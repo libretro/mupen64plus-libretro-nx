@@ -1,0 +1,12 @@
+[submodule "GLideN64"]
+	path = GLideN64
+	url = https://github.com/gonetz/GLideN64.git
+[submodule "mupen64plus-core"]
+	path = mupen64plus-core
+	url = https://github.com/mupen64plus/mupen64plus-core.git
+[submodule "mupen64plus-rsp-hle"]
+	path = mupen64plus-rsp-hle
+	url = https://github.com/mupen64plus/mupen64plus-rsp-hle.git
+[submodule "libretro-common"]
+	path = libretro-common
+	url = https://github.com/libretro/libretro-common.git

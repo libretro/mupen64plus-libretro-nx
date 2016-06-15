@@ -1,0 +1,7 @@
+*.o
+*.dll
+*.dylib
+*.so
+*.d
+*.js
+*.bc
