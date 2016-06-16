@@ -55,9 +55,6 @@ save_memory_data saved_memory;
 cothread_t main_thread;
 static cothread_t cpu_thread;
 
-float polygonOffsetFactor;
-float polygonOffsetUnits;
-
 int astick_deadzone;
 bool flip_only;
 
@@ -73,19 +70,14 @@ static bool     reinit_screen       = false;
 static bool     first_context_reset = false;
 static bool     pushed_frame        = false;
 
-unsigned frame_dupe = false;
-
 uint32_t *blitter_buf;
 uint32_t *blitter_buf_lock   = NULL;
 
-uint32_t gfx_plugin_accuracy = 2;
 uint32_t screen_width;
 uint32_t screen_height;
 uint32_t screen_pitch;
 uint32_t screen_aspectmodehint;
 
-extern unsigned int VI_REFRESH;
-unsigned int BUFFERSWAP;
 unsigned int FAKE_SDL_TICKS;
 
 // after the controller's CONTROL* member has been assigned we can update
@@ -123,6 +115,8 @@ static void setup_variables(void)
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
+      { "mupen64-screensize",
+         "Resolution (restart); 640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|320x240" },
       {"mupen64-audio-buffer-size",
          "Audio Buffer Size (restart); 2048|1024"},
       {"mupen64-astick-deadzone",
@@ -135,19 +129,6 @@ static void setup_variables(void)
         "Player 3 Pak; none|memory|rumble"},
       {"mupen64-pak4",
         "Player 4 Pak; none|memory|rumble"},
-      { "mupen64-disable_expmem",
-         "Enable Expansion Pak RAM; enabled|disabled" },
-      { "mupen64-bufferswap",
-         "Buffer Swap; off|on"
-      },
-      { "mupen64-framerate",
-         "Framerate (restart); original|fullspeed" },
-      { "mupen64-vcache-vbo",
-         "(Glide64) Vertex cache VBO (restart); off|on" },
-      { "mupen64-boot-device",
-         "Boot Device; Default|64DD IPL" },
-      { "mupen64-64dd-hardware",
-         "64DD Hardware; disabled|enabled" },
       { NULL, NULL },
    };
 
@@ -199,9 +180,6 @@ bool emu_step_render(void)
       pushed_frame = true;
       return true;
    }
-
-   if (!pushed_frame && frame_dupe) // Dupe. Not duping violates libretro API, consider it a speedhack.
-      video_cb(NULL, screen_width, screen_height, screen_pitch);
 
    return false;
 }
@@ -359,10 +337,6 @@ void retro_init(void)
          );
    blitter_buf_lock = blitter_buf;
 
-   //hacky stuff for Glide64
-   polygonOffsetUnits = -3.0f;
-   polygonOffsetFactor =  -3.0f;
-
    main_thread = co_active();
    cpu_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
 } 
@@ -412,52 +386,11 @@ void update_variables(bool startup)
 
    }
 
-   var.key = "mupen64-polyoffset-factor";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      float new_val = (float)atoi(var.value);
-      polygonOffsetFactor = new_val;
-   }
-
-   var.key = "mupen64-polyoffset-units";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      float new_val = (float)atoi(var.value);
-      polygonOffsetUnits = new_val;
-   }
-
    var.key = "mupen64-astick-deadzone";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
-
-   var.key = "mupen64-bufferswap";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "on"))
-         BUFFERSWAP = true;
-      else if (!strcmp(var.value, "off"))
-         BUFFERSWAP = false;
-   }
-
-   var.key = "mupen64-framerate";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && initial_boot)
-   {
-      if (!strcmp(var.value, "original"))
-         frame_dupe = false;
-      else if (!strcmp(var.value, "fullspeed"))
-         frame_dupe = true;
-   }
-
    
    {
       struct retro_variable pk1var = { "mupen64-pak1" };
