@@ -107,11 +107,7 @@ static void setup_variables(void)
    struct retro_variable variables[] = {
       { "mupen64-cpucore",
 #ifdef DYNAREC
-#if defined(IOS) || defined(ANDROID)
-         "CPU Core; cached_interpreter|pure_interpreter|dynamic_recompiler" },
-#else
          "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
-#endif
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
@@ -363,6 +359,19 @@ extern void ChangeSize();
 void update_variables(bool startup)
 {
    struct retro_variable var;
+
+
+   var.key = "mupen64-cpucore";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "pure_interpreter"))
+          r4300emu = 0;
+      else if (!strcmp(var.value, "cached_interpreter"))
+          r4300emu = 1;
+      else if (!strcmp(var.value, "dynamic_recompiler"))
+          r4300emu = 2;
+   }
 
    var.key = "mupen64-screensize";
    var.value = NULL;

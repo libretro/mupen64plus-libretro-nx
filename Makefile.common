@@ -39,11 +39,10 @@ SOURCES_C += \
 	$(ROOT_DIR)/custom/mupen64plus-core/ai/ai_controller.c \
 	$(CORE_DIR)/src/api/callbacks.c \
 	$(CORE_DIR)/src/api/common.c \
-	$(CORE_DIR)/src/api/config.c \
 	$(CORE_DIR)/src/api/debugger.c \
-	$(ROOT_DIR)/custom/mupen64plus-core/api/frontend.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/main/main.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/api/frontend.c \
 	$(CORE_DIR)/src/main/util.c \
 	$(CORE_DIR)/src/main/eep_file.c \
 	$(CORE_DIR)/src/main/fla_file.c \
@@ -54,6 +53,7 @@ SOURCES_C += \
 	$(ROOT_DIR)/custom/mupen64plus-core/main/savestates.c \
 	$(CORE_DIR)/src/main/sra_file.c \
 	$(CORE_DIR)/src/memory/memory.c \
+	$(CORE_DIR)/src/osal/files_unix.c \
 	$(CORE_DIR)/src/pi/cart_rom.c \
 	$(CORE_DIR)/src/pi/flashram.c \
 	$(CORE_DIR)/src/pi/pi_controller.c \
@@ -220,8 +220,7 @@ ifeq ($(GLES),1)
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAMStub.cpp
 else
 	GLFLAGS += -DHAVE_OPENGL
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c \
-		$(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
 		$(VIDEODIR_GLIDEN64)/src/OGL3X/UniformBlock.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp

@@ -33,10 +33,8 @@
 #include "callbacks.h"
 #include "m64p_config.h"
 #include "m64p_frontend.h"
-#include "config.h"
 #include "vidext.h"
 #include "../main/cheat.h"
-
 #include "main/main.h"
 #include "main/rom.h"
 #include "main/version.h"
@@ -67,17 +65,6 @@ EXPORT m64p_error CALL CoreStartup(int APIVersion, const char *ConfigPath, const
         return M64ERR_INCOMPATIBLE;
     }
 
-    /* next, start up the configuration handling code by loading and parsing the config file */
-    if (ConfigInit(ConfigPath, DataPath) != M64ERR_SUCCESS)
-        return M64ERR_INTERNAL;
-
-    /* set default configuration parameter values for Core */
-    if (ConfigOpenSection("Core", &g_CoreConfig) != M64ERR_SUCCESS || g_CoreConfig == NULL)
-        return M64ERR_INTERNAL;
-
-    if (!main_set_core_defaults())
-        return M64ERR_INTERNAL;
-
     l_CoreInit = 1;
     return M64ERR_SUCCESS;
 }
@@ -86,8 +73,6 @@ EXPORT m64p_error CALL CoreShutdown(void)
 {
     if (!l_CoreInit)
         return M64ERR_NOT_INIT;
-
-    ConfigShutdown();
 
     l_CoreInit = 0;
     return M64ERR_SUCCESS;
@@ -202,5 +187,3 @@ EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int Ro
 {
     return M64ERR_SUCCESS;
 }
-
-

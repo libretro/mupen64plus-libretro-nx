@@ -120,6 +120,10 @@ static int   l_MainSpeedLimit = 1;       // insert delay during vi_interrupt to 
 * helper functions
 */
 
+EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
+{
+}
+
 void main_message(m64p_msg_level level, unsigned int corner, const char *format, ...)
 {
     va_list ap;
@@ -141,68 +145,6 @@ void main_check_inputs(void)
 /*********************************************************************************************************
 * global functions, for adjusting the core emulator behavior
 */
-
-int main_set_core_defaults(void)
-{
-    float fConfigParamsVersion;
-    int bSaveConfig = 0, bUpgrade = 0;
-
-    if (ConfigGetParameter(g_CoreConfig, "Version", M64TYPE_FLOAT, &fConfigParamsVersion, sizeof(float)) != M64ERR_SUCCESS)
-    {
-        DebugMessage(M64MSG_WARNING, "No version number in 'Core' config section. Setting defaults.");
-        ConfigDeleteSection("Core");
-        ConfigOpenSection("Core", &g_CoreConfig);
-        bSaveConfig = 1;
-    }
-    else if (((int) fConfigParamsVersion) != ((int) CONFIG_PARAM_VERSION))
-    {
-        DebugMessage(M64MSG_WARNING, "Incompatible version %.2f in 'Core' config section: current is %.2f. Setting defaults.", fConfigParamsVersion, (float) CONFIG_PARAM_VERSION);
-        ConfigDeleteSection("Core");
-        ConfigOpenSection("Core", &g_CoreConfig);
-        bSaveConfig = 1;
-    }
-    else if ((CONFIG_PARAM_VERSION - fConfigParamsVersion) >= 0.0001f)
-    {
-        float fVersion = (float) CONFIG_PARAM_VERSION;
-        ConfigSetParameter(g_CoreConfig, "Version", M64TYPE_FLOAT, &fVersion);
-        DebugMessage(M64MSG_INFO, "Updating parameter set version in 'Core' config section to %.2f", fVersion);
-        bUpgrade = 1;
-        bSaveConfig = 1;
-    }
-
-    /* parameters controlling the operation of the core */
-    ConfigSetDefaultFloat(g_CoreConfig, "Version", (float) CONFIG_PARAM_VERSION,  "Mupen64Plus Core config parameter set version number.  Please don't change this version number.");
-    ConfigSetDefaultBool(g_CoreConfig, "OnScreenDisplay", 1, "Draw on-screen display if True, otherwise don't draw OSD");
-#if defined(DYNAREC)
-    ConfigSetDefaultInt(g_CoreConfig, "R4300Emulator", 2, "Use Pure Interpreter if 0, Cached Interpreter if 1, or Dynamic Recompiler if 2 or more");
-#else
-    ConfigSetDefaultInt(g_CoreConfig, "R4300Emulator", 1, "Use Pure Interpreter if 0, Cached Interpreter if 1, or Dynamic Recompiler if 2 or more");
-#endif
-    ConfigSetDefaultBool(g_CoreConfig, "NoCompiledJump", 0, "Disable compiled jump commands in dynamic recompiler (should be set to False) ");
-    ConfigSetDefaultBool(g_CoreConfig, "DisableExtraMem", 0, "Disable 4MB expansion RAM pack. May be necessary for some games");
-    ConfigSetDefaultBool(g_CoreConfig, "AutoStateSlotIncrement", 0, "Increment the save state slot after each save operation");
-    ConfigSetDefaultBool(g_CoreConfig, "EnableDebugger", 0, "Activate the R4300 debugger when ROM execution begins, if core was built with Debugger support");
-    ConfigSetDefaultBool(g_CoreConfig, "DelaySI", 1, "Delay interrupt after DMA SI read/write");
-    ConfigSetDefaultInt(g_CoreConfig, "CountPerOp", 0, "Force number of cycles per emulated instruction");
-    ConfigSetDefaultString(g_CoreConfig, "SharedDataPath", "", "Path to a directory to search when looking for shared data files");
-
-    /* handle upgrades */
-    if (bUpgrade)
-    {
-        if (fConfigParamsVersion < 1.01f)
-        {  // added separate SaveSRAMPath parameter in v1.01
-            const char *pccSaveStatePath = ConfigGetParamString(g_CoreConfig, "SaveStatePath");
-            if (pccSaveStatePath != NULL)
-                ConfigSetParameter(g_CoreConfig, "SaveSRAMPath", M64TYPE_STRING, pccSaveStatePath);
-        }
-    }
-
-    if (bSaveConfig)
-        ConfigSaveSection("Core");
-
-    /* set config parameters for keyboard and joystick commands */
-    return 1;
-}
 
 m64p_error main_core_state_query(m64p_core_param param, int *rval)
 {
@@ -372,14 +314,11 @@ m64p_error main_run(void)
     struct sra_file sra;
     static int channels[] = { 0, 1, 2, 3 };
 
-    /* take the r4300 emulator mode from the config file at this point and cache it in a global variable */
-    r4300emu = ConfigGetParamInt(g_CoreConfig, "R4300Emulator");
-
     /* set some other core parameters based on the config file values */
-    no_compiled_jump = ConfigGetParamBool(g_CoreConfig, "NoCompiledJump");
-    g_delay_si = ConfigGetParamBool(g_CoreConfig, "DelaySI");
-    disable_extra_mem = ConfigGetParamInt(g_CoreConfig, "DisableExtraMem");
-    count_per_op = ConfigGetParamInt(g_CoreConfig, "CountPerOp");
+    no_compiled_jump = 0;
+    g_delay_si = 1;
+    disable_extra_mem = 0;
+    count_per_op = 0;
     if (count_per_op <= 0)
         count_per_op = ROM_PARAMS.countperop;
 
