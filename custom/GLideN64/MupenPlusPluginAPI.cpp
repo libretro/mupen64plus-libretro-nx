@@ -1,5 +1,6 @@
 #include "PluginAPI.h"
 #include "Types.h"
+#include "OpenGL.h"
 
 extern "C" {
 
@@ -17,7 +18,7 @@ EXPORT m64p_error CALL gln64PluginGetVersion(
 	int * _Capabilities
 )
 {
-	return api().PluginGetVersion(_PluginType, _PluginVersion, _APIVersion, _PluginNamePtr, _Capabilities);
+	return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL gln64PluginStartup(
@@ -26,22 +27,21 @@ EXPORT m64p_error CALL gln64PluginStartup(
 	void (*DebugCallback)(void *, int, const char *)
 )
 {
-	return api().PluginStartup(CoreLibHandle);
+	return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL gln64PluginShutdown(void)
 {
-	return api().PluginShutdown();
+	video().stop();
+	return M64ERR_SUCCESS;
 }
 
 EXPORT void CALL gln64ReadScreen2(void *dest, int *width, int *height, int front)
 {
-	api().ReadScreen2(dest, width, height, front);
 }
 
 EXPORT void CALL gln64SetRenderingCallback(void (*callback)(int))
 {
-	api().SetRenderingCallback(callback);
 }
 
 } // extern "C"

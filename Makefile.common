@@ -201,7 +201,6 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/TxFilterStub.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/OpenGL_mupenplus.cpp \
-	$(ROOT_DIR)/custom/GLideN64/mupenplus/MupenPlusAPIImpl.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
 
 ifeq ($(HAVE_NEON),1)
