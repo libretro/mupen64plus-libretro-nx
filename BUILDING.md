@@ -14,6 +14,10 @@ Get the submodules:
 
 Or if you are using a Raspberry Pi:
 
+Rpi2:
+```platform=rpi2 make -j4```
+
+Rpi3:
 ```platform=rpi3 make -j4```
 
 That will create a file named **mupen64plus_libretro.so**
