@@ -177,53 +177,13 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
                 return M64ERR_SUCCESS;
             }
             else if (val == M64EMU_RUNNING)
-            {
                 return M64ERR_SUCCESS;
-            }
-            else if (val == M64EMU_PAUSED)
-            {    
-                return M64ERR_SUCCESS;
-            }
-            return M64ERR_INPUT_INVALID;
-        case M64CORE_VIDEO_MODE:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (val == M64VIDEO_WINDOWED)
-            {
-                if (VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            else if (val == M64VIDEO_FULLSCREEN)
-            {
-                if (!VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            return M64ERR_INPUT_INVALID;
-        case M64CORE_SPEED_LIMITER:
-            return M64ERR_SUCCESS;
-        case M64CORE_VIDEO_SIZE:
-        {
-            // the front-end app is telling us that the user has resized the video output frame, and so
-            // we should try to update the video plugin accordingly.  First, check state
-            int width, height;
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            width = (val >> 16) & 0xffff;
-            height = val & 0xffff;
-            // then call the video plugin.  if the video plugin supports resizing, it will resize its viewport and call
-            // VidExt_ResizeWindow to update the window manager handling our opengl output window
-            //gfx.resizeVideoOutput(width, height);
-            return M64ERR_SUCCESS;
-        }
-        // these are only used for callbacks; they cannot be queried or set
-        case M64CORE_STATE_LOADCOMPLETE:
-        case M64CORE_STATE_SAVECOMPLETE:
             return M64ERR_INPUT_INVALID;
         default:
-            return M64ERR_INPUT_INVALID;
+            break;
     }
+
+    return M64ERR_INPUT_INVALID;
 }
 
 m64p_error main_get_screen_size(int *width, int *height)
@@ -259,12 +219,6 @@ void new_frame(void)
 
     /* advance the current frame */
     l_CurrentFrame++;
-
-    if (l_FrameAdvance) {
-        rompause = 1;
-        l_FrameAdvance = 0;
-        StateChanged(M64CORE_EMU_STATE, M64EMU_PAUSED);
-    }
 }
 
 /* called on vertical interrupt.
