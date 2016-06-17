@@ -6,7 +6,7 @@ clone this repository, for instance:
 
 Get the submodules:
 
-```git submodule update --init --depth=1```
+```git submodule update --init```
 
 #### Building the project
 
