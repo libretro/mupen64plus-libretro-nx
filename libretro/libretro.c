@@ -105,25 +105,25 @@ extern m64p_rom_header ROM_HEADER;
 static void setup_variables(void)
 {
    struct retro_variable variables[] = {
-      { "mupen64-cpucore",
+      { "glupen64-cpucore",
 #ifdef DYNAREC
          "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
-      { "mupen64-screensize",
+      { "glupen64-screensize",
          "Resolution (restart); 640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|320x240" },
-      {"mupen64-audio-buffer-size",
+      {"glupen64-audio-buffer-size",
          "Audio Buffer Size (restart); 2048|1024"},
-      {"mupen64-astick-deadzone",
+      {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-      {"mupen64-pak1",
+      {"glupen64-pak1",
         "Player 1 Pak; none|memory|rumble"},
-      {"mupen64-pak2",
+      {"glupen64-pak2",
         "Player 2 Pak; none|memory|rumble"},
-      {"mupen64-pak3",
+      {"glupen64-pak3",
         "Player 3 Pak; none|memory|rumble"},
-      {"mupen64-pak4",
+      {"glupen64-pak4",
         "Player 4 Pak; none|memory|rumble"},
       { NULL, NULL },
    };
@@ -361,7 +361,7 @@ void update_variables(bool startup)
    struct retro_variable var;
 
 
-   var.key = "mupen64-cpucore";
+   var.key = "glupen64-cpucore";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -373,7 +373,7 @@ void update_variables(bool startup)
           r4300emu = 2;
    }
 
-   var.key = "mupen64-screensize";
+   var.key = "glupen64-screensize";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -387,7 +387,7 @@ void update_variables(bool startup)
 
    if (startup)
    {
-      var.key = "mupen64-audio-buffer-size";
+      var.key = "glupen64-audio-buffer-size";
       var.value = NULL;
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -395,14 +395,14 @@ void update_variables(bool startup)
 
    }
 
-   var.key = "mupen64-astick-deadzone";
+   var.key = "glupen64-astick-deadzone";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
    
    {
-      struct retro_variable pk1var = { "mupen64-pak1" };
+      struct retro_variable pk1var = { "glupen64-pak1" };
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
       {
          int p1_pak = PLUGIN_NONE;
@@ -422,7 +422,7 @@ void update_variables(bool startup)
    }
 
    {
-      struct retro_variable pk2var = { "mupen64-pak2" };
+      struct retro_variable pk2var = { "glupen64-pak2" };
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
       {
          int p2_pak = PLUGIN_NONE;
@@ -440,7 +440,7 @@ void update_variables(bool startup)
    }
    
    {
-      struct retro_variable pk3var = { "mupen64-pak3" };
+      struct retro_variable pk3var = { "glupen64-pak3" };
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
       {
          int p3_pak = PLUGIN_NONE;
@@ -458,7 +458,7 @@ void update_variables(bool startup)
    }
   
    {
-      struct retro_variable pk4var = { "mupen64-pak4" };
+      struct retro_variable pk4var = { "glupen64-pak4" };
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
       {
          int p4_pak = PLUGIN_NONE;
@@ -594,7 +594,7 @@ void retro_run (void)
 
       update_variables(false);
 
-      var.key = "mupen64-aspectratiohint";
+      var.key = "glupen64-aspectratiohint";
       var.value = NULL;
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
