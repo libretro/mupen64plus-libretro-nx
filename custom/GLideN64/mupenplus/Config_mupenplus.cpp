@@ -23,10 +23,10 @@ void Config_LoadConfig()
 
 EXPORT const char * CALL ConfigGetUserDataPath(void)
 {
-  return osal_get_user_datapath();
+  return "";
 }
 
 EXPORT const char * CALL ConfigGetUserCachePath(void)
 {
-  return osal_get_user_cachepath();
+  return "";
 }

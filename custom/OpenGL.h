@@ -10,7 +10,7 @@
 #include "winlnxdefs.h"
 #endif
 
-#include <glsm/glsmsym.h>
+#include <glsym/glsym.h>
 
 #ifdef GLES2
 #define GL_DRAW_FRAMEBUFFER GL_FRAMEBUFFER
