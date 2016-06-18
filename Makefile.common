@@ -173,7 +173,6 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GBI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/gDP.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideN64.cpp \
-	$(VIDEODIR_GLIDEN64)/src/glState.cpp \
 	$(VIDEODIR_GLIDEN64)/src/gSP.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Keys.cpp \
 	$(VIDEODIR_GLIDEN64)/src/L3D.cpp \
