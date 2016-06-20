@@ -57,7 +57,6 @@ static unsigned initial_boot        = true;
 static unsigned audio_buffer_size   = 2048;
 
 static unsigned retro_filtering     = 0;
-static bool     reinit_screen       = false;
 static bool     first_context_reset = false;
 static bool     pushed_frame        = false;
 
@@ -579,16 +578,6 @@ void retro_run (void)
 
    FAKE_SDL_TICKS += 16;
    pushed_frame = false;
-
-   if (reinit_screen)
-   {
-      bool ret;
-      struct retro_system_av_info info;
-      retro_get_system_av_info(&info);
-      info.geometry.aspect_ratio = 4.0 / 3.0;
-      ret = environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &info.geometry);
-      reinit_screen = false;
-   }
 
    do
    {
