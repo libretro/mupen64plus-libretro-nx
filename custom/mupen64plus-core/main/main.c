@@ -80,6 +80,10 @@
 #include "debugger/dbg_types.h"
 #endif
 
+#ifdef WITH_LIRC
+#include "lirc.h"
+#endif //WITH_LIRC
+
 #include <libretro.h>
 
 extern retro_input_poll_t poll_cb;
@@ -111,10 +115,6 @@ int g_gs_vi_counter = 0;
 
 /** static (local) variables **/
 static int   l_CurrentFrame = 0;         // frame counter
-static int   l_TakeScreenshot = 0;       // Tell OSD Rendering callback to take a screenshot just before drawing the OSD
-static int   l_SpeedFactor = 100;        // percentage of nominal game speed at which emulator is running
-static int   l_FrameAdvance = 0;         // variable to check if we pause on next frame
-static int   l_MainSpeedLimit = 1;       // insert delay during vi_interrupt to keep speed at real-time
 
 /*********************************************************************************************************
 * helper functions
@@ -122,19 +122,6 @@ static int   l_MainSpeedLimit = 1;       // insert delay during vi_interrupt to 
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-}
-
-void main_message(m64p_msg_level level, unsigned int corner, const char *format, ...)
-{
-    va_list ap;
-    char buffer[2049];
-    va_start(ap, format);
-    vsnprintf(buffer, 2047, format, ap);
-    buffer[2048]='\0';
-    va_end(ap);
-
-    /* send message to front-end */
-    DebugMessage(level, "%s", buffer);
 }
 
 void main_check_inputs(void)
@@ -177,19 +164,13 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
                 return M64ERR_SUCCESS;
             }
             else if (val == M64EMU_RUNNING)
+            {
                 return M64ERR_SUCCESS;
+            }
             return M64ERR_INPUT_INVALID;
         default:
-            break;
+            return M64ERR_INPUT_INVALID;
     }
-
-    return M64ERR_INPUT_INVALID;
-}
-
-m64p_error main_get_screen_size(int *width, int *height)
-{
-    gfx.readScreen(NULL, width, height, 0);
-    return M64ERR_SUCCESS;
 }
 
 m64p_error main_read_screen(void *pixels, int bFront)
@@ -291,18 +272,13 @@ m64p_error main_run(void)
     init_memory();
 
     // Attach rom to plugins
-    printf("Gfx RomOpen.\n");
     if (!gfx.romOpen())
     {
-        printf("Gfx RomOpen failed.\n");
         return M64ERR_PLUGIN_FAIL;
     }
-    printf("Input RomOpen.\n");
     if (!input.romOpen())
     {
-        printf("Input RomOpen failed.\n");
-        gfx.romClosed();
-        return M64ERR_PLUGIN_FAIL;
+        gfx.romClosed(); return M64ERR_PLUGIN_FAIL;
     }
 
     /* connect external audio sink to AI component */
@@ -329,7 +305,6 @@ m64p_error main_run(void)
         g_si.pif.controllers[i].rumblepak.rumble = rvip_rumble;
     }
 
-    /* connect saved_memory.mempacks to mempaks */
     for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
     {
         g_si.pif.controllers[i].mempak.user_data = NULL;
@@ -337,7 +312,6 @@ m64p_error main_run(void)
         g_si.pif.controllers[i].mempak.data = &saved_memory.mempack[i][0];
     }
 
-    /* connect saved_memory.eeprom to eeprom */
     g_si.pif.eeprom.user_data = NULL;
     g_si.pif.eeprom.save = dummy_save;
     g_si.pif.eeprom.data = saved_memory.eeprom;
@@ -354,15 +328,17 @@ m64p_error main_run(void)
         g_si.pif.eeprom.id = 0xc000;
     }
 
-    /* connect saved_memory.flashram to flashram */
     g_pi.flashram.user_data = NULL;
     g_pi.flashram.save = dummy_save;
     g_pi.flashram.data = saved_memory.flashram;
 
-    /* connect saved_memory.sram to SRAM */
     g_pi.sram.user_data = NULL;
     g_pi.sram.save = dummy_save;
-    g_pi.sram.data = saved_memory.sram;
+    g_pi.sram.data = saved_memory.flashram;
+
+#ifdef WITH_LIRC
+    lircStart();
+#endif // WITH_LIRC
 
 #ifdef DBG
     if (ConfigGetParamBool(g_CoreConfig, "EnableDebugger"))
@@ -376,6 +352,11 @@ m64p_error main_run(void)
     r4300_reset_hard();
     r4300_reset_soft();
     r4300_execute();
+
+    /* now begin to shut down */
+#ifdef WITH_LIRC
+    lircStop();
+#endif // WITH_LIRC
 
 #ifdef DBG
     if (g_DebuggerActive)
