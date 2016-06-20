@@ -188,6 +188,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Turbo3D.cpp \
 	$(VIDEODIR_GLIDEN64)/src/ZSort.cpp \
 	$(VIDEODIR_GLIDEN64)/src/ShaderUtils.cpp \
+	$(VIDEODIR_GLIDEN64)/src/SoftwareRender.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Textures.cpp \
 	$(VIDEODIR_GLIDEN64)/src/TextDrawerStub.cpp \
 	$(VIDEODIR_GLIDEN64)/src/TextureFilterHandler.cpp \
@@ -196,6 +197,8 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM.cpp \
 	$(VIDEODIR_GLIDEN64)/src/BufferCopy/DepthBufferToRDRAM.cpp \
 	$(VIDEODIR_GLIDEN64)/src/BufferCopy/RDRAMtoColorBuffer.cpp \
+	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/ClipPolygon.cpp \
+	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/DepthBufferRender.cpp \
 	$(VIDEODIR_GLIDEN64)/src/common/CommonAPIImpl_common.cpp \
 	$(ROOT_DIR)/custom/GLideN64/MupenPlusPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/TxFilterStub.cpp \
