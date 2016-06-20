@@ -8,11 +8,6 @@ Get the submodules:
 
 ```git submodule update --init```
 
-#### Overwrite OpenGL.h
-
-You need to copy ```custom/OpenGL.h``` to ```GLideN64/src/```
-(I'll figure out a more "automatic way to do this later on)
-
 #### Building the project
 
 ```make -j4```
