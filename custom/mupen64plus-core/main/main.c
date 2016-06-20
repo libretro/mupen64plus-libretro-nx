@@ -120,10 +120,6 @@ static int   l_CurrentFrame = 0;         // frame counter
 * helper functions
 */
 
-EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
-{
-}
-
 void main_check_inputs(void)
 {
     poll_cb();

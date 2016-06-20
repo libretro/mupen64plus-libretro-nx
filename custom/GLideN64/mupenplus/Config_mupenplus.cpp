@@ -20,13 +20,3 @@ void Config_LoadConfig()
 {
 	config.resetToDefaults();
 }
-
-EXPORT const char * CALL ConfigGetUserDataPath(void)
-{
-  return "";
-}
-
-EXPORT const char * CALL ConfigGetUserCachePath(void)
-{
-  return "";
-}
