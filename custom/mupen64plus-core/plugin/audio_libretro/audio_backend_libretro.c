@@ -94,7 +94,7 @@ void init_audio_libretro(unsigned max_audio_frames)
 /* A fully compliant implementation is not really possible with just the zilmar spec.
  * We assume bits == 16 (assumption compatible with audio-sdl plugin implementation)
  */
-void set_audio_format_via_libretro(void* user_data,
+void set_audio_format_via_audio_plugin(void* user_data,
       unsigned int frequency, unsigned int bits)
 {
    uint32_t saved_ai_dacrate = g_ai.regs[AI_DACRATE_REG];
@@ -116,7 +116,7 @@ void set_audio_format_via_libretro(void* user_data,
 }
 
 /* Abuse core & audio plugin implementation details to obtain the desired effect. */
-void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size)
+void push_audio_samples_via_audio_plugin(void* user_data, const void* buffer, size_t size)
 {
    int16_t *out;
    size_t max_frames, remain_frames;

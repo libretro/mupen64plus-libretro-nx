@@ -305,6 +305,11 @@ m64p_error main_run(void)
         return M64ERR_PLUGIN_FAIL;
     }
 
+    /* connect external audio sink to AI component */
+    g_ai.user_data = &g_ai;
+    g_ai.set_audio_format = set_audio_format_via_audio_plugin;
+    g_ai.push_audio_samples = push_audio_samples_via_audio_plugin;
+
     /* connect external time source to AF_RTC component */
     g_si.pif.af_rtc.user_data = NULL;
     g_si.pif.af_rtc.get_time = get_time_using_C_localtime;

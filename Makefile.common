@@ -36,7 +36,7 @@ SOURCES_C += \
 
 # Core
 SOURCES_C += \
-	$(ROOT_DIR)/custom/mupen64plus-core/ai/ai_controller.c \
+	$(CORE_DIR)/src/ai/ai_controller.c \
 	$(CORE_DIR)/src/api/callbacks.c \
 	$(CORE_DIR)/src/api/common.c \
 	$(CORE_DIR)/src/api/debugger.c \
