@@ -378,6 +378,7 @@ $(TARGET): $(OBJECTS)
 clean:
 	find -name "*.o" -type f -delete
 	find -name "*.d" -type f -delete
+	rm -f $(TARGET)
 
 .PHONY: clean
 -include $(OBJECTS:.o=.d)
