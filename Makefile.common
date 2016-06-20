@@ -168,6 +168,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/F3DSWSE.cpp \
 	$(VIDEODIR_GLIDEN64)/src/F3DEX2.cpp \
 	$(VIDEODIR_GLIDEN64)/src/F3DEX2CBFD.cpp \
+	$(VIDEODIR_GLIDEN64)/src/FBOTextureFormats.cpp \
 	$(VIDEODIR_GLIDEN64)/src/FrameBuffer.cpp \
 	$(VIDEODIR_GLIDEN64)/src/FrameBufferInfo.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GBI.cpp \
