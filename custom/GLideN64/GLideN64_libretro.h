@@ -35,4 +35,11 @@ typedef char GLchar;
 #endif // OS_MAC_OS_X
 #endif // GLES2
 
+struct GLState {
+	GLState() { reset(); }
+	void reset();
+};
+
+extern GLState glState;
+
 #endif
