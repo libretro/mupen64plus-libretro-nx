@@ -18,6 +18,9 @@
 #include <libretro.h>
 #include <string.h>
 
+/* strcasecmp not implemented in MSVC */
+#include "api/msvc_compat.h"
+
 static const rarch_resampler_t *resampler_drivers[] = {
    &CC_resampler,
    &sinc_resampler,

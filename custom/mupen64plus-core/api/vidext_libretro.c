@@ -27,18 +27,20 @@
 #include <string.h>
 
 #define M64P_CORE_PROTOTYPES 1
-#include "../osd/osd.h"
-#include "callbacks.h"
 #include "m64p_types.h"
 #include "m64p_vidext.h"
 #include "vidext.h"
+#include "callbacks.h"
+
+#include <libretro.h>
+#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
 #include <glsm/glsmsym.h>
+#endif
 
 /* local variables */
-static m64p_video_extension_functions l_ExternalVideoFuncTable = {11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static m64p_video_extension_functions l_ExternalVideoFuncTable = {10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 static int l_VideoExtensionActive = 0;
 static int l_VideoOutputActive = 0;
-static int l_Fullscreen = 0;
 
 /* global function for use by frontend.c */
 m64p_error OverrideVideoFunctions(m64p_video_extension_functions *VideoFunctionStruct)
@@ -76,7 +78,7 @@ m64p_error OverrideVideoFunctions(m64p_video_extension_functions *VideoFunctionS
 
 int VidExt_InFullscreenMode(void)
 {
-    return l_Fullscreen;
+    return 1;
 }
 
 int VidExt_VideoRunning(void)
@@ -84,65 +86,79 @@ int VidExt_VideoRunning(void)
     return l_VideoOutputActive;
 }
 
-/* video extension functions to be called by the video plugin */
+EXPORT m64p_error CALL VidExt_SetCaption(const char *Title)
+{
+   return M64ERR_SUCCESS;
+}
+
+EXPORT m64p_error CALL VidExt_ToggleFullScreen(void)
+{
+   /* TODO/FIXME - should just do a context reset here. */
+   return M64ERR_SUCCESS;
+}
+
+EXPORT m64p_error CALL VidExt_GL_SetAttribute(m64p_GLattr Attr, int Value)
+{
+   return M64ERR_SUCCESS;
+}
+
 EXPORT m64p_error CALL VidExt_Init(void)
 {
-    return M64ERR_SUCCESS;
+   /* TODO/FIXME - implement. */
+   return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL VidExt_Quit(void)
 {
-    return M64ERR_SUCCESS;
+   /* TODO/FIXME - implement. */
+   return M64ERR_SUCCESS;
+}
+
+EXPORT m64p_error CALL VidExt_SetVideoMode(int Width, int Height, int BitsPerPixel,
+      m64p_video_mode ScreenMode, m64p_video_flags Flags)
+{
+   /* TODO/FIXME - implement. */ 
+   return M64ERR_SUCCESS;
+}
+
+EXPORT void * CALL VidExt_GL_GetProcAddress(const char* Proc)
+{
+#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
+   glsm_ctx_proc_address_t proc_info;
+   proc_info.addr = NULL;
+   if (!glsm_ctl(GLSM_CTL_PROC_ADDRESS_GET, NULL))
+      return NULL;
+   return proc_info.addr(Proc);
+#else
+   return NULL;
+#endif
+}
+
+EXPORT m64p_error CALL VidExt_GL_SwapBuffers(void)
+{
+   return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL VidExt_ListFullscreenModes(m64p_2d_size *SizeArray, int *NumSizes)
 {
-    return M64ERR_SUCCESS;
-}
+#if 0
+   /* TODO/FIXME - implement */
+    i = 0;
+    while (i < *NumSizes && modes[i] != NULL)
+    {
+        SizeArray[i].uiWidth  = modes[i]->w;
+        SizeArray[i].uiHeight = modes[i]->h;
+        i++;
+    }
 
-EXPORT m64p_error CALL VidExt_SetVideoMode(int Width, int Height, int BitsPerPixel, m64p_video_mode ScreenMode, m64p_video_flags Flags)
-{
+    *NumSizes = i;
+#endif
+
     return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL VidExt_ResizeWindow(int Width, int Height)
 {
-    return M64ERR_SUCCESS;
+   /* TODO/FIXME - implement? */
+   return M64ERR_SUCCESS;
 }
-
-EXPORT m64p_error CALL VidExt_SetCaption(const char *Title)
-{
-    return M64ERR_SUCCESS;
-}
-
-EXPORT m64p_error CALL VidExt_ToggleFullScreen(void)
-{
-    return M64ERR_SUCCESS;
-}
-
-EXPORT void * CALL VidExt_GL_GetProcAddress(const char* Proc)
-{
-    glsm_ctx_proc_address_t proc_info;
-    proc_info.addr = NULL;
-    if (!glsm_ctl(GLSM_CTL_PROC_ADDRESS_GET, NULL))
-        return NULL;
-    return proc_info.addr(Proc);
-}
-
-EXPORT m64p_error CALL VidExt_GL_SetAttribute(m64p_GLattr Attr, int Value)
-{
-    return M64ERR_SUCCESS;
-}
-
-EXPORT m64p_error CALL VidExt_GL_GetAttribute(m64p_GLattr Attr, int *pValue)
-{
-    return M64ERR_SUCCESS;
-}
-
-EXPORT m64p_error CALL VidExt_GL_SwapBuffers(void)
-{
-    //retro_return(true);
-    return M64ERR_SUCCESS;
-}
-
-

@@ -32,6 +32,9 @@
 
 #define ROUND(x)    floor((x) + 0.5)
 
+/* snprintf not available in MSVC 2010 and earlier */
+#include "api/msvc_compat.h"
+
 extern retro_environment_t environ_cb;
 extern retro_input_state_t input_cb;
 extern struct retro_rumble_interface rumble;
