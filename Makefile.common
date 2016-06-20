@@ -14,7 +14,8 @@ INCFLAGS += \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
 	-I$(VIDEODIR_GLIDEN64)/src \
-	-I$(VIDEODIR_GLIDEN64)/src/osal
+	-I$(VIDEODIR_GLIDEN64)/src/osal \
+	-I$(ROOT_DIR)/custom/GLideN64
 
 # libco
 SOURCES_C += \
