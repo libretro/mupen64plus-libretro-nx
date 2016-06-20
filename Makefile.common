@@ -43,7 +43,7 @@ SOURCES_C += \
 	$(CORE_DIR)/src/api/debugger.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/main/main.c \
-	$(ROOT_DIR)/custom/mupen64plus-core/api/frontend.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/api/frontend_libretro.c \
 	$(CORE_DIR)/src/main/util.c \
 	$(CORE_DIR)/src/main/eep_file.c \
 	$(CORE_DIR)/src/main/fla_file.c \

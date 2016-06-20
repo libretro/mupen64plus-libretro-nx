@@ -33,8 +33,10 @@
 #include "callbacks.h"
 #include "m64p_config.h"
 #include "m64p_frontend.h"
+#include "config.h"
 #include "vidext.h"
 #include "../main/cheat.h"
+
 #include "main/main.h"
 #include "main/rom.h"
 #include "main/version.h"
@@ -187,3 +189,5 @@ EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int Ro
 {
     return M64ERR_SUCCESS;
 }
+
+
