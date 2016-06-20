@@ -107,7 +107,17 @@ ifeq ($(WITH_DYNAREC), arm)
 		$(CORE_DIR)/src/r4300/new_dynarec/arm/arm_cpu_features.c
 
 	SOURCES_ASM += \
-		$(CORE_DIR)/src/r4300/new_dynarec/arm/linkage_$(WITH_DYNAREC).S
+		$(CORE_DIR)/src/r4300/new_dynarec/arm/linkage_arm.S
+endif
+ifeq ($(WITH_DYNAREC), x86)
+	DYNAREC_USED = 1
+	DYNAFLAGS += -DNEW_DYNAREC=1
+	SOURCES_C += \
+		$(CORE_DIR)/src/r4300/new_dynarec/new_dynarec.c \
+		$(CORE_DIR)/src/r4300/empty_dynarec.c \
+
+	SOURCES_ASM += \
+		$(CORE_DIR)/src/r4300/new_dynarec/x86/linkage_x86.asm
 endif
 ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
 	DYNAREC_USED = 1

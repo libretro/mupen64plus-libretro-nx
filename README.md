@@ -23,7 +23,7 @@ Most of the modifications have involved removing dependencies on SDL, and modify
 
 Cheats
 
-Windows, and Intel x86 (32-bit) machines. I don't own those types of systems so I can't test them, although 32-bit support should be quite simple (Windows not so much).
+Windows, Android, iOS. I don't have those types of systems so I can't test them. I am more than willing to accept pull requests however.
 
 #### Acknowledgments
 
