@@ -5,9 +5,7 @@
 #include "libretro.h"
 #include <libco.h>
 
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
 #include <glsm/glsmsym.h>
-#endif
 
 #include "api/m64p_frontend.h"
 #include "plugin/plugin.h"
@@ -21,7 +19,7 @@
 #include "si/pif.h"
 #include "libretro_memory.h"
 
-#include <audio_plugin.h>
+#include "audio_plugin.h"
 
 #ifndef PRESCALE_WIDTH
 #define PRESCALE_WIDTH  640
@@ -29,13 +27,6 @@
 
 #ifndef PRESCALE_HEIGHT
 #define PRESCALE_HEIGHT 625
-#endif
-
-/* forward declarations */
-int InitGfx(void);
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
-int glide64InitGfx(void);
-void gles2n64_reset(void);
 #endif
 
 struct retro_perf_callback perf_cb;
@@ -75,8 +66,6 @@ uint32_t *blitter_buf_lock   = NULL;
 
 uint32_t screen_width;
 uint32_t screen_height;
-uint32_t screen_pitch;
-uint32_t screen_aspectmodehint;
 
 unsigned int FAKE_SDL_TICKS;
 
@@ -107,12 +96,14 @@ static void setup_variables(void)
    struct retro_variable variables[] = {
       { "glupen64-cpucore",
 #ifdef DYNAREC
+#if defined(IOS) || defined(ANDROID)
+         "CPU Core; cached_interpreter|pure_interpreter|dynamic_recompiler" },
+#else
          "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
+#endif
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
-      { "glupen64-screensize",
-         "Resolution (restart); 640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|320x240" },
       {"glupen64-audio-buffer-size",
          "Audio Buffer Size (restart); 2048|1024"},
       {"glupen64-astick-deadzone",
@@ -125,6 +116,8 @@ static void setup_variables(void)
         "Player 3 Pak; none|memory|rumble"},
       {"glupen64-pak4",
         "Player 4 Pak; none|memory|rumble"},
+      { "glupen64-screensize",
+         "Resolution (restart); 640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|320x240" },
       { NULL, NULL },
    };
 
@@ -313,7 +306,6 @@ void retro_init(void)
 {
    struct retro_log_callback log;
    unsigned colorMode = RETRO_PIXEL_FORMAT_XRGB8888;
-   screen_pitch = 0;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
@@ -360,7 +352,6 @@ void update_variables(bool startup)
 {
    struct retro_variable var;
 
-
    var.key = "glupen64-cpucore";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -392,7 +383,6 @@ void update_variables(bool startup)
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
          audio_buffer_size = atoi(var.value);
-
    }
 
    var.key = "glupen64-astick-deadzone";
@@ -400,7 +390,7 @@ void update_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
-   
+
    {
       struct retro_variable pk1var = { "glupen64-pak1" };
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
@@ -587,42 +577,6 @@ void retro_run (void)
 
    blitter_buf_lock = blitter_buf;
 
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-   {
-      static float last_aspect = 4.0 / 3.0;
-      struct retro_variable var;
-
-      update_variables(false);
-
-      var.key = "glupen64-aspectratiohint";
-      var.value = NULL;
-
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-      {
-         float aspect_val = 4.0 / 3.0;
-         float aspectmode = 0;
-
-         if (!strcmp(var.value, "widescreen"))
-         {
-            aspect_val = 16.0 / 9.0;
-            aspectmode = 1;
-         }
-         else if (!strcmp(var.value, "normal"))
-         {
-            aspect_val = 4.0 / 3.0;
-            aspectmode = 0;
-         }
-
-         if (aspect_val != last_aspect)
-         {
-            screen_aspectmodehint = aspectmode;
-
-            last_aspect = aspect_val;
-            reinit_screen = true;
-         }
-      }
-   }
-
    FAKE_SDL_TICKS += 16;
    pushed_frame = false;
 
@@ -631,15 +585,7 @@ void retro_run (void)
       bool ret;
       struct retro_system_av_info info;
       retro_get_system_av_info(&info);
-      switch (screen_aspectmodehint)
-      {
-         case 0:
-            info.geometry.aspect_ratio = 4.0 / 3.0;
-            break;
-         case 1:
-            info.geometry.aspect_ratio = 16.0 / 9.0;
-            break;
-      }
+      info.geometry.aspect_ratio = 4.0 / 3.0;
       ret = environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &info.geometry);
       reinit_screen = false;
    }
