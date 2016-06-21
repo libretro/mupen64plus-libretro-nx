@@ -21,6 +21,7 @@ Config config;
 void Config_LoadConfig()
 {
 	config.resetToDefaults();
+	config.frameBufferEmulation.enable = 0;
 }
 
 EXPORT int CALL osal_path_existsW(const wchar_t *_path) {
