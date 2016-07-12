@@ -211,6 +211,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/BufferCopy/RDRAMtoColorBuffer.cpp \
 	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/ClipPolygon.cpp \
 	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/DepthBufferRender.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLUniforms/UniformSet.cpp \
 	$(VIDEODIR_GLIDEN64)/src/common/CommonAPIImpl_common.cpp \
 	$(ROOT_DIR)/custom/GLideN64/MupenPlusPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/TxFilterStub.cpp \
@@ -230,13 +231,11 @@ ifeq ($(GLES),1)
 	GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLES2/GLSLCombiner_gles2.cpp \
-		$(VIDEODIR_GLIDEN64)/src/GLES2/UniformSet.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAMStub.cpp
 else
 	GLFLAGS += -DHAVE_OPENGL
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
-		$(VIDEODIR_GLIDEN64)/src/OGL3X/UniformBlock.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
 endif
 SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
