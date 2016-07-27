@@ -54,12 +54,9 @@ static unsigned audio_buffer_size   = 2048;
 
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
-static bool     pushed_frame        = false;
 
 uint32_t *blitter_buf;
 uint32_t *blitter_buf_lock   = NULL;
-
-unsigned int FAKE_SDL_TICKS;
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -158,7 +155,6 @@ bool emu_step_render(void)
    if (flip_only)
    {
       video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-      pushed_frame = true;
       return true;
    }
 
@@ -513,8 +509,6 @@ void retro_run (void)
 
    blitter_buf_lock = blitter_buf;
 
-   FAKE_SDL_TICKS += 16;
-   pushed_frame = false;
    main_run();
 }
 
