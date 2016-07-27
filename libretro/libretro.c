@@ -552,24 +552,6 @@ void retro_unload_game(void)
     emu_initialized = false;
 }
 
-static void glsm_exit(void)
-{
-#ifndef HAVE_SHARED_CONTEXT
-   if (stop)
-      return;
-   glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-#endif
-}
-
-static void glsm_enter(void)
-{
-#ifndef HAVE_SHARED_CONTEXT
-   if (stop)
-      return;
-   glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-#endif
-}
-
 void retro_run (void)
 {
    static bool updated = false;
@@ -581,11 +563,7 @@ void retro_run (void)
 
    do
    {
-      glsm_enter();
-
       co_switch(cpu_thread);
-
-      glsm_exit();
    } while (emu_step_render());
 }
 
