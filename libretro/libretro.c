@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "libretro.h"
-#include <libco.h>
 
 #include <glsm/glsmsym.h>
 
@@ -42,9 +41,6 @@ retro_environment_t environ_cb = NULL;
 struct retro_rumble_interface rumble;
 
 save_memory_data saved_memory;
-
-cothread_t main_thread;
-static cothread_t cpu_thread;
 
 int astick_deadzone;
 bool flip_only;
@@ -191,36 +187,7 @@ void reinit_gfx_plugin(void)
     if(first_context_reset)
     {
         first_context_reset = false;
-        co_switch(cpu_thread);
-    }
-}
-
-static void EmuThreadFunction(void)
-{
-    if (!emu_step_load_data())
-       goto load_fail;
-
-    //ROM is loaded, switch back to main thread so retro_load_game can return (returning failure if needed).
-    //We'll continue here once the context is reset.
-    co_switch(main_thread);
-
-    emu_step_initialize();
-
-    //Context is reset too, everything is safe to use. Now back to main thread so we don't start pushing frames outside retro_run.
-    co_switch(main_thread);
-
-    main_run();
-    log_cb(RETRO_LOG_INFO, "EmuThread: co_switch main_thread. \n");
-
-    co_switch(main_thread);
-
-load_fail:
-    //NEVER RETURN! That's how libco rolls
-    while(1)
-    {
-       if (log_cb)
-          log_cb(RETRO_LOG_ERROR, "Running Dead N64 Emulator");
-       co_switch(main_thread);
+        emu_step_initialize();
     }
 }
 
@@ -323,9 +290,6 @@ void retro_init(void)
          PRESCALE_WIDTH * PRESCALE_HEIGHT, sizeof(uint32_t)
          );
    blitter_buf_lock = blitter_buf;
-
-   main_thread = co_active();
-   cpu_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
 } 
 
 void retro_deinit(void)
@@ -336,8 +300,6 @@ void retro_deinit(void)
       free(blitter_buf);
    blitter_buf      = NULL;
    blitter_buf_lock = NULL;
-
-   co_delete(cpu_thread);
 
    deinit_audio_libretro();
 
@@ -532,10 +494,8 @@ bool retro_load_game(const struct retro_game_info *game)
    memcpy(game_data, game->data, game->size);
    game_size = game->size;
 
-   stop = false;
-   //Finish ROM load before doing anything funny, so we can return failure if needed.
-   co_switch(cpu_thread);
-   if (stop) return false;
+   if (!emu_step_load_data())
+      return false;
 
    first_context_reset = true;
 
@@ -544,12 +504,10 @@ bool retro_load_game(const struct retro_game_info *game)
 
 void retro_unload_game(void)
 {
-    stop = 1;
+   stop = 1;
 
-    co_switch(cpu_thread);
-
-    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
-    emu_initialized = false;
+   CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+   emu_initialized = false;
 }
 
 void retro_run (void)
@@ -560,11 +518,7 @@ void retro_run (void)
 
    FAKE_SDL_TICKS += 16;
    pushed_frame = false;
-
-   do
-   {
-      co_switch(cpu_thread);
-   } while (emu_step_render());
+   main_run();
 }
 
 void retro_reset (void)
@@ -648,7 +602,8 @@ int retro_return(int just_flipping)
 
    flip_only = just_flipping;
 
-   co_switch(main_thread);
+   if (just_flipping)
+      emu_step_render();
 
    return 0;
 }
