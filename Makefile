@@ -65,7 +65,7 @@ else ifeq ($(ARCH), $(filter $(ARCH), arm))
    WITH_DYNAREC = arm
 endif
 
-TARGET_NAME := mupen64plus
+TARGET_NAME := glupen64
 CC_AS ?= $(CC)
 
 # Unix
