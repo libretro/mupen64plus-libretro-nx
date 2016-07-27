@@ -1897,15 +1897,17 @@ static void glsm_state_setup(void)
 {
    unsigned i;
 
-   gl_state.cap_translate[SGL_DEPTH_TEST]           = GL_DEPTH_TEST;
-   gl_state.cap_translate[SGL_BLEND]                = GL_BLEND;
-   gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL]  = GL_POLYGON_OFFSET_FILL;
-   gl_state.cap_translate[SGL_FOG]                  = GL_FOG;
-   gl_state.cap_translate[SGL_CULL_FACE]            = GL_CULL_FACE;
-   gl_state.cap_translate[SGL_ALPHA_TEST]           = GL_ALPHA_TEST;
-   gl_state.cap_translate[SGL_SCISSOR_TEST]         = GL_SCISSOR_TEST;
-   gl_state.cap_translate[SGL_STENCIL_TEST]         = GL_STENCIL_TEST;
-
+   gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
+   gl_state.cap_translate[SGL_BLEND]                    = GL_BLEND;
+   gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL]      = GL_POLYGON_OFFSET_FILL;
+   gl_state.cap_translate[SGL_FOG]                      = GL_FOG;
+   gl_state.cap_translate[SGL_CULL_FACE]                = GL_CULL_FACE;
+   gl_state.cap_translate[SGL_ALPHA_TEST]               = GL_ALPHA_TEST;
+   gl_state.cap_translate[SGL_SCISSOR_TEST]             = GL_SCISSOR_TEST;
+   gl_state.cap_translate[SGL_STENCIL_TEST]             = GL_STENCIL_TEST;
+   gl_state.cap_translate[SGL_DITHER]                   = GL_DITHER;
+   gl_state.cap_translate[SGL_SAMPLE_ALPHA_TO_COVERAGE] = GL_SAMPLE_ALPHA_TO_COVERAGE;
+   gl_state.cap_translate[SGL_SAMPLE_COVERAGE]          = GL_SAMPLE_COVERAGE;
 #ifndef HAVE_OPENGLES
    gl_state.cap_translate[SGL_COLOR_LOGIC_OP]       = GL_COLOR_LOGIC_OP;
    gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
@@ -1975,6 +1977,12 @@ static void glsm_state_bind(void)
    {
       if (gl_state.cap_state[i])
          glEnable(gl_state.cap_translate[i]);
+#ifdef HAVE_OPENGLES
+      else if (gl_state.cap_translate[i] != GL_FOG && gl_state.cap_translate[i] != GL_ALPHA_TEST)
+#else
+      else
+#endif
+         glDisable(gl_state.cap_translate[i]);
    }
 
    glBindFramebuffer(RARCH_GL_FRAMEBUFFER, hw_render.get_current_framebuffer());
