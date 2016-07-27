@@ -88,5 +88,7 @@ typedef struct _rsp_plugin_functions
 
 extern rsp_plugin_functions rsp;
 
+uint32_t retro_screen_width;
+uint32_t retro_screen_height;
 #endif
 

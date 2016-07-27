@@ -1,6 +1,7 @@
 #include "GLideN64_mupenplus.h"
 #include <stdio.h>
 #include <libretro_private.h>
+#include <plugin/plugin.h>
 
 #include "../GLideN64.h"
 #include "../OpenGL.h"
@@ -43,8 +44,8 @@ OGLVideo & OGLVideo::get()
 bool OGLVideoMupenPlus::_start()
 {
 	m_bFullscreen = 1;
-	m_screenWidth = 640;
-	m_screenHeight = 480;
+	m_screenWidth = retro_screen_width;
+	m_screenHeight = retro_screen_height;
 	_setBufferSize();
 
 	LOG(LOG_VERBOSE, "[gles2GlideN64]: Create setting videomode %dx%d\n", m_screenWidth, m_screenHeight);

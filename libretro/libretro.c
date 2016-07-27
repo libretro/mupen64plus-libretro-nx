@@ -59,9 +59,6 @@ static bool     pushed_frame        = false;
 uint32_t *blitter_buf;
 uint32_t *blitter_buf_lock   = NULL;
 
-uint32_t screen_width;
-uint32_t screen_height;
-
 unsigned int FAKE_SDL_TICKS;
 
 // after the controller's CONTROL* member has been assigned we can update
@@ -91,7 +88,7 @@ static void setup_variables(void)
    struct retro_variable variables[] = {
       { "glupen64-cpucore",
 #ifdef DYNAREC
-#if defined(IOS) || defined(ANDROID)
+#if defined(IOS)
          "CPU Core; cached_interpreter|pure_interpreter|dynamic_recompiler" },
 #else
          "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
@@ -112,7 +109,7 @@ static void setup_variables(void)
       {"glupen64-pak4",
         "Player 4 Pak; none|memory|rumble"},
       { "glupen64-screensize",
-         "Resolution (restart); 640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|320x240" },
+         "Resolution (restart); 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
       { NULL, NULL },
    };
 
@@ -160,7 +157,7 @@ bool emu_step_render(void)
 {
    if (flip_only)
    {
-      video_cb(RETRO_HW_FRAME_BUFFER_VALID, screen_width, screen_height, 0);
+      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
       pushed_frame = true;
       return true;
    }
@@ -253,10 +250,10 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    m64p_system_type region = rom_country_code_to_system_type(ROM_HEADER.Country_code);
 
-   info->geometry.base_width   = screen_width;
-   info->geometry.base_height  = screen_height;
-   info->geometry.max_width    = screen_width;
-   info->geometry.max_height   = screen_height;
+   info->geometry.base_width   = retro_screen_width;
+   info->geometry.base_height  = retro_screen_height;
+   info->geometry.max_width    = retro_screen_width;
+   info->geometry.max_height   = retro_screen_height;
    info->geometry.aspect_ratio = 4.0 / 3.0;
    info->timing.fps = (region == SYSTEM_PAL) ? 50.0 : (60/1.001);                // TODO: Actual timing 
    info->timing.sample_rate = 44100.0;
@@ -330,10 +327,10 @@ void update_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (sscanf(var.value ? var.value : "640x480", "%dx%d", &screen_width, &screen_height) != 2)
+      if (sscanf(var.value ? var.value : "640x480", "%dx%d", &retro_screen_width, &retro_screen_height) != 2)
       {
-         screen_width = 640;
-         screen_height = 480;
+         retro_screen_width = 640;
+         retro_screen_height = 480;
       }
    }
 
