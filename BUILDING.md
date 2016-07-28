@@ -20,8 +20,8 @@ Rpi2:
 Rpi3:
 ```platform=rpi3 make -j4```
 
-That will create a file named **mupen64plus_libretro.so**
+That will create a file named **glupen64_libretro.so**
 
 You can run a ROM like this:
 
-retroarch -L mupen64plus_libretro.so /path/to/rom.n64
+retroarch -L glupen64_libretro.so /path/to/rom.n64
