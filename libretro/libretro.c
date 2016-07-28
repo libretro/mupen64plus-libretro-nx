@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "libretro.h"
+#include <libco.h>
 
 #include <glsm/glsmsym.h>
 
@@ -42,8 +43,10 @@ struct retro_rumble_interface rumble;
 
 save_memory_data saved_memory;
 
+static cothread_t game_thread;
+cothread_t retro_thread;
+
 int astick_deadzone;
-bool flip_only;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -152,13 +155,8 @@ load_fail:
 
 bool emu_step_render(void)
 {
-   if (flip_only)
-   {
-      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-      return true;
-   }
-
-   return false;
+   video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+   return true;
 }
 
 static void emu_step_initialize(void)
@@ -169,6 +167,13 @@ static void emu_step_initialize(void)
    emu_initialized = true;
 
    plugin_connect_all();
+}
+
+static void EmuThreadFunction(void)
+{
+   log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
+
+   CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 }
 
 void reinit_gfx_plugin(void)
@@ -279,7 +284,10 @@ void retro_init(void)
          PRESCALE_WIDTH * PRESCALE_HEIGHT, sizeof(uint32_t)
          );
    blitter_buf_lock = blitter_buf;
-} 
+
+   retro_thread = co_active();
+   game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+}
 
 void retro_deinit(void)
 {
@@ -505,9 +513,7 @@ void retro_run (void)
 
    blitter_buf_lock = blitter_buf;
 
-   log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
-
-   CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+   co_switch(game_thread);
 }
 
 void retro_reset (void)
@@ -589,10 +595,10 @@ int retro_return(int just_flipping)
    if (stop)
       return 0;
 
-   flip_only = just_flipping;
-
    if (just_flipping)
       emu_step_render();
+   else
+      co_switch(retro_thread);
 
    return 0;
 }

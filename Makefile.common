@@ -17,6 +17,9 @@ INCFLAGS += \
 	-I$(VIDEODIR_GLIDEN64)/src/osal \
 	-I$(ROOT_DIR)/custom/GLideN64
 
+# libco
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
+
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
 	$(RSPDIR)/src/alist_audio.c \

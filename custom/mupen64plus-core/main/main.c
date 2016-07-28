@@ -267,8 +267,8 @@ static void apply_speed_limiter(void)
 void new_vi(void)
 {
     main_check_inputs();
-    timed_sections_refresh();
-    apply_speed_limiter();
+    //timed_sections_refresh();
+    //apply_speed_limiter();
 }
 
 static void connect_all(
