@@ -169,10 +169,6 @@ static void emu_step_initialize(void)
    emu_initialized = true;
 
    plugin_connect_all();
-
-   log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
-
-   CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 }
 
 void reinit_gfx_plugin(void)
@@ -509,7 +505,9 @@ void retro_run (void)
 
    blitter_buf_lock = blitter_buf;
 
-   main_run();
+   log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
+
+   CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 }
 
 void retro_reset (void)
