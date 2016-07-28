@@ -15,6 +15,7 @@
 #include "main/main.h"
 #include "main/version.h"
 #include "main/savestates.h"
+#include "main/rom.h"
 #include "pi/pi_controller.h"
 #include "si/pif.h"
 #include "libretro_memory.h"
@@ -153,12 +154,6 @@ load_fail:
    return false;
 }
 
-bool emu_step_render(void)
-{
-   video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-   return true;
-}
-
 static void emu_step_initialize(void)
 {
    if (emu_initialized)
@@ -252,7 +247,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.max_width    = retro_screen_width;
    info->geometry.max_height   = retro_screen_height;
    info->geometry.aspect_ratio = 4.0 / 3.0;
-   info->timing.fps = (region == SYSTEM_PAL) ? 50.0 : (60/1.001);                // TODO: Actual timing 
+   //info->timing.fps = (region == SYSTEM_PAL) ? 50.0 : (60/1.001);
+   info->timing.fps = (double)ROM_PARAMS.vilimit;
    info->timing.sample_rate = 44100.0;
 }
 
@@ -582,21 +578,15 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) {
     }
 }
 
-// Stubs
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
-
 bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info) { return false; }
-
 void retro_cheat_reset(void) { }
 void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
 int retro_return(int just_flipping)
 {
-   if (stop)
-      return 0;
-
    if (just_flipping)
-      emu_step_render();
+      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
    else
       co_switch(retro_thread);
 

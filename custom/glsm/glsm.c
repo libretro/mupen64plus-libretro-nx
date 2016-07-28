@@ -1913,7 +1913,7 @@ static void glsm_state_setup(void)
    gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
    gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
 #endif
-
+   gl_state.cap_state[SGL_DITHER] = 1;
    for (i = 0; i < MAX_ATTRIB; i++)
       gl_state.vertex_attrib_pointer.enabled[i] = 0;
 
