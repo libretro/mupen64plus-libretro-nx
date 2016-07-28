@@ -44,8 +44,8 @@ OGLVideo & OGLVideo::get()
 bool OGLVideoMupenPlus::_start()
 {
 	m_bFullscreen = 1;
-	m_screenWidth = retro_screen_width;
-	m_screenHeight = retro_screen_height;
+	m_screenWidth = get_retro_screen_width();
+	m_screenHeight = get_retro_screen_height();
 	_setBufferSize();
 
 	LOG(LOG_VERBOSE, "[gles2GlideN64]: Create setting videomode %dx%d\n", m_screenWidth, m_screenHeight);

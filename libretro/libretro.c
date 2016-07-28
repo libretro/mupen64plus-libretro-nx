@@ -62,6 +62,9 @@ static bool     first_context_reset = false;
 uint32_t *blitter_buf;
 uint32_t *blitter_buf_lock   = NULL;
 
+uint32_t retro_screen_width;
+uint32_t retro_screen_height;
+
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -591,4 +594,14 @@ int retro_return(int just_flipping)
       co_switch(retro_thread);
 
    return 0;
+}
+
+uint32_t get_retro_screen_width()
+{
+   return retro_screen_width;
+}
+
+uint32_t get_retro_screen_height()
+{
+   return retro_screen_height;
 }

@@ -28,6 +28,15 @@
 
 extern void plugin_connect_all();
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+uint32_t get_retro_screen_width();
+uint32_t get_retro_screen_height();
+#ifdef __cplusplus
+}
+#endif
+
 extern GFX_INFO gfx_info;
 
 extern CONTROL Controls[4];
@@ -88,7 +97,5 @@ typedef struct _rsp_plugin_functions
 
 extern rsp_plugin_functions rsp;
 
-uint32_t retro_screen_width;
-uint32_t retro_screen_height;
 #endif
 
