@@ -23,7 +23,7 @@ Most of the modifications have involved removing dependencies on SDL, and modify
 
 Cheats
 
-Windows, Android, iOS. I don't have those types of systems so I can't test them. I am more than willing to accept pull requests however.
+Windows, iOS. I don't have those types of systems so I can't test them. I am more than willing to accept pull requests however.
 
 #### Acknowledgments
 
