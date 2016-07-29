@@ -59,9 +59,7 @@ void OGLVideoMupenPlus::_stop()
 
 void OGLVideoMupenPlus::_swapBuffers()
 {
-	glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
 	retro_return(true);
-	glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
 }
 
 void OGLVideoMupenPlus::_saveScreenshot()
