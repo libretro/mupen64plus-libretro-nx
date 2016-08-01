@@ -23,23 +23,3 @@ void Config_LoadConfig()
 	config.resetToDefaults();
 	config.frameBufferEmulation.enable = 0;
 }
-
-EXPORT int CALL osal_path_existsW(const wchar_t *_path) {
-    char path[PATH_MAX];
-    wcstombs(path, _path, PATH_MAX);
-    struct stat fileinfo;
-    return stat(path, &fileinfo) == 0 ? 1 : 0;
-}
-
-EXPORT int CALL osal_is_directory(const wchar_t * _name) {
-    char name[PATH_MAX + 1];
-    wcstombs(name, _name, PATH_MAX);
-    DIR* dir;
-    dir = opendir(name);
-    if(dir != NULL)
-    {
-        closedir(dir);
-        return 1;
-    }
-    return 0;
-}
