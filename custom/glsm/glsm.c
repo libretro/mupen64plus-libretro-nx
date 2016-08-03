@@ -1579,6 +1579,9 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  */
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
+   if (framebuffer == 0)
+      framebuffer = hw_render.get_current_framebuffer();
+
    if (gl_state.framebuf != framebuffer) {
       glBindFramebuffer(target, framebuffer);
       gl_state.framebuf = framebuffer;
@@ -1979,7 +1982,7 @@ static void glsm_state_bind(void)
          glEnable(gl_state.cap_translate[i]);
    }
 
-   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, hw_render.get_current_framebuffer());
+   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, gl_state.framebuf);
 
    if (gl_state.blendfunc.used && gl_state.cap_state[SGL_BLEND])
       glBlendFunc(
