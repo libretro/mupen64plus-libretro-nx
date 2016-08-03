@@ -1977,22 +1977,16 @@ static void glsm_state_bind(void)
    {
       if (gl_state.cap_state[i])
          glEnable(gl_state.cap_translate[i]);
-#ifdef HAVE_OPENGLES
-      else if (gl_state.cap_translate[i] != GL_FOG && gl_state.cap_translate[i] != GL_ALPHA_TEST)
-#else
-      else
-#endif
-         glDisable(gl_state.cap_translate[i]);
    }
 
    glBindFramebuffer(RARCH_GL_FRAMEBUFFER, hw_render.get_current_framebuffer());
 
-   if (gl_state.blendfunc.used)
+   if (gl_state.blendfunc.used && gl_state.cap_state[SGL_BLEND])
       glBlendFunc(
             gl_state.blendfunc.sfactor,
             gl_state.blendfunc.dfactor);
 
-   if (gl_state.blendfunc_separate.used)
+   if (gl_state.blendfunc_separate.used && gl_state.cap_state[SGL_BLEND])
       glBlendFuncSeparate(
             gl_state.blendfunc_separate.srcRGB,
             gl_state.blendfunc_separate.dstRGB,
@@ -2006,7 +2000,7 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
-   if (gl_state.depthfunc.used)
+   if (gl_state.depthfunc.used && gl_state.cap_state[SGL_DEPTH_TEST])
       glDepthFunc(gl_state.depthfunc.func);
 
    if (gl_state.colormask.used)
@@ -2016,18 +2010,18 @@ static void glsm_state_bind(void)
             gl_state.colormask.blue,
             gl_state.colormask.alpha);
 
-   if (gl_state.cullface.used)
+   if (gl_state.cullface.used && gl_state.cap_state[SGL_CULL_FACE])
       glCullFace(gl_state.cullface.mode);
 
    if (gl_state.depthmask.used)
       glDepthMask(gl_state.depthmask.mask);
 
-   if (gl_state.polygonoffset.used)
+   if (gl_state.polygonoffset.used && gl_state.cap_state[SGL_POLYGON_OFFSET_FILL])
       glPolygonOffset(
             gl_state.polygonoffset.factor,
             gl_state.polygonoffset.units);
 
-   if (gl_state.scissor.used)
+   if (gl_state.scissor.used && gl_state.cap_state[SGL_SCISSOR_TEST])
       glScissor(
             gl_state.scissor.x,
             gl_state.scissor.y,
@@ -2045,18 +2039,18 @@ static void glsm_state_bind(void)
    glBindVertexArray(gl_state.vao);
 #endif
 
-   if (gl_state.frontface.used)
+   if (gl_state.frontface.used && gl_state.cap_state[SGL_CULL_FACE])
       glFrontFace(gl_state.frontface.mode);
 
    if (gl_state.stencilmask.used)
       glStencilMask(gl_state.stencilmask.mask);
 
-   if (gl_state.stencilop.used)
+   if (gl_state.stencilop.used && gl_state.cap_state[SGL_STENCIL_TEST])
       glStencilOp(gl_state.stencilop.sfail,
             gl_state.stencilop.dpfail,
             gl_state.stencilop.dppass);
 
-   if (gl_state.stencilfunc.used)
+   if (gl_state.stencilfunc.used && gl_state.cap_state[SGL_STENCIL_TEST])
       glStencilFunc(
             gl_state.stencilfunc.func,
             gl_state.stencilfunc.ref,
