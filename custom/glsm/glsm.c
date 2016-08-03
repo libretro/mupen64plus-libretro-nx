@@ -1957,6 +1957,8 @@ static void glsm_state_setup(void)
 
 static void glsm_state_bind(void)
 {
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
    unsigned i;
 
    for (i = 0; i < MAX_ATTRIB; i++)
@@ -1989,14 +1991,6 @@ static void glsm_state_bind(void)
             gl_state.blendfunc.sfactor,
             gl_state.blendfunc.dfactor);
 
-   if (gl_state.blendfunc_separate.used && gl_state.cap_state[SGL_BLEND])
-      glBlendFuncSeparate(
-            gl_state.blendfunc_separate.srcRGB,
-            gl_state.blendfunc_separate.dstRGB,
-            gl_state.blendfunc_separate.srcAlpha,
-            gl_state.blendfunc_separate.dstAlpha
-            );
-
    glClearColor(
          gl_state.clear_color.r,
          gl_state.clear_color.g,
@@ -2005,13 +1999,6 @@ static void glsm_state_bind(void)
 
    if (gl_state.depthfunc.used && gl_state.cap_state[SGL_DEPTH_TEST])
       glDepthFunc(gl_state.depthfunc.func);
-
-   if (gl_state.colormask.used)
-      glColorMask(
-            gl_state.colormask.red,
-            gl_state.colormask.green,
-            gl_state.colormask.blue,
-            gl_state.colormask.alpha);
 
    if (gl_state.cullface.used && gl_state.cap_state[SGL_CULL_FACE])
       glCullFace(gl_state.cullface.mode);
@@ -2038,26 +2025,6 @@ static void glsm_state_bind(void)
          gl_state.viewport.y,
          gl_state.viewport.w,
          gl_state.viewport.h);
-#ifdef CORE
-   glBindVertexArray(gl_state.vao);
-#endif
-
-   if (gl_state.frontface.used && gl_state.cap_state[SGL_CULL_FACE])
-      glFrontFace(gl_state.frontface.mode);
-
-   if (gl_state.stencilmask.used)
-      glStencilMask(gl_state.stencilmask.mask);
-
-   if (gl_state.stencilop.used && gl_state.cap_state[SGL_STENCIL_TEST])
-      glStencilOp(gl_state.stencilop.sfail,
-            gl_state.stencilop.dpfail,
-            gl_state.stencilop.dppass);
-
-   if (gl_state.stencilfunc.used && gl_state.cap_state[SGL_STENCIL_TEST])
-      glStencilFunc(
-            gl_state.stencilfunc.func,
-            gl_state.stencilfunc.ref,
-            gl_state.stencilfunc.mask);
 
    for (i = 0; i < glsm_max_textures; i ++)
    {
@@ -2066,16 +2033,12 @@ static void glsm_state_bind(void)
    }
 
    glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
-
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 static void glsm_state_unbind(void)
 {
    unsigned i;
-#ifdef CORE
-   glBindVertexArray(0);
-#endif
+
    for (i = 0; i < SGL_CAP_MAX; i ++)
    {
       if (gl_state.cap_state[i])
