@@ -165,7 +165,6 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
 
 SOURCES_CXX   += \
-	$(VIDEODIR_GLIDEN64)/src/3DMath.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
 	$(ROOT_DIR)/custom/GLideN64/CommonPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Config.cpp \
@@ -219,10 +218,15 @@ SOURCES_CXX   += \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
 
 ifeq ($(HAVE_NEON),1)
+	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMathNeon.cpp \
+		$(VIDEODIR_GLIDEN64)/src/gSPNeon.cpp
+
 	SOURCES_ASM += $(LIBRETRO_COMM_DIR)/conversion/float_to_s16_neon.S \
 		$(LIBRETRO_COMM_DIR)/conversion/s16_to_float_neon.S \
 		$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler_neon.S \
 		$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler_neon.S
+else
+	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
 
 ifeq ($(HAVE_OPENGL),1)
