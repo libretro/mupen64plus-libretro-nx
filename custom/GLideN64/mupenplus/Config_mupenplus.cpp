@@ -1,4 +1,5 @@
 #include "GLideN64_mupenplus.h"
+#include "GLideN64_libretro.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -22,4 +23,7 @@ void Config_LoadConfig()
 {
 	config.resetToDefaults();
 	config.frameBufferEmulation.enable = 0;
+	config.texture.bilinearMode = bilinearMode;
+	config.generalEmulation.enableNoise = EnableNoise;
+	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 }

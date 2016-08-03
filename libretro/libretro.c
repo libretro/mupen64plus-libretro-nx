@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "libretro.h"
+#include "GLideN64_libretro.h"
 #include <libco.h>
 
 #include <glsm/glsmsym.h>
@@ -65,7 +66,9 @@ uint32_t *blitter_buf_lock   = NULL;
 
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
-
+unsigned int bilinearMode = 0;
+unsigned int EnableNoise = 0;
+unsigned int enableLegacyBlending = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -115,6 +118,12 @@ static void setup_variables(void)
         "Player 4 Pak; none|memory|rumble"},
       { "glupen64-screensize",
          "Resolution (restart); 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
+      { "bilinearMode",
+         "Bilinear filtering mode; standard|3point" },
+      { "EnableNoise",
+         "Enable color noise emulation; True|False" },
+      { "enableLegacyBlending",
+         "Faster but less accurate blending mode; True|False" },
       { NULL, NULL },
    };
 
@@ -318,6 +327,36 @@ extern void ChangeSize();
 void update_variables(bool startup)
 {
    struct retro_variable var;
+
+   var.key = "bilinearMode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "standard"))
+         bilinearMode = 1;
+      else
+         bilinearMode = 0;
+   }
+
+   var.key = "EnableNoise";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableNoise = 1;
+      else
+         EnableNoise = 0;
+   }
+
+   var.key = "enableLegacyBlending";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         enableLegacyBlending = 1;
+      else
+         enableLegacyBlending = 0;
+   }
 
    var.key = "glupen64-cpucore";
    var.value = NULL;
