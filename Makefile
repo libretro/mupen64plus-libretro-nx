@@ -91,11 +91,11 @@ ifneq (,$(findstring unix,$(platform)))
       INCFLAGS += -I/opt/vc/include
       WITH_DYNAREC=arm
       ifneq (,$(findstring rpi2,$(platform)))
-         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC
+         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC -DUSE_DEPTH_RENDERBUFFER
          CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
          HAVE_NEON = 1
       else ifneq (,$(findstring rpi3,$(platform)))
-         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC
+         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC -DUSE_DEPTH_RENDERBUFFER
          CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
          HAVE_NEON = 1
       else
