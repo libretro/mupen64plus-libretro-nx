@@ -1916,7 +1916,7 @@ static void glsm_state_setup(void)
    gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
    gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
 #endif
-   gl_state.cap_state[SGL_DITHER] = 1;
+
    for (i = 0; i < MAX_ATTRIB; i++)
       gl_state.vertex_attrib_pointer.enabled[i] = 0;
 
@@ -1926,7 +1926,7 @@ static void glsm_state_setup(void)
 
    gl_state.framebuf                    = hw_render.get_current_framebuffer();
    gl_state.cullface.mode               = GL_BACK;
-   gl_state.frontface.mode              = GL_CCW; 
+   gl_state.frontface.mode              = GL_CCW;
 
    gl_state.blendfunc_separate.used     = false;
    gl_state.blendfunc_separate.srcRGB   = GL_ONE;
