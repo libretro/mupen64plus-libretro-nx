@@ -42,6 +42,14 @@ struct gl_cached_state
       const GLvoid *pointer[MAX_ATTRIB];
    } attrib_pointer;
 
+   struct
+   {
+      GLint param1[32000];
+      GLint param2[32000];
+      GLint param3[32000];
+      GLint param4[32000];
+   } tex_param;
+
 #ifndef HAVE_OPENGLES
    GLenum colorlogicop;
 #endif
@@ -118,7 +126,6 @@ struct gl_cached_state
       bool used;
       GLenum func;
    } depthfunc;
-
 
    struct
    {
@@ -1174,6 +1181,35 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 #ifdef HAVE_LEGACY_GL
    glTexCoord2f(s, t);
 #endif
+}
+
+void rglTexParameteri(GLenum target, GLenum pname, GLint param)
+{
+   GLuint active = gl_state.bind_textures.ids[gl_state.active_texture];
+   if (pname == GL_TEXTURE_MIN_FILTER) {
+      if (gl_state.tex_param.param1[active] != param) {
+         glTexParameteri(target, pname, param);
+         gl_state.tex_param.param1[active] = param;
+      }
+   }
+   else if (pname == GL_TEXTURE_MAG_FILTER) {
+      if (gl_state.tex_param.param2[active] != param) {
+         glTexParameteri(target, pname, param);
+         gl_state.tex_param.param2[active] = param;
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_S) {
+      if (gl_state.tex_param.param3[active] != param) {
+         glTexParameteri(target, pname, param);
+         gl_state.tex_param.param3[active] = param;
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_T) {
+      if (gl_state.tex_param.param4[active] != param) {
+         glTexParameteri(target, pname, param);
+         gl_state.tex_param.param4[active] = param;
+      }
+   }
 }
 
 /*
