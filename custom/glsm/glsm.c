@@ -44,10 +44,10 @@ struct gl_cached_state
 
    struct
    {
-      GLint param1[32000];
-      GLint param2[32000];
-      GLint param3[32000];
-      GLint param4[32000];
+      GLint param1[128000];
+      GLint param2[128000];
+      GLint param3[128000];
+      GLint param4[128000];
    } tex_param;
 
 #ifndef HAVE_OPENGLES
