@@ -2001,19 +2001,20 @@ static void glsm_state_bind(void)
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
-      if (gl_state.vertex_attrib_pointer.enabled[i]) {
+      if (gl_state.vertex_attrib_pointer.enabled[i])
          glEnableVertexAttribArray(i);
-         if (gl_state.attrib_pointer.used[i]){
+      else
+         glDisableVertexAttribArray(i);
+
+      if (gl_state.attrib_pointer.used[i]){
          glVertexAttribPointer(
             i,
             gl_state.attrib_pointer.size[i],
             gl_state.attrib_pointer.type[i],
             gl_state.attrib_pointer.normalized[i],
             gl_state.attrib_pointer.stride[i],
-            gl_state.attrib_pointer.pointer[i]);}
+            gl_state.attrib_pointer.pointer[i]);
       }
-      else
-         glDisableVertexAttribArray(i);
    }
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
@@ -2024,7 +2025,7 @@ static void glsm_state_bind(void)
 
    glBindFramebuffer(RARCH_GL_FRAMEBUFFER, gl_state.framebuf);
 
-   if (gl_state.blendfunc.used && gl_state.cap_state[SGL_BLEND])
+   if (gl_state.blendfunc.used)
       glBlendFunc(
             gl_state.blendfunc.sfactor,
             gl_state.blendfunc.dfactor);
@@ -2035,21 +2036,21 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
-   if (gl_state.depthfunc.used && gl_state.cap_state[SGL_DEPTH_TEST])
+   if (gl_state.depthfunc.used)
       glDepthFunc(gl_state.depthfunc.func);
 
-   if (gl_state.cullface.used && gl_state.cap_state[SGL_CULL_FACE])
+   if (gl_state.cullface.used)
       glCullFace(gl_state.cullface.mode);
 
    if (gl_state.depthmask.used)
       glDepthMask(gl_state.depthmask.mask);
 
-   if (gl_state.polygonoffset.used && gl_state.cap_state[SGL_POLYGON_OFFSET_FILL])
+   if (gl_state.polygonoffset.used)
       glPolygonOffset(
             gl_state.polygonoffset.factor,
             gl_state.polygonoffset.units);
 
-   if (gl_state.scissor.used && gl_state.cap_state[SGL_SCISSOR_TEST])
+   if (gl_state.scissor.used)
       glScissor(
             gl_state.scissor.x,
             gl_state.scissor.y,
