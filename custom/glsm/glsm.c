@@ -1957,6 +1957,8 @@ static void glsm_state_setup(void)
       gl_state.vertex_attrib_pointer.enabled[i] = 0;
 
    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
+   if (glsm_max_textures > 32)
+      glsm_max_textures = 32;
 
    gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
 
