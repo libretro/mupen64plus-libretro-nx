@@ -26,7 +26,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <libretro_private.h>
 
 #include "ai/ai_controller.h"
 #include "api/callbacks.h"
@@ -528,7 +527,6 @@ void gen_interupt(void)
         case VI_INT:
             remove_interupt_event();
             vi_vertical_interrupt_event(&g_vi);
-            retro_return(false);
             break;
     
         case COMPARE_INT:

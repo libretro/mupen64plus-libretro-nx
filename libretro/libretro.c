@@ -49,7 +49,6 @@ static cothread_t game_thread;
 cothread_t retro_thread;
 
 int astick_deadzone;
-bool flip_only;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -164,15 +163,6 @@ load_fail:
    game_data = NULL;
    stop = 1;
 
-   return false;
-}
-
-bool emu_step_render(void)
-{
-   if (flip_only) {
-      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-      return true;
-   }
    return false;
 }
 
@@ -557,15 +547,11 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
-   static bool updated = false;
-
-
    blitter_buf_lock = blitter_buf;
-   do {
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    co_switch(game_thread);
    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-   } while (emu_step_render());
+   video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
 }
 
 void retro_reset (void)
@@ -641,9 +627,7 @@ void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
 int retro_return(int just_flipping)
 {
-
-      flip_only = just_flipping;
-      co_switch(retro_thread);
+   co_switch(retro_thread);
 
    return 0;
 }
