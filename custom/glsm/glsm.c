@@ -2065,12 +2065,8 @@ static void glsm_state_bind(void)
          gl_state.viewport.w,
          gl_state.viewport.h);
 
-   for (i = 0; i < glsm_max_textures; i ++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[i]);
-   }
-
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[0]);
    glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
 }
 
