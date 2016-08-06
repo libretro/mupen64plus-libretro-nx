@@ -236,6 +236,11 @@ ifeq ($(GLES),1)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLES2/GLSLCombiner_gles2.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAMStub.cpp
+else ifeq ($(GLES3),1)
+	GLFLAGS += -DHAVE_OPENGLES3 -DGLES3
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
+	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
+		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
 else
 	GLFLAGS += -DHAVE_OPENGL
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
