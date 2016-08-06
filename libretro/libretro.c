@@ -72,6 +72,7 @@ unsigned int EnableHWLighting = 0;
 unsigned int CorrectTexrectCoords = 0;
 unsigned int enableNativeResTexrects = 0;
 unsigned int enableLegacyBlending = 0;
+unsigned int EnableFBEmulation = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -111,6 +112,12 @@ static void setup_variables(void)
          "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
       { "glupen64-bilinearMode",
          "Bilinear filtering mode; standard|3point" },
+      { "glupen64-EnableFBEmulation",
+#ifdef GLES2
+         "Enable frame buffer emulation; False|True" },
+#else
+         "Enable frame buffer emulation; True|False" },
+#endif
       { "glupen64-EnableNoise",
          "Enable color noise emulation; True|False" },
       { "glupen64-EnableLOD",
@@ -342,6 +349,16 @@ void update_variables(bool startup)
          bilinearMode = 1;
       else
          bilinearMode = 0;
+   }
+
+   var.key = "glupen64-EnableFBEmulation";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableFBEmulation = 1;
+      else
+         EnableFBEmulation = 0;
    }
 
    var.key = "glupen64-EnableNoise";

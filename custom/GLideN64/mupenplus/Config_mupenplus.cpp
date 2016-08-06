@@ -22,7 +22,7 @@ Config config;
 void Config_LoadConfig()
 {
 	config.resetToDefaults();
-	config.frameBufferEmulation.enable = 0;
+	config.frameBufferEmulation.enable = EnableFBEmulation;
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableNoise = EnableNoise;
 	config.generalEmulation.enableLOD = EnableLOD;

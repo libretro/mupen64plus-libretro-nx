@@ -51,4 +51,5 @@ extern unsigned int EnableHWLighting;
 extern unsigned int CorrectTexrectCoords;
 extern unsigned int enableNativeResTexrects;
 extern unsigned int enableLegacyBlending;
+extern unsigned int EnableFBEmulation;
 #endif
