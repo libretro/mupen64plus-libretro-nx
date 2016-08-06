@@ -46,5 +46,9 @@ extern GLState glState;
 
 extern unsigned int bilinearMode;
 extern unsigned int EnableNoise;
+extern unsigned int EnableLOD;
+extern unsigned int EnableHWLighting;
+extern unsigned int CorrectTexrectCoords;
+extern unsigned int enableNativeResTexrects;
 extern unsigned int enableLegacyBlending;
 #endif

@@ -67,6 +67,10 @@ uint32_t retro_screen_width;
 uint32_t retro_screen_height;
 unsigned int bilinearMode = 0;
 unsigned int EnableNoise = 0;
+unsigned int EnableLOD = 0;
+unsigned int EnableHWLighting = 0;
+unsigned int CorrectTexrectCoords = 0;
+unsigned int enableNativeResTexrects = 0;
 unsigned int enableLegacyBlending = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -103,6 +107,26 @@ static void setup_variables(void)
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
+      { "glupen64-screensize",
+         "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
+      { "glupen64-bilinearMode",
+         "Bilinear filtering mode; standard|3point" },
+      { "glupen64-EnableNoise",
+         "Enable color noise emulation; True|False" },
+      { "glupen64-EnableLOD",
+         "Enable LOD emulation; True|False" },
+      { "glupen64-EnableHWLighting",
+         "Enable hardware per-pixel lighting; False|True" },
+      { "glupen64-CorrectTexrectCoords",
+         "Make texrect coordinates continuous (0=Off, 1=Auto, 2=Force); 0|1|2" },
+      { "glupen64-enableNativeResTexrects",
+         "Render 2D texrects in native resolution; False|True" },
+      { "glupen64-enableLegacyBlending",
+#if defined(VC) || defined(ANDROID)
+         "Faster but less accurate blending mode; True|False" },
+#else
+         "Faster but less accurate blending mode; False|True" },
+#endif
       {"glupen64-audio-buffer-size",
          "Audio Buffer Size (restart); 2048|1024"},
       {"glupen64-astick-deadzone",
@@ -115,14 +139,6 @@ static void setup_variables(void)
         "Player 3 Pak; none|memory|rumble"},
       {"glupen64-pak4",
         "Player 4 Pak; none|memory|rumble"},
-      { "glupen64-screensize",
-         "Resolution (restart); 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
-      { "bilinearMode",
-         "Bilinear filtering mode; standard|3point" },
-      { "EnableNoise",
-         "Enable color noise emulation; True|False" },
-      { "enableLegacyBlending",
-         "Faster but less accurate blending mode; True|False" },
       { NULL, NULL },
    };
 
@@ -318,7 +334,7 @@ void update_variables(bool startup)
 {
    struct retro_variable var;
 
-   var.key = "bilinearMode";
+   var.key = "glupen64-bilinearMode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -328,7 +344,7 @@ void update_variables(bool startup)
          bilinearMode = 0;
    }
 
-   var.key = "EnableNoise";
+   var.key = "glupen64-EnableNoise";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -338,7 +354,49 @@ void update_variables(bool startup)
          EnableNoise = 0;
    }
 
-   var.key = "enableLegacyBlending";
+   var.key = "glupen64-EnableLOD";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableLOD = 1;
+      else
+         EnableLOD = 0;
+   }
+
+   var.key = "glupen64-EnableHWLighting";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableHWLighting = 1;
+      else
+         EnableHWLighting = 0;
+   }
+
+   var.key = "glupen64-CorrectTexrectCoords";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "0"))
+         CorrectTexrectCoords = 0;
+      else if (!strcmp(var.value, "1"))
+         CorrectTexrectCoords = 1;
+      else
+         CorrectTexrectCoords = 2;
+   }
+
+   var.key = "glupen64-enableNativeResTexrects";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         enableNativeResTexrects = 1;
+      else
+         enableNativeResTexrects = 0;
+   }
+
+   var.key = "glupen64-enableLegacyBlending";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {

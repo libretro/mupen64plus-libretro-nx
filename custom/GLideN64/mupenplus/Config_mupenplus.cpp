@@ -25,5 +25,9 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.enable = 0;
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableNoise = EnableNoise;
+	config.generalEmulation.enableLOD = EnableLOD;
+	config.generalEmulation.enableHWLighting = EnableHWLighting;
+	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
+	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 }
