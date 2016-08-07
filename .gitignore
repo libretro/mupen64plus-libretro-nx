@@ -1,7 +1,7 @@
 *.o
 *.dll
 *.dylib
-*.so
+*libretro*.so
 *.d
 *.js
 *.bc
