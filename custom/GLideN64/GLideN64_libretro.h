@@ -52,4 +52,9 @@ extern unsigned int CorrectTexrectCoords;
 extern unsigned int enableNativeResTexrects;
 extern unsigned int enableLegacyBlending;
 extern unsigned int EnableFBEmulation;
+extern unsigned int UseNativeResolutionFactor;
+extern unsigned int EnableCopyAuxiliaryToRDRAM;
+extern unsigned int EnableCopyColorToRDRAM;
+extern unsigned int EnableCopyDepthToRDRAM;
+extern unsigned int EnableCopyColorFromRDRAM;
 #endif

@@ -30,4 +30,9 @@ void Config_LoadConfig()
 	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
 	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
+	config.frameBufferEmulation.nativeResFactor = UseNativeResolutionFactor;
+	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
+	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
+	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
+	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 }
