@@ -118,21 +118,8 @@ struct gl_cached_state
    struct
    {
       bool used;
-      GLdouble depth;
-   } cleardepth;
-
-   struct
-   {
-      bool used;
       GLenum func;
    } depthfunc;
-
-   struct
-   {
-      bool used;
-      GLclampd zNear;
-      GLclampd zFar;
-   } depthrange;
 
    struct
    {
@@ -307,18 +294,6 @@ void rglReadBuffer(GLenum mode)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglClearDepth(GLdouble depth)
-{
-   gl_state.cleardepth.used  = true;
-   if (gl_state.cleardepth.depth != depth) {
-#ifdef HAVE_OPENGLES
-      glClearDepthf(depth);
-#else
-      glClearDepth(depth);
-#endif
-      gl_state.cleardepth.depth = depth;
-   }
-}
 
 /*
  *
@@ -339,19 +314,6 @@ void rglPixelStorei(GLenum pname, GLint param)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglDepthRange(GLclampd zNear, GLclampd zFar)
-{
-   gl_state.depthrange.used  = true;
-   if (gl_state.depthrange.zNear != zNear || gl_state.depthrange.zFar  != zFar) {
-#ifdef HAVE_OPENGLES
-      glDepthRangef(zNear, zFar);
-#else
-      glDepthRange(zNear, zFar);
-#endif
-      gl_state.depthrange.zNear = zNear;
-      gl_state.depthrange.zFar  = zFar;
-   }
-}
 
 /*
  *
@@ -828,13 +790,6 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
  * Core in:
  * OpenGL    : 3.0 
  */
-void rglBindFragDataLocation(GLuint program, GLuint colorNumber,
-                                   const char * name)
-{
-#if !defined(HAVE_OPENGLES2)
-   glBindFragDataLocation(program, colorNumber, name);
-#endif
-}
 
 
 /*
@@ -1777,14 +1732,6 @@ void rglTexImage2DMultisample( 	GLenum target,
  * Core in:
  * OpenGL    : 1.5 
  */
-void * rglMapBuffer(	GLenum target, GLenum access)
-{
-#if defined(HAVE_OPENGLES)
-   return glMapBufferOES(target, access);
-#else
-   return glMapBuffer(target, access);
-#endif
-}
 
 /*
  *

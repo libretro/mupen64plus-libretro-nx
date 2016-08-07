@@ -233,13 +233,13 @@ else ifneq (,$(findstring android,$(platform)))
    fpic = -fPIC
    TARGET := $(TARGET_NAME)_libretro_android.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common
-   LDFLAGS += -llog
-   GL_LIB := -lGLESv2
+   LDFLAGS += -llog -L$(ROOT_DIR)/custom
+   GL_LIB := -lGLESv3
 
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
    WITH_DYNAREC=arm
-   GLES = 1
+   GLES3 = 1
    PLATCFLAGS += -DANDROID
    CPUCFLAGS  += -DNO_ASM
    HAVE_NEON = 1

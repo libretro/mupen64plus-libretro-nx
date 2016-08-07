@@ -115,8 +115,6 @@ RETRO_BEGIN_DECLS
 #define glCullFace                  rglCullFace
 #define glStencilOp                 rglStencilOp
 #define glFrontFace                 rglFrontFace
-#define glDepthRange                rglDepthRange
-#define glClearDepth                rglClearDepth
 #define glPolygonOffset             rglPolygonOffset
 #define glPixelStorei               rglPixelStorei
 #define glReadBuffer                rglReadBuffer
@@ -130,7 +128,6 @@ RETRO_BEGIN_DECLS
 #define glBlendColor                rglBlendColor
 #define glBlendEquationSeparate     rglBlendEquationSeparate
 #define glCopyImageSubData          rglCopyImageSubData
-#define glMapBuffer                 rglMapBuffer
 #define glUnmapBuffer               rglUnmapBuffer
 #define glMapBufferRange            rglMapBufferRange
 #define glUniformBlockBinding       rglUniformBlockBinding
@@ -317,8 +314,6 @@ void rglStencilFunc(GLenum func, GLint ref, GLuint mask);
 void rglCullFace(GLenum mode);
 void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass);
 void rglFrontFace(GLenum mode);
-void rglDepthRange(GLclampd zNear, GLclampd zFar);
-void rglClearDepth(GLdouble depth);
 void rglPolygonOffset(GLfloat factor, GLfloat units);
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count);
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
