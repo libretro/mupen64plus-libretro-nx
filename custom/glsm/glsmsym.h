@@ -158,6 +158,7 @@ RETRO_BEGIN_DECLS
 #define glClearBufferfi             rglClearBufferfi
 #define glWaitSync                  rglWaitSync
 #define glFenceSync                 rglFenceSync
+#define glUnmapBuffer               rglUnmapBuffer
 
 const GLubyte* rglGetStringi(GLenum name, GLuint index);
 void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer);

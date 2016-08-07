@@ -314,7 +314,10 @@ void rglPixelStorei(GLenum pname, GLint param)
  * Core in:
  * OpenGLES  : 2.0
  */
-
+GLboolean rglUnmapBuffer(GLenum target)
+{
+   glUnmapBuffer(target);
+}
 /*
  *
  * Core in:
