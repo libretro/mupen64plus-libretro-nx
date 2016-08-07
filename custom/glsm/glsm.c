@@ -316,7 +316,9 @@ void rglPixelStorei(GLenum pname, GLint param)
  */
 GLboolean rglUnmapBuffer(GLenum target)
 {
+#ifndef HAVE_OPENGLES2
    glUnmapBuffer(target);
+#endif
 }
 /*
  *
