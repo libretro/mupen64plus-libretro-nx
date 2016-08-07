@@ -233,7 +233,7 @@ else ifneq (,$(findstring theos_ios,$(platform)))
 else ifneq (,$(findstring android,$(platform)))
    fpic = -fPIC
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common
-   LDFLAGS += -llog -L$(ROOT_DIR)/custom
+   LDFLAGS += -llog
    ifneq (,$(findstring gles2,$(platform)))
    GL_LIB := -lGLESv2
    GLES = 1
