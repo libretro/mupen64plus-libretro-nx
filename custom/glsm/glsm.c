@@ -1738,14 +1738,6 @@ void rglTexImage2DMultisample( 	GLenum target,
  * Core in:
  * OpenGL    : 1.5 
  */
-GLboolean rglUnmapBuffer( 	GLenum target)
-{
-#if defined(HAVE_OPENGLES)
-   return glUnmapBufferOES(target);
-#else
-   return glUnmapBuffer(target);
-#endif
-}
 
 void rglBlendEquation(GLenum mode)
 {
