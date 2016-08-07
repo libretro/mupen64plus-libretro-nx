@@ -80,7 +80,7 @@ ifneq (,$(findstring unix,$(platform)))
       GL_LIB := -lGLESv2
    else ifeq ($(FORCE_GLES3),1)
       GLES3 = 1
-      GL_LIB := -lGL
+      GL_LIB := -lGLESv2
    else ifneq (,$(findstring gles,$(platform)))
       GLES = 1
       GL_LIB := -lGLESv2
