@@ -66,6 +66,7 @@ SOURCES_C += \
 	$(CORE_DIR)/src/plugin/dummy_audio.c \
 	$(CORE_DIR)/src/plugin/dummy_input.c \
 	$(CORE_DIR)/src/plugin/dummy_rsp.c \
+	$(CORE_DIR)/src/osal/files_unix.c \
 	$(CORE_DIR)/src/r4300/r4300.c \
 	$(CORE_DIR)/src/r4300/cached_interp.c \
 	$(CORE_DIR)/src/r4300/cp0.c \
@@ -162,8 +163,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
 	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
-	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
-	$(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
+	$(LIBRETRO_COMM_DIR)/features/features_cpu.c
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \

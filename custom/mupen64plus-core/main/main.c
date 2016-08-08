@@ -415,24 +415,6 @@ m64p_error main_run(void)
     r4300_reset_soft();
     r4300_execute();
 
-    /* now begin to shut down */
-#ifdef WITH_LIRC
-    lircStop();
-#endif // WITH_LIRC
-
-#ifdef DBG
-    if (g_DebuggerActive)
-        destroy_debugger();
-#endif
-
-    rsp.romClosed();
-    input.romClosed();
-    gfx.romClosed();
-
-    // clean up
-    g_EmulatorRunning = 0;
-    StateChanged(M64CORE_EMU_STATE, M64EMU_STOPPED);
-
     return M64ERR_SUCCESS;
 }
 
@@ -450,5 +432,14 @@ void main_stop(void)
     {
         debugger_step();
     }
-#endif        
+    if (g_DebuggerActive)
+        destroy_debugger();
+#endif
+    rsp.romClosed();
+    input.romClosed();
+    gfx.romClosed();
+
+    // clean up
+    g_EmulatorRunning = 0;
+    StateChanged(M64CORE_EMU_STATE, M64EMU_STOPPED);
 }

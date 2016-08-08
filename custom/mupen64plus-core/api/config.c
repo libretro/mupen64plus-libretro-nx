@@ -1449,5 +1449,5 @@ EXPORT const char * CALL ConfigGetUserDataPath(void)
 
 EXPORT const char * CALL ConfigGetUserCachePath(void)
 {
-  return "";
+  return osal_get_user_cachepath();
 }
