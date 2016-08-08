@@ -2046,7 +2046,7 @@ static bool glsm_state_ctx_init(void *data)
    hw_render.version_major      = 3;
    hw_render.version_minor      = 1;
 #elif defined(HAVE_OPENGLES3)
-   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES3;
+   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES2;
 #else
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES2;
 #endif
