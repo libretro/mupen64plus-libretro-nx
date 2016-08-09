@@ -118,11 +118,7 @@ static void setup_variables(void)
       { "glupen64-bilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
-#ifdef GLES2
-         "Enable frame buffer emulation; False|True" },
-#else
          "Enable frame buffer emulation; True|False" },
-#endif
       { "glupen64-UseNativeResolutionFactor",
          "Frame buffer size is the factor of N64 native resolution; 0|1|2|4" },
       { "glupen64-EnableCopyAuxiliaryToRDRAM",

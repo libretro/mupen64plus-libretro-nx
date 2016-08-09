@@ -4,6 +4,7 @@
 #ifdef GLES2
 #define GL_DRAW_FRAMEBUFFER GL_FRAMEBUFFER
 #define GL_READ_FRAMEBUFFER GL_FRAMEBUFFER
+#define NO_BLIT_BUFFER_COPY
 #define GLESX
 #ifdef PANDORA
 typedef char GLchar;
