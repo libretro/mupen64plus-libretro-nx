@@ -157,7 +157,6 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_backend_libretro.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_resampler_driver.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler.c \
-	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/nearest.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \

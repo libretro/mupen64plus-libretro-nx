@@ -1,5 +1,5 @@
 /*  RetroArch - A frontend for libretro.
- *  Copyright (C) 2014-2015 - Ali Bouhlel ( aliaspider@gmail.com )
+ *  Copyright (C) 2014-2016 - Ali Bouhlel ( aliaspider@gmail.com )
  *
  *  RetroArch is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU General Public License as published by the Free Software Found-
@@ -15,14 +15,18 @@
 
 /* Convoluted Cosine Resampler */
 
-#include "../audio_resampler_driver.h"
-#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+
 #ifdef __SSE__
 #include <xmmintrin.h>
 #endif
+
 #include <retro_inline.h>
+#include <retro_miscellaneous.h>
+#include <memalign.h>
+
+#include "../audio_resampler_driver.h"
 
 /* Since SSE and NEON don't provide support for trigonometric functions
  * we approximate those with polynoms
@@ -42,10 +46,6 @@
 #define CC_RESAMPLER_PRECISION 1
 #endif
 
-#ifndef min
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 typedef struct rarch_CC_resampler
 {
    audio_frame_float_t buffer[4];
@@ -54,34 +54,6 @@ typedef struct rarch_CC_resampler
    void (*process)(void *re, struct resampler_data *data);
 } rarch_CC_resampler_t;
 
-/* memalign() replacement functions
- * copied from sinc.c and changed signature so no conflict
- * happens when using griffin.c
- * these functions should probably be moved to a common header
- */
-
-static void *memalign_alloc__(size_t boundary, size_t size)
-{
-   void **place;
-   uintptr_t addr = 0;
-   void *ptr = malloc(boundary + size + sizeof(uintptr_t));
-   if (!ptr)
-      return NULL;
-
-   addr           = ((uintptr_t)
-         ptr + sizeof(uintptr_t) + boundary)
-      & ~(boundary - 1);
-   place          = (void**)addr;
-   place[-1]      = ptr;
-
-   return (void*)addr;
-}
-
-static void memalign_free__(void *ptr)
-{
-   void **p = (void**)ptr;
-   free(p[-1]);
-}
 
 #ifdef _MIPS_ARCH_ALLEGREX
 static void resampler_CC_process(void *re_, struct resampler_data *data)
@@ -177,12 +149,6 @@ done:
    data->output_frames = outp - (audio_frame_float_t*)data->data_out;
 }
 
-
-static void resampler_CC_free(void *re_)
-{
-   (void)re_;
-}
-
 static void *resampler_CC_init(const struct resampler_config *config,
       double bandwidth_mod, resampler_simd_mask_t mask)
 {
@@ -206,25 +172,21 @@ static void *resampler_CC_init(const struct resampler_config *config,
 }
 #else
 
-
 #if defined(__SSE__)
 #define CC_RESAMPLER_IDENT "SSE"
 
 static void resampler_CC_downsample(void *re_, struct resampler_data *data)
 {
-   __m128 vec_previous, vec_current;
-   float ratio, b;
    rarch_CC_resampler_t *re     = (rarch_CC_resampler_t*)re_;
 
    audio_frame_float_t *inp     = (audio_frame_float_t*)data->data_in;
    audio_frame_float_t *inp_max = (audio_frame_float_t*)(inp + data->input_frames);
    audio_frame_float_t *outp    = (audio_frame_float_t*)data->data_out;
+   float ratio                  = 1.0 / data->ratio;
+   float b                      = data->ratio; /* cutoff frequency. */
 
-   ratio = 1.0 / data->ratio;
-   b = data->ratio; /* cutoff frequency. */
-
-   vec_previous = _mm_loadu_ps((float*)&re->buffer[0]);
-   vec_current  = _mm_loadu_ps((float*)&re->buffer[2]);
+   __m128 vec_previous          = _mm_loadu_ps((float*)&re->buffer[0]);
+   __m128 vec_current           = _mm_loadu_ps((float*)&re->buffer[2]);
 
    while (inp != inp_max)
    {
@@ -309,7 +271,7 @@ static void resampler_CC_upsample(void *re_, struct resampler_data *data)
    audio_frame_float_t *inp     = (audio_frame_float_t*)data->data_in;
    audio_frame_float_t *inp_max = (audio_frame_float_t*)(inp + data->input_frames);
    audio_frame_float_t *outp    = (audio_frame_float_t*)data->data_out;
-   float b                      = min(data->ratio, 1.00); /* cutoff frequency. */
+   float b                      = MIN(data->ratio, 1.00); /* cutoff frequency. */
    float ratio                  = 1.0 / data->ratio;
    __m128 vec_previous          = _mm_loadu_ps((float*)&re->buffer[0]);
    __m128 vec_current           = _mm_loadu_ps((float*)&re->buffer[2]);
@@ -419,7 +381,7 @@ static INLINE float cc_int(float x, float b)
    return (val > M_PI) ? M_PI : (val < -M_PI) ? -M_PI : val;
 }
 
-#define cc_kernel(x, b) ((cc_int((x) + 0.5, (b)) - cc_int((x) - 0.5, (b))) / (2.0 * M_PI))
+#define cc_kernel(x, b)    ((cc_int((x) + 0.5, (b)) - cc_int((x) - 0.5, (b))) / (2.0 * M_PI))
 #else
 static INLINE float cc_int(float x, float b)
 {
@@ -430,7 +392,7 @@ static INLINE float cc_int(float x, float b)
    return (val > 0.5) ? 0.5 : (val < -0.5) ? -0.5 : val;
 }
 
-#define cc_kernel(x, b) ((cc_int((x) + 0.5, (b)) - cc_int((x) - 0.5, (b))))
+#define cc_kernel(x, b)    ((cc_int((x) + 0.5, (b)) - cc_int((x) - 0.5, (b))))
 #endif
 
 static INLINE void add_to(const audio_frame_float_t *source,
@@ -484,7 +446,7 @@ static void resampler_CC_upsample(void *re_, struct resampler_data *data)
    audio_frame_float_t *inp_max = (audio_frame_float_t*)
       (inp + data->input_frames);
    audio_frame_float_t *outp    = (audio_frame_float_t*)data->data_out;
-   float                      b = min(data->ratio, 1.00); /* cutoff frequency. */
+   float                      b = MIN(data->ratio, 1.00); /* cutoff frequency. */
    float                  ratio = 1.0 / data->ratio;
 
    while (inp != inp_max)
@@ -504,8 +466,8 @@ static void resampler_CC_upsample(void *re_, struct resampler_data *data)
          for (i = 0; i < 4; i++)
          {
             float temp = cc_kernel(re->distance + 1.0 - i, b);
-            outp->l += re->buffer[i].l * temp;
-            outp->r += re->buffer[i].r * temp;
+            outp->l   += re->buffer[i].l * temp;
+            outp->r   += re->buffer[i].r * temp;
          }
 
          re->distance += ratio;
@@ -527,27 +489,20 @@ static void resampler_CC_process(void *re_, struct resampler_data *data)
       re->process(re_, data);
 }
 
-static void resampler_CC_free(void *re_)
-{
-   rarch_CC_resampler_t *re = (rarch_CC_resampler_t*)re_;
-   if (re)
-      memalign_free__(re);
-}
 
 static void *resampler_CC_init(const struct resampler_config *config,
       double bandwidth_mod, resampler_simd_mask_t mask)
 {
    int i;
    rarch_CC_resampler_t *re = (rarch_CC_resampler_t*)
-      memalign_alloc__(32, sizeof(rarch_CC_resampler_t));
+      memalign_alloc(32, sizeof(rarch_CC_resampler_t));
 
    /* TODO: lookup if NEON support can be detected at 
     * runtime and a funcptr set at runtime for either
     * C codepath or NEON codepath. This will help out
     * Android. */
    (void)mask;
-   (void)config;
-
+   (void)config; 
    if (!re)
       return NULL;
 
@@ -573,6 +528,16 @@ static void *resampler_CC_init(const struct resampler_config *config,
    return re;
 }
 #endif
+
+static void resampler_CC_free(void *re_)
+{
+#ifndef _MIPS_ARCH_ALLEGREX
+   rarch_CC_resampler_t *re = (rarch_CC_resampler_t*)re_;
+   if (re)
+      memalign_free(re);
+#endif
+   (void)re_;
+}
 
 rarch_resampler_t CC_resampler = {
    resampler_CC_init,

@@ -1,6 +1,6 @@
 /*  RetroArch - A frontend for libretro.
  *  Copyright (C) 2010-2014 - Hans-Kristian Arntzen
- *  Copyright (C) 2011-2015 - Daniel De Matteis
+ *  Copyright (C) 2011-2016 - Daniel De Matteis
  * 
  *  RetroArch is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU General Public License as published by the Free Software Found-
@@ -18,18 +18,16 @@
 #ifndef __AUDIO_RESAMPLER_DRIVER_H
 #define __AUDIO_RESAMPLER_DRIVER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stddef.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <math.h>
-#include <boolean.h>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327
-#endif
+#include <boolean.h>
+#include <retro_common_api.h>
+#include <retro_miscellaneous.h>
+#include <libretro.h>
+
+RETRO_BEGIN_DECLS
 
 #define RESAMPLER_SIMD_SSE      (1 << 0)
 #define RESAMPLER_SIMD_SSE2     (1 << 1)
@@ -142,6 +140,7 @@ typedef struct audio_frame_float
 extern rarch_resampler_t sinc_resampler;
 extern rarch_resampler_t CC_resampler;
 extern rarch_resampler_t nearest_resampler;
+extern rarch_resampler_t null_resampler;
 
 #ifndef DONT_HAVE_STRING_LIST
 /**
@@ -201,14 +200,6 @@ bool rarch_resampler_realloc(void **re, const rarch_resampler_t **backend,
    (backend)->process(handle, data); \
 } while(0)
 
-#ifndef RARCH_INTERNAL
-#include "libretro.h"
-extern retro_get_cpu_features_t perf_get_cpu_features_cb;
-#endif
-
-#ifdef __cplusplus
-}
-#endif
+RETRO_END_DECLS
 
 #endif
-

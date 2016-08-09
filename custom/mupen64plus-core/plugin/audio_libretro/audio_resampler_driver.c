@@ -1,6 +1,6 @@
 /*  RetroArch - A frontend for libretro.
  *  Copyright (C) 2010-2014 - Hans-Kristian Arntzen
- *  Copyright (C) 2011-2015 - Daniel De Matteis
+ *  Copyright (C) 2011-2016 - Daniel De Matteis
  * 
  *  RetroArch is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU General Public License as published by the Free Software Found-
@@ -14,17 +14,19 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "audio_resampler_driver.h"
-#include <libretro.h>
 #include <string.h>
 
-/* strcasecmp not implemented in MSVC */
-#include "api/msvc_compat.h"
+#include <string/stdstring.h>
+#include <features/features_cpu.h>
+
+#include "audio_resampler_driver.h"
+#ifdef RARCH_INTERNAL
+#include "../performance_counters.h"
+#endif
 
 static const rarch_resampler_t *resampler_drivers[] = {
-   &CC_resampler,
    &sinc_resampler,
-   &nearest_resampler,
+   &CC_resampler,
    NULL,
 };
 
@@ -96,27 +98,9 @@ static const rarch_resampler_t *find_resampler_driver(const char *ident)
    return resampler_drivers[0];
 }
 
-#ifndef RARCH_INTERNAL
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-retro_get_cpu_features_t perf_get_cpu_features_cb;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
-
-resampler_simd_mask_t resampler_get_cpu_features(void)
+static resampler_simd_mask_t resampler_get_cpu_features(void)
 {
-#ifdef RARCH_INTERNAL
-   return rarch_get_cpu_features();
-#else
-/* no features if interface isn't implemented */
-   return perf_get_cpu_features_cb ? perf_get_cpu_features_cb() : 0;
-#endif
+   return cpu_features_get();
 }
 
 /**
