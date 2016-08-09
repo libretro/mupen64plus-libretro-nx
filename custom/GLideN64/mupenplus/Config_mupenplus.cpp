@@ -35,6 +35,7 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+	config.frameBufferEmulation.bufferSwapMode = BufferSwapMode;
 }
 
 EXPORT int CALL osal_path_existsW(const wchar_t *_path)

@@ -58,4 +58,5 @@ extern unsigned int EnableCopyAuxiliaryToRDRAM;
 extern unsigned int EnableCopyColorToRDRAM;
 extern unsigned int EnableCopyDepthToRDRAM;
 extern unsigned int EnableCopyColorFromRDRAM;
+extern unsigned int BufferSwapMode;
 #endif

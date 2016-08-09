@@ -78,6 +78,7 @@ unsigned int EnableCopyAuxiliaryToRDRAM = 0;
 unsigned int EnableCopyColorToRDRAM = 0;
 unsigned int EnableCopyDepthToRDRAM = 0;
 unsigned int EnableCopyColorFromRDRAM = 0;
+unsigned int BufferSwapMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -128,11 +129,17 @@ static void setup_variables(void)
       { "glupen64-EnableCopyAuxiliaryToRDRAM",
          "Copy auxiliary buffers to RDRAM; False|True" },
       { "glupen64-EnableCopyColorToRDRAM",
+#ifdef ANDROID
          "Enable color buffer copy to RDRAM; Off|Sync|Async" },
+#else
+         "Enable color buffer copy to RDRAM; Async|Sync|Off" },
+#endif
       { "glupen64-EnableCopyDepthToRDRAM",
          "Enable depth buffer copy to RDRAM; Off|FromMem|Software" },
       { "glupen64-EnableCopyColorFromRDRAM",
          "Enable color buffer copy from RDRAM; False|True" },
+      { "glupen64-BufferSwapMode",
+         "When to swap buffers; VIupdate|OriginChange|BufferUpdate" },
       { "glupen64-EnableNoise",
          "Enable color noise emulation; True|False" },
       { "glupen64-EnableLOD",
@@ -434,6 +441,18 @@ void update_variables(bool startup)
          EnableCopyColorFromRDRAM = 1;
       else
          EnableCopyColorFromRDRAM = 0;
+   }
+
+   var.key = "glupen64-BufferSwapMode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "BufferUpdate"))
+         BufferSwapMode = 2;
+      else if (!strcmp(var.value, "OriginChange"))
+         BufferSwapMode = 1;
+      else
+         BufferSwapMode = 0;
    }
 
    var.key = "glupen64-EnableNoise";
