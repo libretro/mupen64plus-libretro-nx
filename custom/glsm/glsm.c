@@ -1170,6 +1170,8 @@ void rglTexParameteri(GLenum target, GLenum pname, GLint param)
          gl_state.tex_param.param4[active] = param;
       }
    }
+   else
+      glTexParameteri(target, pname, param);
 }
 
 /*
