@@ -118,15 +118,19 @@ static void setup_variables(void)
       { "glupen64-bilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
+#ifdef ANDROID
+         "Enable frame buffer emulation; False|True" },
+#else
          "Enable frame buffer emulation; True|False" },
+#endif
       { "glupen64-UseNativeResolutionFactor",
          "Frame buffer size is the factor of N64 native resolution; 0|1|2|4" },
       { "glupen64-EnableCopyAuxiliaryToRDRAM",
          "Copy auxiliary buffers to RDRAM; False|True" },
       { "glupen64-EnableCopyColorToRDRAM",
-         "Enable color buffer copy to RDRAM (0=do not copy, 1=sync mode, 2=async mode); 0|1|2" },
+         "Enable color buffer copy to RDRAM; Off|Sync|Async" },
       { "glupen64-EnableCopyDepthToRDRAM",
-         "Enable depth buffer copy to RDRAM  (0=do not copy, 1=from video memory, 2=software render); 0|1|2" },
+         "Enable depth buffer copy to RDRAM; Off|FromMem|Software" },
       { "glupen64-EnableCopyColorFromRDRAM",
          "Enable color buffer copy from RDRAM; False|True" },
       { "glupen64-EnableNoise",
@@ -136,7 +140,7 @@ static void setup_variables(void)
       { "glupen64-EnableHWLighting",
          "Enable hardware per-pixel lighting; False|True" },
       { "glupen64-CorrectTexrectCoords",
-         "Make texrect coordinates continuous (0=Off, 1=Auto, 2=Force); 0|1|2" },
+         "Make texrect coordinates continuous; Off|Auto|Force" },
       { "glupen64-enableNativeResTexrects",
          "Render 2D texrects in native resolution; False|True" },
       { "glupen64-enableLegacyBlending",
@@ -356,36 +360,36 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "standard"))
-         bilinearMode = 1;
-      else
+      if (!strcmp(var.value, "3point"))
          bilinearMode = 0;
+      else
+         bilinearMode = 1;
    }
 
    var.key = "glupen64-EnableFBEmulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "True"))
-         EnableFBEmulation = 1;
-      else
+      if (!strcmp(var.value, "False"))
          EnableFBEmulation = 0;
+      else
+         EnableFBEmulation = 1;
    }
 
    var.key = "glupen64-UseNativeResolutionFactor";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "0"))
-         UseNativeResolutionFactor = 0;
-      else if (!strcmp(var.value, "1"))
-         UseNativeResolutionFactor = 1;
-      else if (!strcmp(var.value, "2"))
-         UseNativeResolutionFactor = 2;
+      if (!strcmp(var.value, "4"))
+         UseNativeResolutionFactor = 4;
       else if (!strcmp(var.value, "3"))
          UseNativeResolutionFactor = 3;
+      else if (!strcmp(var.value, "2"))
+         UseNativeResolutionFactor = 2;
+      else if (!strcmp(var.value, "1"))
+         UseNativeResolutionFactor = 1;
       else
-         UseNativeResolutionFactor = 4;
+         UseNativeResolutionFactor = 0;
    }
 
    var.key = "glupen64-EnableCopyAuxiliaryToRDRAM";
@@ -402,24 +406,24 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "0"))
-         EnableCopyColorToRDRAM = 0;
-      else if (!strcmp(var.value, "1"))
-         EnableCopyColorToRDRAM = 1;
-      else if (!strcmp(var.value, "2"))
+      if (!strcmp(var.value, "Async"))
          EnableCopyColorToRDRAM = 2;
+      else if (!strcmp(var.value, "Sync"))
+         EnableCopyColorToRDRAM = 1;
+      else
+         EnableCopyColorToRDRAM = 0;
    }
 
    var.key = "glupen64-EnableCopyDepthToRDRAM";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "0"))
-         EnableCopyDepthToRDRAM = 0;
-      else if (!strcmp(var.value, "1"))
-         EnableCopyDepthToRDRAM = 1;
-      else if (!strcmp(var.value, "2"))
+      if (!strcmp(var.value, "Software"))
          EnableCopyDepthToRDRAM = 2;
+      else if (!strcmp(var.value, "FromMem"))
+         EnableCopyDepthToRDRAM = 1;
+      else
+         EnableCopyDepthToRDRAM = 0;
    }
 
    var.key = "glupen64-EnableCopyColorFromRDRAM";
@@ -436,20 +440,20 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "True"))
-         EnableNoise = 1;
-      else
+      if (!strcmp(var.value, "False"))
          EnableNoise = 0;
+      else
+         EnableNoise = 1;
    }
 
    var.key = "glupen64-EnableLOD";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "True"))
-         EnableLOD = 1;
-      else
+      if (!strcmp(var.value, "False"))
          EnableLOD = 0;
+      else
+         EnableLOD = 1;
    }
 
    var.key = "glupen64-EnableHWLighting";
@@ -466,12 +470,12 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "0"))
-         CorrectTexrectCoords = 0;
-      else if (!strcmp(var.value, "1"))
+      if (!strcmp(var.value, "Force"))
+         CorrectTexrectCoords = 2;
+      else if (!strcmp(var.value, "Auto"))
          CorrectTexrectCoords = 1;
       else
-         CorrectTexrectCoords = 2;
+         CorrectTexrectCoords = 0;
    }
 
    var.key = "glupen64-enableNativeResTexrects";
