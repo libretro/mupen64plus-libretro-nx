@@ -234,14 +234,14 @@ else ifneq (,$(findstring android,$(platform)))
    fpic = -fPIC
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common
    LDFLAGS += -llog
-   ifneq (,$(findstring gles2,$(platform)))
-   GL_LIB := -lGLESv2
-   GLES = 1
-   TARGET := $(TARGET_NAME)_libretro_android_gles2.so
-   else ifneq (,$(findstring gles3,$(platform)))
+   ifneq (,$(findstring gles3,$(platform)))
    GL_LIB := -lGLESv3
    GLES3 = 1
    TARGET := $(TARGET_NAME)_libretro_android_gles3.so
+   else
+   GL_LIB := -lGLESv2
+   GLES = 1
+   TARGET := $(TARGET_NAME)_libretro_android.so
    endif
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
