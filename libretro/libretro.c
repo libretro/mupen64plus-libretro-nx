@@ -161,13 +161,13 @@ static void setup_variables(void)
       {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       {"glupen64-pak1",
-        "Player 1 Pak; none|memory|rumble"},
+        "Player 1 Pak; memory|rumble|none"},
       {"glupen64-pak2",
-        "Player 2 Pak; none|memory|rumble"},
+        "Player 2 Pak; memory|rumble|none"},
       {"glupen64-pak3",
-        "Player 3 Pak; none|memory|rumble"},
+        "Player 3 Pak; memory|rumble|none"},
       {"glupen64-pak4",
-        "Player 4 Pak; none|memory|rumble"},
+        "Player 4 Pak; memory|rumble|none"},
       { NULL, NULL },
    };
 
