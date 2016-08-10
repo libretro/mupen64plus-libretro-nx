@@ -1,3 +1,5 @@
+#include "Types.h"
+
 #ifndef GLIDEN64_LIBRETRO_H
 #define GLIDEN64_LIBRETRO_H
 
@@ -45,18 +47,19 @@ struct GLState {
 extern GLState glState;
 #endif
 
-extern unsigned int bilinearMode;
-extern unsigned int EnableNoise;
-extern unsigned int EnableLOD;
-extern unsigned int EnableHWLighting;
-extern unsigned int CorrectTexrectCoords;
-extern unsigned int enableNativeResTexrects;
-extern unsigned int enableLegacyBlending;
-extern unsigned int EnableFBEmulation;
-extern unsigned int UseNativeResolutionFactor;
-extern unsigned int EnableCopyAuxiliaryToRDRAM;
-extern unsigned int EnableCopyColorToRDRAM;
-extern unsigned int EnableCopyDepthToRDRAM;
-extern unsigned int EnableCopyColorFromRDRAM;
-extern unsigned int BufferSwapMode;
+extern u32 bilinearMode;
+extern u32 EnableNoise;
+extern u32 EnableLOD;
+extern u32 EnableHWLighting;
+extern u32 CorrectTexrectCoords;
+extern u32 enableNativeResTexrects;
+extern u32 enableLegacyBlending;
+extern u32 EnableFBEmulation;
+extern u32 UseNativeResolutionFactor;
+extern u32 EnableCopyAuxiliaryToRDRAM;
+extern u32 EnableCopyColorToRDRAM;
+extern u32 EnableCopyDepthToRDRAM;
+extern u32 EnableCopyColorFromRDRAM;
+extern u32 BufferSwapMode;
+extern f32 PolygonOffsetFactor;
 #endif

@@ -65,20 +65,21 @@ uint32_t *blitter_buf_lock   = NULL;
 
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
-unsigned int bilinearMode = 0;
-unsigned int EnableNoise = 0;
-unsigned int EnableLOD = 0;
-unsigned int EnableHWLighting = 0;
-unsigned int CorrectTexrectCoords = 0;
-unsigned int enableNativeResTexrects = 0;
-unsigned int enableLegacyBlending = 0;
-unsigned int EnableFBEmulation = 0;
-unsigned int UseNativeResolutionFactor = 0;
-unsigned int EnableCopyAuxiliaryToRDRAM = 0;
-unsigned int EnableCopyColorToRDRAM = 0;
-unsigned int EnableCopyDepthToRDRAM = 0;
-unsigned int EnableCopyColorFromRDRAM = 0;
-unsigned int BufferSwapMode = 0;
+u32 bilinearMode = 0;
+u32 EnableNoise = 0;
+u32 EnableLOD = 0;
+u32 EnableHWLighting = 0;
+u32 CorrectTexrectCoords = 0;
+u32 enableNativeResTexrects = 0;
+u32 enableLegacyBlending = 0;
+u32 EnableFBEmulation = 0;
+u32 UseNativeResolutionFactor = 0;
+u32 EnableCopyAuxiliaryToRDRAM = 0;
+u32 EnableCopyColorToRDRAM = 0;
+u32 EnableCopyDepthToRDRAM = 0;
+u32 EnableCopyColorFromRDRAM = 0;
+u32 BufferSwapMode = 0;
+f32 PolygonOffsetFactor = 0.0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -116,7 +117,7 @@ static void setup_variables(void)
 #endif
       { "glupen64-screensize",
          "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
-      { "glupen64-bilinearMode",
+      { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
 #ifdef ANDROID
@@ -148,13 +149,17 @@ static void setup_variables(void)
          "Enable hardware per-pixel lighting; False|True" },
       { "glupen64-CorrectTexrectCoords",
          "Make texrect coordinates continuous; Off|Auto|Force" },
-      { "glupen64-enableNativeResTexrects",
+      { "glupen64-EnableNativeResTexrects",
          "Render 2D texrects in native resolution; False|True" },
-      { "glupen64-enableLegacyBlending",
+      { "glupen64-EnableLegacyBlending",
 #if defined(VC) || defined(ANDROID)
          "Faster but less accurate blending mode; True|False" },
 #else
          "Faster but less accurate blending mode; False|True" },
+#endif
+#ifdef ANDROID
+      { "glupen64-PolygonOffsetFactor",
+         "Scale used to calculate depth values; -3.0f|0.2f|-1.5f|-0.2f|-0.001f|-2.0f" },
 #endif
       {"glupen64-audio-buffer-size",
          "Audio Buffer Size (restart); 2048|1024"},
@@ -363,7 +368,7 @@ void update_variables(bool startup)
 {
    struct retro_variable var;
 
-   var.key = "glupen64-bilinearMode";
+   var.key = "glupen64-BilinearMode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -497,7 +502,7 @@ void update_variables(bool startup)
          CorrectTexrectCoords = 0;
    }
 
-   var.key = "glupen64-enableNativeResTexrects";
+   var.key = "glupen64-EnableNativeResTexrects";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -507,7 +512,7 @@ void update_variables(bool startup)
          enableNativeResTexrects = 0;
    }
 
-   var.key = "glupen64-enableLegacyBlending";
+   var.key = "glupen64-EnableLegacyBlending";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -516,7 +521,25 @@ void update_variables(bool startup)
       else
          enableLegacyBlending = 0;
    }
-
+#ifdef ANDROID
+   var.key = "glupen64-PolygonOffsetFactor";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "0.2f"))
+         PolygonOffsetFactor = 0.2f;
+      else if (!strcmp(var.value, "-1.5f"))
+         PolygonOffsetFactor = -1.5f;
+      else if (!strcmp(var.value, "-0.2f"))
+         PolygonOffsetFactor = -0.2f;
+      else if (!strcmp(var.value, "-0.001f"))
+         PolygonOffsetFactor = -0.001f;
+      else if (!strcmp(var.value, "-2.0f"))
+         PolygonOffsetFactor = -2.0f;
+      else
+         PolygonOffsetFactor = -3.0f;
+   }
+#endif
    var.key = "glupen64-cpucore";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)

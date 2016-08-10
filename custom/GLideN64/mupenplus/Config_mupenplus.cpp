@@ -36,6 +36,11 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 	config.frameBufferEmulation.bufferSwapMode = BufferSwapMode;
+#ifdef ANDROID
+	config.generalEmulation.forcePolygonOffset = 1;
+	config.generalEmulation.polygonOffsetFactor = PolygonOffsetFactor;
+	config.generalEmulation.polygonOffsetUnits = PolygonOffsetFactor;
+#endif
 }
 
 EXPORT int CALL osal_path_existsW(const wchar_t *_path)
