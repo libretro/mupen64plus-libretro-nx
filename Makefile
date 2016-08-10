@@ -92,15 +92,13 @@ ifneq (,$(findstring unix,$(platform)))
       INCFLAGS += -I/opt/vc/include
       WITH_DYNAREC=arm
       ifneq (,$(findstring rpi2,$(platform)))
-         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC -DUSE_DEPTH_RENDERBUFFER
+         CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
          CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
          HAVE_NEON = 1
       else ifneq (,$(findstring rpi3,$(platform)))
-         CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DVC -DUSE_DEPTH_RENDERBUFFER
+         CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
          CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
          HAVE_NEON = 1
-      else
-         CPUFLAGS += -DARMv5_ONLY -DNO_ASM
       endif
    endif
    
@@ -232,7 +230,8 @@ else ifneq (,$(findstring theos_ios,$(platform)))
 # Android
 else ifneq (,$(findstring android,$(platform)))
    fpic = -fPIC
-   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common
+   INCFLAGS += -I../mychain/include/c++/4.9.x/arm-linux-androideabi/armv7-a
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
    LDFLAGS += -llog
    ifneq (,$(findstring gles3,$(platform)))
    GL_LIB := -lGLESv3
@@ -246,11 +245,8 @@ else ifneq (,$(findstring android,$(platform)))
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
    WITH_DYNAREC=arm
-   PLATCFLAGS += -DANDROID
-   CPUCFLAGS  += -DNO_ASM
    HAVE_NEON = 1
-   CPUFLAGS += -marm -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp -D__arm__ -DARM_ASM -D__NEON_OPT
-   CFLAGS += -DANDROID
+   CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM_ASM -DANDROID
 
    PLATFORM_EXT := unix
 
@@ -315,7 +311,7 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT
 endif
 
 ifeq ($(PERF_TEST), 1)
@@ -346,7 +342,7 @@ endif
 #else
 #   CFLAGS   += -std=gnu89 -MMD
 #endif
-CXXFLAGS += -std=c++0x -DOS_LINUX
+CXXFLAGS += -std=c++11 -DOS_LINUX
 ### Finalize ###
 OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o)
 CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)

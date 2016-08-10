@@ -175,7 +175,8 @@ struct gl_cached_state
 
    GLuint vao;
    GLuint framebuf;
-   GLuint program; 
+   GLenum framebuf_target;
+   GLuint program;
    GLenum active_texture;
    int cap_state[SGL_CAP_MAX];
    int cap_translate[SGL_CAP_MAX];
@@ -184,6 +185,7 @@ struct gl_cached_state
 static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
+int fbframe = 0;
 
 /* GL wrapper-side */
 
@@ -1580,9 +1582,16 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
 
-   if (gl_state.framebuf != framebuffer) {
+   if (gl_state.framebuf_target != target || gl_state.framebuf != framebuffer) {
+      const GLenum discards[] = {GL_DEPTH_ATTACHMENT};
+#ifdef GLES2
+      glDiscardFramebufferEXT(gl_state.framebuf_target, 1, discards);
+#else
+      glInvalidateFramebuffer(gl_state.framebuf_target, 1, discards);
+#endif
       glBindFramebuffer(target, framebuffer);
       gl_state.framebuf = framebuffer;
+      gl_state.framebuf_target = target;
    }
 }
 
@@ -1909,6 +1918,7 @@ static void glsm_state_setup(void)
    gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
 
    gl_state.framebuf                    = hw_render.get_current_framebuffer();
+   gl_state.framebuf_target             = RARCH_GL_FRAMEBUFFER;
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
@@ -1968,8 +1978,18 @@ static void glsm_state_bind(void)
       if (gl_state.cap_state[i])
          glEnable(gl_state.cap_translate[i]);
    }
+   if (fbframe > 1) {
+      const GLenum discards[] = {GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT};
+#ifdef GLES2
+      glDiscardFramebufferEXT(RARCH_GL_FRAMEBUFFER, 2, discards);
+#else
+      glInvalidateFramebuffer(RARCH_GL_FRAMEBUFFER, 2, discards);
+#endif
+   }
+   else
+      fbframe += 1;
 
-   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, gl_state.framebuf);
+   glBindFramebuffer(gl_state.framebuf_target, gl_state.framebuf);
 
    if (gl_state.blendfunc.used)
       glBlendFunc(
