@@ -1581,6 +1581,9 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
 
+   if (target == 1001)
+      return;
+
    if (gl_state.framebuf_target != target || gl_state.framebuf != framebuffer) {
       const GLenum discards[] = {GL_DEPTH_ATTACHMENT};
 #ifdef GLES2
