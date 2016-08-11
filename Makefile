@@ -230,7 +230,6 @@ else ifneq (,$(findstring theos_ios,$(platform)))
 # Android
 else ifneq (,$(findstring android,$(platform)))
    fpic = -fPIC
-   INCFLAGS += -I../mychain/include/c++/4.9.x/arm-linux-androideabi/armv7-a
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
    LDFLAGS += -llog
    ifneq (,$(findstring gles3,$(platform)))
