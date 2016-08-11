@@ -185,7 +185,6 @@ struct gl_cached_state
 static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
-int fbframe = 0;
 
 /* GL wrapper-side */
 
@@ -1978,16 +1977,14 @@ static void glsm_state_bind(void)
       if (gl_state.cap_state[i])
          glEnable(gl_state.cap_translate[i]);
    }
-   if (fbframe > 1) {
-      const GLenum discards[] = {GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT};
+
 #ifdef GLES2
-      glDiscardFramebufferEXT(RARCH_GL_FRAMEBUFFER, 2, discards);
+   const GLenum discards[] = {GL_COLOR_EXT, GL_DEPTH_EXT};
+   glDiscardFramebufferEXT(RARCH_GL_FRAMEBUFFER, 2, discards);
 #else
-      glInvalidateFramebuffer(RARCH_GL_FRAMEBUFFER, 2, discards);
+   const GLenum discards[] = {GL_COLOR, GL_DEPTH};
+   glInvalidateFramebuffer(RARCH_GL_FRAMEBUFFER, 2, discards);
 #endif
-   }
-   else
-      fbframe += 1;
 
    glBindFramebuffer(gl_state.framebuf_target, gl_state.framebuf);
 
