@@ -1950,8 +1950,6 @@ static void glsm_state_setup(void)
 
 static void glsm_state_bind(void)
 {
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
-
    unsigned i;
 
    for (i = 0; i < MAX_ATTRIB; i++)
