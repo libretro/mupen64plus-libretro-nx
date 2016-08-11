@@ -8,6 +8,10 @@ Get the submodules:
 
 ```git submodule update --init```
 
+You can combine those 2 steps into 1 by doing this:
+
+```git clone --recursive https://github.com/loganmc10/GLupeN64.git```
+
 #### Building the project
 
 ```make -j4```
