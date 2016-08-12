@@ -1244,7 +1244,9 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   int counter,match,i = 0;
+   int counter = 0;
+   int match = 0;
+   int i = 0;
    if (gl_state.attrib_pointer.pointer[name] != NULL) {
       for (i = 0; i < stride; i++) {
          if (((unsigned char *)gl_state.attrib_pointer.pointer[name])[i] == ((unsigned char*)pointer)[i])
