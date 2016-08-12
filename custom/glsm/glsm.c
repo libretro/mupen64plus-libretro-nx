@@ -39,7 +39,8 @@ struct gl_cached_state
       GLenum type[MAX_ATTRIB];
       GLboolean normalized[MAX_ATTRIB];
       GLsizei stride[MAX_ATTRIB];
-      const GLvoid *pointer[MAX_ATTRIB];
+      const GLvoid *real_pointer[MAX_ATTRIB];
+      uintptr_t pointer[MAX_ATTRIB];
    } attrib_pointer;
 
    struct
@@ -1244,13 +1245,14 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   gl_state.attrib_pointer.used[name] = true;
-   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer) {
+   gl_state.attrib_pointer.used[name] = 1;
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != (uintptr_t)&pointer) {
       gl_state.attrib_pointer.size[name] = size;
       gl_state.attrib_pointer.type[name] = type;
       gl_state.attrib_pointer.normalized[name] = normalized;
       gl_state.attrib_pointer.stride[name] = stride;
-      gl_state.attrib_pointer.pointer[name] = pointer;
+      gl_state.attrib_pointer.pointer[name] = (uintptr_t)&pointer;
+      gl_state.attrib_pointer.real_pointer[name] = pointer;
       glVertexAttribPointer(name, size, type, normalized, stride, pointer);
    }
 }
@@ -1910,8 +1912,10 @@ static void glsm_state_setup(void)
    gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
 #endif
 
-   for (i = 0; i < MAX_ATTRIB; i++)
+   for (i = 0; i < MAX_ATTRIB; i++) {
       gl_state.vertex_attrib_pointer.enabled[i] = 0;
+      gl_state.attrib_pointer.used[i] = 0;
+   }
 
    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
    if (glsm_max_textures > 32)
@@ -1931,7 +1935,7 @@ static void glsm_state_setup(void)
    gl_state.blendfunc_separate.dstAlpha = GL_ZERO;
 
    gl_state.depthfunc.used              = false;
-   
+
    gl_state.colormask.used              = false;
    gl_state.colormask.red               = GL_TRUE;
    gl_state.colormask.green             = GL_TRUE;
@@ -1959,8 +1963,6 @@ static void glsm_state_bind(void)
    {
       if (gl_state.vertex_attrib_pointer.enabled[i])
          glEnableVertexAttribArray(i);
-      else
-         glDisableVertexAttribArray(i);
 
       if (gl_state.attrib_pointer.used[i]){
          glVertexAttribPointer(
@@ -1969,7 +1971,7 @@ static void glsm_state_bind(void)
             gl_state.attrib_pointer.type[i],
             gl_state.attrib_pointer.normalized[i],
             gl_state.attrib_pointer.stride[i],
-            gl_state.attrib_pointer.pointer[i]);
+            gl_state.attrib_pointer.real_pointer[i]);
       }
    }
 
@@ -1999,27 +2001,6 @@ static void glsm_state_bind(void)
          gl_state.clear_color.g,
          gl_state.clear_color.b,
          gl_state.clear_color.a);
-
-   if (gl_state.depthfunc.used)
-      glDepthFunc(gl_state.depthfunc.func);
-
-   if (gl_state.cullface.used)
-      glCullFace(gl_state.cullface.mode);
-
-   if (gl_state.depthmask.used)
-      glDepthMask(gl_state.depthmask.mask);
-
-   if (gl_state.polygonoffset.used)
-      glPolygonOffset(
-            gl_state.polygonoffset.factor,
-            gl_state.polygonoffset.units);
-
-   if (gl_state.scissor.used)
-      glScissor(
-            gl_state.scissor.x,
-            gl_state.scissor.y,
-            gl_state.scissor.w,
-            gl_state.scissor.h);
 
    glUseProgram(gl_state.program);
 
