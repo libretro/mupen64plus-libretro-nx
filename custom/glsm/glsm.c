@@ -39,8 +39,7 @@ struct gl_cached_state
       GLenum type[MAX_ATTRIB];
       GLboolean normalized[MAX_ATTRIB];
       GLsizei stride[MAX_ATTRIB];
-      const GLvoid *real_pointer[MAX_ATTRIB];
-      uintptr_t pointer[MAX_ATTRIB];
+      const GLvoid *pointer[MAX_ATTRIB];
    } attrib_pointer;
 
    struct
@@ -1245,14 +1244,23 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
+   int counter = 0;
+   int match = 0;
+   if (gl_state.attrib_pointer.pointer[name] != NULL) {
+      for (int i = 0; i < stride; i++) {
+         if (((unsigned char *)gl_state.attrib_pointer.pointer[name])[i] == ((unsigned char*)pointer)[i])
+            counter++;
+      }
+   }
+   if (stride == counter)
+      match = 1;
    gl_state.attrib_pointer.used[name] = 1;
-   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != (uintptr_t)&pointer) {
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || match == 0) {
       gl_state.attrib_pointer.size[name] = size;
       gl_state.attrib_pointer.type[name] = type;
       gl_state.attrib_pointer.normalized[name] = normalized;
       gl_state.attrib_pointer.stride[name] = stride;
-      gl_state.attrib_pointer.pointer[name] = (uintptr_t)&pointer;
-      gl_state.attrib_pointer.real_pointer[name] = pointer;
+      gl_state.attrib_pointer.pointer[name] = pointer;
       glVertexAttribPointer(name, size, type, normalized, stride, pointer);
    }
 }
@@ -1971,7 +1979,7 @@ static void glsm_state_bind(void)
             gl_state.attrib_pointer.type[i],
             gl_state.attrib_pointer.normalized[i],
             gl_state.attrib_pointer.stride[i],
-            gl_state.attrib_pointer.real_pointer[i]);
+            gl_state.attrib_pointer.pointer[i]);
       }
    }
 
