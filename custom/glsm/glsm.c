@@ -1244,24 +1244,8 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   int doit = 0;
    gl_state.attrib_pointer.used[name] = 1;
-   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride)
-      doit = 1;
-   else {
-      if (gl_state.attrib_pointer.pointer[name] != NULL) {
-         int counter = 0;
-         int i = 0 ;
-         for (i = 0; i < stride; i++) {
-            if (((unsigned char *)gl_state.attrib_pointer.pointer[name])[i] == ((unsigned char*)pointer)[i])
-               counter++;
-         }
-         if (stride != counter)
-            doit = 1;
-      }
-   }
-
-   if (doit == 1) {
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer) {
       gl_state.attrib_pointer.size[name] = size;
       gl_state.attrib_pointer.type[name] = type;
       gl_state.attrib_pointer.normalized[name] = normalized;
