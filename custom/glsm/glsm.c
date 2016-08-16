@@ -67,6 +67,11 @@ struct gl_cached_state
 
    struct
    {
+      GLuint buffer[2];
+   } bindbuffer;
+
+   struct
+   {
       GLuint r;
       GLuint g;
       GLuint b;
@@ -625,8 +630,20 @@ void rglBufferSubData(GLenum target, GLintptr offset,
  */
 void rglBindBuffer(GLenum target, GLuint buffer)
 {
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindBuffer(target, buffer);
+   if (target == GL_ARRAY_BUFFER) {
+      if (gl_state.bindbuffer.buffer[0] != buffer) {
+         gl_state.bindbuffer.buffer[0] = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
+   else if (target == GL_ELEMENT_ARRAY_BUFFER) {
+      if (gl_state.bindbuffer.buffer[1] != buffer) {
+         gl_state.bindbuffer.buffer[1] = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
+   else
+      glBindBuffer(target, buffer);
 }
 
 /*
@@ -1245,14 +1262,14 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       const GLvoid* pointer)
 {
    gl_state.attrib_pointer.used[name] = 1;
-   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer) {
+   //if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer) {
       gl_state.attrib_pointer.size[name] = size;
       gl_state.attrib_pointer.type[name] = type;
       gl_state.attrib_pointer.normalized[name] = normalized;
       gl_state.attrib_pointer.stride[name] = stride;
       gl_state.attrib_pointer.pointer[name] = pointer;
       glVertexAttribPointer(name, size, type, normalized, stride, pointer);
-   }
+   //}
 }
 
 /*
@@ -1921,6 +1938,8 @@ static void glsm_state_setup(void)
 
    gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
 
+   gl_state.bindbuffer.buffer[0]        = 0;
+   gl_state.bindbuffer.buffer[1]        = 0;
    gl_state.framebuf                    = hw_render.get_current_framebuffer();
    gl_state.framebuf_target             = RARCH_GL_FRAMEBUFFER;
    gl_state.cullface.mode               = GL_BACK;
@@ -1956,6 +1975,8 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
+
+   glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
