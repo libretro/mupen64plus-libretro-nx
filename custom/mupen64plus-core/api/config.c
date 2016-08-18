@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libretro.h>
 
 #define M64P_CORE_PROTOTYPES 1
 #include "callbacks.h"
@@ -41,6 +42,8 @@
 #define MUPEN64PLUS_CFG_NAME "mupen64plus.cfg"
 
 #define SECTION_MAGIC 0xDBDC0580
+
+extern retro_environment_t environ_cb;
 
 typedef struct _config_var {
   char                 *name;
@@ -1434,7 +1437,9 @@ EXPORT const char * CALL ConfigGetParamString(m64p_handle ConfigSectionHandle, c
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-  return filename;
+  char *systemDir;
+  environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
+  return osal_get_shared_filepath(filename, systemDir, "");
 }
 
 EXPORT const char * CALL ConfigGetUserConfigPath(void)
