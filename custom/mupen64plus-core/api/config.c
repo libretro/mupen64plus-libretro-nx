@@ -1434,7 +1434,7 @@ EXPORT const char * CALL ConfigGetParamString(m64p_handle ConfigSectionHandle, c
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-  return "";
+  return filename;
 }
 
 EXPORT const char * CALL ConfigGetUserConfigPath(void)

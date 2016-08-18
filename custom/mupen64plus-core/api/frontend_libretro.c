@@ -67,6 +67,8 @@ EXPORT m64p_error CALL CoreStartup(int APIVersion, const char *ConfigPath, const
         return M64ERR_INCOMPATIBLE;
     }
 
+    romdatabase_open();
+
     l_CoreInit = 1;
     return M64ERR_SUCCESS;
 }
