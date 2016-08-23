@@ -1562,9 +1562,6 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
 
-   if (target == 1001)
-      return;
-
    glBindFramebuffer(target, framebuffer);
    gl_state.framebuf = framebuffer;
    gl_state.framebuf_target = target;
