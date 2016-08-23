@@ -64,6 +64,11 @@ struct gl_cached_state
 
    struct
    {
+      GLuint array;
+   } bindvertex;
+
+   struct
+   {
       GLuint r;
       GLuint g;
       GLuint b;
@@ -1799,6 +1804,7 @@ void rglCopyImageSubData( 	GLuint srcName,
 void rglBindVertexArray(GLuint array)
 {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+   gl_state.bindvertex.array = array;
    glBindVertexArray(array);
 #endif
 }
@@ -1928,7 +1934,9 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
-
+#ifdef CORE
+   glBindVertexArray(gl_state.bindvertex.array);
+#endif
    glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
 
    for (i = 0; i < MAX_ATTRIB; i++)
@@ -2019,7 +2027,7 @@ static bool glsm_state_ctx_init(void *data)
 #ifdef CORE
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL_CORE;
    hw_render.version_major      = 3;
-   hw_render.version_minor      = 1;
+   hw_render.version_minor      = 3;
 #else
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL;
 #endif
