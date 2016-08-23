@@ -80,6 +80,7 @@ u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
 u32 BufferSwapMode = 0;
 f32 PolygonOffsetFactor = 0.0;
+u32 EnableFragmentDepthWrite = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -120,7 +121,7 @@ static void setup_variables(void)
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
-#ifdef ANDROID
+#if defined(VC) || defined(ANDROID)
          "Enable frame buffer emulation; False|True" },
 #else
          "Enable frame buffer emulation; True|False" },
@@ -156,6 +157,12 @@ static void setup_variables(void)
          "Faster but less accurate blending mode; True|False" },
 #else
          "Faster but less accurate blending mode; False|True" },
+#endif
+      ( "glupen64-EnableFragmentDepthWrite",
+#ifdef ANDROID
+         "Enable writing of fragment depth; False|True" },
+#else
+         "Enable writing of fragment depth; True|False" },
 #endif
 #ifdef ANDROID
       { "glupen64-PolygonOffsetFactor",
@@ -446,6 +453,16 @@ void update_variables(bool startup)
          EnableCopyColorFromRDRAM = 1;
       else
          EnableCopyColorFromRDRAM = 0;
+   }
+
+   var.key = "glupen64-EnableFragmentDepthWrite";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableFragmentDepthWrite = 1;
+      else
+         EnableFragmentDepthWrite = 0;
    }
 
    var.key = "glupen64-BufferSwapMode";

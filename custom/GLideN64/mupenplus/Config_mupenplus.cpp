@@ -36,6 +36,7 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 	config.frameBufferEmulation.bufferSwapMode = BufferSwapMode;
+	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 #ifdef ANDROID
 	config.generalEmulation.forcePolygonOffset = 1;
 	config.generalEmulation.polygonOffsetFactor = PolygonOffsetFactor;
