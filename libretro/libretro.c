@@ -158,7 +158,7 @@ static void setup_variables(void)
 #else
          "Faster but less accurate blending mode; False|True" },
 #endif
-      ( "glupen64-EnableFragmentDepthWrite",
+      { "glupen64-EnableFragmentDepthWrite",
 #ifdef ANDROID
          "Enable writing of fragment depth; False|True" },
 #else
