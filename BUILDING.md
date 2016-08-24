@@ -2,15 +2,7 @@
 
 clone this repository, for instance:
 
-```git clone https://github.com/loganmc10/GLupeN64.git```
-
-Get the submodules:
-
-```git submodule update --init```
-
-You can combine those 2 steps into 1 by doing this:
-
-```git clone --recursive https://github.com/loganmc10/GLupeN64.git```
+```git clone --depth=1 https://github.com/loganmc10/GLupeN64.git```
 
 #### Building the project
 

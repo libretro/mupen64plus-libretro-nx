@@ -16,7 +16,7 @@ By choosing one RSP implentation (rsp-hle) and one graphics plugin (GLideN64), w
 
 #### How is it organized?
 
-The modules (core, rsp-hle, GLideN64, and libretro-common) are brought in as git submodules, allowing us to easily update the codebase. When modifications have to be made, they are put in the "custom" directory, overriding their vanilla counterparts.
+The modules (core, rsp-hle, GLideN64, and libretro-common) are brought in as git subtrees, allowing us to easily update the codebase. When modifications have to be made, they are put in the "custom" directory, overriding their vanilla counterparts.
 
 We will try to stay as close to the upstream code as possible, if there are improvements to be made, they should be submitted upstream.
 
