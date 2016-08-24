@@ -1085,7 +1085,6 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-/*
 #ifdef HAVE_OPENGLES
 #ifdef HAVE_OPENGLES2
    glslopt_target target = kGlslTargetOpenGLES20;
@@ -1109,9 +1108,8 @@ void rglShaderSource(GLuint shader, GLsizei count,
    glslopt_shader_delete (new_shader);
    glslopt_cleanup (ctx);
 #else
-*/
    glShaderSource(shader, count, string, length);
-//#endif
+#endif
 }
 
 /*

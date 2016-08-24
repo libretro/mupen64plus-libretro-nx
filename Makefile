@@ -93,11 +93,11 @@ ifneq (,$(findstring unix,$(platform)))
       WITH_DYNAREC=arm
       ifneq (,$(findstring rpi2,$(platform)))
          CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
-         CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+         CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mno-unaligned-access
          HAVE_NEON = 1
       else ifneq (,$(findstring rpi3,$(platform)))
          CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
-         CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+         CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
          HAVE_NEON = 1
       endif
    endif
@@ -245,7 +245,7 @@ else ifneq (,$(findstring android,$(platform)))
    CXX = arm-linux-androideabi-g++
    WITH_DYNAREC=arm
    HAVE_NEON = 1
-   CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM_ASM -DANDROID
+   CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM_ASM -DANDROID -mno-unaligned-access
 
    PLATFORM_EXT := unix
 
