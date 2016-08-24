@@ -3,6 +3,7 @@ CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
 LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
+GLSL_OPT_DIR       = $(ROOT_DIR)/glsl-optimizer
 
 DYNAREC_USED := 0
 
@@ -16,7 +17,12 @@ INCFLAGS += \
 	-I$(LIBRETRO_DIR) \
 	-I$(VIDEODIR_GLIDEN64)/src \
 	-I$(VIDEODIR_GLIDEN64)/src/osal \
-	-I$(ROOT_DIR)/custom/GLideN64
+	-I$(ROOT_DIR)/custom/GLideN64 \
+	-I$(ROOT_DIR)/custom/glsl-optimizer \
+	-I$(GLSL_OPT_DIR)/src/glsl \
+	-I$(GLSL_OPT_DIR)/include \
+	-I$(GLSL_OPT_DIR)/src \
+	-I$(GLSL_OPT_DIR)/src/mesa
 
 # libco
 SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
@@ -248,3 +254,112 @@ else
 endif
 SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
 endif
+
+#GLSL OPT
+SOURCES_C += \
+	$(GLSL_OPT_DIR)/src/glsl/glcpp/glcpp-lex.c \
+	$(GLSL_OPT_DIR)/src/glsl/glcpp/pp.c \
+	$(GLSL_OPT_DIR)/src/glsl/glcpp/glcpp-parse.c \
+	$(GLSL_OPT_DIR)/src/util/ralloc.c \
+	$(GLSL_OPT_DIR)/src/util/hash_table.c \
+	$(GLSL_OPT_DIR)/src/mesa/program/symbol_table.c \
+	$(GLSL_OPT_DIR)/src/mesa/program/prog_hash_table.c \
+	$(GLSL_OPT_DIR)/src/mesa/main/imports.c \
+	$(GLSL_OPT_DIR)/src/glsl/strtod.c
+
+SOURCES_CXX += \
+	$(GLSL_OPT_DIR)/src/glsl/opt_copy_propagation_elements.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_constant_folding.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/s_expression.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_constant_propagation.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_ubo_reference.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_parser.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_variable_index_to_cond_assign.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_function_can_inline.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_unused_structs.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_print_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_constant_expression.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_parser_extras.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/hir_field_selection.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_noise.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_dead_code_local.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_if_simplification.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/builtin_types.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_vector_insert.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_packing_builtins.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ast_to_hir.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_uniforms.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_vector.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_equals.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_builder.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_redundant_jumps.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_validate.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_vectorize.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_rvalue_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_expression_flattening.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_tree_grafting.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_noop_swizzle.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_clip_distance.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_import_prototypes.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_vertex_id.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_atomics.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_rebalance_tree.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_minmax.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_dead_builtin_variables.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_vec_index_to_swizzle.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/loop_unroll.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_dead_code.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ast_expr.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/loop_controls.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/linker.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_function_inlining.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_mat_op_to_vec.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_function_detect_recursion.cpp \
+	$(ROOT_DIR)/custom/glsl-optimizer/glsl_optimizer.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_uniform_blocks.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_swizzle_swizzle.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_functions.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_output_reads.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_function.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_named_interface_blocks.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/loop_analysis.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_stats.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_algebraic.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_variable_refcount.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ast_array_index.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_hierarchical_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_cse.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/builtin_variables.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ast_type.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_varyings.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_types.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_dead_builtin_varyings.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_print_glsl_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_print_metal_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_offset_array.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_uniform_initializers.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_constant_variable.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/builtin_functions.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ast_function.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_dead_functions.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_basic_block.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_if_to_cond_assign.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_interface_blocks.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_structure_splitting.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_vec_index_to_cond_assign.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_hv_accept.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/ir_clone.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_flip_matrices.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/standalone_scaffolding.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_array_splitting.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_discard.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_packed_varyings.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_discard_flow.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_copy_propagation.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_jumps.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/lower_instructions.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_lexer.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/link_uniform_block_active_visitor.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/opt_flatten_nested_if_blocks.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_symbol_table.cpp

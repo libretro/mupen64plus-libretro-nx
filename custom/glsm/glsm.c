@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
+#include "glsl_optimizer.h"
 
 struct gl_cached_state
 {
@@ -1080,10 +1081,37 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
  * Core in:
  * OpenGL    : 2.0
  */
+
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-   return glShaderSource(shader, count, string, length);
+/*
+#ifdef HAVE_OPENGLES
+#ifdef HAVE_OPENGLES2
+   glslopt_target target = kGlslTargetOpenGLES20;
+#else
+   glslopt_target target = kGlslTargetOpenGLES30;
+#endif
+   glslopt_ctx* ctx = glslopt_initialize(target);
+   glslopt_shader_type type;
+   GLint _type;
+   glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
+   if (_type == GL_VERTEX_SHADER)
+      type = kGlslOptShaderVertex;
+   else if (_type == GL_FRAGMENT_SHADER)
+      type = kGlslOptShaderFragment;
+   glslopt_shader* new_shader = glslopt_optimize (ctx, type, *string, 0);
+   if (glslopt_get_status (new_shader)) {
+      const char* newSource = glslopt_get_output (new_shader);
+      glShaderSource(shader, count, &newSource, length);
+   } else
+      printf("%s\n",glslopt_get_log (new_shader));
+   glslopt_shader_delete (new_shader);
+   glslopt_cleanup (ctx);
+#else
+*/
+   glShaderSource(shader, count, string, length);
+//#endif
 }
 
 /*
