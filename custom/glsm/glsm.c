@@ -188,6 +188,7 @@ struct gl_cached_state
 static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
+glslopt_ctx* ctx;
 
 /* GL wrapper-side */
 
@@ -1086,12 +1087,6 @@ void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
 #ifdef HAVE_OPENGLES
-#ifdef HAVE_OPENGLES2
-   glslopt_target target = kGlslTargetOpenGLES20;
-#else
-   glslopt_target target = kGlslTargetOpenGLES30;
-#endif
-   glslopt_ctx* ctx = glslopt_initialize(target);
    glslopt_shader_type type;
    GLint _type;
    glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
@@ -1106,7 +1101,6 @@ void rglShaderSource(GLuint shader, GLsizei count,
    } else
       printf("%s\n",glslopt_get_log (new_shader));
    glslopt_shader_delete (new_shader);
-   glslopt_cleanup (ctx);
 #else
    glShaderSource(shader, count, string, length);
 #endif
@@ -1951,10 +1945,6 @@ static void glsm_state_setup(void)
 #ifndef HAVE_OPENGLES
    gl_state.colorlogicop                = GL_COPY;
 #endif
-
-#ifdef CORE
-   glGenVertexArrays(1, &gl_state.vao);
-#endif
 }
 
 static void glsm_state_bind(void)
@@ -2030,6 +2020,9 @@ static bool glsm_state_ctx_destroy(void *data)
    if (gl_state.bind_textures.ids)
       free(gl_state.bind_textures.ids);
    gl_state.bind_textures.ids = NULL;
+#ifdef HAVE_OPENGLES
+   glslopt_cleanup (ctx);
+#endif
 }
 
 static bool glsm_state_ctx_init(void *data)
@@ -2067,6 +2060,15 @@ static bool glsm_state_ctx_init(void *data)
 
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
+
+#ifdef HAVE_OPENGLES
+#ifdef HAVE_OPENGLES2
+   glslopt_target target = kGlslTargetOpenGLES20;
+#else
+   glslopt_target target = kGlslTargetOpenGLES30;
+#endif
+   ctx = glslopt_initialize(target);
+#endif
 
    return true;
 }
