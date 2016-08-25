@@ -6,10 +6,17 @@
 
 #include "PluginAPI.h"
 
+#include "RSP.h"
+#include "GLideN64.h"
+extern u32 FrameSkip;
 extern "C" {
 
+int skip;
+int render;
 EXPORT BOOL CALL gln64InitiateGFX (GFX_INFO Gfx_Info)
 {
+	skip = FrameSkip;
+	render = 0;
 	return api().InitiateGFX(Gfx_Info);
 }
 
@@ -20,7 +27,15 @@ EXPORT void CALL gln64MoveScreen (int xpos, int ypos)
 
 EXPORT void CALL gln64ProcessDList(void)
 {
-	api().ProcessDList();
+	if (skip < FrameSkip) {
+		*REG.MI_INTR |= MI_INTR_DP;
+		CheckInterrupts();
+		++skip;
+	} else {
+		api().ProcessDList();
+		skip = 0;
+		render = 1;
+	}
 }
 
 EXPORT void CALL gln64ProcessRDPList(void)
@@ -40,7 +55,10 @@ EXPORT void CALL gln64ShowCFB (void)
 
 EXPORT void CALL gln64UpdateScreen (void)
 {
-	api().UpdateScreen();
+	if (render == 1) {
+		api().UpdateScreen();
+		render = 0;
+	}
 }
 
 EXPORT void CALL gln64ViStatusChanged (void)

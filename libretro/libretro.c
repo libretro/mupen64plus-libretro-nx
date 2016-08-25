@@ -81,6 +81,7 @@ u32 EnableCopyColorFromRDRAM = 0;
 u32 BufferSwapMode = 0;
 f32 PolygonOffsetFactor = 0.0;
 u32 EnableFragmentDepthWrite = 0;
+u32 FrameSkip = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -118,6 +119,8 @@ static void setup_variables(void)
 #endif
       { "glupen64-screensize",
          "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
+      { "glupen64-FrameSkip",
+         "Frame Skip; 0|1|2|3|4" },
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
@@ -374,6 +377,22 @@ extern void ChangeSize();
 void update_variables(bool startup)
 {
    struct retro_variable var;
+
+   var.key = "glupen64-FrameSkip";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "4"))
+         FrameSkip = 4;
+      else if (!strcmp(var.value, "3"))
+         FrameSkip = 3;
+      else if (!strcmp(var.value, "2"))
+         FrameSkip = 2;
+      else if (!strcmp(var.value, "1"))
+         FrameSkip = 1;
+      else
+         FrameSkip = 0;
+   }
 
    var.key = "glupen64-BilinearMode";
    var.value = NULL;
