@@ -60,9 +60,6 @@ static unsigned audio_buffer_size   = 2048;
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 
-uint32_t *blitter_buf;
-uint32_t *blitter_buf_lock   = NULL;
-
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
 u32 bilinearMode = 0;
@@ -348,11 +345,6 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
    environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
 
-   blitter_buf = (uint32_t*)calloc(
-         PRESCALE_WIDTH * PRESCALE_HEIGHT, sizeof(uint32_t)
-         );
-   blitter_buf_lock = blitter_buf;
-
    retro_thread = co_active();
    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
 }
@@ -360,11 +352,6 @@ void retro_init(void)
 void retro_deinit(void)
 {
    main_stop();
-
-   if (blitter_buf)
-      free(blitter_buf);
-   blitter_buf      = NULL;
-   blitter_buf_lock = NULL;
 
    deinit_audio_libretro();
 
@@ -769,7 +756,6 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
-   blitter_buf_lock = blitter_buf;
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    co_switch(game_thread);
    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
