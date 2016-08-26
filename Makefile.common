@@ -256,6 +256,14 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
 endif
 
 #GLSL OPT
+ifeq ($(GLES),1)
+GLSL_OPT = 1
+else ifeq ($(GLES3),1)
+GLSL_OPT = 1
+endif
+
+ifeq ($(GLSL_OPT),1)
+
 SOURCES_C += \
 	$(GLSL_OPT_DIR)/src/glsl/glcpp/glcpp-lex.c \
 	$(GLSL_OPT_DIR)/src/glsl/glcpp/pp.c \
@@ -363,3 +371,4 @@ SOURCES_CXX += \
 	$(GLSL_OPT_DIR)/src/glsl/link_uniform_block_active_visitor.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/opt_flatten_nested_if_blocks.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/glsl_symbol_table.cpp
+endif
