@@ -15,7 +15,7 @@ int skip;
 int render;
 EXPORT BOOL CALL gln64InitiateGFX (GFX_INFO Gfx_Info)
 {
-	skip = FrameSkip;
+	skip = 0;
 	render = 0;
 	return api().InitiateGFX(Gfx_Info);
 }
@@ -27,13 +27,13 @@ EXPORT void CALL gln64MoveScreen (int xpos, int ypos)
 
 EXPORT void CALL gln64ProcessDList(void)
 {
-	if (skip < FrameSkip) {
+	if (skip && FrameSkip) {
 		*REG.MI_INTR |= MI_INTR_DP;
 		CheckInterrupts();
-		++skip;
+		skip = 0;
 	} else {
 		api().ProcessDList();
-		skip = 0;
+		skip = 1;
 		render = 1;
 	}
 }

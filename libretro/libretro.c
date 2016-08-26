@@ -120,7 +120,7 @@ static void setup_variables(void)
       { "glupen64-screensize",
          "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
       { "glupen64-FrameSkip",
-         "Frame Skip; 0|1|2|3|4" },
+         "Frame Skip; Off|On" },
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
@@ -130,7 +130,7 @@ static void setup_variables(void)
          "Enable frame buffer emulation; True|False" },
 #endif
       { "glupen64-UseNativeResolutionFactor",
-         "Frame buffer size is the factor of N64 native resolution; 0|1|2|4" },
+         "Frame buffer size is the factor of N64 native resolution; 0x|1x|2x|3x|4x" },
       { "glupen64-EnableCopyAuxiliaryToRDRAM",
          "Copy auxiliary buffers to RDRAM; False|True" },
       { "glupen64-EnableCopyColorToRDRAM",
@@ -382,13 +382,7 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "4"))
-         FrameSkip = 4;
-      else if (!strcmp(var.value, "3"))
-         FrameSkip = 3;
-      else if (!strcmp(var.value, "2"))
-         FrameSkip = 2;
-      else if (!strcmp(var.value, "1"))
+      if (!strcmp(var.value, "On"))
          FrameSkip = 1;
       else
          FrameSkip = 0;
@@ -418,13 +412,13 @@ void update_variables(bool startup)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "4"))
+      if (!strcmp(var.value, "4x"))
          UseNativeResolutionFactor = 4;
-      else if (!strcmp(var.value, "3"))
+      else if (!strcmp(var.value, "3x"))
          UseNativeResolutionFactor = 3;
-      else if (!strcmp(var.value, "2"))
+      else if (!strcmp(var.value, "2x"))
          UseNativeResolutionFactor = 2;
-      else if (!strcmp(var.value, "1"))
+      else if (!strcmp(var.value, "1x"))
          UseNativeResolutionFactor = 1;
       else
          UseNativeResolutionFactor = 0;
