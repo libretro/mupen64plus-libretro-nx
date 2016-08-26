@@ -57,7 +57,8 @@ EXPORT void CALL gln64UpdateScreen (void)
 {
 	if (render == 1) {
 		api().UpdateScreen();
-		render = 0;
+		if (FrameSkip)
+			render = 0;
 	}
 }
 
