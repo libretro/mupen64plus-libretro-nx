@@ -351,8 +351,6 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   main_stop();
-
    deinit_audio_libretro();
 
    if (perf_cb.perf_log)
