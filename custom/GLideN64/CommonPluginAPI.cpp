@@ -16,7 +16,7 @@ int render;
 EXPORT BOOL CALL gln64InitiateGFX (GFX_INFO Gfx_Info)
 {
 	skip = 0;
-	render = 0;
+	render = 1;
 	return api().InitiateGFX(Gfx_Info);
 }
 
