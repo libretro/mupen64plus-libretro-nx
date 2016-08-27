@@ -341,7 +341,7 @@ endif
 #else
 #   CFLAGS   += -std=gnu89 -MMD
 #endif
-CXXFLAGS += -std=c++11 -DOS_LINUX
+CXXFLAGS += -std=c++11
 ### Finalize ###
 OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o)
 CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)

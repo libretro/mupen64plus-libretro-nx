@@ -247,7 +247,7 @@ else ifeq ($(GLES3),1)
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
 else
-	GLFLAGS += -DHAVE_OPENGL
+	GLFLAGS += -DHAVE_OPENGL -DCORE -DOS_LINUX
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
