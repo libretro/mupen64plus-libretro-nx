@@ -85,6 +85,18 @@ bool path_contains_compressed_file(const char *path);
 bool path_file_exists(const char *path);
 
 /**
+ * path_get_archive_delim:
+ * @path               : path
+ *
+ * Gets delimiter of an archive file. Only the first '#'
+ * after a compression extension is considered.
+ *
+ * Returns: pointer to the delimiter in the path if it contains
+ * a compressed file, otherwise NULL.
+ */
+const char *path_get_archive_delim(const char *path);
+
+/**
  * path_get_extension:
  * @path               : path
  *
@@ -151,7 +163,7 @@ void path_resolve_realpath(char *buf, size_t size);
  *
  * Checks if @path is an absolute path or a relative path.
  *
- * Returns: true (1) if path is absolute, false (1) if path is relative.
+ * Returns: true if path is absolute, false if path is relative.
  **/
 bool path_is_absolute(const char *path);
 
