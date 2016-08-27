@@ -63,4 +63,5 @@ extern u32 EnableCopyColorFromRDRAM;
 extern u32 BufferSwapMode;
 extern f32 PolygonOffsetFactor;
 extern u32 EnableFragmentDepthWrite;
+extern u32 FrameSkip;
 #endif

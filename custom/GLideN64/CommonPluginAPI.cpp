@@ -8,7 +8,8 @@
 
 #include "RSP.h"
 #include "GLideN64.h"
-extern u32 FrameSkip;
+#include "GLideN64_libretro.h"
+
 extern "C" {
 
 int skip;
