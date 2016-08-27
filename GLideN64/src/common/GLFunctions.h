@@ -104,4 +104,8 @@ extern PFNGLGETPROGRAMBINARYPROC glGetProgramBinary;
 extern PFNGLPROGRAMBINARYPROC glProgramBinary;
 extern PFNGLPROGRAMPARAMETERIPROC glProgramParameteri;
 
+extern PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
+extern PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
+extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+
 #endif // GLFUNCTIONS_H

@@ -21,12 +21,3 @@ That will create a file named **glupen64_libretro.so**
 You can run a ROM like this:
 
 retroarch -L glupen64_libretro.so /path/to/rom.n64
-
-### Subtrees
-#### Adding Subtree
-
-git subtree add --prefix mupen64plus-core https://github.com/mupen64plus/mupen64plus-core.git master --squash
-
-#### Updating Subtree
-
-git subtree pull --prefix mupen64plus-core https://github.com/mupen64plus/mupen64plus-core.git master --squash
