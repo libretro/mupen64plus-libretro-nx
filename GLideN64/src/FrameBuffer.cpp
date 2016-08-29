@@ -582,7 +582,7 @@ void FrameBufferList::saveBuffer(u32 _address, u16 _format, u16 _size, u16 _widt
 		if ((m_pCurrent->m_startAddress != _address) ||
 			(m_pCurrent->m_width != _width) ||
 			//(current->height != height) ||
-			//(current->size != size) ||  // TODO FIX ME
+			(m_pCurrent->m_size < _size) ||
 			(m_pCurrent->m_scaleX != scaleX) ||
 			(m_pCurrent->m_scaleY != scaleY))
 		{
@@ -791,6 +791,8 @@ void FrameBufferList::renderBuffer(u32 _address)
 	OGLRender & render = ogl.getRender();
 	GLint srcY0, srcY1, dstY0, dstY1;
 	GLint X0, X1, Xwidth;
+	GLint Xoffset = 0;
+	GLint Xdivot = 0;
 	GLint srcPartHeight = 0;
 	GLint dstPartHeight = 0;
 
@@ -817,7 +819,10 @@ void FrameBufferList::renderBuffer(u32 _address)
 		isLowerField = vStart > vStartPrev;
 	vStartPrev = vStart;
 
-	srcY0 = ((_address - pBuffer->m_startAddress) << 1 >> pBuffer->m_size) / (*REG.VI_WIDTH);
+	const u32 addrOffset = ((_address - pBuffer->m_startAddress) << 1 >> pBuffer->m_size);
+	srcY0 = addrOffset / (*REG.VI_WIDTH);
+	if (addrOffset % (*REG.VI_WIDTH) != 0)
+		Xoffset = (*REG.VI_WIDTH) - addrOffset % (*REG.VI_WIDTH);
 	if (isLowerField) {
 		if (srcY0 > 0)
 			--srcY0;
@@ -840,14 +845,19 @@ void FrameBufferList::renderBuffer(u32 _address)
 
 	FrameBuffer * pFilteredBuffer = PostProcessor::get().doBlur(PostProcessor::get().doGammaCorrection(pBuffer));
 
+	const bool vi_fsaa = (*REG.VI_STATUS & 512) == 0;
+	const bool vi_divot = (*REG.VI_STATUS & 16) != 0;
+	if (vi_fsaa && vi_divot)
+		Xdivot = 1;
+
 	const f32 viScaleX = _FIXED2FLOAT(_SHIFTR(*REG.VI_X_SCALE, 0, 12), 10);
 	const f32 srcScaleX = pFilteredBuffer->m_scaleX;
 	const f32 dstScaleX = ogl.getScaleX();
 	const s32 h0 = (isPAL ? 128 : 108);
 	const s32 hx0 = max(0, hStart - h0);
 	const s32 hx1 = max(0, h0 + 640 - hEnd);
-	X0 = (GLint)(hx0 * viScaleX * dstScaleX);
-	Xwidth = (GLint)((min((f32)VI.width, (hEnd - hStart)*viScaleX)) * srcScaleX);
+	X0 = (GLint)((hx0 * viScaleX + Xoffset) * dstScaleX);
+	Xwidth = (GLint)((min((f32)VI.width, (hEnd - hStart)*viScaleX - Xoffset - Xdivot)) * srcScaleX);
 	X1 = ogl.getWidth() - (GLint)(hx1 *viScaleX * dstScaleX);
 
 	const f32 srcScaleY = pFilteredBuffer->m_scaleY;
