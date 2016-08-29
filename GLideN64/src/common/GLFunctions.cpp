@@ -114,10 +114,6 @@ PFNGLGETPROGRAMBINARYPROC glGetProgramBinary;
 PFNGLPROGRAMBINARYPROC glProgramBinary;
 PFNGLPROGRAMPARAMETERIPROC glProgramParameteri;
 
-PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
-PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
-PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
-
 void initGLFunctions()
 {
 #ifdef EGL
@@ -221,8 +217,4 @@ void initGLFunctions()
 	glGetProgramBinary = (PFNGLGETPROGRAMBINARYPROC)glGetProcAddress("glGetProgramBinary");
 	glProgramBinary = (PFNGLPROGRAMBINARYPROC)glGetProcAddress("glProgramBinary");
 	glProgramParameteri = (PFNGLPROGRAMPARAMETERIPROC)glGetProcAddress("glProgramParameteri");
-
-	glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)glGetProcAddress("glGenVertexArrays");
-	glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)glGetProcAddress("glBindVertexArray");
-	glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)glGetProcAddress("glDeleteVertexArrays");
 }

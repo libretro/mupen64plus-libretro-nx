@@ -512,6 +512,11 @@ void OGLRender::TexrectDrawer::add()
 		m_max_lry = max(m_max_lry, m_lry);
 	}
 
+#ifndef GLESX
+	glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s1) + render.rect_offset));
+#endif
 	render.updateVBO(&render.rect_vbo, sizeof(GLVertex) * 4, pRect);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -620,6 +625,11 @@ bool OGLRender::TexrectDrawer::draw()
 	render.updateScissor(m_pBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_pBuffer != nullptr ? m_pBuffer->m_FBO : 0);
 
+#ifndef GLESX
+	glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s1) + render.rect_offset));
+#endif
 	render.updateVBO(&render.rect_vbo, sizeof(GLVertex) * 4, rect);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -638,6 +648,11 @@ bool OGLRender::TexrectDrawer::draw()
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
 
+#ifndef GLESX
+	glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0) + render.rect_offset));
+	glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s1) + render.rect_offset));
+#endif
 	render.updateVBO(&render.rect_vbo, sizeof(GLVertex) * 4, rect);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
