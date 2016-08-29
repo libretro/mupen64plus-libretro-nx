@@ -59,6 +59,9 @@ RETRO_BEGIN_DECLS
 #define glBindFragDataLocation      rglBindFragDataLocation
 #define glBindAttribLocation        rglBindAttribLocation
 #define glLinkProgram               rglLinkProgram
+#define glGetIntegerv               rglGetIntegerv
+#define glGetFloatv                 rglGetFloatv
+#define glGetString                 rglGetString
 #define glGetProgramiv              rglGetProgramiv
 #define glGetShaderiv               rglGetShaderiv
 #define glAttachShader              rglAttachShader
@@ -70,6 +73,7 @@ RETRO_BEGIN_DECLS
 #define glGetProgramInfoLog         rglGetProgramInfoLog
 #define glIsProgram                 rglIsProgram
 #define glTexParameteri             rglTexParameteri
+#define glTexParameterf             rglTexParameterf
 #define glEnableVertexAttribArray   rglEnableVertexAttribArray
 #define glDisableVertexAttribArray  rglDisableVertexAttribArray
 #define glVertexAttribPointer       rglVertexAttribPointer
@@ -118,6 +122,7 @@ RETRO_BEGIN_DECLS
 #define glPolygonOffset             rglPolygonOffset
 #define glPixelStorei               rglPixelStorei
 #define glReadBuffer                rglReadBuffer
+#define glReadPixels                rglReadPixels
 #define glUniformMatrix4fv          rglUniformMatrix4fv
 #define glGetAttribLocation         rglGetAttribLocation
 #define glTexStorage2D              rglTexStorage2D
@@ -132,7 +137,7 @@ RETRO_BEGIN_DECLS
 #define glUniformBlockBinding       rglUniformBlockBinding
 #define glGetUniformBlockIndex      rglGetUniformBlockIndex
 #define glGetActiveUniformBlockiv   rglGetActiveUniformBlockiv
-#define glBindBufferBase            rglBindBufferBase 
+#define glBindBufferBase            rglBindBufferBase
 #define glGetUniformIndices         rglGetUniformIndices
 #define glGetActiveUniformsiv       rglGetActiveUniformsiv
 #define glGetError                  rglGetError
@@ -146,6 +151,7 @@ RETRO_BEGIN_DECLS
 #define glProgramBinary             rglProgramBinary
 #define glGetProgramBinary          rglGetProgramBinary
 #define glProgramParameteri         rglProgramParameteri
+#define glTexImage2D                rglTexImage2D
 #define glTexSubImage2D             rglTexSubImage2D
 #define glDeleteVertexArrays        rglDeleteVertexArrays
 #define glRenderbufferStorageMultisample rglRenderbufferStorageMultisample
@@ -180,6 +186,11 @@ void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value);
 void rglProgramParameteri( 	GLuint program,
   	GLenum pname,
   	GLint value);
+const GLubyte* rglGetString(	GLenum name);
+void rglGetIntegerv(	GLenum pname,
+ 	GLint * data);
+void rglGetFloatv(	GLenum pname,
+ 	GLfloat * params);
 void rglGetProgramBinary( 	GLuint program,
   	GLsizei bufsize,
   	GLsizei *length,
@@ -227,6 +238,13 @@ void rglBlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 void rglBlendEquation(GLenum mode);
 void rglGenVertexArrays(GLsizei n, GLuint *arrays);
 void rglReadBuffer(GLenum mode);
+void rglReadPixels(	GLint x,
+ 	GLint y,
+ 	GLsizei width,
+ 	GLsizei height,
+ 	GLenum format,
+ 	GLenum type,
+ 	GLvoid * data);
 void rglPixelStorei(GLenum pname, GLint param);
 void rglTexCoord2f(GLfloat s, GLfloat t);
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
@@ -273,6 +291,7 @@ void rglGetProgramInfoLog(GLuint shader, GLsizei maxLength,
       GLsizei *length, GLchar *infoLog);
 GLboolean rglIsProgram(GLuint program);
 void rglTexParameteri(GLenum target, GLenum pname, GLint param);
+void rglTexParameterf(GLenum target, GLenum pname, GLfloat param);
 void rglEnableVertexAttribArray(GLuint index);
 void rglDisableVertexAttribArray(GLuint index);
 void rglVertexAttribPointer(GLuint name, GLint size,
@@ -382,6 +401,15 @@ void rglTexImage2DMultisample( 	GLenum target,
   	GLsizei height,
   	GLboolean fixedsamplelocations);
 void rglMemoryBarrier( 	GLbitfield barriers);
+void rglTexImage2D(	GLenum target,
+ 	GLint level,
+ 	GLint internalformat,
+ 	GLsizei width,
+ 	GLsizei height,
+ 	GLint border,
+ 	GLenum format,
+ 	GLenum type,
+ 	const GLvoid * data);
 void rglTexSubImage2D( 	GLenum target,
   	GLint level,
   	GLint xoffset,

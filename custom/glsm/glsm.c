@@ -235,6 +235,20 @@ void rglPolygonMode(GLenum face, GLenum mode)
 #endif
 }
 
+void rglTexImage2D(
+	GLenum target,
+ 	GLint level,
+ 	GLint internalformat,
+ 	GLsizei width,
+ 	GLsizei height,
+ 	GLint border,
+ 	GLenum format,
+ 	GLenum type,
+ 	const GLvoid * data)
+{
+   glTexImage2D(target, level, internalformat, width, height, border, format, type, data);
+}
+
 void rglTexSubImage2D(
       GLenum target,
   	GLint level,
@@ -292,6 +306,17 @@ void rglReadBuffer(GLenum mode)
    glReadBuffer(mode);
    gl_state.readbuffer.mode = mode;
 #endif
+}
+
+void rglReadPixels(	GLint x,
+ 	GLint y,
+ 	GLsizei width,
+ 	GLsizei height,
+ 	GLenum format,
+ 	GLenum type,
+ 	GLvoid * data)
+{
+   glReadPixels(x, y, width, height, format, type, data);
 }
 
 /*
@@ -825,6 +850,20 @@ void rglGetProgramiv(GLuint shader, GLenum pname, GLint *params)
    glGetProgramiv(shader, pname, params);
 }
 
+void rglGetIntegerv(GLenum pname, GLint * data)
+{
+   glGetIntegerv(pname, data);
+}
+
+void rglGetFloatv(GLenum pname, GLfloat * params)
+{
+   glGetFloatv(pname, params);
+}
+
+const GLubyte* rglGetString(GLenum name)
+{
+   glGetString(name);
+}
 /*
  * Category: Shaders
  *
@@ -1181,6 +1220,11 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
    glTexParameteri(target, pname, param);
+}
+
+void rglTexParameterf(GLenum target, GLenum pname, GLfloat param)
+{
+   glTexParameterf(target, pname, param);
 }
 
 /*
