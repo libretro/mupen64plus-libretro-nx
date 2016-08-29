@@ -60,6 +60,7 @@ static unsigned audio_buffer_size   = 2048;
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 
+int flip_only = 0;
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
 u32 bilinearMode = 0;
@@ -754,10 +755,15 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
-   glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+   if (flip_only)
+      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+
    co_switch(game_thread);
-   glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-   video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+
+   if (flip_only) {
+      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+   }
 }
 
 void retro_reset (void)
@@ -833,6 +839,7 @@ void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
 int retro_return(int just_flipping)
 {
+   flip_only = just_flipping;
    co_switch(retro_thread);
 
    return 0;
