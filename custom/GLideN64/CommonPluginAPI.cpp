@@ -36,8 +36,10 @@ EXPORT void CALL gln64ProcessDList(void)
 		CheckInterrupts();
 		skip = 0;
 	} else {
-		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-		bound = 1;
+		if (!bound) {
+			glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+			bound = 1;
+		}
 		api().ProcessDList();
 		skip = 1;
 		render = 1;
