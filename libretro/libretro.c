@@ -60,7 +60,6 @@ static unsigned audio_buffer_size   = 2048;
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 
-int flip_only = 0;
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
 u32 bilinearMode = 0;
@@ -753,22 +752,9 @@ void retro_unload_game(void)
    emu_initialized = false;
 }
 
-bool emu_step_render(void)
-{
-   if (flip_only) {
-      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-      return true;
-   } else
-      return false;
-}
-
 void retro_run (void)
 {
-
-   do {
-      co_switch(game_thread);
-   } while (emu_step_render());
+   co_switch(game_thread);
 }
 
 void retro_reset (void)
@@ -842,12 +828,9 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
 void retro_cheat_reset(void) { }
 void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
-int retro_return(int just_flipping)
+void retro_return(void)
 {
-   flip_only = just_flipping;
    co_switch(retro_thread);
-
-   return 0;
 }
 
 uint32_t get_retro_screen_width()

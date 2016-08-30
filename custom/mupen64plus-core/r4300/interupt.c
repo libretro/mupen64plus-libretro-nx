@@ -528,7 +528,7 @@ void gen_interupt(void)
         case VI_INT:
             remove_interupt_event();
             vi_vertical_interrupt_event(&g_vi);
-            retro_return(false);
+            retro_return();
             break;
     
         case COMPARE_INT:

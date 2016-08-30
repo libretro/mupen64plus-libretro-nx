@@ -57,9 +57,12 @@ void OGLVideoMupenPlus::_stop()
 {
 }
 
+extern retro_video_refresh_t video_cb;
+
 void OGLVideoMupenPlus::_swapBuffers()
 {
-	retro_return(true);
+	glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+	video_cb(RETRO_HW_FRAME_BUFFER_VALID, get_retro_screen_width(), get_retro_screen_height(), 0);
 }
 
 void OGLVideoMupenPlus::_saveScreenshot()
