@@ -9,6 +9,7 @@
 #include "RSP.h"
 #include "GLideN64.h"
 #include "GLideN64_libretro.h"
+#include <glsm/glsm.h>
 
 extern "C" {
 
@@ -33,6 +34,7 @@ EXPORT void CALL gln64ProcessDList(void)
 		CheckInterrupts();
 		skip = 0;
 	} else {
+		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
 		api().ProcessDList();
 		skip = 1;
 		render = 1;
