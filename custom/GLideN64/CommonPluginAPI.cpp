@@ -62,7 +62,7 @@ EXPORT void CALL gln64ShowCFB (void)
 EXPORT void CALL gln64UpdateScreen (void)
 {
 	if (render == 1) {
-		if (!bound) {
+		if (!bound && EnableFBEmulation) {
 			glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
 			bound = 1;
 		}
