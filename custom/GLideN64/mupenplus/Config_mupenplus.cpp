@@ -35,7 +35,6 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
-	config.frameBufferEmulation.bufferSwapMode = BufferSwapMode;
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 	config.generalEmulation.enableShadersStorage = 0;
 #ifdef ANDROID

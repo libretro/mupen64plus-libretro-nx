@@ -75,7 +75,6 @@ u32 EnableCopyAuxiliaryToRDRAM = 0;
 u32 EnableCopyColorToRDRAM = 0;
 u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
-u32 BufferSwapMode = 0;
 f32 PolygonOffsetFactor = 0.0;
 u32 EnableFragmentDepthWrite = 0;
 u32 FrameSkip = 0;
@@ -140,8 +139,6 @@ static void setup_variables(void)
          "Enable depth buffer copy to RDRAM; Off|FromMem|Software" },
       { "glupen64-EnableCopyColorFromRDRAM",
          "Enable color buffer copy from RDRAM; False|True" },
-      { "glupen64-BufferSwapMode",
-         "When to swap buffers; VIupdate|OriginChange|BufferUpdate" },
       { "glupen64-EnableNoise",
          "Enable color noise emulation; True|False" },
       { "glupen64-EnableLOD",
@@ -461,18 +458,6 @@ void update_variables(bool startup)
          EnableFragmentDepthWrite = 1;
       else
          EnableFragmentDepthWrite = 0;
-   }
-
-   var.key = "glupen64-BufferSwapMode";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "BufferUpdate"))
-         BufferSwapMode = 2;
-      else if (!strcmp(var.value, "OriginChange"))
-         BufferSwapMode = 1;
-      else
-         BufferSwapMode = 0;
    }
 
    var.key = "glupen64-EnableNoise";
