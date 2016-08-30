@@ -753,14 +753,23 @@ void retro_unload_game(void)
    emu_initialized = false;
 }
 
+bool emu_step_render(void)
+{
+   if (flip_only) {
+      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+      return true;
+   } else
+      return false;
+}
+
 void retro_run (void)
 {
-   glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-   co_switch(game_thread);
-   glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
 
-   if (flip_only)
-      video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+   do {
+      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+      co_switch(game_thread);
+      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+   } while (emu_step_render());
 }
 
 void retro_reset (void)
