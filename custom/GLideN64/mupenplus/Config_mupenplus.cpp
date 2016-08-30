@@ -42,8 +42,6 @@ void Config_LoadConfig()
 	config.generalEmulation.polygonOffsetFactor = PolygonOffsetFactor;
 	config.generalEmulation.polygonOffsetUnits = PolygonOffsetFactor;
 #endif
-	if (FrameSkip)
-		config.frameBufferEmulation.enable = 0;
 }
 
 EXPORT int CALL osal_path_existsW(const wchar_t *_path)

@@ -13,14 +13,10 @@
 
 extern "C" {
 
-int skip;
-int render;
 int bound;
 EXPORT BOOL CALL gln64InitiateGFX (GFX_INFO Gfx_Info)
 {
 	bound = 0;
-	skip = 0;
-	render = 1;
 	return api().InitiateGFX(Gfx_Info);
 }
 
@@ -31,19 +27,11 @@ EXPORT void CALL gln64MoveScreen (int xpos, int ypos)
 
 EXPORT void CALL gln64ProcessDList(void)
 {
-	if (skip && FrameSkip) {
-		*REG.MI_INTR |= MI_INTR_DP;
-		CheckInterrupts();
-		skip = 0;
-	} else {
-		if (!bound) {
-			glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-			bound = 1;
-		}
-		api().ProcessDList();
-		skip = 1;
-		render = 1;
+	if (!bound) {
+		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+		bound = 1;
 	}
+	api().ProcessDList();
 }
 
 EXPORT void CALL gln64ProcessRDPList(void)
@@ -63,15 +51,11 @@ EXPORT void CALL gln64ShowCFB (void)
 
 EXPORT void CALL gln64UpdateScreen (void)
 {
-	if (render == 1) {
-		if (!bound && EnableFBEmulation) {
-			glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-			bound = 1;
-		}
-		api().UpdateScreen();
-		if (FrameSkip)
-			render = 0;
+	if (!bound && EnableFBEmulation) {
+		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+		bound = 1;
 	}
+	api().UpdateScreen();
 }
 
 EXPORT void CALL gln64ViStatusChanged (void)
