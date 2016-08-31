@@ -862,7 +862,7 @@ void rglGetFloatv(GLenum pname, GLfloat * params)
 
 const GLubyte* rglGetString(GLenum name)
 {
-   glGetString(name);
+   return glGetString(name);
 }
 /*
  * Category: Shaders
