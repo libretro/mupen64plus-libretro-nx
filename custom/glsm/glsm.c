@@ -246,6 +246,8 @@ void rglTexImage2D(
  	GLenum type,
  	const GLvoid * data)
 {
+   //This is a fix for https://github.com/loganmc10/GLupeN64/issues/13
+   glPixelStorei(GL_UNPACK_ALIGNMENT,1);
    glTexImage2D(target, level, internalformat, width, height, border, format, type, data);
 }
 
