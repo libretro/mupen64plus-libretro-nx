@@ -22,7 +22,6 @@
 #define M64P_CORE_PROTOTYPES 1
 
 #include <r4300/interupt.h>
-#include <libretro_private.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -528,7 +527,6 @@ void gen_interupt(void)
         case VI_INT:
             remove_interupt_event();
             vi_vertical_interrupt_event(&g_vi);
-            retro_return();
             break;
     
         case COMPARE_INT:

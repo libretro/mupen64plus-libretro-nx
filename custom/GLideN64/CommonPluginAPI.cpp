@@ -7,16 +7,12 @@
 #include "PluginAPI.h"
 
 #include "RSP.h"
-#include "GLideN64.h"
-#include "GLideN64_libretro.h"
-#include <glsm/glsm.h>
+#include <libretro_private.h>
 
 extern "C" {
 
-int bound;
 EXPORT BOOL CALL gln64InitiateGFX (GFX_INFO Gfx_Info)
 {
-	bound = 0;
 	return api().InitiateGFX(Gfx_Info);
 }
 
@@ -27,10 +23,6 @@ EXPORT void CALL gln64MoveScreen (int xpos, int ypos)
 
 EXPORT void CALL gln64ProcessDList(void)
 {
-	if (!bound) {
-		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-		bound = 1;
-	}
 	api().ProcessDList();
 }
 
@@ -51,11 +43,8 @@ EXPORT void CALL gln64ShowCFB (void)
 
 EXPORT void CALL gln64UpdateScreen (void)
 {
-	if (!bound && EnableFBEmulation) {
-		glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-		bound = 1;
-	}
 	api().UpdateScreen();
+	retro_return();
 }
 
 EXPORT void CALL gln64ViStatusChanged (void)
