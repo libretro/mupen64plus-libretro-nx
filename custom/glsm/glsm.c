@@ -744,6 +744,11 @@ void rglCompressedTexImage2D(GLenum target, GLint level,
 void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 {
    glDeleteFramebuffers(n, framebuffers);
+   int i;
+   for (i = 0; i < n; ++i) {
+      if (framebuffers[i] == gl_state.framebuf)
+         gl_state.framebuf = 0;
+   }
 }
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
