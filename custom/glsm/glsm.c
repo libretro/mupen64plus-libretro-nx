@@ -25,6 +25,7 @@
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 #include "glsl_optimizer.h"
+#include "plugin/plugin.h"
 
 struct gl_cached_state
 {
@@ -189,6 +190,7 @@ static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 glslopt_ctx* ctx;
+static int window_first = 0;
 
 /* GL wrapper-side */
 
@@ -2153,6 +2155,12 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          break;
       case GLSM_CTL_STATE_CONTEXT_RESET:
          rglgen_resolve_symbols(hw_render.get_proc_address);
+         if (window_first > 0) {
+            glsm_state_bind();
+            gfx.changeWindow();
+	 }
+         else
+            window_first = 1;
          break;
       case GLSM_CTL_STATE_CONTEXT_DESTROY:
          glsm_state_ctx_destroy(data);

@@ -6,6 +6,7 @@
 
 #include "PluginAPI.h"
 
+#include "OpenGL.h"
 #include "RSP.h"
 #include <libretro_private.h>
 
@@ -59,7 +60,8 @@ EXPORT void CALL gln64ViWidthChanged (void)
 
 EXPORT void CALL gln64ChangeWindow(void)
 {
-	api().ChangeWindow();
+	video().setToggleFullscreen();
+	video().changeWindow();
 }
 
 EXPORT void CALL gln64FBWrite(unsigned int addr, unsigned int size)
