@@ -6,6 +6,10 @@ clone this repository, for instance:
 
 #### Building the project
 
+If you are building for a GLES platform (Android, Raspberry Pi), you might need to cd into 'glsl-optimizer' and run ```./generateParsers.sh``` before compiling the project.
+
+Compiling the project:
+
 ```make -j4```
 
 Or if you are using a Raspberry Pi:
