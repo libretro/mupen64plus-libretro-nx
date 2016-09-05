@@ -472,6 +472,7 @@ void OGLRender::TexrectDrawer::add()
 			draw();
 			memcpy(pRect, rect, sizeof(rect));
 			render._updateTextures(rsTexRect);
+			CombinerInfo::get().updateParameters(rsTexRect);
 		}
 	}
 
@@ -1223,7 +1224,6 @@ void OGLRender::_updateStates(RENDER_STATE _renderState) const
 
 #ifndef GLES2
 	if (gDP.colorImage.address == gDP.depthImageAddress &&
-		gDP.otherMode.cycleType != G_CYC_FILL &&
 		(config.generalEmulation.hacks & hack_ZeldaMM) == 0
 	) {
 		FrameBuffer * pCurBuf = frameBufferList().getCurrent();
@@ -1725,9 +1725,11 @@ void OGLRender::drawTexturedRect(const TexturedRectParams & _params)
 #endif
 	gSP.changed &= ~CHANGED_GEOMETRYMODE; // Don't update cull mode
 	if (!m_texrectDrawer.isEmpty()) {
-		CombinerInfo::get().update();
+		CombinerInfo & cmbInfo = CombinerInfo::get();
+		cmbInfo.update();
 		currentCombiner()->updateRenderState();
 		_updateTextures(rsTexRect);
+		cmbInfo.updateParameters(rsTexRect);
 		if (CombinerInfo::get().isChanged())
 			_setTexCoordArrays();
 	} else {
