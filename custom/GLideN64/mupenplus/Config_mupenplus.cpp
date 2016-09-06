@@ -21,6 +21,7 @@ Config config;
 
 void Config_LoadConfig()
 {
+	u32 hacks = config.generalEmulation.hacks;
 	config.resetToDefaults();
 	config.frameBufferEmulation.enable = EnableFBEmulation;
 	config.texture.bilinearMode = bilinearMode;
@@ -42,6 +43,7 @@ void Config_LoadConfig()
 	config.generalEmulation.polygonOffsetFactor = PolygonOffsetFactor;
 	config.generalEmulation.polygonOffsetUnits = PolygonOffsetFactor;
 #endif
+	config.generalEmulation.hacks = hacks;
 }
 
 EXPORT int CALL osal_path_existsW(const wchar_t *_path)
