@@ -1,6 +1,6 @@
-#line 2 "src/glsl/glcpp/glcpp-lex.c"
+#line 2 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.c"
 
-#line 4 "src/glsl/glcpp/glcpp-lex.c"
+#line 4 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -8,8 +8,8 @@
 
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
-#define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_MINOR_VERSION 6
+#define YY_FLEX_SUBMINOR_VERSION 0
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -47,7 +47,6 @@ typedef int16_t flex_int16_t;
 typedef uint16_t flex_uint16_t;
 typedef int32_t flex_int32_t;
 typedef uint32_t flex_uint32_t;
-typedef uint64_t flex_uint64_t;
 #else
 typedef signed char flex_int8_t;
 typedef short int flex_int16_t;
@@ -55,7 +54,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -85,6 +83,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -159,7 +159,15 @@ typedef void* yyscan_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k.
+ * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
+ * Ditto for the __ia64__ case accordingly.
+ */
+#define YY_BUF_SIZE 32768
+#else
 #define YY_BUF_SIZE 16384
+#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -181,6 +189,7 @@ typedef size_t yy_size_t;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -215,7 +224,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	yy_size_t yy_n_chars;
+	int yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -326,7 +335,7 @@ void glcpp_free (void * ,yyscan_t yyscanner );
 
 /* Begin user sect3 */
 
-#define glcpp_wrap(n) 1
+#define glcpp_wrap(yyscanner) (/*CONSTCOND*/1)
 #define YY_SKIP_YYWRAP
 
 typedef unsigned char YY_CHAR;
@@ -338,6 +347,9 @@ typedef int yy_state_type;
 static yy_state_type yy_get_previous_state (yyscan_t yyscanner );
 static yy_state_type yy_try_NUL_trans (yy_state_type current_state  ,yyscan_t yyscanner);
 static int yy_get_next_buffer (yyscan_t yyscanner );
+#if defined(__GNUC__) && __GNUC__ >= 3
+__attribute__((__noreturn__))
+#endif
 static void yy_fatal_error (yyconst char msg[] ,yyscan_t yyscanner );
 
 /* Done after the current pattern has been matched and before the
@@ -345,7 +357,7 @@ static void yy_fatal_error (yyconst char msg[] ,yyscan_t yyscanner );
  */
 #define YY_DO_BEFORE_ACTION \
 	yyg->yytext_ptr = yy_bp; \
-	yyleng = (yy_size_t) (yy_cp - yy_bp); \
+	yyleng = (size_t) (yy_cp - yy_bp); \
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
@@ -382,7 +394,7 @@ static yyconst flex_int16_t yy_accept[174] =
         9,   11,    0
     } ;
 
-static yyconst flex_int32_t yy_ec[256] =
+static yyconst YY_CHAR yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         4,    4,    5,    1,    1,    1,    1,    1,    1,    1,
@@ -414,7 +426,7 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int32_t yy_meta[46] =
+static yyconst YY_CHAR yy_meta[46] =
     {   0,
         1,    2,    3,    2,    3,    1,    1,    1,    1,    4,
         5,    1,    1,    6,    1,    7,    7,    7,    1,    1,
@@ -423,7 +435,7 @@ static yyconst flex_int32_t yy_meta[46] =
         7,    7,    7,    7,    1
     } ;
 
-static yyconst flex_int16_t yy_base[191] =
+static yyconst flex_uint16_t yy_base[191] =
     {   0,
         0,    0,   43,   44,   55,    0,   47,   48,   99,  141,
       102,  103,  106,  107,  435,  433,  436,  428,  436,  429,
@@ -471,7 +483,7 @@ static yyconst flex_int16_t yy_def[191] =
       173,  173,  173,  173,  173,  173,  173,  173,  173,  173
     } ;
 
-static yyconst flex_int16_t yy_nxt[482] =
+static yyconst flex_uint16_t yy_nxt[482] =
     {   0,
        16,   17,   18,   19,   20,   21,   22,   23,   24,   23,
        23,   25,   26,   27,   28,   29,   30,   30,   31,   32,
@@ -592,8 +604,8 @@ static yyconst flex_int16_t yy_chk[482] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "src/glsl/glcpp/glcpp-lex.l"
-#line 2 "src/glsl/glcpp/glcpp-lex.l"
+#line 1 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
+#line 2 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 /*
  * Copyright © 2010 Intel Corporation
  *
@@ -759,7 +771,7 @@ match longer strings take priority over those matching shorter
 strings, we have to be careful to avoid OTHER matching and hiding
 something that CPP does care about. So we simply exclude all
 characters that appear in any other expressions. */
-#line 763 "src/glsl/glcpp/glcpp-lex.c"
+#line 775 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.c"
 
 #define INITIAL 0
 #define COMMENT 1
@@ -784,7 +796,7 @@ struct yyguts_t
     size_t yy_buffer_stack_max; /**< capacity of stack. */
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
-    yy_size_t yy_n_chars;
+    int yy_n_chars;
     yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
@@ -836,11 +848,11 @@ void glcpp_set_extra (YY_EXTRA_TYPE user_defined ,yyscan_t yyscanner );
 
 FILE *glcpp_get_in (yyscan_t yyscanner );
 
-void glcpp_set_in  (FILE * in_str ,yyscan_t yyscanner );
+void glcpp_set_in  (FILE * _in_str ,yyscan_t yyscanner );
 
 FILE *glcpp_get_out (yyscan_t yyscanner );
 
-void glcpp_set_out  (FILE * out_str ,yyscan_t yyscanner );
+void glcpp_set_out  (FILE * _out_str ,yyscan_t yyscanner );
 
 yy_size_t glcpp_get_leng (yyscan_t yyscanner );
 
@@ -848,7 +860,11 @@ char *glcpp_get_text (yyscan_t yyscanner );
 
 int glcpp_get_lineno (yyscan_t yyscanner );
 
-void glcpp_set_lineno (int line_number ,yyscan_t yyscanner );
+void glcpp_set_lineno (int _line_number ,yyscan_t yyscanner );
+
+int glcpp_get_column  (yyscan_t yyscanner );
+
+void glcpp_set_column (int _column_no ,yyscan_t yyscanner );
 
 YYSTYPE * glcpp_get_lval (yyscan_t yyscanner );
 
@@ -870,8 +886,12 @@ extern int glcpp_wrap (yyscan_t yyscanner );
 #endif
 #endif
 
+#ifndef YY_NO_UNPUT
+    
     static void yyunput (int c,char *buf_ptr  ,yyscan_t yyscanner);
     
+#endif
+
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char *,yyconst char *,int ,yyscan_t yyscanner);
 #endif
@@ -890,7 +910,7 @@ static int input (yyscan_t yyscanner );
 
 #endif
 
-    static void yy_push_state (int new_state ,yyscan_t yyscanner);
+    static void yy_push_state (int _new_state ,yyscan_t yyscanner);
     
     static void yy_pop_state (yyscan_t yyscanner );
     
@@ -898,7 +918,12 @@ static int input (yyscan_t yyscanner );
     
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k */
+#define YY_READ_BUF_SIZE 16384
+#else
 #define YY_READ_BUF_SIZE 8192
+#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -906,7 +931,7 @@ static int input (yyscan_t yyscanner );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO fwrite( yytext, yyleng, 1, yyout )
+#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
 #endif
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
@@ -917,7 +942,7 @@ static int input (yyscan_t yyscanner );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		yy_size_t n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -987,7 +1012,7 @@ extern int glcpp_lex \
 
 /* Code executed at the end of each rule. */
 #ifndef YY_BREAK
-#define YY_BREAK break;
+#define YY_BREAK /*LINTED*/break;
 #endif
 
 #define YY_RULE_SETUP \
@@ -997,12 +1022,43 @@ extern int glcpp_lex \
  */
 YY_DECL
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp, *yy_bp;
-	register int yy_act;
+	yy_state_type yy_current_state;
+	char *yy_cp, *yy_bp;
+	int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
-#line 195 "src/glsl/glcpp/glcpp-lex.l"
+    yylval = yylval_param;
+
+    yylloc = yylloc_param;
+
+	if ( !yyg->yy_init )
+		{
+		yyg->yy_init = 1;
+
+#ifdef YY_USER_INIT
+		YY_USER_INIT;
+#endif
+
+		if ( ! yyg->yy_start )
+			yyg->yy_start = 1;	/* first start state */
+
+		if ( ! yyin )
+			yyin = stdin;
+
+		if ( ! yyout )
+			yyout = stdout;
+
+		if ( ! YY_CURRENT_BUFFER ) {
+			glcpp_ensure_buffer_stack (yyscanner);
+			YY_CURRENT_BUFFER_LVALUE =
+				glcpp__create_buffer(yyin,YY_BUF_SIZE ,yyscanner);
+		}
+
+		glcpp__load_buffer_state(yyscanner );
+		}
+
+	{
+#line 195 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 
 
 	glcpp_parser_t *parser = yyextra;
@@ -1063,39 +1119,9 @@ YY_DECL
 	}
 
 	/* Single-line comments */
-#line 1067 "src/glsl/glcpp/glcpp-lex.c"
+#line 1123 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.c"
 
-    yylval = yylval_param;
-
-    yylloc = yylloc_param;
-
-	if ( !yyg->yy_init )
-		{
-		yyg->yy_init = 1;
-
-#ifdef YY_USER_INIT
-		YY_USER_INIT;
-#endif
-
-		if ( ! yyg->yy_start )
-			yyg->yy_start = 1;	/* first start state */
-
-		if ( ! yyin )
-			yyin = stdin;
-
-		if ( ! yyout )
-			yyout = stdout;
-
-		if ( ! YY_CURRENT_BUFFER ) {
-			glcpp_ensure_buffer_stack (yyscanner);
-			YY_CURRENT_BUFFER_LVALUE =
-				glcpp__create_buffer(yyin,YY_BUF_SIZE ,yyscanner);
-		}
-
-		glcpp__load_buffer_state(yyscanner );
-		}
-
-	while ( 1 )		/* loops until end-of-file is reached */
+	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = yyg->yy_c_buf_p;
 
@@ -1111,7 +1137,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				yyg->yy_last_accepting_state = yy_current_state;
@@ -1148,41 +1174,41 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 255 "src/glsl/glcpp/glcpp-lex.l"
+#line 255 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 }
 	YY_BREAK
 /* Multi-line comments */
 case 2:
 YY_RULE_SETUP
-#line 259 "src/glsl/glcpp/glcpp-lex.l"
+#line 259 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 { yy_push_state(COMMENT, yyscanner); }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 260 "src/glsl/glcpp/glcpp-lex.l"
+#line 260 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 261 "src/glsl/glcpp/glcpp-lex.l"
+#line 261 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 { yylineno++; yycolumn = 0; parser->commented_newlines++; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 262 "src/glsl/glcpp/glcpp-lex.l"
+#line 262 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 263 "src/glsl/glcpp/glcpp-lex.l"
+#line 263 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 { yylineno++; yycolumn = 0; parser->commented_newlines++; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 264 "src/glsl/glcpp/glcpp-lex.l"
+#line 264 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	yy_pop_state(yyscanner);
 	/* In the <HASH> start condition, we don't want any SPACE token. */
@@ -1192,7 +1218,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 271 "src/glsl/glcpp/glcpp-lex.l"
+#line 271 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 
 	/* If the '#' is the first non-whitespace, non-comment token on this
@@ -1210,7 +1236,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 286 "src/glsl/glcpp/glcpp-lex.l"
+#line 286 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->space_tokens = 0;
@@ -1228,10 +1254,11 @@ YY_RULE_SETUP
 case 10:
 /* rule 10 can match eol */
 *yy_cp = yyg->yy_hold_char; /* undo effects of setting up yytext */
+YY_LINENO_REWIND_TO(yy_cp - 1);
 yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 300 "src/glsl/glcpp/glcpp-lex.l"
+#line 300 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 }
@@ -1240,7 +1267,7 @@ YY_RULE_SETUP
 	 * Simply pass them through to the main compiler's lexer/parser. */
 case 11:
 YY_RULE_SETUP
-#line 306 "src/glsl/glcpp/glcpp-lex.l"
+#line 306 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_STRING_TOKEN (PRAGMA);
@@ -1248,7 +1275,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 311 "src/glsl/glcpp/glcpp-lex.l"
+#line 311 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_TOKEN (LINE);
@@ -1257,7 +1284,7 @@ YY_RULE_SETUP
 case 13:
 /* rule 13 can match eol */
 YY_RULE_SETUP
-#line 316 "src/glsl/glcpp/glcpp-lex.l"
+#line 316 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_TOKEN_NEVER_SKIP (NEWLINE);
@@ -1267,7 +1294,7 @@ YY_RULE_SETUP
 	 * even when we are otherwise skipping. */
 case 14:
 YY_RULE_SETUP
-#line 323 "src/glsl/glcpp/glcpp-lex.l"
+#line 323 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->lexing_directive = 1;
@@ -1277,7 +1304,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 330 "src/glsl/glcpp/glcpp-lex.l"
+#line 330 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->lexing_directive = 1;
@@ -1288,10 +1315,11 @@ YY_RULE_SETUP
 case 16:
 /* rule 16 can match eol */
 *yy_cp = yyg->yy_hold_char; /* undo effects of setting up yytext */
+YY_LINENO_REWIND_TO(yy_bp + 2);
 yyg->yy_c_buf_p = yy_cp = yy_bp + 2;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 337 "src/glsl/glcpp/glcpp-lex.l"
+#line 337 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->lexing_directive = 1;
@@ -1302,10 +1330,11 @@ YY_RULE_SETUP
 case 17:
 /* rule 17 can match eol */
 *yy_cp = yyg->yy_hold_char; /* undo effects of setting up yytext */
+YY_LINENO_REWIND_TO(yy_bp + 4);
 yyg->yy_c_buf_p = yy_cp = yy_bp + 4;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 344 "src/glsl/glcpp/glcpp-lex.l"
+#line 344 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->lexing_directive = 1;
@@ -1315,7 +1344,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 351 "src/glsl/glcpp/glcpp-lex.l"
+#line 351 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->space_tokens = 0;
@@ -1324,7 +1353,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 357 "src/glsl/glcpp/glcpp-lex.l"
+#line 357 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->space_tokens = 0;
@@ -1333,7 +1362,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 363 "src/glsl/glcpp/glcpp-lex.l"
+#line 363 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_STRING_TOKEN (ERROR_TOKEN);
@@ -1359,7 +1388,7 @@ YY_RULE_SETUP
 	 */
 case 21:
 YY_RULE_SETUP
-#line 386 "src/glsl/glcpp/glcpp-lex.l"
+#line 386 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	if (! parser->skipping) {
 		BEGIN DEFINE;
@@ -1370,7 +1399,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 394 "src/glsl/glcpp/glcpp-lex.l"
+#line 394 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	yyextra->space_tokens = 0;
@@ -1379,7 +1408,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 400 "src/glsl/glcpp/glcpp-lex.l"
+#line 400 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	/* Nothing to do here. Importantly, don't leave the <HASH>
 	 * start condition, since it's legal to have space between the
@@ -1389,7 +1418,7 @@ YY_RULE_SETUP
 /* This will catch any non-directive garbage after a HASH */
 case 24:
 YY_RULE_SETUP
-#line 407 "src/glsl/glcpp/glcpp-lex.l"
+#line 407 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_TOKEN (GARBAGE);
@@ -1401,7 +1430,7 @@ case 25:
 yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 413 "src/glsl/glcpp/glcpp-lex.l"
+#line 413 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_STRING_TOKEN (FUNC_IDENTIFIER);
@@ -1410,7 +1439,7 @@ YY_RULE_SETUP
 /* An identifier not immediately followed by '(' */
 case 26:
 YY_RULE_SETUP
-#line 419 "src/glsl/glcpp/glcpp-lex.l"
+#line 419 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	RETURN_STRING_TOKEN (OBJ_IDENTIFIER);
@@ -1419,7 +1448,7 @@ YY_RULE_SETUP
 /* Whitespace */
 case 27:
 YY_RULE_SETUP
-#line 425 "src/glsl/glcpp/glcpp-lex.l"
+#line 425 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	/* Just ignore it. Nothing to do here. */
 }
@@ -1428,7 +1457,7 @@ YY_RULE_SETUP
 case 28:
 /* rule 28 can match eol */
 YY_RULE_SETUP
-#line 430 "src/glsl/glcpp/glcpp-lex.l"
+#line 430 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	glcpp_error(yylloc, yyextra, "#define followed by a non-identifier: %s", yytext);
@@ -1439,7 +1468,7 @@ YY_RULE_SETUP
 	 * space. This is an error. */
 case 29:
 YY_RULE_SETUP
-#line 438 "src/glsl/glcpp/glcpp-lex.l"
+#line 438 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	BEGIN INITIAL;
 	glcpp_error(yylloc, yyextra, "#define followed by a non-identifier: %s", yytext);
@@ -1448,98 +1477,98 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 444 "src/glsl/glcpp/glcpp-lex.l"
+#line 444 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (INTEGER_STRING);
 }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 448 "src/glsl/glcpp/glcpp-lex.l"
+#line 448 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (INTEGER_STRING);
 }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 452 "src/glsl/glcpp/glcpp-lex.l"
+#line 452 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (INTEGER_STRING);
 }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 456 "src/glsl/glcpp/glcpp-lex.l"
+#line 456 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (LEFT_SHIFT);
 }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 460 "src/glsl/glcpp/glcpp-lex.l"
+#line 460 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (RIGHT_SHIFT);
 }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 464 "src/glsl/glcpp/glcpp-lex.l"
+#line 464 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (LESS_OR_EQUAL);
 }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 468 "src/glsl/glcpp/glcpp-lex.l"
+#line 468 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (GREATER_OR_EQUAL);
 }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 472 "src/glsl/glcpp/glcpp-lex.l"
+#line 472 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (EQUAL);
 }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 476 "src/glsl/glcpp/glcpp-lex.l"
+#line 476 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (NOT_EQUAL);
 }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 480 "src/glsl/glcpp/glcpp-lex.l"
+#line 480 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (AND);
 }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 484 "src/glsl/glcpp/glcpp-lex.l"
+#line 484 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (OR);
 }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 488 "src/glsl/glcpp/glcpp-lex.l"
+#line 488 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (PLUS_PLUS);
 }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 492 "src/glsl/glcpp/glcpp-lex.l"
+#line 492 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (MINUS_MINUS);
 }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 496 "src/glsl/glcpp/glcpp-lex.l"
+#line 496 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	if (! parser->skipping) {
 		if (parser->is_gles)
@@ -1550,42 +1579,42 @@ YY_RULE_SETUP
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 504 "src/glsl/glcpp/glcpp-lex.l"
+#line 504 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (DEFINED);
 }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 508 "src/glsl/glcpp/glcpp-lex.l"
+#line 508 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (IDENTIFIER);
 }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 512 "src/glsl/glcpp/glcpp-lex.l"
+#line 512 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (OTHER);
 }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 516 "src/glsl/glcpp/glcpp-lex.l"
+#line 516 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_TOKEN (yytext[0]);
 }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 520 "src/glsl/glcpp/glcpp-lex.l"
+#line 520 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	RETURN_STRING_TOKEN (OTHER);
 }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 524 "src/glsl/glcpp/glcpp-lex.l"
+#line 524 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	if (yyextra->space_tokens) {
 		RETURN_TOKEN (SPACE);
@@ -1597,7 +1626,7 @@ YY_RULE_SETUP
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 532 "src/glsl/glcpp/glcpp-lex.l"
+#line 532 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	if (parser->commented_newlines) {
 		BEGIN NEWLINE_CATCHUP;
@@ -1615,7 +1644,7 @@ case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(COMMENT):
 case YY_STATE_EOF(DEFINE):
 case YY_STATE_EOF(HASH):
-#line 545 "src/glsl/glcpp/glcpp-lex.l"
+#line 545 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	if (YY_START == COMMENT)
 		glcpp_error(yylloc, yyextra, "Unterminated comment");
@@ -1631,7 +1660,7 @@ case YY_STATE_EOF(HASH):
 	 * of the preceding patterns to match that input. */
 case 51:
 YY_RULE_SETUP
-#line 559 "src/glsl/glcpp/glcpp-lex.l"
+#line 559 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 {
 	glcpp_error(yylloc, yyextra, "Internal compiler error: Unexpected character: %s", yytext);
 
@@ -1647,10 +1676,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 572 "src/glsl/glcpp/glcpp-lex.l"
+#line 572 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1654 "src/glsl/glcpp/glcpp-lex.c"
+#line 1683 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.c"
 case YY_STATE_EOF(DONE):
 case YY_STATE_EOF(NEWLINE_CATCHUP):
 case YY_STATE_EOF(UNREACHABLE):
@@ -1784,6 +1813,7 @@ case YY_STATE_EOF(UNREACHABLE):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of glcpp_lex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1796,9 +1826,9 @@ case YY_STATE_EOF(UNREACHABLE):
 static int yy_get_next_buffer (yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	register char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
-	register char *source = yyg->yytext_ptr;
-	register int number_to_move, i;
+	char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
+	char *source = yyg->yytext_ptr;
+	yy_size_t number_to_move, i;
 	int ret_val;
 
 	if ( yyg->yy_c_buf_p > &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars + 1] )
@@ -1827,7 +1857,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	/* Try to read more data. */
 
 	/* First move last chars to start of buffer. */
-	number_to_move = (int) (yyg->yy_c_buf_p - yyg->yytext_ptr) - 1;
+	number_to_move = (yy_size_t) (yyg->yy_c_buf_p - yyg->yytext_ptr) - 1;
 
 	for ( i = 0; i < number_to_move; ++i )
 		*(dest++) = *(source++);
@@ -1847,7 +1877,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) (yyg->yy_c_buf_p - b->yy_ch_buf);
@@ -1909,9 +1939,9 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	else
 		ret_val = EOB_ACT_CONTINUE_SCAN;
 
-	if ((yy_size_t) (yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
+	if ((int) (yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		yy_size_t new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
+		int new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) glcpp_realloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size ,yyscanner );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
@@ -1930,15 +1960,15 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
     static yy_state_type yy_get_previous_state (yyscan_t yyscanner)
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp;
+	yy_state_type yy_current_state;
+	char *yy_cp;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 	yy_current_state = yyg->yy_start;
 
 	for ( yy_cp = yyg->yytext_ptr + YY_MORE_ADJ; yy_cp < yyg->yy_c_buf_p; ++yy_cp )
 		{
-		register YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
+		YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
 		if ( yy_accept[yy_current_state] )
 			{
 			yyg->yy_last_accepting_state = yy_current_state;
@@ -1963,11 +1993,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
  */
     static yy_state_type yy_try_NUL_trans  (yy_state_type yy_current_state , yyscan_t yyscanner)
 {
-	register int yy_is_jam;
+	int yy_is_jam;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner; /* This var may be unused depending upon options. */
-	register char *yy_cp = yyg->yy_c_buf_p;
+	char *yy_cp = yyg->yy_c_buf_p;
 
-	register YY_CHAR yy_c = 1;
+	YY_CHAR yy_c = 1;
 	if ( yy_accept[yy_current_state] )
 		{
 		yyg->yy_last_accepting_state = yy_current_state;
@@ -1982,12 +2012,15 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 173);
 
+	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
 }
 
-    static void yyunput (int c, register char * yy_bp , yyscan_t yyscanner)
+#ifndef YY_NO_UNPUT
+
+    static void yyunput (int c, char * yy_bp , yyscan_t yyscanner)
 {
-	register char *yy_cp;
+	char *yy_cp;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
     yy_cp = yyg->yy_c_buf_p;
@@ -1998,10 +2031,10 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		register yy_size_t number_to_move = yyg->yy_n_chars + 2;
-		register char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
+		yy_size_t number_to_move = yyg->yy_n_chars + 2;
+		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
-		register char *source =
+		char *source =
 				&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move];
 
 		while ( source > YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -2022,6 +2055,8 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	yyg->yy_hold_char = *yy_cp;
 	yyg->yy_c_buf_p = yy_cp;
 }
+
+#endif
 
 #ifndef YY_NO_INPUT
 #ifdef __cplusplus
@@ -2072,7 +2107,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 				case EOB_ACT_END_OF_FILE:
 					{
 					if ( glcpp_wrap(yyscanner ) )
-						return 0;
+						return EOF;
 
 					if ( ! yyg->yy_did_buffer_switch_on_eof )
 						YY_NEW_FILE;
@@ -2176,7 +2211,7 @@ static void glcpp__load_buffer_state  (yyscan_t yyscanner)
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in glcpp__create_buffer()" );
 
-	b->yy_buf_size = size;
+	b->yy_buf_size = (yy_size_t)size;
 
 	/* yy_ch_buf has to be 2 characters longer than the size given because
 	 * we need to put in 2 end-of-buffer characters.
@@ -2337,7 +2372,7 @@ static void glcpp_ensure_buffer_stack (yyscan_t yyscanner)
 		 * scanner will even need a stack. We use 2 instead of 1 to avoid an
 		 * immediate realloc on the next call.
          */
-		num_to_alloc = 1;
+		num_to_alloc = 1; /* After all that talk, this was set to 1 anyways... */
 		yyg->yy_buffer_stack = (struct yy_buffer_state**)glcpp_alloc
 								(num_to_alloc * sizeof(struct yy_buffer_state*)
 								, yyscanner);
@@ -2354,7 +2389,7 @@ static void glcpp_ensure_buffer_stack (yyscan_t yyscanner)
 	if (yyg->yy_buffer_stack_top >= (yyg->yy_buffer_stack_max) - 1){
 
 		/* Increase the buffer to prepare for a possible push. */
-		int grow_size = 8 /* arbitrary grow size */;
+		yy_size_t grow_size = 8 /* arbitrary grow size */;
 
 		num_to_alloc = yyg->yy_buffer_stack_max + grow_size;
 		yyg->yy_buffer_stack = (struct yy_buffer_state**)glcpp_realloc
@@ -2421,8 +2456,8 @@ YY_BUFFER_STATE glcpp__scan_string (yyconst char * yystr , yyscan_t yyscanner)
 
 /** Setup the input buffer state to scan the given bytes. The next call to glcpp_lex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
@@ -2430,7 +2465,8 @@ YY_BUFFER_STATE glcpp__scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_
 {
 	YY_BUFFER_STATE b;
 	char *buf;
-	yy_size_t n, i;
+	yy_size_t n;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
@@ -2455,7 +2491,7 @@ YY_BUFFER_STATE glcpp__scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_
 	return b;
 }
 
-    static void yy_push_state (int  new_state , yyscan_t yyscanner)
+    static void yy_push_state (int  _new_state , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	if ( yyg->yy_start_stack_ptr >= yyg->yy_start_stack_depth )
@@ -2477,7 +2513,7 @@ YY_BUFFER_STATE glcpp__scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_
 
 	yyg->yy_start_stack[yyg->yy_start_stack_ptr++] = YY_START;
 
-	BEGIN(new_state);
+	BEGIN(_new_state);
 }
 
     static void yy_pop_state  (yyscan_t yyscanner)
@@ -2501,7 +2537,9 @@ YY_BUFFER_STATE glcpp__scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_
 
 static void yy_fatal_error (yyconst char* msg , yyscan_t yyscanner)
 {
-    	(void) fprintf( stderr, "%s\n", msg );
+	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+	(void)yyg;
+	(void) fprintf( stderr, "%s\n", msg );
 	exit( YY_EXIT_FAILURE );
 }
 
@@ -2607,51 +2645,51 @@ void glcpp_set_extra (YY_EXTRA_TYPE  user_defined , yyscan_t yyscanner)
 }
 
 /** Set the current line number.
- * @param line_number
+ * @param _line_number line number
  * @param yyscanner The scanner object.
  */
-void glcpp_set_lineno (int  line_number , yyscan_t yyscanner)
+void glcpp_set_lineno (int  _line_number , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
         /* lineno is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           yy_fatal_error( "glcpp_set_lineno called with no buffer" , yyscanner); 
+           YY_FATAL_ERROR( "glcpp_set_lineno called with no buffer" );
     
-    yylineno = line_number;
+    yylineno = _line_number;
 }
 
 /** Set the current column.
- * @param line_number
+ * @param _column_no column number
  * @param yyscanner The scanner object.
  */
-void glcpp_set_column (int  column_no , yyscan_t yyscanner)
+void glcpp_set_column (int  _column_no , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
         /* column is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           yy_fatal_error( "glcpp_set_column called with no buffer" , yyscanner); 
+           YY_FATAL_ERROR( "glcpp_set_column called with no buffer" );
     
-    yycolumn = column_no;
+    yycolumn = _column_no;
 }
 
 /** Set the input stream. This does not discard the current
  * input buffer.
- * @param in_str A readable stream.
+ * @param _in_str A readable stream.
  * @param yyscanner The scanner object.
  * @see glcpp__switch_to_buffer
  */
-void glcpp_set_in (FILE *  in_str , yyscan_t yyscanner)
+void glcpp_set_in (FILE *  _in_str , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yyin = in_str ;
+    yyin = _in_str ;
 }
 
-void glcpp_set_out (FILE *  out_str , yyscan_t yyscanner)
+void glcpp_set_out (FILE *  _out_str , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yyout = out_str ;
+    yyout = _out_str ;
 }
 
 int glcpp_get_debug  (yyscan_t yyscanner)
@@ -2660,10 +2698,10 @@ int glcpp_get_debug  (yyscan_t yyscanner)
     return yy_flex_debug;
 }
 
-void glcpp_set_debug (int  bdebug , yyscan_t yyscanner)
+void glcpp_set_debug (int  _bdebug , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yy_flex_debug = bdebug ;
+    yy_flex_debug = _bdebug ;
 }
 
 /* Accessor methods for yylval and yylloc */
@@ -2826,7 +2864,10 @@ int glcpp_lex_destroy  (yyscan_t yyscanner)
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char* s1, yyconst char * s2, int n , yyscan_t yyscanner)
 {
-	register int i;
+	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+	(void)yyg;
+
+	int i;
 	for ( i = 0; i < n; ++i )
 		s1[i] = s2[i];
 }
@@ -2835,7 +2876,7 @@ static void yy_flex_strncpy (char* s1, yyconst char * s2, int n , yyscan_t yysca
 #ifdef YY_NEED_STRLEN
 static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 {
-	register int n;
+	int n;
 	for ( n = 0; s[n]; ++n )
 		;
 
@@ -2845,11 +2886,16 @@ static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 
 void *glcpp_alloc (yy_size_t  size , yyscan_t yyscanner)
 {
+	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+	(void)yyg;
 	return (void *) malloc( size );
 }
 
 void *glcpp_realloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 {
+	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+	(void)yyg;
+
 	/* The cast to (char *) in the following accommodates both
 	 * implementations that use char* generic pointers, and those
 	 * that use void* generic pointers.  It works with the latter
@@ -2862,12 +2908,14 @@ void *glcpp_realloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 
 void glcpp_free (void * ptr , yyscan_t yyscanner)
 {
+	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+	(void)yyg;
 	free( (char *) ptr );	/* see glcpp_realloc() for (char *) cast */
 }
 
 #define YYTABLES_NAME "yytables"
 
-#line 572 "src/glsl/glcpp/glcpp-lex.l"
+#line 572 "glsl-optimizer/src/glsl/glcpp/glcpp-lex.l"
 
 
 
