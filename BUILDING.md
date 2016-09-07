@@ -29,5 +29,3 @@ On Fedora, make sure you have these packages installed: ```mingw64-gcc-c++ mingw
 Then run ```platform=win make -j4```
 
 That will create a file named **glupen64_libretro.dll**
-
-**You need a fairly recent version of mingw-w64 to compile this core for Windows, I tried with Ubuntu 16.04.1 and it didn't work, but it did work in Fedora 24. Arch Linux would probably work as well.**
