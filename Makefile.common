@@ -124,7 +124,7 @@ ifeq ($(WITH_DYNAREC), x86)
 		$(CORE_DIR)/src/r4300/new_dynarec/new_dynarec.c \
 		$(CORE_DIR)/src/r4300/empty_dynarec.c \
 
-	SOURCES_ASM += \
+	SOURCES_NASM += \
 		$(CORE_DIR)/src/r4300/new_dynarec/x86/linkage_x86.asm
 endif
 ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
@@ -247,7 +247,7 @@ else ifeq ($(GLES3),1)
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
 else
-	GLFLAGS += -DHAVE_OPENGL -DCORE -DOS_LINUX
+	GLFLAGS += -DHAVE_OPENGL -DCORE
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
 		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp

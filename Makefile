@@ -60,8 +60,10 @@ endif
 # Target Dynarec
 WITH_DYNAREC = $(ARCH)
 
+PIC = 1
 ifeq ($(ARCH), $(filter $(ARCH), i386 i686))
    WITH_DYNAREC = x86
+   PIC = 0
 else ifeq ($(ARCH), $(filter $(ARCH), arm))
    WITH_DYNAREC = arm
 endif
@@ -73,7 +75,6 @@ CC_AS ?= $(CC)
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
-   fpic = -fPIC
    
    ifeq ($(FORCE_GLES),1)
       GLES = 1
@@ -143,7 +144,6 @@ ifneq (,$(findstring unix,$(platform)))
 else ifneq (,$(findstring imx6,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T
-   fpic = -fPIC
    GLES = 1
    GL_LIB := -lGLESv2
    CPUFLAGS += -DNO_ASM
@@ -159,7 +159,6 @@ else ifneq (,$(findstring osx,$(platform)))
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
-   fpic = -fPIC
 
    PLATCFLAGS += -D__MACOSX__ -DOSX
    GL_LIB := -framework OpenGL
@@ -189,7 +188,6 @@ else ifneq (,$(findstring ios,$(platform)))
    LDFLAGS += -dynamiclib
    HAVE_NEON=1
 
-   fpic = -fPIC
    GL_LIB := -framework OpenGLES
 
    CC = clang -arch armv7 -isysroot $(IOSSDK)
@@ -229,7 +227,6 @@ else ifneq (,$(findstring theos_ios,$(platform)))
 
 # Android
 else ifneq (,$(findstring android,$(platform)))
-   fpic = -fPIC
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
    LDFLAGS += -llog
    ifneq (,$(findstring gles3,$(platform)))
@@ -251,7 +248,6 @@ else ifneq (,$(findstring android,$(platform)))
 
 # QNX
 else ifeq ($(platform), qnx)
-   fpic = -fPIC
    TARGET := $(TARGET_NAME)_libretro_qnx.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common
    GL_LIB := -lGLESv2
@@ -302,9 +298,16 @@ else ifneq (,$(findstring win,$(platform)))
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
    PLATFORM_EXT := win32
-   CC = gcc
-   CXX = g++
+   CC = x86_64-w64-mingw32-gcc
+   CXX = x86_64-w64-mingw32-g++
+endif
 
+ifneq (,$(findstring win,$(platform)))
+   COREFLAGS += -DOS_WINDOWS -DMINGW
+   ASFLAGS = -f win32
+else
+   COREFLAGS += -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
 endif
 
 include Makefile.common
@@ -343,7 +346,13 @@ endif
 #endif
 CXXFLAGS += -std=c++11
 ### Finalize ###
-OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o)
+ifeq ($(PIC), 1)
+   fpic = -fPIC
+else
+   fpic = -fno-PIC
+endif
+
+OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o) $(SOURCES_NASM:.asm=.o)
 CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 
@@ -358,7 +367,7 @@ COMMON_FLAGS := -DIOS $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno
 $(LIBRARY_NAME)_ASFLAGS += $(CFLAGS) $(COMMON_FLAGS)
 $(LIBRARY_NAME)_CFLAGS += $(CFLAGS) $(COMMON_FLAGS)
 $(LIBRARY_NAME)_CXXFLAGS += $(CXXFLAGS) $(COMMON_FLAGS)
-${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM)
+${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
 ${LIBRARY_NAME}_FRAMEWORKS = OpenGLES
 ${LIBRARY_NAME}_LIBRARIES = z
 include $(THEOS_MAKE_PATH)/library.mk
@@ -366,6 +375,9 @@ else
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+
+%.o: %.asm
+	nasm $(ASFLAGS) $< -o $@
 
 %.o: %.S
 	$(CC_AS) $(CFLAGS) -c $< -o $@
