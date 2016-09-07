@@ -22,7 +22,7 @@ That will create a file named **glupen64_libretro.so**
 
 ### Building for Windows (64-bit only)
 
-The only supported way to build this core for Windows is cross-compiling it from Linux.
+The only supported way to build this core for Windows is cross-compiling it from Linux. You may be able to compile it on Windows using something like MSYS2, but I haven't tried.
 
 On Fedora, make sure you have these packages installed: ```mingw64-gcc-c++ mingw64-zlib```
 
