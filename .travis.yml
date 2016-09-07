@@ -18,5 +18,5 @@ script:
   - docker exec ubuntu wget -q https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip
   - docker exec ubuntu unzip -qq android-ndk-r12b-linux-x86_64.zip
   - docker exec ubuntu ./android-ndk-r12b/build/tools/make_standalone_toolchain.py --arch arm --api 18 --install-dir /mychain
-  - docker exec ubuntu git clone --depth 1 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
+  - docker exec ubuntu git clone --depth 25 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
   - docker exec ubuntu /bin/bash -c "export PATH=$PATH:/mychain/bin; cd GLupeN64; git checkout $TRAVIS_COMMIT; platform=$PLATFORM make" 
