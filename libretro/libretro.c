@@ -127,11 +127,7 @@ static void setup_variables(void)
       { "glupen64-EnableCopyAuxiliaryToRDRAM",
          "Copy auxiliary buffers to RDRAM; False|True" },
       { "glupen64-EnableCopyColorToRDRAM",
-#ifdef ANDROID
-         "Enable color buffer copy to RDRAM; Off|Sync|Async" },
-#else
          "Enable color buffer copy to RDRAM; Async|Sync|Off" },
-#endif
       { "glupen64-EnableCopyDepthToRDRAM",
          "Enable depth buffer copy to RDRAM; Off|FromMem|Software" },
       { "glupen64-EnableCopyColorFromRDRAM",
