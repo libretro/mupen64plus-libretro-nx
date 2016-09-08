@@ -7,16 +7,18 @@ before_install:
   - docker pull ubuntu
   - docker run --name ubuntu -it -d ubuntu /bin/bash
 env:
-  - PLATFORM=unix
+  - PLATFORM=linux
   - PLATFORM=win
   - PLATFORM=android
+  - PLATFORM=android-gles3
+  - PLATFORM=rpi2-cross
+  - PLATFORM=rpi3-cross
 
 script:
   - docker exec ubuntu apt-get -qq update
   - docker exec ubuntu apt-get -qq -y dist-upgrade
-  - docker exec ubuntu apt-get -qq -y install build-essential git libgl1-mesa-dev libz-mingw-w64-dev g++-mingw-w64-x86-64 zlib1g-dev flex bison wget unzip python
-  - docker exec ubuntu wget -q https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip
-  - docker exec ubuntu unzip -qq android-ndk-r12b-linux-x86_64.zip
-  - docker exec ubuntu ./android-ndk-r12b/build/tools/make_standalone_toolchain.py --arch arm --api 18 --install-dir /mychain
+  - docker exec ubuntu apt-get -qq -y install build-essential git libgl1-mesa-dev libgles2-mesa-dev libz-mingw-w64-dev g++-mingw-w64-x86-64 zlib1g-dev flex bison wget unzip zip python
+  - docker exec ubuntu /bin/bash -c "if [[ $PLATFORM == "android*" ]]; then wget -q https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip; unzip -qq android-ndk-r12b-linux-x86_64.zip; ./android-ndk-r12b/build/tools/make_standalone_toolchain.py --arch arm --api 18 --install-dir /mychain; sed -i '/#include <GLES2\/gl2.h>/d' /mychain/sysroot/usr/include/GLES2/gl2ext.h; fi"
+  - docker exec ubuntu /bin/bash -c "if [[ $PLATFORM == "rpi*" ]]; then git clone --depth 1 https://github.com/raspberrypi/tools.git /rpitools; git clone --depth 1 https://github.com/raspberrypi/firmware.git /rpifirmware; mv /rpifirmware/opt/vc /opt; fi"
   - docker exec ubuntu git clone --depth 25 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
-  - docker exec ubuntu /bin/bash -c "export PATH=$PATH:/mychain/bin; cd GLupeN64; if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then git checkout $TRAVIS_COMMIT; else git fetch origin pull/$TRAVIS_PULL_REQUEST/head:temp; git checkout temp; fi; platform=$PLATFORM make"
+  - docker exec ubuntu /bin/bash -c "export PATH=$PATH:/mychain/bin:/rpitools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin; cd GLupeN64; if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then git checkout $TRAVIS_COMMIT; else git fetch origin pull/$TRAVIS_PULL_REQUEST/head:temp; git checkout temp; fi; platform=$PLATFORM make"

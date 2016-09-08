@@ -18,7 +18,7 @@ ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
 
 ifeq ($(platform),)
-   platform = unix
+   platform = linux
    ifeq ($(UNAME),)
       platform = win
    else ifneq ($(findstring MINGW,$(UNAME)),)
@@ -29,15 +29,15 @@ ifeq ($(platform),)
       platform = win
    endif
 else ifneq (,$(findstring armv,$(platform)))
-   override platform += unix
+   override platform += linux
 else ifneq (,$(findstring rpi,$(platform)))
-   override platform += unix
+   override platform += linux
 else ifneq (,$(findstring odroid,$(platform)))
-   override platform += unix
+   override platform += linux
 endif
 
 # system platform
-system_platform = unix
+system_platform = linux
 ifeq ($(shell uname -a),)
    EXE_EXT = .exe
    system_platform = win
@@ -71,8 +71,8 @@ endif
 TARGET_NAME := glupen64
 CC_AS ?= $(CC)
 
-# Unix
-ifneq (,$(findstring unix,$(platform)))
+# Linux
+ifneq (,$(findstring linux,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    
@@ -100,6 +100,12 @@ ifneq (,$(findstring unix,$(platform)))
          CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
          CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
          HAVE_NEON = 1
+      endif
+      ifneq (,$(findstring cross,$(platform)))
+         INCFLAGS += -I$(ROOT_DIR)/custom/rpi-cross
+         GL_LIB += -L$(ROOT_DIR)/custom/rpi-cross -lrt
+         CC = arm-linux-gnueabihf-gcc
+         CXX = arm-linux-gnueabihf-g++
       endif
    endif
    
@@ -138,7 +144,7 @@ ifneq (,$(findstring unix,$(platform)))
       endif
    endif
    
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
 
 # i.MX6
 else ifneq (,$(findstring imx6,$(platform)))
@@ -147,7 +153,7 @@ else ifneq (,$(findstring imx6,$(platform)))
    GLES = 1
    GL_LIB := -lGLESv2
    CPUFLAGS += -DNO_ASM
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
    WITH_DYNAREC=arm
    HAVE_NEON=1
 
@@ -162,7 +168,7 @@ else ifneq (,$(findstring osx,$(platform)))
 
    PLATCFLAGS += -D__MACOSX__ -DOSX
    GL_LIB := -framework OpenGL
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
 
    # Target Dynarec
    ifeq ($(ARCH), $(filter $(ARCH), ppc))
@@ -179,7 +185,7 @@ else ifneq (,$(findstring ios,$(platform)))
    DEFINES += -DIOS
    GLES = 1
    WITH_DYNAREC=arm
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
 
    PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
    PLATCFLAGS += -DIOS -marm
@@ -244,7 +250,7 @@ else ifneq (,$(findstring android,$(platform)))
    HAVE_NEON = 1
    CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM_ASM -DANDROID -mno-unaligned-access
 
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
 
 # QNX
 else ifeq ($(platform), qnx)
@@ -264,7 +270,7 @@ else ifeq ($(platform), qnx)
    CPUFLAGS += -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE
    CFLAGS += -D__QNX__
 
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
 
 # emscripten
 else ifeq ($(platform), emscripten)
@@ -289,7 +295,7 @@ else ifeq ($(platform), emscripten)
                  -Daudio_convert_init_simd=mupen_audio_convert_init_simd
 
    HAVE_NEON = 0
-   PLATFORM_EXT := unix
+   PLATFORM_EXT := linux
    #HAVE_SHARED_CONTEXT := 1
 
 # Windows
