@@ -22,5 +22,5 @@ script:
   - docker exec ubuntu /bin/bash -c "if [[ $PLATFORM == "rpi*" ]]; then git clone --depth 1 https://github.com/raspberrypi/tools.git /rpitools; git clone --depth 1 https://github.com/raspberrypi/firmware.git /rpifirmware; mv /rpifirmware/opt/vc /opt; fi"
   - docker exec ubuntu git clone --depth 25 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
   - docker exec ubuntu /bin/bash -c "export PATH=$PATH:/mychain/bin:/rpitools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin; cd GLupeN64; if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then git checkout $TRAVIS_COMMIT; else git fetch origin pull/$TRAVIS_PULL_REQUEST/head:temp; git checkout temp; fi; platform=$PLATFORM make"
-  - docker exec ubuntu /bin/bash -c "zip glupen64_$PLATFORM.zip glupen64_*"
-  - docker exec ubuntu aws s3 cp glupen64_$PLATFORM.zip s3://loganbuildbot
+  - docker exec ubuntu /bin/bash -c "cd GLupeN64; zip glupen64_$PLATFORM.zip glupen64_*"
+  - docker exec ubuntu /bin/bash -c "cd GLupeN64; aws s3 cp glupen64_$PLATFORM.zip s3://loganbuildbot"
