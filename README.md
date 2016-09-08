@@ -1,5 +1,7 @@
 # GLupeN64
 
+<b>[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)</b>
+
 <b>Please read the [Wiki](https://github.com/loganmc10/GLupeN64/wiki), it has information on how to fix common 'gotchas'</b>
 
 GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [RSP-HLE](https://github.com/mupen64plus/mupen64plus-rsp-hle) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
