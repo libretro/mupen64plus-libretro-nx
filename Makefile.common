@@ -228,10 +228,11 @@ SOURCES_CXX   += \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
 
 ifneq (,$(findstring rpi3,$(platform)))
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC_ARMV8.cpp \
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC_ARMV8.cpp
 else
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC.cpp \
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC.cpp
 endif
+
 ifeq ($(HAVE_NEON),1)
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMathNeon.cpp \
 		$(VIDEODIR_GLIDEN64)/src/gSPNeon.cpp
