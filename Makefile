@@ -98,7 +98,7 @@ ifneq (,$(findstring linux,$(platform)))
          HAVE_NEON = 1
       else ifneq (,$(findstring rpi3,$(platform)))
          CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
-         CPUFLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
+         CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
          HAVE_NEON = 1
       endif
       ifneq (,$(findstring cross,$(platform)))
