@@ -166,7 +166,7 @@ else ifneq (,$(findstring osx,$(platform)))
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
-   PLATCFLAGS += -D__MACOSX__ -DOSX
+   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X
    GL_LIB := -framework OpenGL
    PLATFORM_EXT := linux
 
@@ -187,6 +187,7 @@ else ifneq (,$(findstring ios,$(platform)))
    WITH_DYNAREC=arm
    PLATFORM_EXT := linux
 
+   PLATCFLAGS += -DOS_MAC_OS_X
    PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
    PLATCFLAGS += -DIOS -marm
    CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
