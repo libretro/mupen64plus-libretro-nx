@@ -555,10 +555,8 @@ void rglActiveTexture(GLenum texture)
  */
 void rglBindTexture(GLenum target, GLuint texture)
 {
-   if (gl_state.bind_textures.ids[gl_state.active_texture] != texture) {
-      glBindTexture(target, texture);
-      gl_state.bind_textures.ids[gl_state.active_texture] = texture;
-   }
+   glBindTexture(target, texture);
+   gl_state.bind_textures.ids[gl_state.active_texture] = texture;
 }
 
 /*
