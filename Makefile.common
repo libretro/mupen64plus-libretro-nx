@@ -274,7 +274,7 @@ endif
 
 ifeq ($(GLSL_OPT),1)
 
-SETUP_GLSL:=$(shell sh ./glsl-optimizer/glsl_setup.sh)
+SETUP_GLSL:=$(shell sh ./custom/glsl-optimizer/glsl_setup.sh)
 
 SOURCES_C += \
 	$(GLSL_OPT_DIR)/src/glsl/glcpp/glcpp-lex.c \

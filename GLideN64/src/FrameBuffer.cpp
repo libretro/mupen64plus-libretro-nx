@@ -385,7 +385,7 @@ CachedTexture * FrameBuffer::getTexture(u32 _t)
 	const bool getDepthTexture = m_isDepthBuffer &&
 								 gDP.colorImage.address == gDP.depthImageAddress &&
 								 m_pDepthBuffer != nullptr &&
-								 (config.generalEmulation.hacks & hack_ZeldaMM) != 0;
+								 (config.generalEmulation.hacks & hack_ZeldaMM) == 0;
 	CachedTexture *pTexture = getDepthTexture ? m_pDepthBuffer->m_pDepthBufferTexture : m_pTexture;
 
 	const u32 shift = (gSP.textureTile[_t]->imageAddress - m_startAddress) >> (m_size - 1);
@@ -553,7 +553,11 @@ void FrameBufferList::saveBuffer(u32 _address, u16 _format, u16 _size, u16 _widt
 	}
 
 	OGLVideo & ogl = video();
+	bool bPrevIsDepth = false;
+
 	if (m_pCurrent != nullptr) {
+		bPrevIsDepth = m_pCurrent->m_isDepthBuffer;
+
 		// Correct buffer's end address
 		if (!m_pCurrent->isAuxiliary()) {
 			if (gDP.colorImage.height > 200)
@@ -639,8 +643,12 @@ void FrameBufferList::saveBuffer(u32 _address, u16 _format, u16 _size, u16 _widt
 	);
 #endif
 
-	if (m_pCurrent->isAuxiliary())
-		ogl.getRender().clearDepthBuffer(0, 0);
+	if (m_pCurrent->isAuxiliary() && m_pCurrent->m_pDepthBuffer != nullptr && bPrevIsDepth) {
+		// N64 games may use partial depth buffer clear for aux buffers
+		// It will not work for GL, so we have to force clear depth buffer for aux buffer
+		const DepthBuffer * pDepth = m_pCurrent->m_pDepthBuffer;
+		ogl.getRender().clearDepthBuffer(pDepth->m_ulx, pDepth->m_uly, pDepth->m_lrx, pDepth->m_lry);
+	}
 
 	m_pCurrent->m_isDepthBuffer = _address == gDP.depthImageAddress;
 	m_pCurrent->m_isPauseScreen = m_pCurrent->m_isOBScreen = false;
@@ -829,7 +837,7 @@ void FrameBufferList::renderBuffer(u32 _address)
 
 	const u32 addrOffset = ((_address - pBuffer->m_startAddress) << 1 >> pBuffer->m_size);
 	srcY0 = addrOffset / (*REG.VI_WIDTH);
-	if (addrOffset % (*REG.VI_WIDTH) != 0)
+	if ((*REG.VI_WIDTH) <= 640 && (addrOffset % (*REG.VI_WIDTH) != 0))
 		Xoffset = (*REG.VI_WIDTH) - addrOffset % (*REG.VI_WIDTH);
 	if (isLowerField) {
 		if (srcY0 > 0)
