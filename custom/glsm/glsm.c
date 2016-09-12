@@ -191,6 +191,7 @@ static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 glslopt_ctx* ctx;
 static int window_first = 0;
+static int resetting_context = 0;
 
 /* GL wrapper-side */
 
@@ -1363,7 +1364,8 @@ GLuint rglCreateShader(GLenum shaderType)
  */
 void rglDeleteProgram(GLuint program)
 {
-   glDeleteProgram(program);
+   if (!resetting_context)
+      glDeleteProgram(program);
 }
 
 /*
@@ -1374,7 +1376,8 @@ void rglDeleteProgram(GLuint program)
  */
 void rglDeleteShader(GLuint shader)
 {
-   glDeleteShader(shader);
+   if (!resetting_context)
+      glDeleteShader(shader);
 }
 
 /*
@@ -2154,8 +2157,9 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
       case GLSM_CTL_STATE_CONTEXT_RESET:
          rglgen_resolve_symbols(hw_render.get_proc_address);
          if (window_first > 0) {
-            glsm_state_bind();
+            resetting_context = 1;
             gfx.changeWindow();
+            resetting_context = 0;
 	 }
          else
             window_first = 1;
