@@ -62,6 +62,7 @@ static bool     first_context_reset = false;
 
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
+int buffers_swapped = 0;
 u32 bilinearMode = 0;
 u32 EnableNoise = 0;
 u32 EnableLOD = 0;
@@ -724,8 +725,9 @@ void retro_run (void)
 {
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    co_switch(game_thread);
-   glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-   video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+   if (!buffers_swapped)
+      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+   buffers_swapped = 0;
 }
 
 void retro_reset (void)
