@@ -556,8 +556,10 @@ void rglActiveTexture(GLenum texture)
  */
 void rglBindTexture(GLenum target, GLuint texture)
 {
-   glBindTexture(target, texture);
-   gl_state.bind_textures.ids[gl_state.active_texture] = texture;
+   if (gl_state.bind_textures.ids[gl_state.active_texture] != texture) {
+      glBindTexture(target, texture);
+      gl_state.bind_textures.ids[gl_state.active_texture] = texture;
+   }
 }
 
 /*
@@ -755,6 +757,11 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
 {
    glDeleteTextures(n, textures);
+   int i;
+   for (i = 0; i < n; ++i) {
+      if (textures[i] == gl_state.bind_textures.ids[gl_state.active_texture])
+         gl_state.bind_textures.ids[gl_state.active_texture] = 0;
+   }
 }
 
 /*
@@ -1640,10 +1647,11 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
-
-   glBindFramebuffer(target, framebuffer);
-   gl_state.framebuf = framebuffer;
-   gl_state.framebuf_target = target;
+   if (gl_state.framebuf != framebuffer || gl_state.framebuf_target != target) {
+      glBindFramebuffer(target, framebuffer);
+      gl_state.framebuf = framebuffer;
+      gl_state.framebuf_target = target;
+   }
 }
 
 /*
