@@ -2014,7 +2014,7 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
-#ifdef CORE
+#ifndef HAVE_OPENGLES2
    glBindVertexArray(gl_state.bindvertex.array);
 #endif
    glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
