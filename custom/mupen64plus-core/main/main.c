@@ -75,6 +75,7 @@
 #include "main/sra_file.h"
 #include "main/util.h"
 #include "vi/vi_controller.h"
+#include "r4300/new_dynarec/new_dynarec.h"
 
 #ifdef DBG
 #include "debugger/dbg_debugger.h"
@@ -313,6 +314,9 @@ m64p_error main_run(void)
 
     /* set some other core parameters based on the config file values */
     no_compiled_jump = 0;
+#ifdef NEW_DYNAREC
+    stop_after_jal = 1;
+#endif
     g_delay_si = 1;
     disable_extra_mem = 0;
     count_per_op = 0;
