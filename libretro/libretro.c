@@ -348,9 +348,83 @@ void retro_deinit(void)
       perf_cb.perf_log();
 }
 
-extern void ChangeSize();
+void update_controllers()
+{
+   {
+      struct retro_variable pk1var = { "glupen64-pak1" };
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
+      {
+         int p1_pak = PLUGIN_NONE;
+         if (!strcmp(pk1var.value, "rumble"))
+            p1_pak = PLUGIN_RAW;
+         else if (!strcmp(pk1var.value, "memory"))
+            p1_pak = PLUGIN_MEMPAK;
 
-void update_variables(bool startup)
+         // If controller struct is not initialised yet, set pad_pak_types instead
+         // which will be looked at when initialising the controllers.
+         if (controller[0].control)
+            controller[0].control->Plugin = p1_pak;
+         else
+            pad_pak_types[0] = p1_pak;
+
+      }
+   }
+
+   {
+      struct retro_variable pk2var = { "glupen64-pak2" };
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
+      {
+         int p2_pak = PLUGIN_NONE;
+         if (!strcmp(pk2var.value, "rumble"))
+            p2_pak = PLUGIN_RAW;
+         else if (!strcmp(pk2var.value, "memory"))
+            p2_pak = PLUGIN_MEMPAK;
+
+         if (controller[1].control)
+            controller[1].control->Plugin = p2_pak;
+         else
+            pad_pak_types[1] = p2_pak;
+
+      }
+   }
+
+   {
+      struct retro_variable pk3var = { "glupen64-pak3" };
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
+      {
+         int p3_pak = PLUGIN_NONE;
+         if (!strcmp(pk3var.value, "rumble"))
+            p3_pak = PLUGIN_RAW;
+         else if (!strcmp(pk3var.value, "memory"))
+            p3_pak = PLUGIN_MEMPAK;
+
+         if (controller[2].control)
+            controller[2].control->Plugin = p3_pak;
+         else
+            pad_pak_types[2] = p3_pak;
+
+      }
+   }
+
+   {
+      struct retro_variable pk4var = { "glupen64-pak4" };
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
+      {
+         int p4_pak = PLUGIN_NONE;
+         if (!strcmp(pk4var.value, "rumble"))
+            p4_pak = PLUGIN_RAW;
+         else if (!strcmp(pk4var.value, "memory"))
+            p4_pak = PLUGIN_MEMPAK;
+
+         if (controller[3].control)
+            controller[3].control->Plugin = p4_pak;
+         else
+            pad_pak_types[3] = p4_pak;
+      }
+   }
+}
+
+void update_variables()
 {
    struct retro_variable var;
 
@@ -548,14 +622,11 @@ void update_variables(bool startup)
       }
    }
 
-   if (startup)
-   {
-      var.key = "glupen64-audio-buffer-size";
-      var.value = NULL;
+   var.key = "glupen64-audio-buffer-size";
+   var.value = NULL;
 
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-         audio_buffer_size = atoi(var.value);
-   }
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      audio_buffer_size = atoi(var.value);
 
    var.key = "glupen64-astick-deadzone";
    var.value = NULL;
@@ -563,80 +634,7 @@ void update_variables(bool startup)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
 
-   {
-      struct retro_variable pk1var = { "glupen64-pak1" };
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
-      {
-         int p1_pak = PLUGIN_NONE;
-         if (!strcmp(pk1var.value, "rumble"))
-            p1_pak = PLUGIN_RAW;
-         else if (!strcmp(pk1var.value, "memory"))
-            p1_pak = PLUGIN_MEMPAK;
-         
-         // If controller struct is not initialised yet, set pad_pak_types instead
-         // which will be looked at when initialising the controllers.
-         if (controller[0].control)
-            controller[0].control->Plugin = p1_pak;
-         else
-            pad_pak_types[0] = p1_pak;
-         
-      }
-   }
-
-   {
-      struct retro_variable pk2var = { "glupen64-pak2" };
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
-      {
-         int p2_pak = PLUGIN_NONE;
-         if (!strcmp(pk2var.value, "rumble"))
-            p2_pak = PLUGIN_RAW;
-         else if (!strcmp(pk2var.value, "memory"))
-            p2_pak = PLUGIN_MEMPAK;
-            
-         if (controller[1].control)
-            controller[1].control->Plugin = p2_pak;
-         else
-            pad_pak_types[1] = p2_pak;
-         
-      }
-   }
-   
-   {
-      struct retro_variable pk3var = { "glupen64-pak3" };
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
-      {
-         int p3_pak = PLUGIN_NONE;
-         if (!strcmp(pk3var.value, "rumble"))
-            p3_pak = PLUGIN_RAW;
-         else if (!strcmp(pk3var.value, "memory"))
-            p3_pak = PLUGIN_MEMPAK;
-            
-         if (controller[2].control)
-            controller[2].control->Plugin = p3_pak;
-         else
-            pad_pak_types[2] = p3_pak;
-         
-      }
-   }
-  
-   {
-      struct retro_variable pk4var = { "glupen64-pak4" };
-      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
-      {
-         int p4_pak = PLUGIN_NONE;
-         if (!strcmp(pk4var.value, "rumble"))
-            p4_pak = PLUGIN_RAW;
-         else if (!strcmp(pk4var.value, "memory"))
-            p4_pak = PLUGIN_MEMPAK;
-            
-         if (controller[3].control)
-            controller[3].control->Plugin = p4_pak;
-         else
-            pad_pak_types[3] = p4_pak;
-      }
-   }
-
-
+   update_controllers();
 }
 
 static void format_saved_memory(void)
@@ -682,7 +680,7 @@ bool retro_load_game(const struct retro_game_info *game)
    glsm_ctx_params_t params = {0};
    format_saved_memory();
 
-   update_variables(true);
+   update_variables();
    initial_boot = false;
 
    init_audio_libretro(audio_buffer_size);
@@ -723,6 +721,9 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
+   static bool updated = false;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+      update_controllers();
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    co_switch(game_thread);
    if (!buffers_swapped)
