@@ -8,6 +8,8 @@
 #include "../Config.h"
 #include "../Log.h"
 
+#include <libretro_private.h>
+
 #ifndef EGL
 #if !defined(OS_WINDOWS) || defined(GLES2) || defined(GLES3) || defined(GLES3_1) || defined(MINGW)
 
@@ -56,14 +58,9 @@ void OGLVideoMupenPlus::_stop()
 {
 }
 
-extern retro_video_refresh_t video_cb;
-extern int buffers_swapped;
-
 void OGLVideoMupenPlus::_swapBuffers()
 {
-	glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-	video_cb(RETRO_HW_FRAME_BUFFER_VALID, get_retro_screen_width(), get_retro_screen_height(), 0);
-	buffers_swapped = 1;
+	retro_return();
 }
 
 void OGLVideoMupenPlus::_saveScreenshot()

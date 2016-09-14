@@ -8,7 +8,6 @@
 
 #include "OpenGL.h"
 #include "RSP.h"
-#include <libretro_private.h>
 
 extern "C" {
 
@@ -45,7 +44,6 @@ EXPORT void CALL gln64ShowCFB (void)
 EXPORT void CALL gln64UpdateScreen (void)
 {
 	api().UpdateScreen();
-	retro_return();
 }
 
 EXPORT void CALL gln64ViStatusChanged (void)
