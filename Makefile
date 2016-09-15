@@ -16,7 +16,7 @@ ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
 
 ifneq (,$(findstring unix,$(platform)))
-   platform=linux
+   platform = linux
 endif
 
 ifeq ($(platform),)
@@ -60,16 +60,18 @@ ifneq (,$(findstring linux,$(platform)))
 
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    GLES = 1
    GL_LIB := -L/opt/vc/lib -lGLESv2
    INCFLAGS += -I/opt/vc/include
    WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
-      CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
+      CPUFLAGS += -DVC -DUSE_DEPTH_RENDERBUFFER
       CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mno-unaligned-access
       HAVE_NEON = 1
    else ifneq (,$(findstring rpi3,$(platform)))
-      CPUFLAGS += -DARM_ASM -DVC -DUSE_DEPTH_RENDERBUFFER
+      CPUFLAGS += -DVC -DUSE_DEPTH_RENDERBUFFER
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
       HAVE_NEON = 1
    endif
@@ -82,10 +84,11 @@ else ifneq (,$(findstring rpi,$(platform)))
 
 # ODROIDs
 else ifneq (,$(findstring odroid,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    BOARD := $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
    GLES = 1
    GL_LIB := -lGLESv2
-   CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE
    CPUFLAGS += -marm -mfloat-abi=hard -mfpu=neon
    HAVE_NEON = 1
    WITH_DYNAREC=arm
@@ -162,13 +165,13 @@ else ifneq (,$(findstring android,$(platform)))
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
    LDFLAGS += -llog
    ifneq (,$(findstring gles3,$(platform)))
-   GL_LIB := -lGLESv3
-   GLES3 = 1
-   TARGET := $(TARGET_NAME)_libretro_android_gles3.so
+      GL_LIB := -lGLESv3
+      GLES3 = 1
+      TARGET := $(TARGET_NAME)_libretro_android_gles3.so
    else
-   GL_LIB := -lGLESv2
-   GLES = 1
-   TARGET := $(TARGET_NAME)_libretro_android.so
+      GL_LIB := -lGLESv2
+      GLES = 1
+      TARGET := $(TARGET_NAME)_libretro_android.so
    endif
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
@@ -250,16 +253,6 @@ endif
 
 LDFLAGS    += $(fpic) -lz
 
-ifeq ($(platform), theos_ios)
-COMMON_FLAGS := -DIOS $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
-$(LIBRARY_NAME)_ASFLAGS += $(CFLAGS) $(COMMON_FLAGS)
-$(LIBRARY_NAME)_CFLAGS += $(CFLAGS) $(COMMON_FLAGS)
-$(LIBRARY_NAME)_CXXFLAGS += $(CXXFLAGS) $(COMMON_FLAGS)
-${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
-${LIBRARY_NAME}_FRAMEWORKS = OpenGLES
-${LIBRARY_NAME}_LIBRARIES = z
-include $(THEOS_MAKE_PATH)/library.mk
-else
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
@@ -284,4 +277,3 @@ clean:
 
 .PHONY: clean
 -include $(OBJECTS:.o=.d)
-endif
