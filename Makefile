@@ -17,6 +17,10 @@ UNAME=$(shell uname -a)
 ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
 
+ifneq (,$(findstring unix,$(platform)))
+   platform=linux
+endif
+
 ifeq ($(platform),)
    platform = linux
    ifeq ($(UNAME),)
