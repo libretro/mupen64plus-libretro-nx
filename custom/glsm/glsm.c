@@ -2087,6 +2087,8 @@ static bool glsm_state_ctx_destroy(void *data)
 #ifdef HAVE_OPENGLES
    glslopt_cleanup (ctx);
 #endif
+
+   return true;
 }
 
 static bool glsm_state_ctx_init(void *data)
