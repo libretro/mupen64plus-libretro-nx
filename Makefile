@@ -67,20 +67,23 @@ else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    GLES = 1
-   GL_LIB := -L/opt/vc/lib -lGLESv2
-   INCFLAGS += -I/opt/vc/include
+   ifneq (,$(findstring mesa,$(platform)))
+      GL_LIB := -lGLESv2
+   else
+      GL_LIB := -L/opt/vc/lib -lGLESv2
+      INCFLAGS += -I/opt/vc/include
+      CPUFLAGS += -DVC -DUSE_DEPTH_RENDERBUFFER
+   endif
    WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
-      CPUFLAGS += -DVC -DUSE_DEPTH_RENDERBUFFER
       CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mno-unaligned-access
       HAVE_NEON = 1
    else ifneq (,$(findstring rpi3,$(platform)))
-      CPUFLAGS += -DVC -DUSE_DEPTH_RENDERBUFFER
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
       HAVE_NEON = 1
    endif
    ifneq (,$(findstring cross,$(platform)))
-      INCFLAGS += -I$(ROOT_DIR)/custom/rpi-cross
+      INCFLAGS += -I/rpitools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/arm-linux-gnueabihf/libc/usr/include -I/usr/include
       GL_LIB += -L$(ROOT_DIR)/custom/rpi-cross -lrt
       CC = arm-linux-gnueabihf-gcc
       CXX = arm-linux-gnueabihf-g++

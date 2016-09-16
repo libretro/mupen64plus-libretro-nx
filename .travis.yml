@@ -13,6 +13,8 @@ env:
   - PLATFORM=android-gles3
   - PLATFORM=rpi2-cross
   - PLATFORM=rpi3-cross
+  - PLATFORM=rpi2-cross-mesa
+  - PLATFORM=rpi3-cross-mesa
 
 script:
   - docker exec ubuntu apt-get -qq update
