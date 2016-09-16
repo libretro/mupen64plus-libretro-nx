@@ -16,11 +16,15 @@ ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
 
 ifneq (,$(findstring unix,$(platform)))
-   platform = linux
+   real_platform = linux
+endif
+
+ifneq (,$(findstring linux,$(platform)))
+   real_platform = linux
 endif
 
 ifeq ($(platform),)
-   platform = linux
+   real_platform = linux
 endif
 
 # Cross compile ?
@@ -44,7 +48,7 @@ TARGET_NAME := glupen64
 CC_AS ?= $(CC)
 
 # Linux
-ifneq (,$(findstring linux,$(platform)))
+ifneq (,$(findstring linux,$(real_platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 
