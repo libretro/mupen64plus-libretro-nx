@@ -82,12 +82,6 @@ else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
       HAVE_NEON = 1
    endif
-   ifneq (,$(findstring cross,$(platform)))
-      INCFLAGS += -I/rpitools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/arm-linux-gnueabihf/libc/usr/include -I/usr/include
-      GL_LIB += -L$(ROOT_DIR)/custom/rpi-cross -lrt
-      CC = arm-linux-gnueabihf-gcc
-      CXX = arm-linux-gnueabihf-g++
-   endif
 
 # ODROIDs
 else ifneq (,$(findstring odroid,$(platform)))
