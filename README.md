@@ -1,4 +1,5 @@
 # GLupeN64
+**Minimum RetroArch version: v1.3.4**
 
 <b>[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)</b>
 
@@ -6,17 +7,15 @@ GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [RS
 
 #### How is this different from [mupen64plus-libretro](https://github.com/libretro/mupen64plus-libretro)?
 
-mupen64plus-libretro tries to emulate the complete mupen64plus experience (think multiple graphic and RSP plugins). They also make modifications to the code as they see fit.
+mupen64plus-libretro implements multiple RSP and Graphics plugins. There are also code modifications that make it different than standalone mupen64plus.
 
-Because mupen64plus is built to be modular it is difficult to "convert" that project to a libretro core, since you end up with functions with the same name (for instance multiple functions named "PluginStartup").
+GLupeN64 uses RSP-HLE and GLideN64 (a graphics plugin that is not available in mupen64plus-libretro). The emulator code itself is identical to standalone mupen64plus.
 
-Many modifications had to be made to the mupen64plus-libretro code to get it to work inside libretro. As a result, it differs quite greatly from vanilla mupen64plus (there is no up to date GLideN64 implmentation for example).
-
-By choosing one RSP implentation (rsp-hle) and one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
+By choosing one RSP implementation (rsp-hle) and one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
 
 #### How is it organized?
 
-The modules (core, rsp-hle, GLideN64, and libretro-common) are brought in as git subtrees, allowing us to easily update the codebase. When modifications have to be made, they are put in the "custom" directory, overriding their vanilla counterparts.
+The modules (mupen64plus-core, rsp-hle, GLideN64, and libretro-common) are identical to the upstream repositories, allowing us to easily update the codebase. When modifications have to be made, they are put in the "custom" directory, overriding their vanilla counterparts.
 
 We will try to stay as close to the upstream code as possible, if there are improvements to be made, they should be submitted upstream.
 
