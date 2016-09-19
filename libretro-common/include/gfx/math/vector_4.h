@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (apple_compat.h).
+ * The following license statement only applies to this file (vector_4.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,65 +20,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __APPLE_COMPAT_H
-#define __APPLE_COMPAT_H
+#ifndef __LIBRETRO_SDK_GFX_MATH_VECTOR_4_H__
+#define __LIBRETRO_SDK_GFX_MATH_VECTOR_4_H__
 
-#ifdef __APPLE__
-#include <AvailabilityMacros.h>
-#endif
+#include <stdint.h>
 
-#ifdef __OBJC__
+typedef float vec4_t[4];
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
-typedef int NSInteger;
-typedef unsigned NSUInteger;
-typedef float CGFloat;
-#endif
+void vec4_add(float *dst, const float *src);
 
-#ifndef __has_feature
-/* Compatibility with non-Clang compilers. */
-#define __has_feature(x) 0
-#endif
+void vec4_subtract(float *dst, const float *src);
 
-#ifndef CF_RETURNS_RETAINED
-#if __has_feature(attribute_cf_returns_retained)
-#define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
-#else
-#define CF_RETURNS_RETAINED
-#endif
-#endif
+void vec4_scale(float *dst, const float scale);
 
-#ifndef NS_INLINE
-#define NS_INLINE inline
-#endif
-
-NS_INLINE CF_RETURNS_RETAINED CFTypeRef CFBridgingRetainCompat(id X)
-{
-#if __has_feature(objc_arc)
-   return (__bridge_retained CFTypeRef)X;
-#else
-   return X;
-#endif
-}
+void vec4_copy(float *dst, const float *src);
 
 #endif
 
-#ifdef IOS
-#ifndef __IPHONE_5_0
-#warning "This project uses features only available in iOS SDK 5.0 and later."
-#endif
-
-#ifdef __OBJC__
-#import <UIKit/UIKit.h>
-#import <GLKit/GLKit.h>
-#import <Foundation/Foundation.h>
-#endif
-
-#else
-
-#ifdef __OBJC__
-#include <objc/objc-runtime.h>
-#endif
-#endif
-
-#endif

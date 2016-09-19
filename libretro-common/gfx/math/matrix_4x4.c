@@ -24,6 +24,7 @@
 #include <math.h>
 
 #include <gfx/math/matrix_4x4.h>
+#include <gfx/math/vector_3.h>
 
 void matrix_4x4_copy(math_matrix_4x4 *dst, const math_matrix_4x4 *src)
 {
@@ -119,20 +120,18 @@ void matrix_4x4_ortho(math_matrix_4x4 *mat,
       float bottom, float top,
       float znear, float zfar)
 {
-   float tx, ty, tz;
+   float rl = right - left;
+   float tb = top   - bottom;
+   float fn = zfar  - znear;
 
    matrix_4x4_identity(mat);
 
-   tx = -(right + left) / (right - left);
-   ty = -(top + bottom) / (top - bottom);
-   tz = -(zfar + znear) / (zfar - znear);
-
-   MAT_ELEM_4X4(*mat, 0, 0) =  2.0f / (right - left);
-   MAT_ELEM_4X4(*mat, 1, 1) =  2.0f / (top - bottom);
-   MAT_ELEM_4X4(*mat, 2, 2) = -2.0f / (zfar - znear);
-   MAT_ELEM_4X4(*mat, 0, 3) = tx;
-   MAT_ELEM_4X4(*mat, 1, 3) = ty;
-   MAT_ELEM_4X4(*mat, 2, 3) = tz;
+   MAT_ELEM_4X4(*mat, 0, 0) =  2.0f / rl;
+   MAT_ELEM_4X4(*mat, 1, 1) =  2.0f / tb;
+   MAT_ELEM_4X4(*mat, 2, 2) = -2.0f / fn;
+   MAT_ELEM_4X4(*mat, 0, 3) = -(left + right)  / rl;
+   MAT_ELEM_4X4(*mat, 1, 3) = -(top  + bottom) / tb;
+   MAT_ELEM_4X4(*mat, 2, 3) = -(zfar + znear)  / fn;
 }
 
 void matrix_4x4_scale(math_matrix_4x4 *out, float x, float y,
@@ -162,17 +161,60 @@ void matrix_4x4_translate(math_matrix_4x4 *out, float x,
 /*
  * Creates a perspective projection matrix.
  */
-void matrix_4x4_projection(math_matrix_4x4 *out, float znear,
+void matrix_4x4_projection(math_matrix_4x4 *out, 
+      float y_fov,
+      float aspect,
+      float znear,
       float zfar)
 {
+   float const a = 1.f / tan(y_fov / 2.f);
    float delta_z = zfar - znear;
 
    memset(out, 0, sizeof(*out));
-   MAT_ELEM_4X4(*out, 0, 0) = znear;
-   MAT_ELEM_4X4(*out, 1, 1) = zfar;
-   MAT_ELEM_4X4(*out, 2, 2) = (zfar + znear) / delta_z;
-   MAT_ELEM_4X4(*out, 2, 3) = -2.0f * zfar * znear / delta_z;
-   MAT_ELEM_4X4(*out, 3, 2) = -1.0f;
+   MAT_ELEM_4X4(*out, 0, 0) = a / aspect;
+   MAT_ELEM_4X4(*out, 1, 1) = a;
+   MAT_ELEM_4X4(*out, 2, 2) = -((zfar + znear) / delta_z);
+   MAT_ELEM_4X4(*out, 2, 3) = -1.f;
+   MAT_ELEM_4X4(*out, 3, 2) = -((2.f * zfar * znear) / delta_z);
+}
+
+/* TODO/FIXME - finish */
+void matrix_4x4_lookat(math_matrix_4x4 *out,
+      vec3_t eye,
+      vec3_t center,
+      vec3_t up)
+{
+   vec3_t s, t, f;
+
+   vec3_copy(&f[0], center);
+   vec3_subtract(&f[0], eye);
+   vec3_normalize(&f[0]);
+
+   vec3_cross(&s[0], &f[0], up);
+   vec3_normalize(&s[0]);
+
+   vec3_cross(&t[0], &s[0], f);
+
+   memset(out, 0, sizeof(*out));
+
+   MAT_ELEM_4X4(*out, 0, 0) = s[0];
+   MAT_ELEM_4X4(*out, 0, 1) = t[0];
+   MAT_ELEM_4X4(*out, 0, 2) = -f[0];
+
+   MAT_ELEM_4X4(*out, 1, 0) = s[1];
+   MAT_ELEM_4X4(*out, 1, 1) = t[1];
+   MAT_ELEM_4X4(*out, 1, 2) = -f[1];
+
+   MAT_ELEM_4X4(*out, 2, 0) = s[2];
+   MAT_ELEM_4X4(*out, 2, 1) = t[2];
+   MAT_ELEM_4X4(*out, 2, 2) = -f[2];
+
+   MAT_ELEM_4X4(*out, 3, 3) = 1.f;
+
+#if 0
+   mat4x4_translate_in_place(m, -eye[0], -eye[1], -eye[2]);
+#endif
+
 }
 
 /*
@@ -185,6 +227,9 @@ void matrix_4x4_multiply(
 {
    unsigned r, c, k;
    math_matrix_4x4 mat;
+
+   if (!out || !a || !b)
+      return;
 
    for (r = 0; r < 4; r++)
    {

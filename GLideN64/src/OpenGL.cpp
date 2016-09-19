@@ -1448,6 +1448,7 @@ void OGLRender::drawTriangles()
 
 void OGLRender::drawLine(int _v0, int _v1, float _width)
 {
+	m_texrectDrawer.draw();
 	if (!_canDraw())
 		return;
 
