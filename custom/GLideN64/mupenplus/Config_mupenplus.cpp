@@ -36,7 +36,11 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+#ifndef GLES2
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
+#else
+	config.generalEmulation.enableFragmentDepthWrite = 0;
+#endif
 	config.generalEmulation.enableShadersStorage = 0;
 #ifdef ANDROID
 	config.generalEmulation.forcePolygonOffset = 1;
