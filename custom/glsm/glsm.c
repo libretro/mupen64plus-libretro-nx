@@ -352,7 +352,9 @@ void rglPixelStorei(GLenum pname, GLint param)
 GLboolean rglUnmapBuffer(GLenum target)
 {
 #ifndef HAVE_OPENGLES2
-   glUnmapBuffer(target);
+   return glUnmapBuffer(target);
+#else
+   return GL_FALSE;
 #endif
 }
 /*
@@ -1931,6 +1933,8 @@ void *rglFenceSync(GLenum condition, GLbitfield flags)
 {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
    return (GLsync)glFenceSync(condition, flags);
+#else
+   return NULL;
 #endif
 }
 

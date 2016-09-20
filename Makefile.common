@@ -25,7 +25,9 @@ INCFLAGS += \
 	-I$(GLSL_OPT_DIR)/src/mesa
 
 # libco
-SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
+ifneq ($(platform), emscripten)
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
+endif
 
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
@@ -170,10 +172,13 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
-	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
 	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
 	$(LIBRETRO_COMM_DIR)/features/features_cpu.c
+
+ifneq ($(platform), emscripten)
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/streams/file_stream.c
+endif
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \

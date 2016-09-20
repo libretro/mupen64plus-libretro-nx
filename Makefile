@@ -185,23 +185,32 @@ else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
    GLES := 1
    WITH_DYNAREC :=
-   CPUFLAGS += -Dasm=asmerror -D__asm__=asmerror -DNO_ASM -DNOSSE
-   SINGLE_THREAD := 1
-   PLATCFLAGS += -Drglgen_symbol_map=mupen_rglgen_symbol_map \
-                 -Dmain_exit=mupen_main_exit \
-                 -Dadler32=mupen_adler32 \
-                 -Drglgen_resolve_symbols_custom=mupen_rglgen_resolve_symbols_custom \
-                 -Drglgen_resolve_symbols=mupen_rglgen_resolve_symbols \
-                 -Dsinc_resampler=mupen_sinc_resampler \
-                 -Dnearest_resampler=mupen_nearest_resampler \
-                 -DCC_resampler=mupen_CC_resampler \
-                 -Daudio_resampler_driver_find_handle=mupen_audio_resampler_driver_find_handle \
-                 -Daudio_resampler_driver_find_ident=mupen_audio_resampler_driver_find_ident \
-                 -Drarch_resampler_realloc=mupen_rarch_resampler_realloc \
-                 -Daudio_convert_s16_to_float_C=mupen_audio_convert_s16_to_float_C \
-                 -Daudio_convert_float_to_s16_C=mupen_audio_convert_float_to_s16_C \
-                 -Daudio_convert_init_simd=mupen_audio_convert_init_simd
-
+   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
+   PLATCFLAGS += \
+      -Dsinc_resampler=glupen_sinc_resampler \
+      -DCC_resampler=glupen_CC_resampler \
+      -Drglgen_symbol_map=glupen_rglgen_symbol_map \
+      -Drglgen_resolve_symbols_custom=glupen_rglgen_resolve_symbols_custom \
+      -Drglgen_resolve_symbols=glupen_rglgen_resolve_symbols \
+      -Dmemalign_alloc=glupen_memalign_alloc \
+      -Dmemalign_free=glupen_memalign_free \
+      -Dmemalign_alloc_aligned=glupen_memalign_alloc_aligned \
+      -Daudio_resampler_driver_find_handle=glupen_audio_resampler_driver_find_handle \
+      -Daudio_resampler_driver_find_ident=glupen_audio_resampler_driver_find_ident \
+      -Drarch_resampler_realloc=glupen_rarch_resampler_realloc \
+      -Dconvert_float_to_s16_C=glupen_convert_float_to_s16_C \
+      -Dconvert_float_to_s16_init_simd=glupen_convert_float_to_s16_init_simd \
+      -Dconvert_s16_to_float_C=glupen_convert_s16_to_float_C \
+      -Dconvert_s16_to_float_init_simd=glupen_convert_s16_to_float_init_simd \
+      -Dcpu_features_get_perf_counter=glupen_cpu_features_get_perf_counter \
+      -Dcpu_features_get_time_usec=glupen_cpu_features_get_time_usec \
+      -Dcpu_features_get_core_amount=glupen_cpu_features_get_core_amount \
+      -Dcpu_features_get=glupen_cpu_features_get \
+      -Dffs=glupen_ffs \
+      -Dstrlcpy_retro__=glupen_strlcpy_retro__ \
+      -Dstrlcat_retro__=glupen_strlcat_retro__
+   CC = emcc
+   CXX = em++
    HAVE_NEON = 0
 
 # Windows
@@ -245,14 +254,14 @@ else
 endif
 
 OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o) $(SOURCES_NASM:.asm=.o)
-CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
-CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
+CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
+CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 
-ifeq ($(findstring Haiku,$(UNAME)),)
-   LDFLAGS += -lm
+ifneq ($(platform), emscripten)
+   LDFLAGS    += -lz
 endif
 
-LDFLAGS    += $(fpic) -lz
+LDFLAGS    += $(fpic)
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)

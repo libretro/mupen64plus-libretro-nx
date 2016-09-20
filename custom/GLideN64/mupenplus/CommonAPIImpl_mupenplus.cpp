@@ -1,5 +1,6 @@
 #include "GLideN64_mupenplus.h"
 #include <algorithm>
+#include <string>
 #include "../PluginAPI.h"
 #include "../OpenGL.h"
 #include "../RSP.h"

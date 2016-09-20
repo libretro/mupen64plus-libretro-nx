@@ -4,7 +4,12 @@
 
 #include "libretro.h"
 #include "GLideN64_libretro.h"
+
+#ifndef EMSCRIPTEN
 #include <libco.h>
+#else
+#include <emscripten.h>
+#endif
 
 #include <glsm/glsmsym.h>
 
@@ -45,8 +50,12 @@ struct retro_rumble_interface rumble;
 
 save_memory_data saved_memory;
 
+#ifndef EMSCRIPTEN
 static cothread_t game_thread;
 cothread_t retro_thread;
+#else
+static emscripten_coroutine game_thread;
+#endif
 
 int astick_deadzone;
 
@@ -104,11 +113,7 @@ static void setup_variables(void)
    struct retro_variable variables[] = {
       { "glupen64-cpucore",
 #ifdef DYNAREC
-#if defined(IOS)
-         "CPU Core; cached_interpreter|pure_interpreter|dynamic_recompiler" },
-#else
          "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
-#endif
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
@@ -143,7 +148,7 @@ static void setup_variables(void)
       { "glupen64-EnableNativeResTexrects",
          "Render 2D texrects in native resolution; False|True" },
       { "glupen64-EnableLegacyBlending",
-#if defined(VC) || defined(ANDROID)
+#if defined(VC) || defined(ANDROID) || defined(EMSCRIPTEN)
          "Faster but less accurate blending mode; True|False" },
 #else
          "Faster but less accurate blending mode; False|True" },
@@ -223,7 +228,11 @@ static void emu_step_initialize(void)
    plugin_connect_all();
 }
 
+#ifndef EMSCRIPTEN
 static void EmuThreadFunction(void)
+#else
+static void EmuThreadFunction(void * arg)
+#endif
 {
    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
 
@@ -341,8 +350,12 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
    environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
 
+#ifndef EMSCRIPTEN
    retro_thread = co_active();
    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+#else
+   game_thread = emscripten_coroutine_create(EmuThreadFunction, NULL, 65536 * sizeof(void*) * 16);
+#endif
 }
 
 void retro_deinit(void)
@@ -730,7 +743,11 @@ void retro_run (void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_controllers();
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+#ifndef EMSCRIPTEN
    co_switch(game_thread);
+#else
+   emscripten_coroutine_next(game_thread);
+#endif
    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
 }
@@ -808,7 +825,11 @@ void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
 void retro_return(void)
 {
+#ifndef EMSCRIPTEN
    co_switch(retro_thread);
+#else
+   emscripten_yield();
+#endif
 }
 
 uint32_t get_retro_screen_width()
