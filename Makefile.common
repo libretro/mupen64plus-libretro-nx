@@ -274,7 +274,9 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
 endif
 
 #GLSL OPT
-ifeq ($(GLES),1)
+ifeq ($(platform), emscripten)
+GLSL_OPT = 0
+else ifeq ($(GLES),1)
 GLSL_OPT = 1
 else ifeq ($(GLES3),1)
 GLSL_OPT = 1

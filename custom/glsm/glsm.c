@@ -1144,7 +1144,7 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-#ifdef HAVE_OPENGLES
+#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
    glslopt_shader_type type;
    GLint _type;
    glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
@@ -2088,7 +2088,7 @@ static bool glsm_state_ctx_destroy(void *data)
    if (gl_state.bind_textures.ids)
       free(gl_state.bind_textures.ids);
    gl_state.bind_textures.ids = NULL;
-#ifdef HAVE_OPENGLES
+#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
    glslopt_cleanup (ctx);
 #endif
 
@@ -2131,7 +2131,7 @@ static bool glsm_state_ctx_init(void *data)
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
 
-#ifdef HAVE_OPENGLES
+#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
 #ifdef HAVE_OPENGLES2
    glslopt_target target = kGlslTargetOpenGLES20;
 #else
