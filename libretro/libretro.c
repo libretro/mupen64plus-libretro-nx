@@ -122,7 +122,7 @@ static void setup_variables(void)
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
-#ifdef VC
+#if defined(VC) || defined(EMSCRIPTEN)
          "Enable frame buffer emulation; False|True" },
 #else
          "Enable frame buffer emulation; True|False" },
