@@ -415,7 +415,7 @@ void PostProcessor::_initBlur()
 
 void PostProcessor::init()
 {
-#ifndef GLESX
+#ifdef USE_VBO
 	glGenBuffers(1, &pp_vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*16, vert, GL_STATIC_DRAW);
@@ -428,7 +428,7 @@ void PostProcessor::init()
 
 void PostProcessor::_destroyCommon()
 {
-#ifndef GLESX
+#ifdef USE_VBO
 	glDeleteBuffers(1, &pp_vbo);
 #endif
 	delete m_pResultBuffer;
@@ -502,7 +502,7 @@ void PostProcessor::_setGLState() {
 
 	glEnableVertexAttribArray(SC_POSITION);
 	glEnableVertexAttribArray(SC_TEXCOORD0);
-#ifndef GLESX
+#ifdef USE_VBO
 	glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
 	glVertexAttribPointer(SC_POSITION, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL);
 	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL + 2);

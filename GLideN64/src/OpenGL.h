@@ -38,14 +38,17 @@ typedef char GLchar;
 #include <GL/glext.h>
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
+#define USE_VBO
 #else
 #if defined(OS_MAC_OS_X)
 #define GL_GLEXT_PROTOTYPES
+#define USE_VBO
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #elif defined(OS_LINUX)
 #define GL_GLEXT_PROTOTYPES
+#define USE_VBO
 #include <GL/gl.h>
 #include <GL/glext.h>
 #define GL_IMAGE_TEXTURES_SUPPORT
@@ -54,6 +57,7 @@ typedef char GLchar;
 #include <GL/gl.h>
 #include "glext.h"
 #include "common/GLFunctions.h"
+#define USE_VBO
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
 #endif // OS_MAC_OS_X
