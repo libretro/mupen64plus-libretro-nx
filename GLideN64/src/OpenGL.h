@@ -97,7 +97,7 @@ public:
 	void updateVBO(GLuint* type, GLsizeiptr length, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
-	void drawLLETriangle(u32 _numVtx);
+	void drawScreenSpaceTriangle(u32 _numVtx);
 	void drawDMATriangles(u32 _numVtx);
 	void drawLine(int _v0, int _v1, float _width);
 	void drawRect(int _ulx, int _uly, int _lrx, int _lry, float * _pColor);
@@ -199,8 +199,9 @@ private:
 	void _updateDepthCompare() const;
 	void _updateTextures(RENDER_STATE _renderState) const;
 	void _updateStates(RENDER_STATE _renderState) const;
-	void _prepareDrawTriangle(int _type, u32 numUpdate);
+	void _prepareDrawTriangle(bool _dma, u32 numUpdate);
 	bool _canDraw() const;
+	void _drawThickLine(int _v0, int _v1, float _width);
 
 	struct {
 		SPVertex vertices[VERTBUFF_SIZE];
@@ -254,8 +255,10 @@ private:
 	TexturedRectParams m_texrectParams;
 	GLVertex m_rect[4];
 	u32 m_modifyVertices;
+	GLfloat m_maxLineWidth;
 	bool m_bImageTexture;
 	bool m_bFlatColors;
+	bool m_bDmaVertices;
 	GLuint tri_vbo, rect_vbo, vao;
 	u32 tri_offset, rect_offset, tri_size, rect_size, vbo_max_size;
 
