@@ -1365,7 +1365,7 @@ void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
 		for(i = 0; i < triangles.num; ++i)
 			temp[i] = triangles.vertices[triangles.elements[i]];
 		updateVBO(&tri_vbo, sizeof(SPVertex) * numUpdate, temp);
-	else
+	} else
 		updateVBO(&tri_vbo, sizeof(SPVertex) * numUpdate, triangles.dmaVertices.data());
 #endif
 
