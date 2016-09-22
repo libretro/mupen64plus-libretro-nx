@@ -242,7 +242,7 @@ ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g
    CPUOPTS += -DOPENGL_DEBUG
 else
-   CPUOPTS += -O2 -DNDEBUG
+   CPUOPTS += -O3 -DNDEBUG
 endif
 
 CXXFLAGS += -std=c++11
@@ -261,7 +261,7 @@ ifneq ($(platform), emscripten)
    LDFLAGS    += -lz
 endif
 
-LDFLAGS    += $(fpic)
+LDFLAGS    += $(fpic) -O3
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
