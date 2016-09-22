@@ -184,6 +184,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
 	$(ROOT_DIR)/custom/GLideN64/CommonPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Config.cpp \
+	$(VIDEODIR_GLIDEN64)/src/convert.cpp \
 	$(VIDEODIR_GLIDEN64)/src/DepthBuffer.cpp \
 	$(VIDEODIR_GLIDEN64)/src/F3D.cpp \
 	$(VIDEODIR_GLIDEN64)/src/F3DDKR.cpp \
