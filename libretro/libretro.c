@@ -5,10 +5,12 @@
 #include "libretro.h"
 #include "GLideN64_libretro.h"
 
-#ifndef EMSCRIPTEN
-#include <libco.h>
-#else
+#ifdef EMSCRIPTEN
+#include <pthread.h>
+#include <EGL/egl.h>
 #include <emscripten.h>
+#else
+#include <libco.h>
 #endif
 
 #include <glsm/glsmsym.h>
@@ -55,6 +57,14 @@ static cothread_t game_thread;
 cothread_t retro_thread;
 #else
 static emscripten_coroutine game_thread;
+static pthread_t game_pthread;
+int pthread_support = 0;
+int first_time = 1;
+int game_running = 1;
+EGLDisplay myDisplay;
+EGLSurface myReadSurface;
+EGLSurface myDrawSurface;
+EGLContext myContext;
 #endif
 
 int astick_deadzone;
@@ -230,10 +240,12 @@ static void emu_step_initialize(void)
 
 #ifndef EMSCRIPTEN
 static void EmuThreadFunction(void)
-#else
-static void EmuThreadFunction(void * arg)
-#endif
 {
+#else
+static void* EmuThreadFunction(void * arg)
+{
+   eglMakeCurrent(myDisplay, myDrawSurface, myReadSurface, myContext);
+#endif
    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
 
    CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
@@ -354,7 +366,9 @@ void retro_init(void)
    retro_thread = co_active();
    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
 #else
-   game_thread = emscripten_coroutine_create(EmuThreadFunction, NULL, 65536 * sizeof(void*) * 16);
+   pthread_support = emscripten_has_threading_support();
+   if (!pthread_support)
+      game_thread = emscripten_coroutine_create(EmuThreadFunction, NULL, 65536 * sizeof(void*) * 16);
 #endif
 }
 
@@ -746,7 +760,27 @@ void retro_run (void)
 #ifndef EMSCRIPTEN
    co_switch(game_thread);
 #else
-   emscripten_coroutine_next(game_thread);
+   if (!pthread_support)
+      emscripten_coroutine_next(game_thread);
+   else {
+      if (first_time) {
+         myContext = eglGetCurrentContext();
+         myDisplay = eglGetCurrentDisplay();
+         myReadSurface = eglGetCurrentSurface(EGL_READ);
+         myDrawSurface = eglGetCurrentSurface(EGL_DRAW);
+         glFlush();
+         eglMakeCurrent(myDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+         pthread_create( &game_pthread, NULL, EmuThreadFunction, NULL);
+         first_time = 0;
+      }
+      else {
+         glFlush();
+         eglMakeCurrent(myDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+         game_running = 1;
+      }
+      while (game_running) {}
+      eglMakeCurrent(myDisplay, myDrawSurface, myReadSurface, myContext);
+   }
 #endif
    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
@@ -828,7 +862,15 @@ void retro_return(void)
 #ifndef EMSCRIPTEN
    co_switch(retro_thread);
 #else
-   emscripten_yield();
+   if (!pthread_support)
+      emscripten_yield();
+   else {
+      glFlush();
+      eglMakeCurrent(myDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+      game_running = 0;
+      while (!game_running) {}
+      eglMakeCurrent(myDisplay, myDrawSurface, myReadSurface, myContext);
+   }
 #endif
 }
 
