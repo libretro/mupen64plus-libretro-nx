@@ -1368,7 +1368,7 @@ void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
 	glVertexAttribPointer(SC_MODIFY, 4, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, modify) + tri_offset));
 
 	if (!_dma) {
-		SPVertex temp[VERTBUFF_SIZE];
+		SPVertex temp[ELEMBUFF_SIZE];
 		u32 i;
 		for(i = 0; i < triangles.num; ++i)
 			temp[i] = triangles.vertices[triangles.elements[i]];
