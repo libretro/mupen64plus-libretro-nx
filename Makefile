@@ -185,7 +185,7 @@ else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
    GLES := 1
    WITH_DYNAREC :=
-   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1 -s USE_PTHREADS=2
+   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
    PLATCFLAGS += \
       -Dsinc_resampler=glupen_sinc_resampler \
       -DCC_resampler=glupen_CC_resampler \
@@ -259,8 +259,6 @@ CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFL
 
 ifneq ($(platform), emscripten)
    LDFLAGS    += -lz
-else
-   LDFLAGS    += -s USE_PTHREADS=2
 endif
 
 LDFLAGS    += $(fpic) -O3
