@@ -74,7 +74,7 @@ SOURCES_C += \
 	$(CORE_DIR)/src/plugin/dummy_audio.c \
 	$(CORE_DIR)/src/plugin/dummy_input.c \
 	$(CORE_DIR)/src/plugin/dummy_rsp.c \
-	$(CORE_DIR)/src/r4300/r4300.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/r4300/r4300.c \
 	$(CORE_DIR)/src/r4300/cached_interp.c \
 	$(CORE_DIR)/src/r4300/cp0.c \
 	$(CORE_DIR)/src/r4300/cp1.c \

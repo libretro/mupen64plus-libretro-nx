@@ -7,8 +7,6 @@
 
 #ifndef EMSCRIPTEN
 #include <libco.h>
-#else
-#include <emscripten.h>
 #endif
 
 #include <glsm/glsmsym.h>
@@ -53,11 +51,10 @@ save_memory_data saved_memory;
 #ifndef EMSCRIPTEN
 static cothread_t game_thread;
 cothread_t retro_thread;
-#else
-static emscripten_coroutine game_thread;
 #endif
 
 int astick_deadzone;
+int first_time = 1;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -228,11 +225,7 @@ static void emu_step_initialize(void)
    plugin_connect_all();
 }
 
-#ifndef EMSCRIPTEN
 static void EmuThreadFunction(void)
-#else
-static void EmuThreadFunction(void * arg)
-#endif
 {
    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
 
@@ -353,8 +346,6 @@ void retro_init(void)
 #ifndef EMSCRIPTEN
    retro_thread = co_active();
    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
-#else
-   game_thread = emscripten_coroutine_create(EmuThreadFunction, NULL, 65536 * sizeof(void*) * 16);
 #endif
 }
 
@@ -737,16 +728,26 @@ void retro_unload_game(void)
    emu_initialized = false;
 }
 
+void cached_step(void);
+
 void retro_run (void)
 {
    static bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_controllers();
    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+   if (r4300emu == 1) {
+      if (first_time) {
+         first_time = 0;
+         CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+      } else {
+         stop = 0;
+         cached_step();
+      }
+   }
 #ifndef EMSCRIPTEN
-   co_switch(game_thread);
-#else
-   emscripten_coroutine_next(game_thread);
+   else
+      co_switch(game_thread);
 #endif
    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
@@ -825,10 +826,11 @@ void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
 
 void retro_return(void)
 {
+   if (r4300emu == 1)
+      stop = 1;
 #ifndef EMSCRIPTEN
-   co_switch(retro_thread);
-#else
-   emscripten_yield();
+   else
+      co_switch(retro_thread);
 #endif
 }
 
