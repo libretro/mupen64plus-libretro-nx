@@ -1,4 +1,7 @@
 # GLupeN64
+
+**Try this out on the [RetroArch Web Player](https://buildbot.libretro.com/web/)!**
+
 **Minimum RetroArch version: v1.3.4**
 
 <b>[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)</b>
