@@ -2080,6 +2080,12 @@ static void glsm_state_unbind(void)
       if (gl_state.cap_state[i])
          glDisable(gl_state.cap_translate[i]);
    }
+
+   for (i = 0; i < MAX_ATTRIB; i++)
+   {
+      if (gl_state.vertex_attrib_pointer.enabled[i])
+         glDisableVertexAttribArray(i);
+   }
    glActiveTexture(GL_TEXTURE0);
 }
 
