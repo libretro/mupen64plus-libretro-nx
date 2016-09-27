@@ -287,16 +287,16 @@ static int sevenzip_parse_file_init(file_archive_transfer_t *state,
          (struct sevenzip_context_t*)sevenzip_stream_new();
 
    if (state->archive_size < SEVENZIP_MAGIC_LEN)
-      return -1;
+      goto error;
 
    if (memcmp(state->data, SEVENZIP_MAGIC, SEVENZIP_MAGIC_LEN) != 0)
-      return -1;
+      goto error;
 
    state->stream = sevenzip_context;
 
    /* could not open 7zip archive? */
    if (InFile_Open(&sevenzip_context->archiveStream.file, file))
-      return -1;
+      goto error;
 
    FileInStream_CreateVTable(&sevenzip_context->archiveStream);
    LookToRead_CreateVTable(&sevenzip_context->lookStream, False);
@@ -305,13 +305,16 @@ static int sevenzip_parse_file_init(file_archive_transfer_t *state,
    CrcGenerateTable();
    SzArEx_Init(&sevenzip_context->db);
 
-   SRes res = SzArEx_Open(&sevenzip_context->db, &sevenzip_context->lookStream.s,
-         &sevenzip_context->allocImp, &sevenzip_context->allocTempImp);
-
-   if (res != SZ_OK)
-      return -1;
+   if (SzArEx_Open(&sevenzip_context->db, &sevenzip_context->lookStream.s,
+         &sevenzip_context->allocImp, &sevenzip_context->allocTempImp) != SZ_OK)
+      goto error;
 
    return 0;
+
+error:
+   if (sevenzip_context)
+      sevenzip_stream_free(sevenzip_context);
+   return -1;
 }
 
 static int sevenzip_parse_file_iterate_step_internal(
@@ -390,8 +393,9 @@ static int sevenzip_parse_file_iterate_step(file_archive_transfer_t *state,
       return ret;
 
    userdata->extracted_file_path = filename;
+   userdata->crc = checksum;
 
-   if (!file_cb(filename, valid_exts, cdata, cmode,
+   if (file_cb && !file_cb(filename, valid_exts, cdata, cmode,
             csize, size, checksum, userdata))
       return 0;
 

@@ -27,6 +27,12 @@
 #include <stddef.h>
 #include <boolean.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <retro_miscellaneous.h>
 
 enum file_archive_transfer_type
@@ -46,9 +52,11 @@ typedef struct file_archive_handle
    const struct file_archive_file_backend *backend;
 } file_archive_file_handle_t;
 
+typedef struct file_archive_file_data file_archive_file_data_t;
+
 typedef struct file_archive_transfer
 {
-   void *handle;
+   file_archive_file_data_t *handle;
    void *stream;
    const uint8_t *footer;
    const uint8_t *directory;
@@ -88,7 +96,7 @@ typedef struct
 
 struct archive_extract_userdata
 {
-   char *archive_path;
+   char archive_path[PATH_MAX_LENGTH];
    char *first_extracted_file_path;
    char *extracted_file_path;
    const char *extraction_directory;
@@ -154,18 +162,18 @@ int file_archive_parse_file_progress(file_archive_transfer_t *state);
 
 /**
  * file_archive_extract_file:
- * @zip_path                    : filename path to ZIP archive.
- * @zip_path_size               : size of ZIP archive.
+ * @archive_path                    : filename path to ZIP archive.
+ * @archive_path_size               : size of ZIP archive.
  * @valid_exts                  : valid extensions for a file.
- * @extraction_directory        : the directory to extract temporary
- *                                unzipped file to.
+ * @extraction_directory        : the directory to extract the temporary
+ *                                file to.
  *
  * Extract file from archive. If no file inside the archive is
  * specified, the first file found will be used.
  *
  * Returns : true (1) on success, otherwise false (0).
  **/
-bool file_archive_extract_file(char *zip_path, size_t zip_path_size,
+bool file_archive_extract_file(char *archive_path, size_t archive_path_size,
       const char *valid_exts, const char *extraction_dir,
       char *out_path, size_t len);
 
@@ -183,28 +191,24 @@ bool file_archive_perform_mode(const char *name, const char *valid_exts,
       const uint8_t *cdata, unsigned cmode, uint32_t csize, uint32_t size,
       uint32_t crc32, struct archive_extract_userdata *userdata);
 
-void file_archive_deflate_init(void *data, int level);
-
 int file_archive_compressed_read(
       const char* path, void **buf,
       const char* optional_filename, ssize_t *length);
-
-struct string_list* file_archive_file_list_new(const char *path,
-      const char *ext);
-
-struct string_list* file_archive_filename_split(const char *path);
-
-const uint8_t* file_archive_data(void *handle);
-
-int file_archive_parse_file_init(file_archive_transfer_t *state,
-      const char *file);
-
-void file_archive_free(void *handle);
 
 const struct file_archive_file_backend* file_archive_get_zlib_file_backend(void);
 const struct file_archive_file_backend* file_archive_get_7z_file_backend(void);
 
 const struct file_archive_file_backend* file_archive_get_file_backend(const char *path);
+
+/**
+ * file_archive_get_file_crc32:
+ * @path                         : filename path of archive
+ *
+ * Returns: CRC32 of the specified file in the archive, otherwise 0.
+ * If no path within the archive is specified, the first
+ * file found inside is used.
+ **/
+uint32_t file_archive_get_file_crc32(const char *path);
 
 extern const struct file_archive_file_backend zlib_backend;
 extern const struct file_archive_file_backend sevenzip_backend;

@@ -59,7 +59,7 @@ CC      := $(compiler)
 CXX     := $(subst CC,++,$(compiler))
 flags   := -fPIC $(extra_flags) -I../../libretro-common/include
 asflags := -fPIC  $(extra_flags)
-LDFLAGS := -lz
+LDFLAGS := 
 flags   += -std=c99 -DMD5_BUILD_UTILITY
 
 
@@ -79,7 +79,7 @@ md5$(DYLIB): md5.o
 
 sha1$(DYLIB): sha1.o
 
-crc32$(DYLIB): crc32.o
+crc32$(DYLIB): crc32.o ../encodings/encoding_crc32.o
 
 %.o: %.S
 	$(CC) -c -o $@ $(asflags) $(LDFLAGS)  $(ASMFLAGS)  $<

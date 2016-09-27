@@ -94,7 +94,7 @@ end:
  * after a compression extension is considered.
  *
  * Returns: pointer to the delimiter in the path if it contains
- * a compressed file, otherwise NULL.
+ * a path inside a compressed file, otherwise NULL.
  */
 const char *path_get_archive_delim(const char *path)
 {
@@ -104,7 +104,12 @@ const char *path_get_archive_delim(const char *path)
 
 #ifdef HAVE_ZLIB
    if (last)
+   {
       delim = strcasestr(last, ".zip#");
+
+      if (!delim)
+         delim = strcasestr(last, ".apk#");
+   }
 
    if (delim)
       return delim + 4;
@@ -194,7 +199,8 @@ bool path_is_compressed_file(const char* path)
    const char *ext = path_get_extension(path);
 
 #ifdef HAVE_ZLIB
-   if (string_is_equal_noncase(ext, "zip"))
+   if (string_is_equal_noncase(ext, "zip") ||
+             string_is_equal_noncase(ext, "apk"))
       return true;
 #endif
 
@@ -482,7 +488,7 @@ void path_basedir(char *path)
       return;
 
 #ifdef HAVE_COMPRESSION
-   /* We want to find the directory with the zipfile in basedir. */
+   /* We want to find the directory with the archive in basedir. */
    last = (char*)path_get_archive_delim(path);
    if (last)
       *last = '\0';
@@ -657,7 +663,7 @@ void fill_pathname_join_special_ext(char *out_path,
 }
 
 void fill_pathname_join_concat(char *out_path,
-      const char *dir, const char *path, 
+      const char *dir, const char *path,
       const char *concat,
       size_t size)
 {
