@@ -20,14 +20,18 @@
  }
  glslopt_cleanup (ctx);
 */
-
+#ifdef __cplusplus
 struct glslopt_shader;
 struct glslopt_ctx;
+#else
+typedef struct {} glslopt_shader;
+typedef struct {} glslopt_ctx;
+#endif
 
-enum glslopt_shader_type {
+typedef enum {
 	kGlslOptShaderVertex = 0,
 	kGlslOptShaderFragment,
-};
+} glslopt_shader_type;
 
 // Options flags for glsl_optimize
 enum glslopt_options {
@@ -36,15 +40,15 @@ enum glslopt_options {
 };
 
 // Optimizer target language
-enum glslopt_target {
+typedef enum {
 	kGlslTargetOpenGL = 0,
 	kGlslTargetOpenGLES20 = 1,
 	kGlslTargetOpenGLES30 = 2,
 	kGlslTargetMetal = 3,
-};
+} glslopt_target;
 
 // Type info
-enum glslopt_basic_type {
+typedef enum {
 	kGlslTypeFloat = 0,
 	kGlslTypeInt,
 	kGlslTypeBool,
@@ -55,26 +59,30 @@ enum glslopt_basic_type {
 	kGlslTypeTex2DArray,
 	kGlslTypeOther,
 	kGlslTypeCount
-};
-enum glslopt_precision {
+} glslopt_basic_type;
+typedef enum {
 	kGlslPrecHigh = 0,
 	kGlslPrecMedium,
 	kGlslPrecLow,
 	kGlslPrecCount
-};
-
-glslopt_ctx* glslopt_initialize (glslopt_target target);
-void glslopt_cleanup (glslopt_ctx* ctx);
+} glslopt_precision;
 
 void glslopt_set_max_unroll_iterations (glslopt_ctx* ctx, unsigned iterations);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+glslopt_ctx* glslopt_initialize (glslopt_target target);
+void glslopt_cleanup (glslopt_ctx* ctx);
 glslopt_shader* glslopt_optimize (glslopt_ctx* ctx, glslopt_shader_type type, const char* shaderSource, unsigned options);
 bool glslopt_get_status (glslopt_shader* shader);
 const char* glslopt_get_output (glslopt_shader* shader);
-const char* glslopt_get_raw_output (glslopt_shader* shader);
 const char* glslopt_get_log (glslopt_shader* shader);
 void glslopt_shader_delete (glslopt_shader* shader);
-
+#ifdef __cplusplus
+}
+#endif
+const char* glslopt_get_raw_output (glslopt_shader* shader);
 int glslopt_shader_get_input_count (glslopt_shader* shader);
 void glslopt_shader_get_input_desc (glslopt_shader* shader, int index, const char** outName, glslopt_basic_type* outType, glslopt_precision* outPrec, int* outVecSize, int* outMatSize, int* outArraySize, int* outLocation);
 int glslopt_shader_get_uniform_count (glslopt_shader* shader);

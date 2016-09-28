@@ -96,12 +96,12 @@ struct glslopt_ctx {
 	glslopt_target target;
 };
 
-glslopt_ctx* glslopt_initialize (glslopt_target target)
+extern "C" glslopt_ctx* glslopt_initialize (glslopt_target target)
 {
 	return new glslopt_ctx(target);
 }
 
-void glslopt_cleanup (glslopt_ctx* ctx)
+extern "C" void glslopt_cleanup (glslopt_ctx* ctx)
 {
 	delete ctx;
 	_mesa_destroy_shader_compiler();
@@ -603,7 +603,7 @@ static void find_shader_variables(glslopt_shader* sh, exec_list* ir)
 }
 
 
-glslopt_shader* glslopt_optimize (glslopt_ctx* ctx, glslopt_shader_type type, const char* shaderSource, unsigned options)
+extern "C" glslopt_shader* glslopt_optimize (glslopt_ctx* ctx, glslopt_shader_type type, const char* shaderSource, unsigned options)
 {
 	glslopt_shader* shader = new (ctx->mem_ctx) glslopt_shader ();
 
@@ -719,17 +719,17 @@ glslopt_shader* glslopt_optimize (glslopt_ctx* ctx, glslopt_shader_type type, co
 	return shader;
 }
 
-void glslopt_shader_delete (glslopt_shader* shader)
+extern "C" void glslopt_shader_delete (glslopt_shader* shader)
 {
 	delete shader;
 }
 
-bool glslopt_get_status (glslopt_shader* shader)
+extern "C" bool glslopt_get_status (glslopt_shader* shader)
 {
 	return shader->status;
 }
 
-const char* glslopt_get_output (glslopt_shader* shader)
+extern "C" const char* glslopt_get_output (glslopt_shader* shader)
 {
 	return shader->optimizedOutput;
 }
@@ -739,7 +739,7 @@ const char* glslopt_get_raw_output (glslopt_shader* shader)
 	return shader->rawOutput;
 }
 
-const char* glslopt_get_log (glslopt_shader* shader)
+extern "C" const char* glslopt_get_log (glslopt_shader* shader)
 {
 	return shader->infoLog;
 }

@@ -285,7 +285,7 @@ endif
 
 ifeq ($(GLSL_OPT),1)
 
-SETUP_GLSL:=$(shell sh ./custom/glsl-optimizer/glsl_setup.sh)
+SETUP_GLSL:=$(shell sh ./glsl-optimizer/glsl_setup.sh)
 
 SOURCES_C += \
 	$(GLSL_OPT_DIR)/src/glsl/glcpp/glcpp-lex.c \
@@ -347,7 +347,7 @@ SOURCES_CXX += \
 	$(GLSL_OPT_DIR)/src/glsl/opt_function_inlining.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/lower_mat_op_to_vec.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/ir_function_detect_recursion.cpp \
-	$(ROOT_DIR)/custom/glsl-optimizer/glsl_optimizer.cpp \
+	$(GLSL_OPT_DIR)/src/glsl/glsl_optimizer.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/link_uniform_blocks.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/opt_swizzle_swizzle.cpp \
 	$(GLSL_OPT_DIR)/src/glsl/link_functions.cpp \
