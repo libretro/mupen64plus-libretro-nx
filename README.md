@@ -1,10 +1,10 @@
 # GLupeN64
 
+**Please read the [Wiki](https://github.com/loganmc10/GLupeN64/wiki) for an explanation of the core options**
+
 **Try this out on the [RetroArch Web Player](https://buildbot.libretro.com/web/)!**
 
-**Minimum RetroArch version: v1.3.4**
-
-<b>[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)</b>
+**[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)**
 
 GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [RSP-HLE](https://github.com/mupen64plus/mupen64plus-rsp-hle) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
 
@@ -16,13 +16,6 @@ GLupeN64 uses RSP-HLE and GLideN64 (a graphics plugin that is not available in m
 
 By choosing one RSP implementation (rsp-hle) and one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
 
-#### How is it organized?
-
-The modules (mupen64plus-core, rsp-hle, GLideN64, and libretro-common) are identical to the upstream repositories, allowing us to easily update the codebase. When modifications have to be made, they are put in the "custom" directory, overriding their vanilla counterparts.
-
-We will try to stay as close to the upstream code as possible, if there are improvements to be made, they should be submitted upstream.
-
-Most of the modifications have involved removing dependencies on SDL, and modifying the plugin architecture to get it running inside libretro.
 #### What is not supported:
 
 Cheats
@@ -32,3 +25,5 @@ Cheats
 #### Acknowledgments
 
 A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64. I haven't really written any code for this project, I'm just putting together the work by other people.
+
+**Minimum RetroArch version: v1.3.4**
