@@ -145,7 +145,7 @@ static void setup_variables(void)
       { "glupen64-EnableNativeResTexrects",
          "Render 2D texrects in native resolution; False|True" },
       { "glupen64-EnableLegacyBlending",
-#if defined(VC) || defined(ANDROID) || defined(EMSCRIPTEN)
+#if defined(HAVE_OPENGLES)
          "Faster but less accurate blending mode; True|False" },
 #else
          "Faster but less accurate blending mode; False|True" },
