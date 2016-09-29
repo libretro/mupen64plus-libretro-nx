@@ -1987,6 +1987,7 @@ static void glsm_state_setup(void)
 
    gl_state.bindbuffer.buffer[0]        = 0;
    gl_state.bindbuffer.buffer[1]        = 0;
+   gl_state.bindvertex.array            = 0;
    gl_state.framebuf                    = hw_render.get_current_framebuffer();
    gl_state.framebuf_target             = RARCH_GL_FRAMEBUFFER;
    gl_state.cullface.mode               = GL_BACK;
