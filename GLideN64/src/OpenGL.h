@@ -38,7 +38,6 @@ typedef char GLchar;
 #include <GL/glext.h>
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
-#define USE_VBO
 #else
 #if defined(OS_MAC_OS_X)
 #define GL_GLEXT_PROTOTYPES
@@ -57,7 +56,6 @@ typedef char GLchar;
 #include <GL/gl.h>
 #include "glext.h"
 #include "common/GLFunctions.h"
-#define USE_VBO
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
 #endif // OS_MAC_OS_X
@@ -98,7 +96,7 @@ struct CachedTexture;
 class OGLRender
 {
 public:
-	void updateVBO(GLuint* type, GLsizeiptr length, void *pointer);
+	void updateVBO(bool _tri, GLsizeiptr length, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
 	void drawScreenSpaceTriangle(u32 _numVtx);
@@ -259,9 +257,13 @@ private:
 	bool m_bImageTexture;
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
-	GLuint tri_vbo, rect_vbo, vao;
-	u32 tri_offset, rect_offset, tri_size, rect_size, vbo_max_size;
-
+#ifdef GLES2
+	GLuint tri_vbo, rect_vbo;
+	u32 tri_size, rect_size;
+#else
+	GLuint vao, vbo;
+	u32 vbo_offset, vbo_max_size;
+#endif
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;

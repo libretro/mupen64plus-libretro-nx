@@ -68,6 +68,8 @@ static bool     first_context_reset = false;
 
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
+float retro_screen_aspect;
+
 u32 bilinearMode = 0;
 u32 EnableNoise = 0;
 u32 EnableLOD = 0;
@@ -83,6 +85,7 @@ u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
 f32 PolygonOffsetFactor = 0.0;
 u32 EnableFragmentDepthWrite = 0;
+u32 AspectRatio = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -114,8 +117,12 @@ static void setup_variables(void)
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
-      { "glupen64-screensize",
-         "Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680" },
+      { "glupen64-43screensize",
+         "4:3 Resolution; 320x240|640x480|960x720|1280x960" },
+      { "glupen64-169screensize",
+         "16:9 Resolution; 320x180|640x360|960x540|1280x720" },
+      { "glupen64-aspect",
+         "Aspect Ratio; 4:3|16:9" },
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
       { "glupen64-EnableFBEmulation",
@@ -313,7 +320,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_height  = retro_screen_height;
    info->geometry.max_width    = retro_screen_width;
    info->geometry.max_height   = retro_screen_height;
-   info->geometry.aspect_ratio = 4.0 / 3.0;
+   info->geometry.aspect_ratio = retro_screen_aspect;
    //info->timing.fps = (region == SYSTEM_PAL) ? 50.0 : (60/1.001);
    info->timing.fps = (double)ROM_PARAMS.vilimit;
    info->timing.sample_rate = 44100.0;
@@ -619,16 +626,28 @@ void update_variables()
           r4300emu = 2;
    }
 
-   var.key = "glupen64-screensize";
+   var.key = "glupen64-aspect";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "16:9")) {
+          AspectRatio = 3;
+          retro_screen_aspect = 16.0 / 9.0;
+      } else {
+          AspectRatio = 1;
+          retro_screen_aspect = 4.0 / 3.0;
+      }
+   }
+
+   if (AspectRatio == 1)
+      var.key = "glupen64-43screensize";
+   else
+      var.key = "glupen64-169screensize";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (sscanf(var.value ? var.value : "640x480", "%dx%d", &retro_screen_width, &retro_screen_height) != 2)
-      {
-         retro_screen_width = 640;
-         retro_screen_height = 480;
-      }
+      sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
    }
 
    var.key = "glupen64-audio-buffer-size";

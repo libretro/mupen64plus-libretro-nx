@@ -23,6 +23,7 @@ void Config_LoadConfig()
 {
 	u32 hacks = config.generalEmulation.hacks;
 	config.resetToDefaults();
+	config.frameBufferEmulation.aspect = AspectRatio;
 	config.frameBufferEmulation.enable = EnableFBEmulation;
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableNoise = EnableNoise;

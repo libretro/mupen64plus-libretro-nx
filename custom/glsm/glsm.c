@@ -1315,13 +1315,15 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   gl_state.attrib_pointer.used[name] = 1;
-   gl_state.attrib_pointer.size[name] = size;
-   gl_state.attrib_pointer.type[name] = type;
-   gl_state.attrib_pointer.normalized[name] = normalized;
-   gl_state.attrib_pointer.stride[name] = stride;
-   gl_state.attrib_pointer.pointer[name] = pointer;
-   glVertexAttribPointer(name, size, type, normalized, stride, pointer);
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer) {
+      gl_state.attrib_pointer.used[name] = 1;
+      gl_state.attrib_pointer.size[name] = size;
+      gl_state.attrib_pointer.type[name] = type;
+      gl_state.attrib_pointer.normalized[name] = normalized;
+      gl_state.attrib_pointer.stride[name] = stride;
+      gl_state.attrib_pointer.pointer[name] = pointer;
+      glVertexAttribPointer(name, size, type, normalized, stride, pointer);
+   }
 }
 
 /*
@@ -1649,6 +1651,12 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  */
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
+   const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
+#ifdef GLES2
+   glDiscardFramebufferEXT(gl_state.framebuf_target, 1, discards);
+#else
+   glInvalidateFramebuffer(gl_state.framebuf_target, 1, discards);
+#endif
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
    if (gl_state.framebuf != framebuffer || gl_state.framebuf_target != target) {

@@ -68,6 +68,7 @@ extern u32 EnableCopyColorFromRDRAM;
 extern f32 PolygonOffsetFactor;
 extern u32 EnableFragmentDepthWrite;
 extern u32 FrameSkip;
+extern u32 AspectRatio;
 
 #if defined(MINGW) && defined(__cplusplus)
 #include "mingw.thread.h"
