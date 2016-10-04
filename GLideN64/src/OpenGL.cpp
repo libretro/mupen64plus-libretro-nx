@@ -660,7 +660,6 @@ void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 #ifdef USE_VBO
 	u32 offset;
 #ifndef GLES2
-	void* temp;
 	GLbitfield access = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	if (vbo_offset + length > vbo_max_size) {
@@ -668,10 +667,10 @@ void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 		access |= GL_MAP_INVALIDATE_BUFFER_BIT;
 	}
 	offset = vbo_offset;
-	temp = glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access);
-	vbo_offset += length;
+	void* temp = glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access);
 	memcpy(temp, pointer, length);
 	glUnmapBuffer(GL_ARRAY_BUFFER);
+	vbo_offset += length;
 #else
 	offset = 0;
 	if(_tri) {
