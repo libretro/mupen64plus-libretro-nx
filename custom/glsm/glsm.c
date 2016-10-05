@@ -1651,12 +1651,14 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  */
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
-   const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
+   if (!resetting_context) {
+      const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 #ifdef GLES2
-   glDiscardFramebufferEXT(gl_state.framebuf_target, 1, discards);
+      glDiscardFramebufferEXT(gl_state.framebuf_target, 1, discards);
 #else
-   glInvalidateFramebuffer(gl_state.framebuf_target, 1, discards);
+      glInvalidateFramebuffer(gl_state.framebuf_target, 1, discards);
 #endif
+   }
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
    if (gl_state.framebuf != framebuffer || gl_state.framebuf_target != target) {
