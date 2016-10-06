@@ -27,6 +27,13 @@
 #include "glsl_optimizer.h"
 #include "plugin/plugin.h"
 
+struct texture_cached_state
+{
+   GLint pname_attrib[5];
+};
+
+static struct texture_cached_state texture_state[32000];
+
 struct gl_cached_state
 {
    struct
@@ -178,8 +185,7 @@ struct gl_cached_state
    } readbuffer;
 
    GLuint vao;
-   GLuint framebuf;
-   GLenum framebuf_target;
+   GLuint framebuf[2];
    GLuint program;
    GLenum active_texture;
    int cap_state[SGL_CAP_MAX];
@@ -749,22 +755,24 @@ void rglCompressedTexImage2D(GLenum target, GLint level,
 void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 {
    glDeleteFramebuffers(n, framebuffers);
-   int i;
+   int i, p;
    for (i = 0; i < n; ++i) {
-      if (framebuffers[i] == gl_state.framebuf)
-         gl_state.framebuf = 0;
+      for (p = 0; p < 2; ++p) {
+         if (framebuffers[i] == gl_state.framebuf[p])
+            gl_state.framebuf[p] = 0;
+      }
    }
 }
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
 {
    glDeleteTextures(n, textures);
-   int i;
+   int i,p;
    for (i = 0; i < n; ++i) {
-      if (gl_state.bind_textures.ids != NULL) {
-         if (textures[i] == gl_state.bind_textures.ids[gl_state.active_texture])
-            gl_state.bind_textures.ids[gl_state.active_texture] = 0;
-      }
+      for (p = 0; p < 5; ++p)
+         texture_state[textures[i]].pname_attrib[p] = 9999;
+      if (textures[i] == gl_state.bind_textures.ids[gl_state.active_texture])
+         gl_state.bind_textures.ids[gl_state.active_texture] = 0;
    }
 }
 
@@ -1194,6 +1202,11 @@ GLuint rglCreateProgram(void)
 void rglGenTextures(GLsizei n, GLuint *textures)
 {
    glGenTextures(n, textures);
+   int i,p;
+   for (i = 0; i < n; ++i) {
+      for (p = 0; p < 5; ++p)
+         texture_state[textures[i]].pname_attrib[p] = 9999;
+   }
 }
 
 /*
@@ -1238,7 +1251,40 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   glTexParameteri(target, pname, param);
+   if (pname == GL_TEXTURE_MIN_FILTER) {
+      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[0] != param) {
+         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[0] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_MAG_FILTER) {
+      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[1] != param) {
+         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[1] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_S) {
+      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[2] != param) {
+         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[2] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_T) {
+      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[3] != param) {
+         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[3] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+#ifndef HAVE_OPENGLES2
+   else if (pname == GL_TEXTURE_MAX_LEVEL) {
+      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[4] != param) {
+         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[4] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+#endif
+   else
+      glTexParameteri(target, pname, param);
 }
 
 void rglTexParameterf(GLenum target, GLenum pname, GLfloat param)
@@ -1649,21 +1695,29 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  */
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
-   if (!resetting_context) {
-      const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
-#ifdef GLES2
-      glDiscardFramebufferEXT(gl_state.framebuf_target, 1, discards);
-#else
-      glInvalidateFramebuffer(gl_state.framebuf_target, 1, discards);
-#endif
-   }
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
-   if (gl_state.framebuf != framebuffer || gl_state.framebuf_target != target) {
-      glBindFramebuffer(target, framebuffer);
-      gl_state.framebuf = framebuffer;
-      gl_state.framebuf_target = target;
+   if (target == GL_FRAMEBUFFER) {
+      if (gl_state.framebuf[0] != framebuffer || gl_state.framebuf[1] != framebuffer) {
+         glBindFramebuffer(target, framebuffer);
+         gl_state.framebuf[0] = framebuffer;
+         gl_state.framebuf[1] = framebuffer;
+      }
    }
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER) {
+      if (gl_state.framebuf[0] != framebuffer) {
+         glBindFramebuffer(target, framebuffer);
+         gl_state.framebuf[0] = framebuffer;
+      }
+   }
+   else if (target == GL_READ_FRAMEBUFFER) {
+      if (gl_state.framebuf[1] != framebuffer) {
+         glBindFramebuffer(target, framebuffer);
+         gl_state.framebuf[1] = framebuffer;
+      }
+   }
+#endif
 }
 
 /*
@@ -1998,8 +2052,8 @@ static void glsm_state_setup(void)
    gl_state.bindbuffer.buffer[0]        = 0;
    gl_state.bindbuffer.buffer[1]        = 0;
    gl_state.bindvertex.array            = 0;
-   gl_state.framebuf                    = hw_render.get_current_framebuffer();
-   gl_state.framebuf_target             = RARCH_GL_FRAMEBUFFER;
+   gl_state.framebuf[0]                 = hw_render.get_current_framebuffer();
+   gl_state.framebuf[1]                 = hw_render.get_current_framebuffer();
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
@@ -2032,7 +2086,8 @@ static void glsm_state_bind(void)
 #ifndef HAVE_OPENGLES2
    glBindVertexArray(gl_state.bindvertex.array);
 #endif
-   glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
+   if (gl_state.bindbuffer.buffer[0] != 0)
+      glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
@@ -2056,7 +2111,15 @@ static void glsm_state_bind(void)
          glEnable(gl_state.cap_translate[i]);
    }
 
-   glBindFramebuffer(gl_state.framebuf_target, gl_state.framebuf);
+#ifdef HAVE_OPENGLES2
+   glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0]);
+#else
+   if (gl_state.framebuf[0] == gl_state.framebuf[1])
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0]);
+   else
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0]);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1]);
+#endif
 
    if (gl_state.blendfunc.used)
       glBlendFunc(
