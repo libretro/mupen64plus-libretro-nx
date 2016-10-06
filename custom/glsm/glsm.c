@@ -31,7 +31,7 @@ struct gl_cached_state
 {
    struct
    {
-      GLuint *ids;
+      GLuint ids[32];
    } bind_textures;
 
    struct
@@ -1993,7 +1993,9 @@ static void glsm_state_setup(void)
    if (glsm_max_textures > 32)
       glsm_max_textures = 32;
 
-   gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
+   for (i = 0; i < glsm_max_textures; i++) {
+      gl_state.bind_textures.ids[i] = 0;
+   }
 
    gl_state.bindbuffer.buffer[0]        = 0;
    gl_state.bindbuffer.buffer[1]        = 0;
@@ -2102,9 +2104,6 @@ static void glsm_state_unbind(void)
 
 static bool glsm_state_ctx_destroy(void *data)
 {
-   if (gl_state.bind_textures.ids)
-      free(gl_state.bind_textures.ids);
-   gl_state.bind_textures.ids = NULL;
 #if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
    glslopt_cleanup (ctx);
 #endif
