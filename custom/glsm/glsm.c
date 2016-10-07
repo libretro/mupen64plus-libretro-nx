@@ -1668,7 +1668,7 @@ void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
  */
 void rglPolygonOffset(GLfloat factor, GLfloat units)
 {
-   gl_state.polygonoffset.used   = true;
+   gl_state.polygonoffset.used = true;
    if (gl_state.polygonoffset.factor != factor || gl_state.polygonoffset.units != units) {
       glPolygonOffset(factor, units);
       gl_state.polygonoffset.factor = factor;
@@ -2072,6 +2072,8 @@ static void glsm_state_setup(void)
    gl_state.colormask.alpha             = GL_TRUE;
 
    gl_state.polygonoffset.used          = false;
+   gl_state.polygonoffset.factor        = 0;
+   gl_state.polygonoffset.units         = 0;
 
    gl_state.depthfunc.func              = GL_LESS;
 
@@ -2251,6 +2253,7 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          rglgen_resolve_symbols(hw_render.get_proc_address);
          if (window_first > 0) {
             resetting_context = 1;
+            glsm_state_setup();
             gfx.changeWindow();
             resetting_context = 0;
 	 }
