@@ -159,7 +159,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             if (val == M64EMU_STOPPED)
-            {        
+            {
                 /* this stop function is asynchronous.  The emulator may not terminate until later */
                 main_stop();
                 return M64ERR_SUCCESS;
@@ -302,14 +302,15 @@ static void dummy_save(void *user_data)
 /*********************************************************************************************************
 * emulation thread - runs the core
 */
+struct eep_file eep;
+struct fla_file fla;
+struct mpk_file mpk;
+struct sra_file sra;
+
 m64p_error main_run(void)
 {
     size_t i;
     unsigned int disable_extra_mem;
-    struct eep_file eep;
-    struct fla_file fla;
-    struct mpk_file mpk;
-    struct sra_file sra;
     static int channels[] = { 0, 1, 2, 3 };
 
     /* set some other core parameters based on the config file values */
@@ -431,19 +432,16 @@ void main_stop(void)
 
     DebugMessage(M64MSG_STATUS, "Stopping emulation.");
     stop = 1;
-#ifdef DBG
-    if(g_DebuggerActive)
-    {
-        debugger_step();
-    }
-    if (g_DebuggerActive)
-        destroy_debugger();
-#endif
+
+    close_sra_file(&sra);
+    close_fla_file(&fla);
+    close_eep_file(&eep);
+    close_mpk_file(&mpk);
+
     rsp.romClosed();
     input.romClosed();
     gfx.romClosed();
 
-    // clean up
     g_EmulatorRunning = 0;
     StateChanged(M64CORE_EMU_STATE, M64EMU_STOPPED);
 }

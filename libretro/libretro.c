@@ -358,6 +358,7 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
+   CoreDoCommand(M64CMD_STOP, 0, NULL);
    deinit_audio_libretro();
 
    if (perf_cb.perf_log)
@@ -741,8 +742,6 @@ bool retro_load_game(const struct retro_game_info *game)
 
 void retro_unload_game(void)
 {
-   stop = 1;
-
    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
    emu_initialized = false;
 }
@@ -787,8 +786,6 @@ size_t retro_get_memory_size(unsigned type)
    return (type == RETRO_MEMORY_SAVE_RAM) ? sizeof(saved_memory) : 0;
 }
 
-
-
 size_t retro_serialize_size (void)
 {
     return 16788288 + 1024; // < 16MB and some change... ouch
@@ -824,7 +821,7 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) {
                     pad_present[in_port] = 0;
                     break;
                 }
-                
+
             case RETRO_DEVICE_JOYPAD:
             default:
                 if (controller[in_port].control){
