@@ -767,10 +767,8 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
 {
    glDeleteTextures(n, textures);
-   int i,p;
+   int i;
    for (i = 0; i < n; ++i) {
-      for (p = 0; p < 5; ++p)
-         texture_state[textures[i]].pname_attrib[p] = 9999;
       if (textures[i] == gl_state.bind_textures.ids[gl_state.active_texture])
          gl_state.bind_textures.ids[gl_state.active_texture] = 0;
    }

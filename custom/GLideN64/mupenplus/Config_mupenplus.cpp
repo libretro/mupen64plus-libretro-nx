@@ -37,6 +37,9 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+#ifdef HAVE_OPENGLES
+	config.frameBufferEmulation.bufferSwapMode = 2;
+#endif
 #ifndef GLES2
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 #else
