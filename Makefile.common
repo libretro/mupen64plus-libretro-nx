@@ -207,6 +207,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/L3DEX.cpp \
 	$(VIDEODIR_GLIDEN64)/src/N64.cpp \
 	$(VIDEODIR_GLIDEN64)/src/OpenGL.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Performance.cpp \
 	$(VIDEODIR_GLIDEN64)/src/RDP.cpp \
 	$(VIDEODIR_GLIDEN64)/src/RSP.cpp \
 	$(VIDEODIR_GLIDEN64)/src/S2DEX2.cpp \
