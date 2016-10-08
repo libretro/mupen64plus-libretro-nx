@@ -2118,9 +2118,10 @@ static void glsm_state_bind(void)
 #else
    if (gl_state.framebuf[0] == gl_state.framebuf[1])
       glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0]);
-   else
+   else {
       glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0]);
       glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1]);
+   }
 #endif
 
    if (gl_state.blendfunc.used)
