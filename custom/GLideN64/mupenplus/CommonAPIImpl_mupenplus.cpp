@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #endif
 
+extern retro_environment_t environ_cb;
+
 int PluginAPI::InitiateGFX(const GFX_INFO & _gfxInfo)
 {
 	_initiateGFX(_gfxInfo);
@@ -48,15 +50,9 @@ void PluginAPI::GetUserDataPath(wchar_t * _strPath)
 
 void PluginAPI::GetUserCachePath(wchar_t * _strPath)
 {
-#ifdef ANDROID
-	std::string pathname = getenv("EXTERNAL_STORAGE");
-	pathname += "/RetroArch";
-	std::string shaderpath = pathname + "/shaders";
-	mkdir(shaderpath.c_str(), 0770);
-	_getWSPath(pathname.c_str(), _strPath);
-#else
-	_getWSPath(ConfigGetUserCachePath(), _strPath);
-#endif
+	char* systemDir;
+	environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
+	_getWSPath(systemDir, _strPath);
 }
 
 void PluginAPI::FindPluginPath(wchar_t * _strPath)
