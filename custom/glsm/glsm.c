@@ -1729,7 +1729,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 #ifdef HAVE_OPENGLES2
             glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
 #else
-            glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, discards);
+            glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, discards);
 #endif
             gl_state.framebuf[0].has_depth = 0;
          }
