@@ -184,8 +184,13 @@ struct gl_cached_state
       GLenum mode;
    } readbuffer;
 
+   struct
+   {
+      GLuint location;
+      int has_depth;
+   } framebuf[2];
+
    GLuint vao;
-   GLuint framebuf[2];
    GLuint program;
    GLenum active_texture;
    int cap_state[SGL_CAP_MAX];
@@ -198,6 +203,7 @@ static struct gl_cached_state gl_state;
 glslopt_ctx* ctx;
 static int window_first = 0;
 static int resetting_context = 0;
+static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 
 /* GL wrapper-side */
 
@@ -704,6 +710,16 @@ void rglLinkProgram(GLuint program)
 void rglFramebufferTexture2D(GLenum target, GLenum attachment,
       GLenum textarget, GLuint texture, GLint level)
 {
+   if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (target == GL_FRAMEBUFFER)
+         gl_state.framebuf[0].has_depth = 1;
+#ifndef HAVE_OPENGLES2
+      else if (target == GL_DRAW_FRAMEBUFFER)
+         gl_state.framebuf[0].has_depth = 1;
+      else if (target == GL_READ_FRAMEBUFFER)
+         gl_state.framebuf[1].has_depth = 1;
+#endif
+   }
    glFramebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
@@ -758,8 +774,8 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
    int i, p;
    for (i = 0; i < n; ++i) {
       for (p = 0; p < 2; ++p) {
-         if (framebuffers[i] == gl_state.framebuf[p])
-            gl_state.framebuf[p] = 0;
+         if (framebuffers[i] == gl_state.framebuf[p].location)
+            gl_state.framebuf[p].location = 0;
       }
    }
 }
@@ -853,6 +869,16 @@ GLenum rglCheckFramebufferStatus(GLenum target)
 void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
       GLenum renderbuffertarget, GLuint renderbuffer)
 {
+   if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (target == GL_FRAMEBUFFER)
+         gl_state.framebuf[0].has_depth = 1;
+#ifndef HAVE_OPENGLES2
+      else if (target == GL_DRAW_FRAMEBUFFER)
+         gl_state.framebuf[0].has_depth = 1;
+      else if (target == GL_READ_FRAMEBUFFER)
+         gl_state.framebuf[1].has_depth = 1;
+#endif
+   }
    glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
 }
 
@@ -1696,23 +1722,45 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    if (framebuffer == 0)
       framebuffer = hw_render.get_current_framebuffer();
    if (target == GL_FRAMEBUFFER) {
-      if (gl_state.framebuf[0] != framebuffer || gl_state.framebuf[1] != framebuffer) {
+      if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
+#ifdef HAVE_OPENGLES
+         if (gl_state.framebuf[0].has_depth) {
+#ifdef HAVE_OPENGLES2
+            glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
+#else
+            glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, discards);
+#endif
+            gl_state.framebuf[0].has_depth = 0;
+         }
+#endif
          glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[0] = framebuffer;
-         gl_state.framebuf[1] = framebuffer;
+         gl_state.framebuf[0].location = framebuffer;
+         gl_state.framebuf[1].location = framebuffer;
       }
    }
 #ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_FRAMEBUFFER) {
-      if (gl_state.framebuf[0] != framebuffer) {
+      if (gl_state.framebuf[0].location != framebuffer) {
+#ifdef HAVE_OPENGLES
+         if (gl_state.framebuf[0].has_depth) {
+            glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, discards);
+            gl_state.framebuf[0].has_depth = 0;
+         }
+#endif
          glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[0] = framebuffer;
+         gl_state.framebuf[0].location = framebuffer;
       }
    }
    else if (target == GL_READ_FRAMEBUFFER) {
-      if (gl_state.framebuf[1] != framebuffer) {
+      if (gl_state.framebuf[1].location != framebuffer) {
+#ifdef HAVE_OPENGLES
+         if (gl_state.framebuf[1].has_depth) {
+            glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, 1, discards);
+            gl_state.framebuf[1].has_depth = 0;
+         }
+#endif
          glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[1] = framebuffer;
+         gl_state.framebuf[1].location = framebuffer;
       }
    }
 #endif
@@ -2050,8 +2098,10 @@ static void glsm_state_setup(void)
    gl_state.bindbuffer.buffer[0]        = 0;
    gl_state.bindbuffer.buffer[1]        = 0;
    gl_state.bindvertex.array            = 0;
-   gl_state.framebuf[0]                 = hw_render.get_current_framebuffer();
-   gl_state.framebuf[1]                 = hw_render.get_current_framebuffer();
+   gl_state.framebuf[0].location        = hw_render.get_current_framebuffer();
+   gl_state.framebuf[1].location        = hw_render.get_current_framebuffer();
+   gl_state.framebuf[0].has_depth       = 0;
+   gl_state.framebuf[1].has_depth       = 0;
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
@@ -2112,13 +2162,13 @@ static void glsm_state_bind(void)
    }
 
 #ifdef HAVE_OPENGLES2
-   glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0]);
+   glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
 #else
-   if (gl_state.framebuf[0] == gl_state.framebuf[1])
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0]);
+   if (gl_state.framebuf[0].location == gl_state.framebuf[1].location)
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
    else {
-      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0]);
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1]);
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].location);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].location);
    }
 #endif
 
