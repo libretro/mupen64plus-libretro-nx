@@ -193,6 +193,7 @@ struct gl_cached_state
    GLuint vao;
    GLuint program;
    GLenum active_texture;
+   GLuint default_framebuffer;
    int cap_state[SGL_CAP_MAX];
    int cap_translate[SGL_CAP_MAX];
 };
@@ -1720,7 +1721,7 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
    if (framebuffer == 0)
-      framebuffer = hw_render.get_current_framebuffer();
+      framebuffer = gl_state.default_framebuffer;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
 #ifdef HAVE_OPENGLES
@@ -1733,10 +1734,10 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
             gl_state.framebuf[0].has_depth = 0;
          }
 #ifndef HAVE_OPENGLES2
-	 if (gl_state.framebuf[1].has_depth) {
+         if (gl_state.framebuf[1].has_depth) {
             glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, 1, discards);
             gl_state.framebuf[1].has_depth = 0;
-	 }
+         }
 #endif
 #endif
          glBindFramebuffer(target, framebuffer);
@@ -2104,8 +2105,9 @@ static void glsm_state_setup(void)
    gl_state.bindbuffer.buffer[0]        = 0;
    gl_state.bindbuffer.buffer[1]        = 0;
    gl_state.bindvertex.array            = 0;
-   gl_state.framebuf[0].location        = hw_render.get_current_framebuffer();
-   gl_state.framebuf[1].location        = hw_render.get_current_framebuffer();
+   gl_state.default_framebuffer         = hw_render.get_current_framebuffer();
+   gl_state.framebuf[0].location        = gl_state.default_framebuffer;
+   gl_state.framebuf[1].location        = gl_state.default_framebuffer;
    gl_state.framebuf[0].has_depth       = 0;
    gl_state.framebuf[1].has_depth       = 0;
    gl_state.cullface.mode               = GL_BACK;
