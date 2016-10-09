@@ -1732,6 +1732,12 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 #endif
             gl_state.framebuf[0].has_depth = 0;
          }
+#ifndef HAVE_OPENGLES2
+	 if (gl_state.framebuf[1].has_depth) {
+            glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, 1, discards);
+            gl_state.framebuf[1].has_depth = 0;
+	 }
+#endif
 #endif
          glBindFramebuffer(target, framebuffer);
          gl_state.framebuf[0].location = framebuffer;
