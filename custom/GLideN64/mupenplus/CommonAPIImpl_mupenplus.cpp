@@ -52,7 +52,9 @@ void PluginAPI::GetUserCachePath(wchar_t * _strPath)
 {
 	char* systemDir;
 	environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
-	_getWSPath(systemDir, _strPath);
+	std::string str(systemDir);
+	str += "GLupeN64/";
+	_getWSPath(str.c_str(), _strPath);
 }
 
 void PluginAPI::FindPluginPath(wchar_t * _strPath)

@@ -1437,9 +1437,7 @@ EXPORT const char * CALL ConfigGetParamString(m64p_handle ConfigSectionHandle, c
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-  char *systemDir;
-  environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
-  return osal_get_shared_filepath(filename, systemDir, "");
+  return "";
 }
 
 EXPORT const char * CALL ConfigGetUserConfigPath(void)
@@ -1454,5 +1452,5 @@ EXPORT const char * CALL ConfigGetUserDataPath(void)
 
 EXPORT const char * CALL ConfigGetUserCachePath(void)
 {
-  return osal_get_user_cachepath();
+  return "";
 }

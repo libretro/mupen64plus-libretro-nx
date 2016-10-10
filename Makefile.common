@@ -105,9 +105,9 @@ SOURCES_C += \
 	$(CORE_DIR)/src/vi/vi_controller.c
 
 ifneq (,$(findstring win,$(platform)))
-	SOURCES_C += $(CORE_DIR)/src/osal/files_win32.c
+	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_win32.c
 else
-	SOURCES_C += $(CORE_DIR)/src/osal/files_unix.c
+	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
 endif
 
 ### DYNAREC ###
