@@ -1,6 +1,6 @@
 #include "VI.h"
-#include "Performance.h"
 #include "Config.h"
+#include "Performance.h"
 
 Performance perf;
 
@@ -9,14 +9,20 @@ Performance::Performance()
 	, m_frames(0)
 	, m_fps(0)
 	, m_vis(0)
-	, m_startTime(0) {
+	, m_startTime(0)
+	, m_enabled(false) {
 }
 
 void Performance::reset()
 {
-	if ((config.onScreenDisplay.fps | config.onScreenDisplay.vis | config.onScreenDisplay.percent) == 0)
-		return;
-	m_startTime = std::clock();
+	m_vi = 0;
+	m_frames = 0;
+	m_fps = 0;
+	m_vis = 0;
+	m_startTime = 0;
+	m_enabled = (config.onScreenDisplay.fps | config.onScreenDisplay.vis | config.onScreenDisplay.percent) != 0;
+	if (m_enabled)
+		m_startTime = std::clock();
 }
 
 f32 Performance::getFps() const
@@ -37,7 +43,7 @@ f32 Performance::getPercent() const
 
 void Performance::increaseVICount()
 {
-	if ((config.onScreenDisplay.fps | config.onScreenDisplay.vis | config.onScreenDisplay.percent) == 0)
+	if (!m_enabled)
 		return;
 	m_vi++;
 	const clock_t curTime = std::clock();
@@ -53,7 +59,7 @@ void Performance::increaseVICount()
 
 void Performance::increaseFramesCount()
 {
-	if ((config.onScreenDisplay.fps | config.onScreenDisplay.vis | config.onScreenDisplay.percent) == 0)
+	if (!m_enabled)
 		return;
 	m_frames++;
 }
