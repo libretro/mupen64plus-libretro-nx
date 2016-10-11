@@ -27,13 +27,6 @@
 #include "glsl_optimizer.h"
 #include "plugin/plugin.h"
 
-struct texture_cached_state
-{
-   GLint pname_attrib[5];
-};
-
-static struct texture_cached_state texture_state[32000];
-
 struct gl_cached_state
 {
    struct
@@ -1227,11 +1220,6 @@ GLuint rglCreateProgram(void)
 void rglGenTextures(GLsizei n, GLuint *textures)
 {
    glGenTextures(n, textures);
-   int i,p;
-   for (i = 0; i < n; ++i) {
-      for (p = 0; p < 5; ++p)
-         texture_state[textures[i]].pname_attrib[p] = 9999;
-   }
 }
 
 /*
@@ -1276,40 +1264,7 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   if (pname == GL_TEXTURE_MIN_FILTER) {
-      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[0] != param) {
-         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[0] = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_MAG_FILTER) {
-      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[1] != param) {
-         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[1] = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_WRAP_S) {
-      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[2] != param) {
-         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[2] = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_WRAP_T) {
-      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[3] != param) {
-         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[3] = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-#ifndef HAVE_OPENGLES2
-   else if (pname == GL_TEXTURE_MAX_LEVEL) {
-      if (texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[4] != param) {
-         texture_state[gl_state.bind_textures.ids[gl_state.active_texture]].pname_attrib[4] = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-#endif
-   else
-      glTexParameteri(target, pname, param);
+   glTexParameteri(target, pname, param);
 }
 
 void rglTexParameterf(GLenum target, GLenum pname, GLfloat param)
