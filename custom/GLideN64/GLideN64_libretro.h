@@ -74,4 +74,8 @@ extern u32 AspectRatio;
 #include "mingw.thread.h"
 #endif
 
+#ifdef GLESX
+#undef GL_NUM_EXTENSIONS
+#endif
+
 #endif
