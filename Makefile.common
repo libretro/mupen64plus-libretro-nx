@@ -184,6 +184,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
 	$(ROOT_DIR)/custom/GLideN64/CommonPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Config.cpp \
+	$(VIDEODIR_GLIDEN64)/src/CRC32.cpp \
 	$(VIDEODIR_GLIDEN64)/src/convert.cpp \
 	$(VIDEODIR_GLIDEN64)/src/DepthBuffer.cpp \
 	$(VIDEODIR_GLIDEN64)/src/F3D.cpp \
@@ -236,6 +237,10 @@ SOURCES_CXX   += \
 
 ifneq (,$(findstring rpi3,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC_ARMV8.cpp
+else ifeq ($(GLES),1)
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC_OPT.cpp
+else ifeq ($(GLES3),1)
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC_OPT.cpp
 else
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC.cpp
 endif
