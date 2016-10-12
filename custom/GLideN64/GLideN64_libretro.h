@@ -54,8 +54,6 @@ extern GLState glState;
 #endif
 
 extern u32 bilinearMode;
-extern u32 EnableNoise;
-extern u32 EnableLOD;
 extern u32 EnableHWLighting;
 extern u32 CorrectTexrectCoords;
 extern u32 enableNativeResTexrects;
@@ -66,9 +64,6 @@ extern u32 EnableCopyAuxiliaryToRDRAM;
 extern u32 EnableCopyColorToRDRAM;
 extern u32 EnableCopyDepthToRDRAM;
 extern u32 EnableCopyColorFromRDRAM;
-extern f32 PolygonOffsetFactor;
-extern u32 EnableFragmentDepthWrite;
-extern u32 FrameSkip;
 extern u32 AspectRatio;
 
 #if defined(MINGW) && defined(__cplusplus)

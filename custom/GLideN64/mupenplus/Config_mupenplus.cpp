@@ -26,8 +26,6 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.aspect = AspectRatio;
 	config.frameBufferEmulation.enable = EnableFBEmulation;
 	config.texture.bilinearMode = bilinearMode;
-	config.generalEmulation.enableNoise = EnableNoise;
-	config.generalEmulation.enableLOD = EnableLOD;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
 	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
@@ -39,16 +37,6 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 #ifdef HAVE_OPENGLES
 	config.frameBufferEmulation.bufferSwapMode = 2;
-#endif
-#ifndef GLES2
-	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
-#else
-	config.generalEmulation.enableFragmentDepthWrite = 0;
-#endif
-#ifdef ANDROID
-	config.generalEmulation.forcePolygonOffset = 1;
-	config.generalEmulation.polygonOffsetFactor = PolygonOffsetFactor;
-	config.generalEmulation.polygonOffsetUnits = PolygonOffsetFactor;
 #endif
 	config.generalEmulation.hacks = hacks;
 }

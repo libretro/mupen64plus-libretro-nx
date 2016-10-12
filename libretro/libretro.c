@@ -71,8 +71,6 @@ uint32_t retro_screen_height;
 float retro_screen_aspect;
 
 u32 bilinearMode = 0;
-u32 EnableNoise = 0;
-u32 EnableLOD = 0;
 u32 EnableHWLighting = 0;
 u32 CorrectTexrectCoords = 0;
 u32 enableNativeResTexrects = 0;
@@ -83,8 +81,6 @@ u32 EnableCopyAuxiliaryToRDRAM = 0;
 u32 EnableCopyColorToRDRAM = 0;
 u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
-f32 PolygonOffsetFactor = 0.0;
-u32 EnableFragmentDepthWrite = 0;
 u32 AspectRatio = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -141,10 +137,6 @@ static void setup_variables(void)
          "Enable depth buffer copy to RDRAM; Off|FromMem|Software" },
       { "glupen64-EnableCopyColorFromRDRAM",
          "Enable color buffer copy from RDRAM; False|True" },
-      { "glupen64-EnableNoise",
-         "Enable color noise emulation; True|False" },
-      { "glupen64-EnableLOD",
-         "Enable LOD emulation; True|False" },
       { "glupen64-EnableHWLighting",
          "Enable hardware per-pixel lighting; False|True" },
       { "glupen64-CorrectTexrectCoords",
@@ -157,18 +149,6 @@ static void setup_variables(void)
 #else
          "Faster but less accurate blending mode; False|True" },
 #endif
-      { "glupen64-EnableFragmentDepthWrite",
-#ifdef GLES2
-         "Enable writing of fragment depth; False|True" },
-#else
-         "Enable writing of fragment depth; True|False" },
-#endif
-#ifdef ANDROID
-      { "glupen64-PolygonOffsetFactor",
-         "Scale used to calculate depth values; -3.0f|0.2f|-1.5f|-0.2f|-0.001f|-2.0f" },
-#endif
-      {"glupen64-audio-buffer-size",
-         "Audio Buffer Size (restart); 2048|1024"},
       {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       {"glupen64-pak1",
@@ -529,36 +509,6 @@ void update_variables()
          EnableCopyColorFromRDRAM = 0;
    }
 
-   var.key = "glupen64-EnableFragmentDepthWrite";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "True"))
-         EnableFragmentDepthWrite = 1;
-      else
-         EnableFragmentDepthWrite = 0;
-   }
-
-   var.key = "glupen64-EnableNoise";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "False"))
-         EnableNoise = 0;
-      else
-         EnableNoise = 1;
-   }
-
-   var.key = "glupen64-EnableLOD";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "False"))
-         EnableLOD = 0;
-      else
-         EnableLOD = 1;
-   }
-
    var.key = "glupen64-EnableHWLighting";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -600,25 +550,7 @@ void update_variables()
       else
          enableLegacyBlending = 0;
    }
-#ifdef ANDROID
-   var.key = "glupen64-PolygonOffsetFactor";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "0.2f"))
-         PolygonOffsetFactor = 0.2f;
-      else if (!strcmp(var.value, "-1.5f"))
-         PolygonOffsetFactor = -1.5f;
-      else if (!strcmp(var.value, "-0.2f"))
-         PolygonOffsetFactor = -0.2f;
-      else if (!strcmp(var.value, "-0.001f"))
-         PolygonOffsetFactor = -0.001f;
-      else if (!strcmp(var.value, "-2.0f"))
-         PolygonOffsetFactor = -2.0f;
-      else
-         PolygonOffsetFactor = -3.0f;
-   }
-#endif
+
    var.key = "glupen64-cpucore";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -654,12 +586,6 @@ void update_variables()
    {
       sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
    }
-
-   var.key = "glupen64-audio-buffer-size";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-      audio_buffer_size = atoi(var.value);
 
    var.key = "glupen64-astick-deadzone";
    var.value = NULL;
