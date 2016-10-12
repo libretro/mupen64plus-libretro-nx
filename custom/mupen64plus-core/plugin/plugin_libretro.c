@@ -199,6 +199,7 @@ static m64p_error plugin_start_input(void)
     }
 
 DEFINE_RSP(hle);
+DEFINE_RSP(lle);
 
 rsp_plugin_functions rsp;
 RSP_INFO rsp_info;
@@ -239,11 +240,16 @@ static m64p_error plugin_start_rsp(void)
    return M64ERR_SUCCESS;
 }
 
+extern int rspMode;
+
 /* global functions */
 void plugin_connect_all()
 {
    gfx = gfx_gln64;
-   rsp = rsp_hle;
+   if (rspMode == 0)
+      rsp = rsp_hle;
+   else
+      rsp = rsp_lle;
    plugin_start_gfx();
    plugin_start_input();
    plugin_start_rsp();

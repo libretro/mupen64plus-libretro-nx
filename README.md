@@ -6,15 +6,15 @@
 
 **[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)**
 
-GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [RSP-HLE](https://github.com/mupen64plus/mupen64plus-rsp-hle) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
+GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
 
 #### How is this different from [mupen64plus-libretro](https://github.com/libretro/mupen64plus-libretro)?
 
-mupen64plus-libretro implements multiple RSP and Graphics plugins. There are also code modifications that make it different than standalone mupen64plus.
+mupen64plus-libretro implements multiple Graphics plugins. There are also code modifications that make it different than standalone mupen64plus.
 
-GLupeN64 uses RSP-HLE and GLideN64 (a graphics plugin that is not available in mupen64plus-libretro). The emulator code itself is identical to standalone mupen64plus.
+GLupeN64 uses GLideN64 (a graphics plugin that is not available in mupen64plus-libretro). The emulator code itself is identical to standalone mupen64plus.
 
-By choosing one RSP implementation (rsp-hle) and one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
+By choosing one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
 
 #### What is not supported:
 

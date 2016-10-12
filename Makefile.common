@@ -1,4 +1,5 @@
 RSPDIR             = $(ROOT_DIR)/mupen64plus-rsp-hle
+CXD4DIR            = $(ROOT_DIR)/mupen64plus-rsp-cxd4
 CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
 LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
@@ -42,6 +43,16 @@ SOURCES_C += \
 	$(RSPDIR)/src/mp3.c \
 	$(RSPDIR)/src/musyx.c \
 	$(ROOT_DIR)/custom/mupen64plus-rsp-hle/plugin.c
+
+SOURCES_C += \
+	$(ROOT_DIR)/custom/mupen64plus-rsp-cxd4/module.c \
+	$(CXD4DIR)/su.c \
+	$(CXD4DIR)/vu/add.c \
+	$(CXD4DIR)/vu/divide.c \
+	$(CXD4DIR)/vu/logical.c \
+	$(CXD4DIR)/vu/multiply.c \
+	$(CXD4DIR)/vu/select.c \
+	$(CXD4DIR)/vu/vu.c
 
 # Core
 SOURCES_C += \

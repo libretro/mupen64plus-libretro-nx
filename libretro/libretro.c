@@ -82,6 +82,7 @@ u32 EnableCopyColorToRDRAM = 0;
 u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
 u32 AspectRatio = 0;
+int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -113,6 +114,8 @@ static void setup_variables(void)
 #else
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
+      { "glupen64-rspmode",
+         "RSP Mode; HLE|LLE" },
       { "glupen64-43screensize",
          "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440" },
       { "glupen64-169screensize",
@@ -428,6 +431,16 @@ void update_controllers()
 void update_variables()
 {
    struct retro_variable var;
+
+   var.key = "glupen64-rspmode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "HLE"))
+         rspMode = 0;
+      else
+         rspMode = 1;
+   }
 
    var.key = "glupen64-BilinearMode";
    var.value = NULL;
