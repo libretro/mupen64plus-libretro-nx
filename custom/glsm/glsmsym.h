@@ -165,7 +165,15 @@ RETRO_BEGIN_DECLS
 #define glWaitSync                  rglWaitSync
 #define glFenceSync                 rglFenceSync
 #define glUnmapBuffer               rglUnmapBuffer
+#define glBufferStorage             rglBufferStorage
 
+#define GL_MAP_PERSISTENT_BIT         0x0040
+#define GL_MAP_COHERENT_BIT           0x0080
+
+void rglBufferStorage(GLenum target,
+                       GLsizeiptr size,
+                       const GLvoid * data,
+                       GLbitfield flags);
 const GLubyte* rglGetStringi(GLenum name, GLuint index);
 void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer);
 void rglClearBufferfv( 	GLenum buffer,

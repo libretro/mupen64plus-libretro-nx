@@ -795,6 +795,18 @@ void rglRenderbufferStorage(GLenum target, GLenum internalFormat,
    glRenderbufferStorage(target, internalFormat, width, height);
 }
 
+void rglBufferStorage(GLenum target,
+                       GLsizeiptr size,
+                       const GLvoid * data,
+                       GLbitfield flags)
+{
+#if defined(HAVE_OPENGLES3)
+   glBufferStorageEXT(target, size, data, flags);
+#elif !defined(HAVE_OPENGLES)
+   glBufferStorage(target, size, data, flags);
+#endif
+}
+
 /*
  *
  * Core in:

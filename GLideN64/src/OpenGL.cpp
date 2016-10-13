@@ -658,20 +658,30 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 
 /*---------------OGLRender-------------*/
 
+char* vbo_data;
 void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 #ifdef USE_VBO
 	u32 offset;
 #ifndef GLES2
-	GLbitfield access = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+	GLbitfield access_bits = vbo_access;
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	if (vbo_offset + length > vbo_max_size) {
+		if (buffer_storage) {
+			glUnmapBuffer(GL_ARRAY_BUFFER);
+			vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, access_bits);
+		}
+		else
+			access_bits |= GL_MAP_INVALIDATE_BUFFER_BIT;
 		vbo_offset = 0;
-		access |= GL_MAP_INVALIDATE_BUFFER_BIT;
 	}
 	offset = vbo_offset;
-	void* temp = glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access);
-	memcpy(temp, pointer, length);
-	glUnmapBuffer(GL_ARRAY_BUFFER);
+	if (buffer_storage)
+		memcpy(&vbo_data[vbo_offset], pointer, length);
+	else {
+		vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access_bits);
+		memcpy(vbo_data, pointer, length);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	}
 	vbo_offset += length;
 #else
 	offset = 0;
@@ -2220,13 +2230,22 @@ void OGLRender::_initVBO()
 {
 #ifdef USE_VBO
 #ifndef GLES2
+	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 	glGenBuffers(1, &vbo);
 	vbo_offset = 0;
 	vbo_max_size = 16777216;
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
+	if (buffer_storage) {
+		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+		vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
+	}
+	else {
+		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+		glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
+	}
 #else
 	tri_size = sizeof(SPVertex) * ELEMBUFF_SIZE;
 	rect_size = sizeof(GLVertex) * 4;
@@ -2278,15 +2297,19 @@ void OGLRender::_initData()
 void OGLRender::_destroyVBO()
 {
 #ifdef USE_VBO
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 #ifndef GLES2
 	glBindVertexArray(0);
 	glDeleteVertexArrays(1, &vao);
+	if (buffer_storage) {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	}
 	glDeleteBuffers(1, &vbo);
 #else
 	glDeleteBuffers(1, &tri_vbo);
 	glDeleteBuffers(1, &rect_vbo);
 #endif
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 #endif
 }
 

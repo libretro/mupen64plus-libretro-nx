@@ -26,9 +26,11 @@ typedef char GLchar;
 #endif
 #elif defined(GLES3)
 #include <GLES3/gl3.h>
+#define USE_VBO
 #define GLESX
 #elif defined(GLES3_1)
 #include <GLES3/gl31.h>
+#define USE_VBO
 #define GLESX
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
@@ -53,6 +55,7 @@ typedef char GLchar;
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
 #elif defined(OS_WINDOWS)
+#define USE_VBO
 #include <GL/gl.h>
 #include "glext.h"
 #include "common/GLFunctions.h"
@@ -63,8 +66,10 @@ typedef char GLchar;
 
 #ifdef GLESX
 #define GET_PROGRAM_BINARY_EXTENSION "GL_OES_get_program_binary"
+#define GET_BUFFER_STORAGE "GL_EXT_buffer_storage"
 #else
 #define GET_PROGRAM_BINARY_EXTENSION "GL_ARB_get_program_binary"
+#define GET_BUFFER_STORAGE "GL_ARB_buffer_storage"
 #endif
 
 #ifdef USE_SDL
@@ -265,6 +270,8 @@ private:
 	GLuint tri_vbo, rect_vbo;
 	u32 tri_size, rect_size;
 #else
+	GLbitfield vbo_access;
+	bool buffer_storage;
 	GLuint vao, vbo;
 	u32 vbo_offset, vbo_max_size;
 #endif

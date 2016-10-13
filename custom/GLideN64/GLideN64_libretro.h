@@ -16,9 +16,11 @@
 typedef char GLchar;
 #endif
 #elif defined(GLES3)
+#define USE_VBO
 #define GLESX
 #define GL_UNIFORMBLOCK_SUPPORT
 #elif defined(GLES3_1)
+#define USE_VBO
 #define GLESX
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
@@ -38,6 +40,7 @@ typedef char GLchar;
 #define GL_MULTISAMPLING_SUPPORT
 #define GL_UNIFORMBLOCK_SUPPORT
 #elif defined(OS_WINDOWS)
+#define USE_VBO
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
 #define GL_UNIFORMBLOCK_SUPPORT
