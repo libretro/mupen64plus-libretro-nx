@@ -658,7 +658,6 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 
 /*---------------OGLRender-------------*/
 
-char* vbo_data;
 void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 #ifdef USE_VBO
 	u32 offset;
@@ -678,8 +677,8 @@ void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 	if (buffer_storage)
 		memcpy(&vbo_data[vbo_offset], pointer, length);
 	else {
-		vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access_bits);
-		memcpy(vbo_data, pointer, length);
+		void* temp = glMapBufferRange(GL_ARRAY_BUFFER, vbo_offset, length, access_bits);
+		memcpy(temp, pointer, length);
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 	}
 	vbo_offset += length;

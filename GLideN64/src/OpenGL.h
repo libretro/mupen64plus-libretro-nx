@@ -270,6 +270,7 @@ private:
 	GLuint tri_vbo, rect_vbo;
 	u32 tri_size, rect_size;
 #else
+	char* vbo_data;
 	GLbitfield vbo_access;
 	bool buffer_storage;
 	GLuint vao, vbo;
