@@ -33,7 +33,7 @@
 #include "callbacks.h"
 #include "m64p_config.h"
 #include "m64p_frontend.h"
-#include "config.h"
+#include "../../../mupen64plus-core/src/api/config.h"
 #include "vidext.h"
 #include "../main/cheat.h"
 
