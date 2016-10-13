@@ -11,13 +11,13 @@ DYNAREC_USED := 0
 INCFLAGS += \
 	-I$(ROOT_DIR)/custom \
 	-I$(ROOT_DIR)/custom/mupen64plus-core \
+	-I$(VIDEODIR_GLIDEN64)/src \
+	-I$(VIDEODIR_GLIDEN64)/src/osal \
 	-I$(CORE_DIR)/src \
 	-I$(CORE_DIR)/src/api \
 	-I$(AUDIO_LIBRETRO_DIR) \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
-	-I$(VIDEODIR_GLIDEN64)/src \
-	-I$(VIDEODIR_GLIDEN64)/src/osal \
 	-I$(ROOT_DIR)/custom/GLideN64 \
 	-I$(ROOT_DIR)/custom/glsl-optimizer \
 	-I$(GLSL_OPT_DIR)/src/glsl \
