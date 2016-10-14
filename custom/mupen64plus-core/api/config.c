@@ -31,7 +31,7 @@
 
 #define M64P_CORE_PROTOTYPES 1
 #include "callbacks.h"
-#include "config.h"
+#include "../../../mupen64plus-core/src/api/config.h"
 #include "m64p_config.h"
 #include "m64p_types.h"
 #include "main/util.h"
