@@ -26,11 +26,9 @@ typedef char GLchar;
 #endif
 #elif defined(GLES3)
 #include <GLES3/gl3.h>
-#define USE_VBO
 #define GLESX
 #elif defined(GLES3_1)
 #include <GLES3/gl31.h>
-#define USE_VBO
 #define GLESX
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
