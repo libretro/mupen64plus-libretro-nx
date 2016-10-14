@@ -266,16 +266,14 @@ private:
 	bool m_bImageTexture;
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
-#ifdef GLES2
 	GLuint tri_vbo, rect_vbo;
 	u32 tri_size, rect_size;
-#else
-	char* vbo_data;
+	char* tri_vbo_data;
+	char* rect_vbo_data;
 	GLbitfield vbo_access;
 	bool buffer_storage;
-	GLuint vao, vbo;
-	u32 vbo_offset, vbo_max_size;
-#endif
+	GLuint vao;
+	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;
