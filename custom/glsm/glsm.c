@@ -1768,7 +1768,7 @@ void *rglMapBufferRange( 	GLenum target,
   	GLsizeiptr length,
   	GLbitfield access)
 {
-#if defined(HAVE_OPENGLES)
+#if defined(HAVE_OPENGLES2)
    return glMapBufferRangeEXT(target, offset, length, access);
 #else
    return glMapBufferRange(target, offset, length, access);
