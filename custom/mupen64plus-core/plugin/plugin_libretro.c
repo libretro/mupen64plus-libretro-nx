@@ -199,7 +199,9 @@ static m64p_error plugin_start_input(void)
     }
 
 DEFINE_RSP(hle);
+#ifndef VC
 DEFINE_RSP(lle);
+#endif
 
 rsp_plugin_functions rsp;
 RSP_INFO rsp_info;
@@ -248,8 +250,10 @@ void plugin_connect_all()
    gfx = gfx_gln64;
    if (rspMode == 0)
       rsp = rsp_hle;
+#ifndef VC
    else
       rsp = rsp_lle;
+#endif
    plugin_start_gfx();
    plugin_start_input();
    plugin_start_rsp();

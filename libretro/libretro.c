@@ -110,7 +110,11 @@ static void setup_variables(void)
          "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
       { "glupen64-rspmode",
+#ifndef VC
          "RSP Mode; HLE|LLE" },
+#else
+         "RSP Mode; HLE" },
+#endif
       { "glupen64-43screensize",
          "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440" },
       { "glupen64-169screensize",
