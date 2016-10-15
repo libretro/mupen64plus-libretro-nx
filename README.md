@@ -2,8 +2,6 @@
 
 **Please read the [Wiki](https://github.com/loganmc10/GLupeN64/wiki) for an explanation of the core options**
 
-**Try this out on the [RetroArch Web Player](https://buildbot.libretro.com/web/)!**
-
 **[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)**
 
 GLupeN64 is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
