@@ -42,6 +42,7 @@ struct gl_cached_state
       GLboolean normalized[MAX_ATTRIB];
       GLsizei stride[MAX_ATTRIB];
       const GLvoid *pointer[MAX_ATTRIB];
+      GLuint buffer[MAX_ATTRIB];
    } attrib_pointer;
 
 #ifndef HAVE_OPENGLES
@@ -800,9 +801,9 @@ void rglBufferStorage(GLenum target,
                        const GLvoid * data,
                        GLbitfield flags)
 {
-#if defined(HAVE_OPENGLES3)
+#if defined(HAVE_OPENGLES)
    glBufferStorageEXT(target, size, data, flags);
-#elif !defined(HAVE_OPENGLES)
+#else
    glBufferStorage(target, size, data, flags);
 #endif
 }
@@ -1182,7 +1183,7 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
+#ifdef HAVE_OPENGLES
    glslopt_shader_type type;
    GLint _type;
    glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
@@ -1359,6 +1360,7 @@ void rglVertexAttribPointer(GLuint name, GLint size,
    gl_state.attrib_pointer.normalized[name] = normalized;
    gl_state.attrib_pointer.stride[name] = stride;
    gl_state.attrib_pointer.pointer[name] = pointer;
+   gl_state.attrib_pointer.buffer[name] = gl_state.bindbuffer.buffer[0];
    glVertexAttribPointer(name, size, type, normalized, stride, pointer);
 }
 
@@ -1766,11 +1768,10 @@ void *rglMapBufferRange( 	GLenum target,
   	GLsizeiptr length,
   	GLbitfield access)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   return glMapBufferRange(target, offset, length, access);
+#if defined(HAVE_OPENGLES)
+   return glMapBufferRangeEXT(target, offset, length, access);
 #else
-   printf("WARNING! Not implemented.\n");
-   return NULL;
+   return glMapBufferRange(target, offset, length, access);
 #endif
 }
 
@@ -2191,7 +2192,7 @@ static void glsm_state_unbind(void)
 
 static bool glsm_state_ctx_destroy(void *data)
 {
-#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
+#ifdef HAVE_OPENGLES
    glslopt_cleanup (ctx);
 #endif
 
@@ -2234,7 +2235,7 @@ static bool glsm_state_ctx_init(void *data)
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
 
-#if defined(HAVE_OPENGLES) && !defined(EMSCRIPTEN)
+#ifdef HAVE_OPENGLES
 #ifdef HAVE_OPENGLES2
    glslopt_target target = kGlslTargetOpenGLES20;
 #else

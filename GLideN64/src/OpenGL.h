@@ -41,19 +41,16 @@ typedef char GLchar;
 #else
 #if defined(OS_MAC_OS_X)
 #define GL_GLEXT_PROTOTYPES
-#define USE_VBO
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #elif defined(OS_LINUX)
 #define GL_GLEXT_PROTOTYPES
-#define USE_VBO
 #include <GL/gl.h>
 #include <GL/glext.h>
 #define GL_IMAGE_TEXTURES_SUPPORT
 #define GL_MULTISAMPLING_SUPPORT
 #elif defined(OS_WINDOWS)
-#define USE_VBO
 #include <GL/gl.h>
 #include "glext.h"
 #include "common/GLFunctions.h"
@@ -265,11 +262,10 @@ private:
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
 	GLuint tri_vbo, rect_vbo;
-	u32 tri_size, rect_size;
 	char* tri_vbo_data;
 	char* rect_vbo_data;
 	GLbitfield vbo_access;
-	bool buffer_storage;
+	bool use_vbo;
 	GLuint vao;
 	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
 	TexrectDrawer m_texrectDrawer;

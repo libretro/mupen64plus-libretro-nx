@@ -415,11 +415,12 @@ void PostProcessor::_initBlur()
 
 void PostProcessor::init()
 {
-#ifdef USE_VBO
-	glGenBuffers(1, &pp_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*16, vert, GL_STATIC_DRAW);
-#endif
+	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	if (use_vbo) {
+		glGenBuffers(1, &pp_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*16, vert, GL_STATIC_DRAW);
+	}
 	_initCommon();
 	_initGammaCorrection();
 	if (config.bloomFilter.enable != 0)
@@ -428,9 +429,8 @@ void PostProcessor::init()
 
 void PostProcessor::_destroyCommon()
 {
-#ifdef USE_VBO
-	glDeleteBuffers(1, &pp_vbo);
-#endif
+	if (use_vbo)
+		glDeleteBuffers(1, &pp_vbo);
 	delete m_pResultBuffer;
 	m_pResultBuffer = nullptr;
 
@@ -502,14 +502,14 @@ void PostProcessor::_setGLState() {
 
 	glEnableVertexAttribArray(SC_POSITION);
 	glEnableVertexAttribArray(SC_TEXCOORD0);
-#ifdef USE_VBO
-	glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
-	glVertexAttribPointer(SC_POSITION, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL);
-	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL + 2);
-#else
-	glVertexAttribPointer(SC_POSITION, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)vert);
-	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)vert + 2);
-#endif
+	if (use_vbo) {
+		glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);
+		glVertexAttribPointer(SC_POSITION, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL);
+		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)NULL + 2);
+	} else {
+		glVertexAttribPointer(SC_POSITION, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)vert);
+		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (float*)vert + 2);
+	}
 	glDisableVertexAttribArray(SC_COLOR);
 	glDisableVertexAttribArray(SC_TEXCOORD1);
 	glDisableVertexAttribArray(SC_NUMLIGHTS);

@@ -662,68 +662,26 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 /*---------------OGLRender-------------*/
 
 void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
-#ifdef USE_VBO
-#ifndef GLES2
-	GLbitfield access_bits = vbo_access;
-	if (_tri) {
-		if (tri_vbo_offset_bytes + length > vbo_max_size) {
-			if (buffer_storage) {
-				glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-				glUnmapBuffer(GL_ARRAY_BUFFER);
-				tri_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, access_bits);
+	if (use_vbo) {
+		if (_tri) {
+			if (tri_vbo_offset_bytes + length > vbo_max_size) {
+				tri_vbo_offset = 0;
+				tri_vbo_offset_bytes = 0;
 			}
-			else
-				access_bits |= GL_MAP_INVALIDATE_BUFFER_BIT;
-			tri_vbo_offset = 0;
-			tri_vbo_offset_bytes = 0;
-		}
-		if (buffer_storage)
 			memcpy(&tri_vbo_data[tri_vbo_offset_bytes], pointer, length);
-		else {
-			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-			void* temp = glMapBufferRange(GL_ARRAY_BUFFER, tri_vbo_offset_bytes, length, access_bits);
-			memcpy(temp, pointer, length);
-			glUnmapBuffer(GL_ARRAY_BUFFER);
-		}
-		tri_vbo_offset_bytes += length;
-	} else {
-		if (rect_vbo_offset_bytes + length > vbo_max_size) {
-			if (buffer_storage) {
-				glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-				glUnmapBuffer(GL_ARRAY_BUFFER);
-				rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, access_bits);
+			tri_vbo_offset_bytes += length;
+		} else {
+			if (rect_vbo_offset_bytes + length > vbo_max_size) {
+				rect_vbo_offset = 0;
+				rect_vbo_offset_bytes = 0;
 			}
-			else
-				access_bits |= GL_MAP_INVALIDATE_BUFFER_BIT;
-			rect_vbo_offset = 0;
-			rect_vbo_offset_bytes = 0;
-		}
-		if (buffer_storage)
 			memcpy(&rect_vbo_data[rect_vbo_offset_bytes], pointer, length);
-		else {
-			glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-			void* temp = glMapBufferRange(GL_ARRAY_BUFFER, rect_vbo_offset_bytes, length, access_bits);
-			memcpy(temp, pointer, length);
-			glUnmapBuffer(GL_ARRAY_BUFFER);
+			rect_vbo_offset_bytes += length;
 		}
-		rect_vbo_offset_bytes += length;
-	}
-#else
-	if(_tri) {
-		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-		glBufferData(GL_ARRAY_BUFFER, tri_size, NULL, GL_DYNAMIC_DRAW);
 	} else {
-		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-		glBufferData(GL_ARRAY_BUFFER, rect_size, NULL, GL_DYNAMIC_DRAW);
+		tri_vbo_offset = 0;
+		rect_vbo_offset = 0;
 	}
-	glBufferSubData(GL_ARRAY_BUFFER, 0, length, pointer);
-	tri_vbo_offset = 0;
-	rect_vbo_offset = 0;
-#endif
-#else
-	tri_vbo_offset = 0;
-	rect_vbo_offset = 0;
-#endif
 }
 
 void OGLRender::addTriangle(int _v0, int _v1, int _v2)
@@ -1342,59 +1300,59 @@ void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
 	const bool updateColorArrays = m_bFlatColors != bFlatColors;
 	m_bFlatColors = bFlatColors;
 
-#ifndef USE_VBO
-	if (updateArrays) {
-		SPVertex * pVtx = _dma ? triangles.dmaVertices.data() : &triangles.vertices[0];
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->x);
-		if (m_bFlatColors)
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->flat_r);
-		else
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->r);
-		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->s);
-		if (config.generalEmulation.enableHWLighting) {
-			glEnableVertexAttribArray(SC_NUMLIGHTS);
-			glVertexAttribPointer(SC_NUMLIGHTS, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), &pVtx->HWLight);
-		}
-		glEnableVertexAttribArray(SC_MODIFY);
-		glVertexAttribPointer(SC_MODIFY, 4, GL_BYTE, GL_FALSE, sizeof(SPVertex), &pVtx->modify);
-	} else if (updateColorArrays) {
-		SPVertex * pVtx = _dma ? triangles.dmaVertices.data() : &triangles.vertices[0];
-		if (m_bFlatColors)
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->flat_r);
-		else
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->r);
-	}
-#else
-	if (updateArrays) {
-		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, x)));
-		if (m_bFlatColors)
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, flat_r)));
-		else
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
-		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, s)));
-		if (config.generalEmulation.enableHWLighting) {
-			glEnableVertexAttribArray(SC_NUMLIGHTS);
-			glVertexAttribPointer(SC_NUMLIGHTS, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, HWLight)));
-		}
-		glEnableVertexAttribArray(SC_MODIFY);
-		glVertexAttribPointer(SC_MODIFY, 4, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, modify)));
+	if (!use_vbo) {
+		if (updateArrays) {
+			SPVertex * pVtx = _dma ? triangles.dmaVertices.data() : &triangles.vertices[0];
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->x);
+			if (m_bFlatColors)
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->flat_r);
+			else
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->r);
+			glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->s);
+			if (config.generalEmulation.enableHWLighting) {
+				glEnableVertexAttribArray(SC_NUMLIGHTS);
+				glVertexAttribPointer(SC_NUMLIGHTS, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), &pVtx->HWLight);
+			}
+			glEnableVertexAttribArray(SC_MODIFY);
+			glVertexAttribPointer(SC_MODIFY, 4, GL_BYTE, GL_FALSE, sizeof(SPVertex), &pVtx->modify);
 		} else if (updateColorArrays) {
-		if (m_bFlatColors)
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, flat_r)));
-		else
-			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
-	}
+			SPVertex * pVtx = _dma ? triangles.dmaVertices.data() : &triangles.vertices[0];
+			if (m_bFlatColors)
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->flat_r);
+			else
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->r);
+		}
+	} else {
+		if (updateArrays) {
+			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, x)));
+			if (m_bFlatColors)
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, flat_r)));
+			else
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
+			glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, s)));
+			if (config.generalEmulation.enableHWLighting) {
+				glEnableVertexAttribArray(SC_NUMLIGHTS);
+				glVertexAttribPointer(SC_NUMLIGHTS, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, HWLight)));
+			}
+			glEnableVertexAttribArray(SC_MODIFY);
+			glVertexAttribPointer(SC_MODIFY, 4, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, modify)));
+		} else if (updateColorArrays) {
+			if (m_bFlatColors)
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, flat_r)));
+			else
+				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
+		}
 
-	if (!_dma) {
-		SPVertex temp[ELEMBUFF_SIZE];
-		u32 i;
-		for(i = 0; i < triangles.num; ++i)
-			temp[i] = triangles.vertices[triangles.elements[i]];
-		updateVBO(true, sizeof(SPVertex) * numUpdate, temp);
-	} else
-		updateVBO(true, sizeof(SPVertex) * numUpdate, triangles.dmaVertices.data());
-#endif
+		if (!_dma) {
+			SPVertex temp[ELEMBUFF_SIZE];
+			u32 i;
+			for(i = 0; i < triangles.num; ++i)
+				temp[i] = triangles.vertices[triangles.elements[i]];
+			updateVBO(true, sizeof(SPVertex) * numUpdate, temp);
+		} else
+			updateVBO(true, sizeof(SPVertex) * numUpdate, triangles.dmaVertices.data());
+	}
 
 	if ((m_modifyVertices & MODIFY_XY) != 0)
 		_updateScreenCoordsViewport();
@@ -1453,12 +1411,12 @@ void OGLRender::drawTriangles()
 	}
 
 	_prepareDrawTriangle(false, triangles.num);
-#ifndef USE_VBO
-	glDrawElements(GL_TRIANGLES, triangles.num, GL_UNSIGNED_BYTE, triangles.elements);
-#else
-	glDrawArrays(GL_TRIANGLES, tri_vbo_offset, triangles.num);
-	tri_vbo_offset += triangles.num;
-#endif
+	if (!use_vbo)
+		glDrawElements(GL_TRIANGLES, triangles.num, GL_UNSIGNED_BYTE, triangles.elements);
+	else {
+		glDrawArrays(GL_TRIANGLES, tri_vbo_offset, triangles.num);
+		tri_vbo_offset += triangles.num;
+	}
 //	glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT);
 
 	if (config.frameBufferEmulation.enable != 0 &&
@@ -1573,16 +1531,16 @@ void OGLRender::drawLine(int _v0, int _v1, float _width)
 		glDisableVertexAttribArray(SC_TEXCOORD0);
 		glDisableVertexAttribArray(SC_TEXCOORD1);
 		glEnableVertexAttribArray(SC_MODIFY);
-#ifndef USE_VBO
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].x);
-		glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].r);
-		glVertexAttribPointer(SC_MODIFY, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].modify);
-#else
-		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, x)));
-		glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
-		glVertexAttribPointer(SC_MODIFY, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, modify)));
-#endif
+		if (!use_vbo) {
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].x);
+			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].r);
+			glVertexAttribPointer(SC_MODIFY, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), &triangles.vertices[0].modify);
+		} else {
+			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, x)));
+			glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
+			glVertexAttribPointer(SC_MODIFY, 1, GL_BYTE, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, modify)));
+		}
 
 		m_renderState = rsLine;
 		currentCombiner()->updateRenderState();
@@ -1592,19 +1550,19 @@ void OGLRender::drawLine(int _v0, int _v1, float _width)
 		_updateScreenCoordsViewport();
 
 	glLineWidth(lineWidth);
-#ifndef USE_VBO
-	unsigned short elem[2];
-	elem[0] = _v0;
-	elem[1] = _v1;
-	glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, elem);
-#else
-	SPVertex temp[2];
-	temp[0] = triangles.vertices[_v0];
-	temp[1] = triangles.vertices[_v1];
-	updateVBO(true, sizeof(SPVertex) * 2, temp);
-	glDrawArrays(GL_LINES, tri_vbo_offset, 2);
-	tri_vbo_offset += 2;
-#endif
+	if (!use_vbo) {
+		unsigned short elem[2];
+		elem[0] = _v0;
+		elem[1] = _v1;
+		glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, elem);
+	} else {
+		SPVertex temp[2];
+		temp[0] = triangles.vertices[_v0];
+		temp[1] = triangles.vertices[_v1];
+		updateVBO(true, sizeof(SPVertex) * 2, temp);
+		glDrawArrays(GL_LINES, tri_vbo_offset, 2);
+		tri_vbo_offset += 2;
+	}
 }
 
 void OGLRender::drawRect(int _ulx, int _uly, int _lrx, int _lry, float *_pColor)
@@ -1627,12 +1585,12 @@ void OGLRender::drawRect(int _ulx, int _uly, int _lrx, int _lry, float *_pColor)
 	}
 
 	if (updateArrays) {
-#ifndef USE_VBO
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
-#else
-		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
-#endif
+		if (!use_vbo)
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
+		else {
+			glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
+			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
+		}
 	}
 	currentCombiner()->updateRenderState();
 
@@ -1876,16 +1834,16 @@ void OGLRender::drawTexturedRect(const TexturedRectParams & _params)
 #ifdef RENDERSTATE_TEST
 			StateChanges++;
 #endif
-#ifndef USE_VBO
-			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
-			glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s0);
-			glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s1);
-#else
-			glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-			glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
-			glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0)));
-			glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s1)));
-#endif
+			if (!use_vbo) {
+				glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
+				glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s0);
+				glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s1);
+			} else {
+				glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
+				glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
+				glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0)));
+				glVertexAttribPointer(SC_TEXCOORD1, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s1)));
+			}
 			glDisableVertexAttribArray(SC_NUMLIGHTS);
 			glDisableVertexAttribArray(SC_MODIFY);
 		}
@@ -2276,39 +2234,25 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
-#ifdef USE_VBO
-	glGenBuffers(1, &tri_vbo);
-	glGenBuffers(1, &rect_vbo);
+	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	if (use_vbo) {
+		glGenBuffers(1, &tri_vbo);
+		glGenBuffers(1, &rect_vbo);
+		rect_vbo_offset_bytes = 0;
+		tri_vbo_offset_bytes = 0;
 #ifndef GLES2
-	rect_vbo_offset_bytes = 0;
-	tri_vbo_offset_bytes = 0;
-	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	vbo_max_size = 16777216;
-	if (buffer_storage) {
-		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+#endif
+		vbo_max_size = 16777216;
+		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
 		tri_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
 		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
 		rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
 	}
-	else {
-		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-		glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-		glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
-	}
-#else
-	tri_size = sizeof(SPVertex) * ELEMBUFF_SIZE;
-	rect_size = sizeof(GLVertex) * 4;
-	glGenBuffers(1, &tri_vbo);
-	glGenBuffers(1, &rect_vbo);
-#endif
-#endif
 }
 
 void OGLRender::_initData()
@@ -2352,15 +2296,15 @@ void OGLRender::_initData()
 
 void OGLRender::_destroyVBO()
 {
-#ifdef USE_VBO
+	if (use_vbo) {
 #ifndef GLES2
-	glBindVertexArray(0);
-	glDeleteVertexArrays(1, &vao);
+		glBindVertexArray(0);
+		glDeleteVertexArrays(1, &vao);
 #endif
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDeleteBuffers(1, &tri_vbo);
-	glDeleteBuffers(1, &rect_vbo);
-#endif
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glDeleteBuffers(1, &tri_vbo);
+		glDeleteBuffers(1, &rect_vbo);
+	}
 }
 
 void OGLRender::_destroyData()
@@ -2415,14 +2359,14 @@ void OGLRender::copyTexturedRect(GLint _srcX0, GLint _srcY0, GLint _srcX1, GLint
 	glDisableVertexAttribArray(SC_NUMLIGHTS);
 	glDisableVertexAttribArray(SC_MODIFY);
 	glEnableVertexAttribArray(SC_TEXCOORD0);
-#ifndef USE_VBO
-	glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
-	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s0);
-#else
-	glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-	glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
-	glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0)));
-#endif
+	if (!use_vbo) {
+		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].x);
+		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), &m_rect[0].s0);
+	} else {
+		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
+		glVertexAttribPointer(SC_POSITION, 4, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, x)));
+		glVertexAttribPointer(SC_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (const GLvoid *)(offsetof(GLVertex, s0)));
+	}
 	glUseProgram(m_programCopyTex);
 
 	const float scaleX = 1.0f / _dstWidth;
