@@ -68,12 +68,12 @@ else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    GLES = 1
+   CPUFLAGS += -DVC
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
    else
       GL_LIB := -L/opt/vc/lib -lGLESv2
       INCFLAGS += -I/opt/vc/include
-      CPUFLAGS += -DVC
    endif
    WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
