@@ -690,28 +690,14 @@ void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 				tri_vbo_offset = 0;
 				tri_vbo_offset_bytes = 0;
 			}
-			if (buffer_storage)
-				memcpy(&tri_vbo_data[tri_vbo_offset_bytes], pointer, length);
-			else {
-				glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-				void* temp = glMapBufferRange(GL_ARRAY_BUFFER, tri_vbo_offset_bytes, length, vbo_access);
-				memcpy(temp, pointer, length);
-				glUnmapBuffer(GL_ARRAY_BUFFER);
-			}
+			memcpy(&tri_vbo_data[tri_vbo_offset_bytes], pointer, length);
 			tri_vbo_offset_bytes += length;
 		} else {
 			if (rect_vbo_offset_bytes + length > rect_max_size) {
 				rect_vbo_offset = 0;
 				rect_vbo_offset_bytes = 0;
 			}
-			if (buffer_storage)
-				memcpy(&rect_vbo_data[rect_vbo_offset_bytes], pointer, length);
-			else {
-				glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-				void* temp = glMapBufferRange(GL_ARRAY_BUFFER, rect_vbo_offset_bytes, length, vbo_access);
-				memcpy(temp, pointer, length);
-				glUnmapBuffer(GL_ARRAY_BUFFER);
-			}
+			memcpy(&rect_vbo_data[rect_vbo_offset_bytes], pointer, length);
 			rect_vbo_offset_bytes += length;
 		}
 	} else {
@@ -2299,7 +2285,7 @@ void OGLRender::_initVBO()
 #ifdef GLES2
 	use_vbo = OGLVideo::isExtensionSupported("EXT_map_buffer_range") && OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #else
-	use_vbo = true;
+	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #endif
 	if (use_vbo) {
 #ifndef GLES2
@@ -2317,7 +2303,6 @@ void OGLRender::_initVBO()
 		else
 #endif
 			use_indirect = false;
-		buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 		glGenBuffers(1, &tri_vbo);
 		glGenBuffers(1, &rect_vbo);
 		rect_vbo_offset_bytes = 0;
@@ -2340,21 +2325,13 @@ void OGLRender::_initVBO()
 #endif
 		tri_max_size = 16777216;
 		rect_max_size = sizeof(GLVertex) * 4 * 50000;
-		if (buffer_storage) {
-			vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-			glBufferStorage(GL_ARRAY_BUFFER, tri_max_size, NULL, vbo_access);
-			tri_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, tri_max_size, vbo_access);
-			glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-			glBufferStorage(GL_ARRAY_BUFFER, rect_max_size, NULL, vbo_access);
-			rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, rect_max_size, vbo_access);
-		} else {
-			vbo_access = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
-			glBufferData(GL_ARRAY_BUFFER, tri_max_size, NULL, GL_STREAM_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
-			glBufferData(GL_ARRAY_BUFFER, rect_max_size, NULL, GL_STREAM_DRAW);
-		}
+		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
+		glBufferStorage(GL_ARRAY_BUFFER, tri_max_size, NULL, vbo_access);
+		tri_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, tri_max_size, vbo_access);
+		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
+		glBufferStorage(GL_ARRAY_BUFFER, rect_max_size, NULL, vbo_access);
+		rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, rect_max_size, vbo_access);
 	}
 }
 

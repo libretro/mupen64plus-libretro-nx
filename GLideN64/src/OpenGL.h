@@ -272,7 +272,7 @@ private:
 	DrawArraysIndirectCommand indirect[50000];
 	char* tri_vbo_data;
 	char* rect_vbo_data;
-	bool buffer_storage, use_indirect;
+	bool use_indirect;
 	GLbitfield vbo_access;
 	GLuint vao;
 	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, tri_max_size, rect_max_size;
