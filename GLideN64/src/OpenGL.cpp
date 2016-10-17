@@ -2282,27 +2282,34 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
-#ifdef GLES2
-	use_vbo = OGLVideo::isExtensionSupported("EXT_map_buffer_range") && OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-#else
+	GLint majorVersion = 0;
+	GLint minorVersion = 0;
+#ifndef GLES2
+	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+#ifdef GLESX
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+#else
+	if (majorVersion >= 4 && minorVersion >= 4)
+		use_vbo = true;
+	else
+		use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+#endif
+#else
+	use_vbo = OGLVideo::isExtensionSupported("EXT_map_buffer_range") && OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #endif
 	if (use_vbo) {
-#ifndef GLES2
-		GLint majorVersion = 0;
-		glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
-		GLint minorVersion = 0;
-		glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
 #ifdef GLESX
 		if (majorVersion >= 3 && minorVersion >= 1)
 			use_indirect = true;
+		else
+			use_indirect = false;
 #else
 		if (majorVersion >= 4)
 			use_indirect = true;
-#endif
 		else
+			use_indirect = OGLVideo::isExtensionSupported("ARB_draw_indirect");
 #endif
-			use_indirect = false;
 		glGenBuffers(1, &tri_vbo);
 		glGenBuffers(1, &rect_vbo);
 		rect_vbo_offset_bytes = 0;
