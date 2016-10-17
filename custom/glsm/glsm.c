@@ -358,10 +358,10 @@ void rglPixelStorei(GLenum pname, GLint param)
  */
 GLboolean rglUnmapBuffer(GLenum target)
 {
-#ifndef HAVE_OPENGLES2
-   return glUnmapBuffer(target);
+#ifdef HAVE_OPENGLES2
+   return glUnmapBufferOES(target);
 #else
-   return GL_FALSE;
+   return glUnmapBuffer(target);
 #endif
 }
 /*
@@ -743,6 +743,13 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
    glDrawArrays(mode, first, count);
 }
 
+
+void rglDrawArraysIndirect(GLenum mode, const void *indirect)
+{
+#ifndef HAVE_OPENGLES2
+   glDrawArraysIndirect(mode, indirect);
+#endif
+}
 /*
  *
  * Core in:

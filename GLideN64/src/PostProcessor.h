@@ -29,7 +29,6 @@ private:
 	void _preDraw(FrameBuffer * _pBuffer);
 	void _postDraw();
 
-	bool use_vbo;
 	GLuint m_extractBloomProgram;
 	GLuint m_seperableBlurProgram;
 	GLuint m_glowProgram;
@@ -42,6 +41,7 @@ private:
 	GLuint m_FBO_glowMap;
 	GLuint m_FBO_blur;
 
+	bool use_vbo;
 	GLuint pp_vbo;
 
 	CachedTexture * m_pTextureOriginal;

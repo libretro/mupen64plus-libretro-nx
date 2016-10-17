@@ -415,7 +415,9 @@ void PostProcessor::_initBlur()
 
 void PostProcessor::init()
 {
-	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	OGLVideo & ogl = video();
+	OGLRender & render = ogl.getRender();
+	use_vbo = render.use_vbo;
 	if (use_vbo) {
 		glGenBuffers(1, &pp_vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, pp_vbo);

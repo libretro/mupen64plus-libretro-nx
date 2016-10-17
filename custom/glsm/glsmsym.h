@@ -37,6 +37,7 @@ RETRO_BEGIN_DECLS
 #define glVertexAttrib4f            rglVertexAttrib4f
 #define glVertexAttrib4fv           rglVertexAttrib4fv
 #define glDrawArrays                rglDrawArrays
+#define glDrawArraysIndirect        rglDrawArraysIndirect
 #define glDrawElements              rglDrawElements
 #define glCompressedTexImage2D      rglCompressedTexImage2D
 #define glBindTexture               rglBindTexture
@@ -169,6 +170,8 @@ RETRO_BEGIN_DECLS
 
 #define GL_MAP_PERSISTENT_BIT         0x0040
 #define GL_MAP_COHERENT_BIT           0x0080
+#define GL_DRAW_INDIRECT_BUFFER       0x8F3F
+#define GL_MAP_UNSYNCHRONIZED_BIT     0x0020
 
 void rglBufferStorage(GLenum target,
                        GLsizeiptr size,
@@ -343,6 +346,7 @@ void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass);
 void rglFrontFace(GLenum mode);
 void rglPolygonOffset(GLfloat factor, GLfloat units);
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count);
+void rglDrawArraysIndirect(GLenum mode, const void *indirect);
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
       GLfloat z, GLfloat w);
 void rglVertexAttrib4fv(GLuint name, GLfloat* v);
