@@ -744,12 +744,6 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 }
 
 
-void rglDrawArraysIndirect(GLenum mode, const void *indirect)
-{
-#ifndef HAVE_OPENGLES2
-   glDrawArraysIndirect(mode, indirect);
-#endif
-}
 /*
  *
  * Core in:

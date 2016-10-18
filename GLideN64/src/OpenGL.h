@@ -262,20 +262,12 @@ private:
 	bool m_bImageTexture;
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
-	GLuint tri_vbo, rect_vbo, draw_vbo;
-	typedef  struct {
-		GLuint  count;
-		GLuint  primCount;
-		GLuint  first;
-		GLuint  reserved;
-	} DrawArraysIndirectCommand;
-	DrawArraysIndirectCommand indirect[50000];
+	GLuint tri_vbo, rect_vbo;
 	char* tri_vbo_data;
 	char* rect_vbo_data;
-	bool use_indirect;
 	GLbitfield vbo_access;
 	GLuint vao;
-	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, tri_max_size, rect_max_size;
+	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;
