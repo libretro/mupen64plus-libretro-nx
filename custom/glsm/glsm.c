@@ -1355,14 +1355,16 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   gl_state.attrib_pointer.used[name] = 1;
-   gl_state.attrib_pointer.size[name] = size;
-   gl_state.attrib_pointer.type[name] = type;
-   gl_state.attrib_pointer.normalized[name] = normalized;
-   gl_state.attrib_pointer.stride[name] = stride;
-   gl_state.attrib_pointer.pointer[name] = pointer;
-   gl_state.attrib_pointer.buffer[name] = gl_state.bindbuffer.buffer[0];
-   glVertexAttribPointer(name, size, type, normalized, stride, pointer);
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer || gl_state.attrib_pointer.buffer[name] != gl_state.bindbuffer.buffer[0]) {
+      gl_state.attrib_pointer.used[name] = 1;
+      gl_state.attrib_pointer.size[name] = size;
+      gl_state.attrib_pointer.type[name] = type;
+      gl_state.attrib_pointer.normalized[name] = normalized;
+      gl_state.attrib_pointer.stride[name] = stride;
+      gl_state.attrib_pointer.pointer[name] = pointer;
+      gl_state.attrib_pointer.buffer[name] = gl_state.bindbuffer.buffer[0];
+      glVertexAttribPointer(name, size, type, normalized, stride, pointer);
+   }
 }
 
 /*
@@ -2121,14 +2123,17 @@ static void glsm_state_bind(void)
       if (gl_state.vertex_attrib_pointer.enabled[i])
          glEnableVertexAttribArray(i);
 
-      if (gl_state.attrib_pointer.used[i]){
-         glVertexAttribPointer(
-            i,
-            gl_state.attrib_pointer.size[i],
-            gl_state.attrib_pointer.type[i],
-            gl_state.attrib_pointer.normalized[i],
-            gl_state.attrib_pointer.stride[i],
-            gl_state.attrib_pointer.pointer[i]);
+      if (gl_state.attrib_pointer.used[i]) {
+         if (gl_state.attrib_pointer.buffer[i] == gl_state.bindbuffer.buffer[0]) {
+            glVertexAttribPointer(
+               i,
+               gl_state.attrib_pointer.size[i],
+               gl_state.attrib_pointer.type[i],
+               gl_state.attrib_pointer.normalized[i],
+               gl_state.attrib_pointer.stride[i],
+               gl_state.attrib_pointer.pointer[i]);
+         } else
+            gl_state.attrib_pointer.buffer[i] = 0;
       }
    }
 
