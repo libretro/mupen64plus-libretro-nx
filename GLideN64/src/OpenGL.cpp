@@ -2282,34 +2282,9 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
-	GLint majorVersion = 0;
-	GLint minorVersion = 0;
-#ifndef GLES2
-	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
-	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
-#ifdef GLESX
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-#else
-	if (majorVersion >= 4 && minorVersion >= 4)
-		use_vbo = true;
-	else
-		use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-#endif
-#else
-	use_vbo = OGLVideo::isExtensionSupported("EXT_map_buffer_range") && OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-#endif
 	if (use_vbo) {
-#ifdef GLESX
-		if (majorVersion >= 3 && minorVersion >= 1)
-			use_indirect = true;
-		else
-			use_indirect = false;
-#else
-		if (majorVersion >= 4)
-			use_indirect = true;
-		else
-			use_indirect = OGLVideo::isExtensionSupported("ARB_draw_indirect");
-#endif
+		use_indirect = OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
 		glGenBuffers(1, &tri_vbo);
 		glGenBuffers(1, &rect_vbo);
 		rect_vbo_offset_bytes = 0;
