@@ -2231,13 +2231,8 @@ static bool glsm_state_ctx_init(void *data)
 #else
 #ifdef CORE
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL_CORE;
-#ifdef OS_WINDOWS
-   hw_render.version_major      = 4;
-   hw_render.version_minor      = 0;
-#else
    hw_render.version_major      = 3;
    hw_render.version_minor      = 3;
-#endif
 #else
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL;
 #endif
