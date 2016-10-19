@@ -2063,6 +2063,12 @@ static void glsm_state_setup(void)
    for (i = 0; i < MAX_ATTRIB; i++) {
       gl_state.vertex_attrib_pointer.enabled[i] = 0;
       gl_state.attrib_pointer.used[i] = 0;
+      gl_state.attrib_pointer.size[i] = 0;
+      gl_state.attrib_pointer.type[i] = 0;
+      gl_state.attrib_pointer.normalized[i] = 0;
+      gl_state.attrib_pointer.stride[i] = 0;
+      gl_state.attrib_pointer.pointer[i] = 0;
+      gl_state.attrib_pointer.buffer[i] = 0;
    }
 
    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
