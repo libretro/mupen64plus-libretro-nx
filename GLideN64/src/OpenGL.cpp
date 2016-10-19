@@ -2246,7 +2246,11 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
+#ifdef GLES2
+	use_vbo = false;
+#else
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+#endif
 	if (use_vbo) {
 		glGenBuffers(1, &tri_vbo);
 		glGenBuffers(1, &rect_vbo);

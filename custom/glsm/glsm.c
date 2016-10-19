@@ -358,11 +358,7 @@ void rglPixelStorei(GLenum pname, GLint param)
  */
 GLboolean rglUnmapBuffer(GLenum target)
 {
-#ifdef HAVE_OPENGLES2
-   return glUnmapBufferOES(target);
-#else
    return glUnmapBuffer(target);
-#endif
 }
 /*
  *
@@ -1771,11 +1767,7 @@ void *rglMapBufferRange( 	GLenum target,
   	GLsizeiptr length,
   	GLbitfield access)
 {
-#if defined(HAVE_OPENGLES2)
-   return glMapBufferRangeEXT(target, offset, length, access);
-#else
    return glMapBufferRange(target, offset, length, access);
-#endif
 }
 
 /*
