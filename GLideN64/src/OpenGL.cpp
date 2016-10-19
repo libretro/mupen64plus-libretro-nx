@@ -1331,6 +1331,8 @@ void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
 			else
 				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), &pVtx->r);
 		}
+		tri_vbo_offset = 0;
+		rect_vbo_offset = 0;
 	} else {
 		if (updateArrays) {
 			glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
