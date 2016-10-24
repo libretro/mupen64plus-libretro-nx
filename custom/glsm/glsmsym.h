@@ -98,6 +98,7 @@ RETRO_BEGIN_DECLS
 #define glUniform2f                 rglUniform2f
 #define glUniform2i                 rglUniform2i
 #define glUniform2fv                rglUniform2fv
+#define glUniform3i                 rglUniform3i
 #define glUniform3f                 rglUniform3f
 #define glUniform3fv                rglUniform3fv
 #define glUniform4i                 rglUniform4i
@@ -324,6 +325,7 @@ void rglUniform1i(GLint location, GLint v0);
 void rglUniform2f(GLint location, GLfloat v0, GLfloat v1);
 void rglUniform2i(GLint location, GLint v0, GLint v1);
 void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value);
+void rglUniform3i(GLint location, GLint v0, GLint v1, GLint v2);
 void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
 void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value);
 void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3);

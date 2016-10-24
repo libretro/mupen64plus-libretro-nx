@@ -56,14 +56,17 @@ struct gl_cached_state
 
    struct
    {
-      GLenum pname;
-      GLint param;
-   } pixelstore_i;
+      GLfloat v0[MAX_ATTRIB];
+      GLfloat v1[MAX_ATTRIB];
+      GLfloat v2[MAX_ATTRIB];
+      GLfloat v3[MAX_ATTRIB];
+   } vertex_attribs;
 
    struct
    {
-      GLuint buffer[2];
-   } bindbuffer;
+      GLenum pname;
+      GLint param;
+   } pixelstore_i;
 
    struct
    {
@@ -184,14 +187,27 @@ struct gl_cached_state
       int has_depth;
    } framebuf[2];
 
+   GLuint array_buffer;
    GLuint vao;
    GLuint program;
-   GLenum active_texture;
-   GLuint default_framebuffer;
    int cap_state[SGL_CAP_MAX];
    int cap_translate[SGL_CAP_MAX];
 };
 
+struct gl_program_uniforms
+{
+   GLfloat uniform1f;
+   GLfloat uniform2f[2];
+   GLfloat uniform3f[3];
+   GLfloat uniform4f[4];
+   GLint uniform1i;
+   GLint uniform2i[2];
+   GLint uniform3i[3];
+   GLint uniform4i[4];
+};
+static struct gl_program_uniforms program_uniforms[500][500];
+static GLenum active_texture;
+static GLuint default_framebuffer;
 static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
@@ -385,8 +401,8 @@ void rglDepthFunc(GLenum func)
 {
    gl_state.depthfunc.used = true;
    if (gl_state.depthfunc.func != func) {
-      gl_state.depthfunc.func = func;
       glDepthFunc(func);
+      gl_state.depthfunc.func = func;
    }
 }
 
@@ -518,9 +534,9 @@ void rglBlendFunc(GLenum sfactor, GLenum dfactor)
 {
    gl_state.blendfunc.used = true;
    if (gl_state.blendfunc.sfactor != sfactor || gl_state.blendfunc.dfactor != dfactor) {
+      glBlendFunc(sfactor, dfactor);
       gl_state.blendfunc.sfactor = sfactor;
       gl_state.blendfunc.dfactor = dfactor;
-      glBlendFunc(sfactor, dfactor);
    }
 }
 
@@ -534,11 +550,11 @@ void rglBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum 
 {
    gl_state.blendfunc_separate.used     = true;
    if (gl_state.blendfunc_separate.srcRGB != srcRGB || gl_state.blendfunc_separate.dstRGB != dstRGB || gl_state.blendfunc_separate.srcAlpha != srcAlpha || gl_state.blendfunc_separate.dstAlpha != dstAlpha) {
+      glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
       gl_state.blendfunc_separate.srcRGB   = srcRGB;
       gl_state.blendfunc_separate.dstRGB   = dstRGB;
       gl_state.blendfunc_separate.srcAlpha = srcAlpha;
       gl_state.blendfunc_separate.dstAlpha = dstAlpha;
-      glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
    }
 }
 
@@ -550,9 +566,9 @@ void rglBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum 
  */
 void rglActiveTexture(GLenum texture)
 {
-   if (gl_state.active_texture != texture - GL_TEXTURE0) {
+   if (active_texture != texture - GL_TEXTURE0) {
       glActiveTexture(texture);
-      gl_state.active_texture = texture - GL_TEXTURE0;
+      active_texture = texture - GL_TEXTURE0;
    }
 }
 
@@ -563,9 +579,9 @@ void rglActiveTexture(GLenum texture)
  */
 void rglBindTexture(GLenum target, GLuint texture)
 {
-   if (gl_state.bind_textures.ids[gl_state.active_texture] != texture) {
+   if (gl_state.bind_textures.ids[active_texture] != texture) {
       glBindTexture(target, texture);
-      gl_state.bind_textures.ids[gl_state.active_texture] = texture;
+      gl_state.bind_textures.ids[active_texture] = texture;
    }
 }
 
@@ -604,8 +620,8 @@ void rglEnable(GLenum cap)
 void rglUseProgram(GLuint program)
 {
    if (gl_state.program != program) {
-      gl_state.program = program;
       glUseProgram(program);
+      gl_state.program = program;
    }
 }
 
@@ -667,14 +683,8 @@ void rglBufferSubData(GLenum target, GLintptr offset,
 void rglBindBuffer(GLenum target, GLuint buffer)
 {
    if (target == GL_ARRAY_BUFFER) {
-      if (gl_state.bindbuffer.buffer[0] != buffer) {
-         gl_state.bindbuffer.buffer[0] = buffer;
-         glBindBuffer(target, buffer);
-      }
-   }
-   else if (target == GL_ELEMENT_ARRAY_BUFFER) {
-      if (gl_state.bindbuffer.buffer[1] != buffer) {
-         gl_state.bindbuffer.buffer[1] = buffer;
+      if (gl_state.array_buffer != buffer) {
+         gl_state.array_buffer = buffer;
          glBindBuffer(target, buffer);
       }
    }
@@ -779,8 +789,8 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
    glDeleteTextures(n, textures);
    int i;
    for (i = 0; i < n; ++i) {
-      if (textures[i] == gl_state.bind_textures.ids[gl_state.active_texture])
-         gl_state.bind_textures.ids[gl_state.active_texture] = 0;
+      if (textures[i] == gl_state.bind_textures.ids[active_texture])
+         gl_state.bind_textures.ids[active_texture] = 0;
    }
 }
 
@@ -1353,14 +1363,14 @@ void rglVertexAttribPointer(GLuint name, GLint size,
       GLenum type, GLboolean normalized, GLsizei stride,
       const GLvoid* pointer)
 {
-   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer || gl_state.attrib_pointer.buffer[name] != gl_state.bindbuffer.buffer[0]) {
+   if (gl_state.attrib_pointer.size[name] != size || gl_state.attrib_pointer.type[name] != type || gl_state.attrib_pointer.normalized[name] != normalized || gl_state.attrib_pointer.stride[name] != stride || gl_state.attrib_pointer.pointer[name] != pointer || gl_state.attrib_pointer.buffer[name] != gl_state.array_buffer) {
       gl_state.attrib_pointer.used[name] = 1;
       gl_state.attrib_pointer.size[name] = size;
       gl_state.attrib_pointer.type[name] = type;
       gl_state.attrib_pointer.normalized[name] = normalized;
       gl_state.attrib_pointer.stride[name] = stride;
       gl_state.attrib_pointer.pointer[name] = pointer;
-      gl_state.attrib_pointer.buffer[name] = gl_state.bindbuffer.buffer[0];
+      gl_state.attrib_pointer.buffer[name] = gl_state.array_buffer;
       glVertexAttribPointer(name, size, type, normalized, stride, pointer);
    }
 }
@@ -1384,7 +1394,13 @@ void rglBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
       GLfloat z, GLfloat w)
 {
-    glVertexAttrib4f(name, x, y, z, w);
+   if (gl_state.vertex_attribs.v0[name] != x || gl_state.vertex_attribs.v1[name] != y || gl_state.vertex_attribs.v2[name] != z || gl_state.vertex_attribs.v3[name] != w) {
+      glVertexAttrib4f(name, x, y, z, w);
+      gl_state.vertex_attribs.v0[name] = x;
+      gl_state.vertex_attribs.v1[name] = y;
+      gl_state.vertex_attribs.v2[name] = z;
+      gl_state.vertex_attribs.v3[name] = w;
+   }
 }
 
 /*
@@ -1394,7 +1410,13 @@ void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
  */
 void rglVertexAttrib4fv(GLuint name, GLfloat* v)
 {
-    glVertexAttrib4fv(name, v);
+   if (gl_state.vertex_attribs.v0[name] != v[0] || gl_state.vertex_attribs.v1[name] != v[1] || gl_state.vertex_attribs.v2[name] != v[2] || gl_state.vertex_attribs.v3[name] != v[3]) {
+      glVertexAttrib4fv(name, v);
+      gl_state.vertex_attribs.v0[name] = v[0];
+      gl_state.vertex_attribs.v1[name] = v[1];
+      gl_state.vertex_attribs.v2[name] = v[2];
+      gl_state.vertex_attribs.v3[name] = v[3];
+   }
 }
 
 /*
@@ -1473,7 +1495,10 @@ void rglGenBuffers(GLsizei n, GLuint *buffers)
  */
 void rglUniform1f(GLint location, GLfloat v0)
 {
-   glUniform1f(location, v0);
+   if (program_uniforms[gl_state.program][location].uniform1f != v0) {
+      glUniform1f(location, v0);
+      program_uniforms[gl_state.program][location].uniform1f = v0;
+   }
 }
 
 /*
@@ -1484,7 +1509,10 @@ void rglUniform1f(GLint location, GLfloat v0)
  */
 void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
 {
-   glUniform1fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform1f != value[0]) {
+      glUniform1fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform1f = value[0];
+   }
 }
 
 /*
@@ -1495,7 +1523,10 @@ void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
  */
 void rglUniform1iv(GLint location,  GLsizei count,  const GLint *value)
 {
-   glUniform1iv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform1i != value[0]) {
+      glUniform1iv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform1i = value[0];
+   }
 }
 
 void rglClearBufferfv( 	GLenum buffer,
@@ -1564,7 +1595,10 @@ void rglRenderbufferStorageMultisample( 	GLenum target,
  */
 void rglUniform1i(GLint location, GLint v0)
 {
-   glUniform1i(location, v0);
+   if (program_uniforms[gl_state.program][location].uniform1i != v0) {
+      glUniform1i(location, v0);
+      program_uniforms[gl_state.program][location].uniform1i = v0;
+   }
 }
 
 /*
@@ -1575,7 +1609,11 @@ void rglUniform1i(GLint location, GLint v0)
  */
 void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
 {
-   glUniform2f(location, v0, v1);
+   if (program_uniforms[gl_state.program][location].uniform2f[0] != v0 || program_uniforms[gl_state.program][location].uniform2f[1] != v1) {
+      glUniform2f(location, v0, v1);
+      program_uniforms[gl_state.program][location].uniform2f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform2f[1] = v1;
+   }
 }
 
 /*
@@ -1586,7 +1624,20 @@ void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
  */
 void rglUniform2i(GLint location, GLint v0, GLint v1)
 {
-   glUniform2i(location, v0, v1);
+   if (program_uniforms[gl_state.program][location].uniform2i[0] != v0 || program_uniforms[gl_state.program][location].uniform2i[1] != v1) {
+      glUniform2i(location, v0, v1);
+      program_uniforms[gl_state.program][location].uniform2i[0] = v0;
+      program_uniforms[gl_state.program][location].uniform2i[1] = v1;
+   }
+}
+
+void rglUniform3i(GLint location, GLint v0, GLint v1, GLint v2)
+{
+   if (program_uniforms[gl_state.program][location].uniform3i[0] != v0 || program_uniforms[gl_state.program][location].uniform3i[1] != v1) {
+      glUniform3i(location, v0, v1, v2);
+      program_uniforms[gl_state.program][location].uniform3i[0] = v0;
+      program_uniforms[gl_state.program][location].uniform3i[1] = v1;
+   }
 }
 
 /*
@@ -1597,7 +1648,11 @@ void rglUniform2i(GLint location, GLint v0, GLint v1)
  */
 void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   glUniform2fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform2f[0] != value[0] || program_uniforms[gl_state.program][location].uniform2f[1] != value[1]) {
+      glUniform2fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform2f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform2f[1] = value[1];
+   }
 }
 
 /*
@@ -1608,7 +1663,12 @@ void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
  */
 void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
 {
-   glUniform3f(location, v0, v1, v2);
+   if (program_uniforms[gl_state.program][location].uniform3f[0] != v0 || program_uniforms[gl_state.program][location].uniform3f[1] != v1 || program_uniforms[gl_state.program][location].uniform3f[2] != v2) {
+      glUniform3f(location, v0, v1, v2);
+      program_uniforms[gl_state.program][location].uniform3f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform3f[1] = v1;
+      program_uniforms[gl_state.program][location].uniform3f[2] = v2;
+   }
 }
 
 /*
@@ -1619,7 +1679,12 @@ void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
  */
 void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   glUniform3fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform3f[0] != value[0] || program_uniforms[gl_state.program][location].uniform3f[1] != value[1] || program_uniforms[gl_state.program][location].uniform3f[2] != value[2]) {
+      glUniform3fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform3f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform3f[1] = value[1];
+      program_uniforms[gl_state.program][location].uniform3f[2] = value[2];
+   }
 }
 
 /*
@@ -1630,7 +1695,13 @@ void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
  */
 void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
 {
-   glUniform4i(location, v0, v1, v2, v3);
+   if (program_uniforms[gl_state.program][location].uniform4i[0] != v0 || program_uniforms[gl_state.program][location].uniform4i[1] != v1 || program_uniforms[gl_state.program][location].uniform4i[2] != v2 || program_uniforms[gl_state.program][location].uniform4i[3] != v3) {
+      glUniform4i(location, v0, v1, v2, v3);
+      program_uniforms[gl_state.program][location].uniform4i[0] = v0;
+      program_uniforms[gl_state.program][location].uniform4i[1] = v1;
+      program_uniforms[gl_state.program][location].uniform4i[2] = v2;
+      program_uniforms[gl_state.program][location].uniform4i[3] = v3;
+   }
 }
 
 /*
@@ -1641,7 +1712,13 @@ void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
  */
 void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 {
-   glUniform4f(location, v0, v1, v2, v3);
+   if (program_uniforms[gl_state.program][location].uniform4f[0] != v0 || program_uniforms[gl_state.program][location].uniform4f[1] != v1 || program_uniforms[gl_state.program][location].uniform4f[2] != v2 || program_uniforms[gl_state.program][location].uniform4f[3] != v3) {
+      glUniform4f(location, v0, v1, v2, v3);
+      program_uniforms[gl_state.program][location].uniform4f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform4f[1] = v1;
+      program_uniforms[gl_state.program][location].uniform4f[2] = v2;
+      program_uniforms[gl_state.program][location].uniform4f[3] = v3;
+   }
 }
 
 /*
@@ -1652,7 +1729,13 @@ void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3
  */
 void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   glUniform4fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform4f[0] != value[0] || program_uniforms[gl_state.program][location].uniform4f[1] != value[1] || program_uniforms[gl_state.program][location].uniform4f[2] != value[2] || program_uniforms[gl_state.program][location].uniform4f[3] != value[3]) {
+      glUniform4fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform4f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform4f[1] = value[1];
+      program_uniforms[gl_state.program][location].uniform4f[2] = value[2];
+      program_uniforms[gl_state.program][location].uniform4f[3] = value[3];
+   }
 }
 
 
@@ -1691,7 +1774,7 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
    if (framebuffer == 0)
-      framebuffer = gl_state.default_framebuffer;
+      framebuffer = default_framebuffer;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
 #ifdef HAVE_OPENGLES
@@ -2075,12 +2158,11 @@ static void glsm_state_setup(void)
       gl_state.bind_textures.ids[i] = 0;
    }
 
-   gl_state.bindbuffer.buffer[0]        = 0;
-   gl_state.bindbuffer.buffer[1]        = 0;
+   gl_state.array_buffer                = 0;
    gl_state.bindvertex.array            = 0;
-   gl_state.default_framebuffer         = hw_render.get_current_framebuffer();
-   gl_state.framebuf[0].location        = gl_state.default_framebuffer;
-   gl_state.framebuf[1].location        = gl_state.default_framebuffer;
+   default_framebuffer                  = hw_render.get_current_framebuffer();
+   gl_state.framebuf[0].location        = default_framebuffer;
+   gl_state.framebuf[1].location        = default_framebuffer;
    gl_state.framebuf[0].has_depth       = 0;
    gl_state.framebuf[1].has_depth       = 0;
    gl_state.cullface.mode               = GL_BACK;
@@ -2117,8 +2199,8 @@ static void glsm_state_bind(void)
 #ifndef HAVE_OPENGLES2
    glBindVertexArray(gl_state.bindvertex.array);
 #endif
-   if (gl_state.bindbuffer.buffer[0] != 0)
-      glBindBuffer(GL_ARRAY_BUFFER, gl_state.bindbuffer.buffer[0]);
+   if (gl_state.array_buffer != 0)
+      glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
@@ -2126,7 +2208,7 @@ static void glsm_state_bind(void)
          glEnableVertexAttribArray(i);
 
       if (gl_state.attrib_pointer.used[i]) {
-         if (gl_state.attrib_pointer.buffer[i] == gl_state.bindbuffer.buffer[0]) {
+         if (gl_state.attrib_pointer.buffer[i] == gl_state.array_buffer) {
             glVertexAttribPointer(
                i,
                gl_state.attrib_pointer.size[i],
@@ -2177,7 +2259,7 @@ static void glsm_state_bind(void)
 
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[0]);
-   glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
+   glActiveTexture(GL_TEXTURE0 + active_texture);
 }
 
 static void glsm_state_unbind(void)
