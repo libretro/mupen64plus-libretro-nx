@@ -207,11 +207,6 @@ void sthread_join(sthread_t *thread)
  * sthread_isself:
  * @thread                  : pointer to thread object
  *
- * Join with a terminated thread. Waits for the thread specified by
- * @thread to terminate. If that thread has already terminated, then
- * it will return immediately. The thread specified by @thread must
- * be joinable.
- *
  * Returns: true (1) if calling thread is the specified thread
  */
 bool sthread_isself(sthread_t *thread)
@@ -479,3 +474,41 @@ bool scond_wait_timeout(scond_t *cond, slock_t *lock, int64_t timeout_us)
    return (ret == 0);
 #endif
 }
+
+#ifdef HAVE_THREAD_STORAGE
+bool sthread_tls_create(sthread_tls_t *tls)
+{
+#ifdef USE_WIN32_THREADS
+   return (*tls = TlsAlloc()) != TLS_OUT_OF_INDEXES;
+#else
+   return pthread_key_create(tls, NULL) == 0;
+#endif
+}
+
+bool sthread_tls_delete(sthread_tls_t *tls)
+{
+#ifdef USE_WIN32_THREADS
+   return TlsFree(*tls) != 0;
+#else
+   return pthread_key_delete(*tls) == 0;
+#endif
+}
+
+void *sthread_tls_get(sthread_tls_t *tls)
+{
+#ifdef USE_WIN32_THREADS
+   return TlsGetValue(*tls);
+#else
+   return pthread_getspecific(*tls);
+#endif
+}
+
+bool sthread_tls_set(sthread_tls_t *tls, const void *data)
+{
+#ifdef USE_WIN32_THREADS
+   return TlsSetValue(*tls, (void*)data) != 0;
+#else
+   return pthread_setspecific(*tls, data) == 0;
+#endif
+}
+#endif
