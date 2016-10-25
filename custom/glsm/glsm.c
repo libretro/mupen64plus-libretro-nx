@@ -21,11 +21,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 #include "glsl_optimizer.h"
 #include "plugin/plugin.h"
+
+#define MAX_UNIFORMS 500
 
 struct gl_cached_state
 {
@@ -205,7 +208,7 @@ struct gl_program_uniforms
    GLint uniform3i[3];
    GLint uniform4i[4];
 };
-static struct gl_program_uniforms program_uniforms[500][500];
+static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
@@ -2120,7 +2123,13 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 
 static void glsm_state_setup(void)
 {
-   unsigned i;
+   memset(&gl_state, 0, sizeof(gl_state));
+   unsigned i,p;
+   for (i = 0; i < MAX_UNIFORMS; ++i) {
+      for (p = 0; p < MAX_UNIFORMS; ++p) {
+         memset(&program_uniforms[i][p], 0, sizeof(program_uniforms[i][p]));
+      }
+   }
 
    gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
    gl_state.cap_translate[SGL_BLEND]                    = GL_BLEND;
@@ -2139,24 +2148,9 @@ static void glsm_state_setup(void)
    gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
 #endif
 
-   for (i = 0; i < MAX_ATTRIB; i++) {
-      gl_state.vertex_attrib_pointer.enabled[i] = 0;
-      gl_state.attrib_pointer.used[i] = 0;
-      gl_state.attrib_pointer.size[i] = 0;
-      gl_state.attrib_pointer.type[i] = 0;
-      gl_state.attrib_pointer.normalized[i] = 0;
-      gl_state.attrib_pointer.stride[i] = 0;
-      gl_state.attrib_pointer.pointer[i] = 0;
-      gl_state.attrib_pointer.buffer[i] = 0;
-   }
-
    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
    if (glsm_max_textures > 32)
       glsm_max_textures = 32;
-
-   for (i = 0; i < glsm_max_textures; i++) {
-      gl_state.bind_textures.ids[i] = 0;
-   }
 
    gl_state.array_buffer                = 0;
    gl_state.bindvertex.array            = 0;
