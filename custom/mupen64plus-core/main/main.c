@@ -203,66 +203,6 @@ void new_frame(void)
     l_CurrentFrame++;
 }
 
-static void apply_speed_limiter(void)
-{
-    static unsigned long totalVIs = 0;
-    static int resetOnce = 0;
-    static int lastSpeedFactor = 100;
-    static unsigned int StartFPSTime = 0;
-    static const double defaultSpeedFactor = 100.0;
-    long            ms;
-    struct timespec spec;
-    clock_gettime(CLOCK_REALTIME, &spec);
-    ms = round(spec.tv_nsec / 1.0e6);
-    unsigned int CurrentFPSTime = ms;
-
-    // calculate frame duration based upon ROM setting (50/60hz) and mupen64plus speed adjustment
-    const double VILimitMilliseconds = 1000.0 / (double)ROM_PARAMS.vilimit;
-    const double SpeedFactorMultiple = defaultSpeedFactor/l_SpeedFactor;
-    const double AdjustedLimit = VILimitMilliseconds * SpeedFactorMultiple;
-
-    //if this is the first time or we are resuming from pause
-    if(StartFPSTime == 0 || !resetOnce || lastSpeedFactor != l_SpeedFactor)
-    {
-       StartFPSTime = CurrentFPSTime;
-       totalVIs = 0;
-       resetOnce = 1;
-    }
-    else
-    {
-        ++totalVIs;
-    }
-
-    lastSpeedFactor = l_SpeedFactor;
-
-    timed_section_start(TIMED_SECTION_IDLE);
-
-#ifdef DBG
-    if(g_DebuggerActive) DebuggerCallback(DEBUG_UI_VI, 0);
-#endif
-
-    double totalElapsedGameTime = AdjustedLimit*totalVIs;
-    double elapsedRealTime = CurrentFPSTime - StartFPSTime;
-    double sleepTime = totalElapsedGameTime - elapsedRealTime;
-
-    //Reset if the sleep needed is an unreasonable value
-    static const double minSleepNeeded = -50;
-    static const double maxSleepNeeded = 50;
-    if(sleepTime < minSleepNeeded || sleepTime > (maxSleepNeeded*SpeedFactorMultiple))
-    {
-       resetOnce = 0;
-    }
-    else if(sleepTime > 0.0 && l_MainSpeedLimit)
-    {
-       //DebugMessage(M64MSG_VERBOSE, "    apply_speed_limiter(): Waiting %ims", (int) sleepTime);
-
-       usleep(sleepTime * 1000);
-       //SDL_Delay((int) sleepTime);
-    }
-
-    timed_section_end(TIMED_SECTION_IDLE);
-}
-
 /* called on vertical interrupt.
  * Allow the core to perform various things */
 void new_vi(void)
