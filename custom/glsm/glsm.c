@@ -2123,11 +2123,11 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 
 static void glsm_state_setup(void)
 {
-   memset(&gl_state, 0, sizeof(gl_state));
+   memset(&gl_state, 0, sizeof(struct gl_cached_state));
    unsigned i,p;
    for (i = 0; i < MAX_UNIFORMS; ++i) {
       for (p = 0; p < MAX_UNIFORMS; ++p) {
-         memset(&program_uniforms[i][p], 0, sizeof(program_uniforms[i][p]));
+         memset(&program_uniforms[i][p], 0, sizeof(struct gl_program_uniforms));
       }
    }
 
