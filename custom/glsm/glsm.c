@@ -29,6 +29,7 @@
 #include "plugin/plugin.h"
 
 #define MAX_UNIFORMS 500
+#define MAX_TEXTURES 128000
 
 struct gl_cached_state
 {
@@ -208,6 +209,13 @@ struct gl_program_uniforms
    GLint uniform3i[3];
    GLint uniform4i[4];
 };
+
+struct gl_texture_params
+{
+   GLint param[5];
+};
+
+static struct gl_texture_params* texture_params[MAX_TEXTURES];
 static struct gl_program_uniforms* program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
@@ -795,6 +803,7 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
    glDeleteTextures(n, textures);
    int i;
    for (i = 0; i < n; ++i) {
+      free(texture_params[textures[i]]);
       if (textures[i] == gl_state.bind_textures.ids[active_texture])
          gl_state.bind_textures.ids[active_texture] = 0;
    }
@@ -1248,6 +1257,9 @@ GLuint rglCreateProgram(void)
 void rglGenTextures(GLsizei n, GLuint *textures)
 {
    glGenTextures(n, textures);
+   int i;
+   for (i = 0; i < n; ++i)
+      texture_params[textures[i]] = malloc(sizeof(struct gl_texture_params));
 }
 
 /*
@@ -1292,7 +1304,40 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   glTexParameteri(target, pname, param);
+   if (pname == GL_TEXTURE_MIN_FILTER) {
+      if (texture_params[gl_state.bind_textures.ids[active_texture]]->param[0] != param) {
+         texture_params[gl_state.bind_textures.ids[active_texture]]->param[0] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_MAG_FILTER) {
+      if (texture_params[gl_state.bind_textures.ids[active_texture]]->param[1] != param) {
+         texture_params[gl_state.bind_textures.ids[active_texture]]->param[1] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_S) {
+      if (texture_params[gl_state.bind_textures.ids[active_texture]]->param[2] != param) {
+         texture_params[gl_state.bind_textures.ids[active_texture]]->param[2] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+   else if (pname == GL_TEXTURE_WRAP_T) {
+      if (texture_params[gl_state.bind_textures.ids[active_texture]]->param[3] != param) {
+         texture_params[gl_state.bind_textures.ids[active_texture]]->param[3] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+#ifndef HAVE_OPENGLES2
+   else if (pname == GL_TEXTURE_MAX_LEVEL) {
+      if (texture_params[gl_state.bind_textures.ids[active_texture]]->param[4] != param) {
+         texture_params[gl_state.bind_textures.ids[active_texture]]->param[4] = param;
+         glTexParameteri(target, pname, param);
+      }
+   }
+#endif
+   else
+      glTexParameteri(target, pname, param);
 }
 
 void rglTexParameterf(GLenum target, GLenum pname, GLfloat param)
