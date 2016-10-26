@@ -208,7 +208,7 @@ struct gl_program_uniforms
    GLint uniform3i[3];
    GLint uniform4i[4];
 };
-static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
+static struct gl_program_uniforms* program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
@@ -703,6 +703,9 @@ void rglBindBuffer(GLenum target, GLuint buffer)
  */
 void rglLinkProgram(GLuint program)
 {
+   int i;
+   for (i = 0; i < MAX_UNIFORMS; ++i)
+      program_uniforms[program][i] = malloc(sizeof(struct gl_program_uniforms));
    glLinkProgram(program);
 }
 
@@ -1441,6 +1444,9 @@ GLuint rglCreateShader(GLenum shaderType)
  */
 void rglDeleteProgram(GLuint program)
 {
+   int i;
+   for (i = 0; i < MAX_UNIFORMS; ++i)
+      free(program_uniforms[program][i]);
    if (!resetting_context)
       glDeleteProgram(program);
 }
@@ -1498,9 +1504,9 @@ void rglGenBuffers(GLsizei n, GLuint *buffers)
  */
 void rglUniform1f(GLint location, GLfloat v0)
 {
-   if (program_uniforms[gl_state.program][location].uniform1f != v0) {
+   if (program_uniforms[gl_state.program][location]->uniform1f != v0) {
       glUniform1f(location, v0);
-      program_uniforms[gl_state.program][location].uniform1f = v0;
+      program_uniforms[gl_state.program][location]->uniform1f = v0;
    }
 }
 
@@ -1512,9 +1518,9 @@ void rglUniform1f(GLint location, GLfloat v0)
  */
 void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
 {
-   if (program_uniforms[gl_state.program][location].uniform1f != value[0]) {
+   if (program_uniforms[gl_state.program][location]->uniform1f != value[0]) {
       glUniform1fv(location, count, value);
-      program_uniforms[gl_state.program][location].uniform1f = value[0];
+      program_uniforms[gl_state.program][location]->uniform1f = value[0];
    }
 }
 
@@ -1526,9 +1532,9 @@ void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
  */
 void rglUniform1iv(GLint location,  GLsizei count,  const GLint *value)
 {
-   if (program_uniforms[gl_state.program][location].uniform1i != value[0]) {
+   if (program_uniforms[gl_state.program][location]->uniform1i != value[0]) {
       glUniform1iv(location, count, value);
-      program_uniforms[gl_state.program][location].uniform1i = value[0];
+      program_uniforms[gl_state.program][location]->uniform1i = value[0];
    }
 }
 
@@ -1598,9 +1604,9 @@ void rglRenderbufferStorageMultisample( 	GLenum target,
  */
 void rglUniform1i(GLint location, GLint v0)
 {
-   if (program_uniforms[gl_state.program][location].uniform1i != v0) {
+   if (program_uniforms[gl_state.program][location]->uniform1i != v0) {
       glUniform1i(location, v0);
-      program_uniforms[gl_state.program][location].uniform1i = v0;
+      program_uniforms[gl_state.program][location]->uniform1i = v0;
    }
 }
 
@@ -1612,10 +1618,10 @@ void rglUniform1i(GLint location, GLint v0)
  */
 void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
 {
-   if (program_uniforms[gl_state.program][location].uniform2f[0] != v0 || program_uniforms[gl_state.program][location].uniform2f[1] != v1) {
+   if (program_uniforms[gl_state.program][location]->uniform2f[0] != v0 || program_uniforms[gl_state.program][location]->uniform2f[1] != v1) {
       glUniform2f(location, v0, v1);
-      program_uniforms[gl_state.program][location].uniform2f[0] = v0;
-      program_uniforms[gl_state.program][location].uniform2f[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform2f[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform2f[1] = v1;
    }
 }
 
@@ -1627,19 +1633,19 @@ void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
  */
 void rglUniform2i(GLint location, GLint v0, GLint v1)
 {
-   if (program_uniforms[gl_state.program][location].uniform2i[0] != v0 || program_uniforms[gl_state.program][location].uniform2i[1] != v1) {
+   if (program_uniforms[gl_state.program][location]->uniform2i[0] != v0 || program_uniforms[gl_state.program][location]->uniform2i[1] != v1) {
       glUniform2i(location, v0, v1);
-      program_uniforms[gl_state.program][location].uniform2i[0] = v0;
-      program_uniforms[gl_state.program][location].uniform2i[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform2i[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform2i[1] = v1;
    }
 }
 
 void rglUniform3i(GLint location, GLint v0, GLint v1, GLint v2)
 {
-   if (program_uniforms[gl_state.program][location].uniform3i[0] != v0 || program_uniforms[gl_state.program][location].uniform3i[1] != v1) {
+   if (program_uniforms[gl_state.program][location]->uniform3i[0] != v0 || program_uniforms[gl_state.program][location]->uniform3i[1] != v1) {
       glUniform3i(location, v0, v1, v2);
-      program_uniforms[gl_state.program][location].uniform3i[0] = v0;
-      program_uniforms[gl_state.program][location].uniform3i[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform3i[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform3i[1] = v1;
    }
 }
 
@@ -1651,10 +1657,10 @@ void rglUniform3i(GLint location, GLint v0, GLint v1, GLint v2)
  */
 void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   if (program_uniforms[gl_state.program][location].uniform2f[0] != value[0] || program_uniforms[gl_state.program][location].uniform2f[1] != value[1]) {
+   if (program_uniforms[gl_state.program][location]->uniform2f[0] != value[0] || program_uniforms[gl_state.program][location]->uniform2f[1] != value[1]) {
       glUniform2fv(location, count, value);
-      program_uniforms[gl_state.program][location].uniform2f[0] = value[0];
-      program_uniforms[gl_state.program][location].uniform2f[1] = value[1];
+      program_uniforms[gl_state.program][location]->uniform2f[0] = value[0];
+      program_uniforms[gl_state.program][location]->uniform2f[1] = value[1];
    }
 }
 
@@ -1666,11 +1672,11 @@ void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
  */
 void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
 {
-   if (program_uniforms[gl_state.program][location].uniform3f[0] != v0 || program_uniforms[gl_state.program][location].uniform3f[1] != v1 || program_uniforms[gl_state.program][location].uniform3f[2] != v2) {
+   if (program_uniforms[gl_state.program][location]->uniform3f[0] != v0 || program_uniforms[gl_state.program][location]->uniform3f[1] != v1 || program_uniforms[gl_state.program][location]->uniform3f[2] != v2) {
       glUniform3f(location, v0, v1, v2);
-      program_uniforms[gl_state.program][location].uniform3f[0] = v0;
-      program_uniforms[gl_state.program][location].uniform3f[1] = v1;
-      program_uniforms[gl_state.program][location].uniform3f[2] = v2;
+      program_uniforms[gl_state.program][location]->uniform3f[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform3f[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform3f[2] = v2;
    }
 }
 
@@ -1682,11 +1688,11 @@ void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
  */
 void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   if (program_uniforms[gl_state.program][location].uniform3f[0] != value[0] || program_uniforms[gl_state.program][location].uniform3f[1] != value[1] || program_uniforms[gl_state.program][location].uniform3f[2] != value[2]) {
+   if (program_uniforms[gl_state.program][location]->uniform3f[0] != value[0] || program_uniforms[gl_state.program][location]->uniform3f[1] != value[1] || program_uniforms[gl_state.program][location]->uniform3f[2] != value[2]) {
       glUniform3fv(location, count, value);
-      program_uniforms[gl_state.program][location].uniform3f[0] = value[0];
-      program_uniforms[gl_state.program][location].uniform3f[1] = value[1];
-      program_uniforms[gl_state.program][location].uniform3f[2] = value[2];
+      program_uniforms[gl_state.program][location]->uniform3f[0] = value[0];
+      program_uniforms[gl_state.program][location]->uniform3f[1] = value[1];
+      program_uniforms[gl_state.program][location]->uniform3f[2] = value[2];
    }
 }
 
@@ -1698,12 +1704,12 @@ void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
  */
 void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
 {
-   if (program_uniforms[gl_state.program][location].uniform4i[0] != v0 || program_uniforms[gl_state.program][location].uniform4i[1] != v1 || program_uniforms[gl_state.program][location].uniform4i[2] != v2 || program_uniforms[gl_state.program][location].uniform4i[3] != v3) {
+   if (program_uniforms[gl_state.program][location]->uniform4i[0] != v0 || program_uniforms[gl_state.program][location]->uniform4i[1] != v1 || program_uniforms[gl_state.program][location]->uniform4i[2] != v2 || program_uniforms[gl_state.program][location]->uniform4i[3] != v3) {
       glUniform4i(location, v0, v1, v2, v3);
-      program_uniforms[gl_state.program][location].uniform4i[0] = v0;
-      program_uniforms[gl_state.program][location].uniform4i[1] = v1;
-      program_uniforms[gl_state.program][location].uniform4i[2] = v2;
-      program_uniforms[gl_state.program][location].uniform4i[3] = v3;
+      program_uniforms[gl_state.program][location]->uniform4i[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform4i[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform4i[2] = v2;
+      program_uniforms[gl_state.program][location]->uniform4i[3] = v3;
    }
 }
 
@@ -1715,12 +1721,12 @@ void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
  */
 void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 {
-   if (program_uniforms[gl_state.program][location].uniform4f[0] != v0 || program_uniforms[gl_state.program][location].uniform4f[1] != v1 || program_uniforms[gl_state.program][location].uniform4f[2] != v2 || program_uniforms[gl_state.program][location].uniform4f[3] != v3) {
+   if (program_uniforms[gl_state.program][location]->uniform4f[0] != v0 || program_uniforms[gl_state.program][location]->uniform4f[1] != v1 || program_uniforms[gl_state.program][location]->uniform4f[2] != v2 || program_uniforms[gl_state.program][location]->uniform4f[3] != v3) {
       glUniform4f(location, v0, v1, v2, v3);
-      program_uniforms[gl_state.program][location].uniform4f[0] = v0;
-      program_uniforms[gl_state.program][location].uniform4f[1] = v1;
-      program_uniforms[gl_state.program][location].uniform4f[2] = v2;
-      program_uniforms[gl_state.program][location].uniform4f[3] = v3;
+      program_uniforms[gl_state.program][location]->uniform4f[0] = v0;
+      program_uniforms[gl_state.program][location]->uniform4f[1] = v1;
+      program_uniforms[gl_state.program][location]->uniform4f[2] = v2;
+      program_uniforms[gl_state.program][location]->uniform4f[3] = v3;
    }
 }
 
@@ -1732,12 +1738,12 @@ void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3
  */
 void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
 {
-   if (program_uniforms[gl_state.program][location].uniform4f[0] != value[0] || program_uniforms[gl_state.program][location].uniform4f[1] != value[1] || program_uniforms[gl_state.program][location].uniform4f[2] != value[2] || program_uniforms[gl_state.program][location].uniform4f[3] != value[3]) {
+   if (program_uniforms[gl_state.program][location]->uniform4f[0] != value[0] || program_uniforms[gl_state.program][location]->uniform4f[1] != value[1] || program_uniforms[gl_state.program][location]->uniform4f[2] != value[2] || program_uniforms[gl_state.program][location]->uniform4f[3] != value[3]) {
       glUniform4fv(location, count, value);
-      program_uniforms[gl_state.program][location].uniform4f[0] = value[0];
-      program_uniforms[gl_state.program][location].uniform4f[1] = value[1];
-      program_uniforms[gl_state.program][location].uniform4f[2] = value[2];
-      program_uniforms[gl_state.program][location].uniform4f[3] = value[3];
+      program_uniforms[gl_state.program][location]->uniform4f[0] = value[0];
+      program_uniforms[gl_state.program][location]->uniform4f[1] = value[1];
+      program_uniforms[gl_state.program][location]->uniform4f[2] = value[2];
+      program_uniforms[gl_state.program][location]->uniform4f[3] = value[3];
    }
 }
 
@@ -2124,12 +2130,6 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 static void glsm_state_setup(void)
 {
    memset(&gl_state, 0, sizeof(struct gl_cached_state));
-   unsigned i,p;
-   for (i = 0; i < MAX_UNIFORMS; ++i) {
-      for (p = 0; p < MAX_UNIFORMS; ++p) {
-         memset(&program_uniforms[i][p], 0, sizeof(struct gl_program_uniforms));
-      }
-   }
 
    gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
    gl_state.cap_translate[SGL_BLEND]                    = GL_BLEND;
