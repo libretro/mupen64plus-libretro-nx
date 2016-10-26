@@ -23,7 +23,8 @@ INCFLAGS += \
 	-I$(GLSL_OPT_DIR)/src/glsl \
 	-I$(GLSL_OPT_DIR)/include \
 	-I$(GLSL_OPT_DIR)/src \
-	-I$(GLSL_OPT_DIR)/src/mesa
+	-I$(GLSL_OPT_DIR)/src/mesa \
+	-I$(ROOT_DIR)/xxHash
 
 # libco
 ifneq ($(platform), emscripten)
@@ -187,7 +188,8 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
-	$(LIBRETRO_COMM_DIR)/features/features_cpu.c
+	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
+	$(ROOT_DIR)/xxHash/xxhash.c
 
 ifneq ($(platform), emscripten)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/streams/file_stream.c
@@ -245,13 +247,8 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/TxFilterStub.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/OpenGL_mupenplus.cpp \
-	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
-
-ifneq (,$(findstring rpi3,$(platform)))
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
-else
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32.cpp
-endif
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp \
+	$(ROOT_DIR)/custom/CRC.cpp
 
 ifeq ($(HAVE_NEON),1)
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMathNeon.cpp \
