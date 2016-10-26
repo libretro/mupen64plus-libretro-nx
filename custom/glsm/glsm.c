@@ -711,9 +711,6 @@ void rglBindBuffer(GLenum target, GLuint buffer)
  */
 void rglLinkProgram(GLuint program)
 {
-   int i;
-   for (i = 0; i < MAX_UNIFORMS; ++i)
-      program_uniforms[program][i] = malloc(sizeof(struct gl_program_uniforms));
    glLinkProgram(program);
 }
 
@@ -1246,7 +1243,11 @@ void rglCompileShader(GLuint shader)
  */
 GLuint rglCreateProgram(void)
 {
-   return glCreateProgram();
+   GLuint temp = glCreateProgram();
+   int i;
+   for (i = 0; i < MAX_UNIFORMS; ++i)
+      program_uniforms[temp][i] = malloc(sizeof(struct gl_program_uniforms));
+   return temp;
 }
 
 /*
