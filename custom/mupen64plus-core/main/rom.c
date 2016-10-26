@@ -434,6 +434,8 @@ void romdatabase_open(void)
     next_search = &g_romdatabase.list;
     /* Parse ROM database file */
     char * line = strtok (inifile, "\n");
+    if (line == NULL)
+       return;
     lineno = 1;
     do
     {

@@ -333,7 +333,7 @@ m64p_error main_run(void)
 
     connect_all(&g_r4300, &g_dp, &g_sp,
                 &g_ai, &g_pi, &g_ri, &g_si, &g_vi,
-                g_rdram, (disable_extra_mem == 0) ? 0x800000 : 0x400000,
+                g_rdram, 0x800000,
                 g_rom, g_rom_size);
 
     init_memory();

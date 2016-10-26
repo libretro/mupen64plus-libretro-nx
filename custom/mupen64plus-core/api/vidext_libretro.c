@@ -123,15 +123,7 @@ EXPORT m64p_error CALL VidExt_SetVideoMode(int Width, int Height, int BitsPerPix
 
 EXPORT void * CALL VidExt_GL_GetProcAddress(const char* Proc)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
-   glsm_ctx_proc_address_t proc_info;
-   proc_info.addr = NULL;
-   if (!glsm_ctl(GLSM_CTL_PROC_ADDRESS_GET, NULL))
-      return NULL;
-   return proc_info.addr(Proc);
-#else
    return NULL;
-#endif
 }
 
 EXPORT m64p_error CALL VidExt_GL_SwapBuffers(void)
