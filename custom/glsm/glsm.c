@@ -797,13 +797,13 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
 {
-   glDeleteTextures(n, textures);
    int i;
    for (i = 0; i < n; ++i) {
       free(texture_params[textures[i]]);
       if (textures[i] == gl_state.bind_textures.ids[active_texture])
          gl_state.bind_textures.ids[active_texture] = 0;
    }
+   glDeleteTextures(n, textures);
 }
 
 /*
@@ -1246,7 +1246,7 @@ GLuint rglCreateProgram(void)
    GLuint temp = glCreateProgram();
    int i;
    for (i = 0; i < MAX_UNIFORMS; ++i)
-      program_uniforms[temp][i] = malloc(sizeof(struct gl_program_uniforms));
+      program_uniforms[temp][i] = calloc(1, sizeof(struct gl_program_uniforms));
    return temp;
 }
 
@@ -1259,8 +1259,10 @@ void rglGenTextures(GLsizei n, GLuint *textures)
 {
    glGenTextures(n, textures);
    int i;
-   for (i = 0; i < n; ++i)
-      texture_params[textures[i]] = malloc(sizeof(struct gl_texture_params));
+   for (i = 0; i < n; ++i) {
+      texture_params[textures[i]] = calloc(1, sizeof(struct gl_texture_params));
+      texture_params[textures[i]]->param[4] = 1000;
+   }
 }
 
 /*
