@@ -1311,32 +1311,32 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   if (pname == GL_TEXTURE_MIN_FILTER) {
+   if (pname == GL_TEXTURE_MIN_FILTER && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->min_filter != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->min_filter = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_MAG_FILTER) {
+   else if (pname == GL_TEXTURE_MAG_FILTER && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->mag_filter != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->mag_filter = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_WRAP_S) {
+   else if (pname == GL_TEXTURE_WRAP_S && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_s != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_s = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_WRAP_T) {
+   else if (pname == GL_TEXTURE_WRAP_T && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_t != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_t = param;
          glTexParameteri(target, pname, param);
       }
    }
 #ifndef HAVE_OPENGLES2
-   else if (pname == GL_TEXTURE_MAX_LEVEL) {
+   else if (pname == GL_TEXTURE_MAX_LEVEL && texture_params[gl_state.bind_textures.ids[active_texture]] !=NULL) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->max_level != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->max_level = param;
          glTexParameteri(target, pname, param);
@@ -2356,7 +2356,7 @@ static bool glsm_state_ctx_init(void *data)
 #ifdef CORE
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL_CORE;
    hw_render.version_major      = 3;
-   hw_render.version_minor      = 3;
+   hw_render.version_minor      = 0;
 #else
    hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL;
 #endif
