@@ -661,6 +661,12 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 
 /*---------------OGLRender-------------*/
 
+void OGLRender::updateIBO(GLsizeiptr length, void *pointer) {
+	if (ibo_offset_bytes + length > vbo_max_size)
+		ibo_offset_bytes = 0;
+	memcpy(&ibo_data[ibo_offset_bytes], pointer, length);
+}
+
 void OGLRender::updateVBO(bool _tri, GLsizeiptr length, void *pointer) {
 	if (use_vbo) {
 		if (_tri) {
@@ -1276,7 +1282,7 @@ void OGLRender::_setTexCoordArrays() const
 	}
 }
 
-void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
+void OGLRender::_prepareDrawTriangle(bool _dma)
 {
 	m_texrectDrawer.draw();
 
@@ -1355,15 +1361,6 @@ void OGLRender::_prepareDrawTriangle(bool _dma, u32 numUpdate)
 			else
 				glVertexAttribPointer(SC_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(SPVertex), (const GLvoid *)(offsetof(SPVertex, r)));
 		}
-
-		if (!_dma) {
-			SPVertex temp[ELEMBUFF_SIZE];
-			u32 i;
-			for(i = 0; i < triangles.num; ++i)
-				temp[i] = triangles.vertices[triangles.elements[i]];
-			updateVBO(true, sizeof(SPVertex) * numUpdate, temp);
-		} else
-			updateVBO(true, sizeof(SPVertex) * numUpdate, triangles.dmaVertices.data());
 	}
 
 	if ((m_modifyVertices & MODIFY_XY) != 0)
@@ -1388,8 +1385,9 @@ void OGLRender::drawScreenSpaceTriangle(u32 _numVtx)
 	m_modifyVertices = MODIFY_ALL;
 
 	gSP.changed &= ~CHANGED_GEOMETRYMODE; // Don't update cull mode
-	_prepareDrawTriangle(true, _numVtx);
+	_prepareDrawTriangle(true);
 	glDisable(GL_CULL_FACE);
+	updateVBO(true, sizeof(SPVertex) * _numVtx, triangles.dmaVertices.data());
 	glDrawArrays(GL_TRIANGLE_STRIP, tri_vbo_offset, _numVtx);
 	tri_vbo_offset += _numVtx;
 
@@ -1401,7 +1399,8 @@ void OGLRender::drawDMATriangles(u32 _numVtx)
 {
 	if (_numVtx == 0 || !_canDraw())
 		return;
-	_prepareDrawTriangle(true, _numVtx);
+	_prepareDrawTriangle(true);
+	updateVBO(true, sizeof(SPVertex) * _numVtx, triangles.dmaVertices.data());
 	glDrawArrays(GL_TRIANGLES, tri_vbo_offset, _numVtx);
 	tri_vbo_offset += _numVtx;
 
@@ -1422,12 +1421,32 @@ void OGLRender::drawTriangles()
 		return;
 	}
 
-	_prepareDrawTriangle(false, triangles.num);
+	_prepareDrawTriangle(false);
 	if (!use_vbo)
 		glDrawElements(GL_TRIANGLES, triangles.num, GL_UNSIGNED_BYTE, triangles.elements);
 	else {
-		glDrawArrays(GL_TRIANGLES, tri_vbo_offset, triangles.num);
-		tri_vbo_offset += triangles.num;
+		SPVertex temp_verts[ELEMBUFF_SIZE];
+		GLubyte temp_elements[ELEMBUFF_SIZE];
+		u32 i, p;
+		u32 total_verts = 0;
+		for(i = 0; i < triangles.num; ++i) {
+			for (p = 0; p < i; ++p) {
+				if (triangles.elements[p] == triangles.elements[i]) {
+					temp_elements[i] = temp_elements[p];
+					break;
+				}
+			}
+			if (p == i) {
+				temp_elements[i] = total_verts;
+				temp_verts[total_verts] = triangles.vertices[triangles.elements[i]];
+				++total_verts;
+			}
+		}
+		updateIBO(sizeof(GLubyte) * triangles.num, temp_elements);
+		updateVBO(true, sizeof(SPVertex) * total_verts, temp_verts);
+		glDrawRangeElementsBaseVertex(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + ibo_offset_bytes, tri_vbo_offset);
+		ibo_offset_bytes += sizeof(GLubyte) * triangles.num;
+		tri_vbo_offset += total_verts;
 	}
 //	glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT);
 
@@ -2175,17 +2194,17 @@ void OGLRender::_initExtensions()
 	glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, lineWidthRange);
 	m_maxLineWidth = lineWidthRange[1];
 
+	majorVersion = 0;
+	minorVersion = 0;
 #ifndef GLES2
-	GLint majorVersion = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
 	LOG(LOG_VERBOSE, "OpenGL major version: %d\n", majorVersion);
+	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+	LOG(LOG_VERBOSE, "OpenGL minor version: %d\n", minorVersion);
 	assert(majorVersion >= 3 && "Plugin requires GL version 3 or higher.");
 #endif
 
 #ifdef GL_IMAGE_TEXTURES_SUPPORT
-	GLint minorVersion = 0;
-	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
-	LOG(LOG_VERBOSE, "OpenGL minor version: %d\n", minorVersion);
 #ifndef GLESX
 	m_bImageTexture = (majorVersion >= 4) && (minorVersion >= 3) && (glBindImageTexture != nullptr);
 #elif defined(GLES3_1)
@@ -2246,14 +2265,18 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
-#ifdef GLES2
+#if defined(GLES2)
 	use_vbo = false;
+#elif defined(GLESX)
+	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE) && majorVersion >= 3 && minorVersion >= 2;
 #else
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #endif
 	if (use_vbo) {
 		glGenBuffers(1, &tri_vbo);
 		glGenBuffers(1, &rect_vbo);
+		glGenBuffers(1, &ibo);
+		ibo_offset_bytes = 0;
 		rect_vbo_offset_bytes = 0;
 		tri_vbo_offset_bytes = 0;
 #ifndef GLES2
@@ -2268,6 +2291,9 @@ void OGLRender::_initVBO()
 		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
 		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
 		rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+		glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
+		ibo_data = (char*)glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
 	}
 }
 
@@ -2314,6 +2340,8 @@ void OGLRender::_destroyVBO()
 {
 	if (use_vbo) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		glDeleteBuffers(1, &ibo);
 		glDeleteBuffers(1, &tri_vbo);
 		glDeleteBuffers(1, &rect_vbo);
 #ifndef GLES2

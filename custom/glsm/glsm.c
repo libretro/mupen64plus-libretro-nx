@@ -192,6 +192,7 @@ struct gl_cached_state
    } framebuf[2];
 
    GLuint array_buffer;
+   GLuint index_buffer;
    GLuint vao;
    GLuint program;
    int cap_state[SGL_CAP_MAX];
@@ -703,6 +704,12 @@ void rglBindBuffer(GLenum target, GLuint buffer)
          glBindBuffer(target, buffer);
       }
    }
+   else if (target == GL_ELEMENT_ARRAY_BUFFER) {
+      if (gl_state.index_buffer != buffer) {
+         gl_state.index_buffer = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
    else
       glBindBuffer(target, buffer);
 }
@@ -776,6 +783,22 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
                            const GLvoid * indices)
 {
    glDrawElements(mode, count, type, indices);
+}
+
+
+void rglDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
+{
+   #ifndef HAVE_OPENGLES2
+   glDrawElementsBaseVertex(mode, count, type, indices, basevertex);
+   #endif
+}
+
+
+void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
+{
+   #ifndef HAVE_OPENGLES2
+   glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+   #endif
 }
 
 void rglCompressedTexImage2D(GLenum target, GLint level,
@@ -2205,6 +2228,7 @@ static void glsm_state_setup(void)
       glsm_max_textures = 32;
 
    gl_state.array_buffer                = 0;
+   gl_state.index_buffer                = 0;
    gl_state.bindvertex.array            = 0;
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;

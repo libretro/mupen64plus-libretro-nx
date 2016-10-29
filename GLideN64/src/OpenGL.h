@@ -97,6 +97,7 @@ class OGLRender
 {
 public:
 	bool use_vbo;
+	void updateIBO(GLsizeiptr length, void *pointer);
 	void updateVBO(bool _tri, GLsizeiptr length, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
@@ -203,7 +204,7 @@ private:
 	void _updateDepthCompare() const;
 	void _updateTextures(RENDER_STATE _renderState) const;
 	void _updateStates(RENDER_STATE _renderState) const;
-	void _prepareDrawTriangle(bool _dma, u32 numUpdate);
+	void _prepareDrawTriangle(bool _dma);
 	bool _canDraw() const;
 	void _drawThickLine(int _v0, int _v1, float _width);
 
@@ -262,12 +263,13 @@ private:
 	bool m_bImageTexture;
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
-	GLuint tri_vbo, rect_vbo;
+	GLint majorVersion, minorVersion;
+	GLuint tri_vbo, rect_vbo, ibo, vao;
 	char* tri_vbo_data;
 	char* rect_vbo_data;
+	char* ibo_data;
 	GLbitfield vbo_access;
-	GLuint vao;
-	u32 tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
+	u32 ibo_offset_bytes, tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;
