@@ -1425,7 +1425,7 @@ void OGLRender::drawTriangles()
 	if (!use_vbo)
 		glDrawElements(GL_TRIANGLES, triangles.num, GL_UNSIGNED_BYTE, triangles.elements);
 	else {
-		SPVertex temp_verts[ELEMBUFF_SIZE];
+		SPVertex temp_verts[VERTBUFF_SIZE];
 		GLubyte temp_elements[ELEMBUFF_SIZE];
 		u32 i, p;
 		u32 total_verts = 0;
