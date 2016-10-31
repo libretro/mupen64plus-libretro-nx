@@ -2311,7 +2311,7 @@ void OGLRender::_initVBO()
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 #endif
-		vbo_max_size = 16777216;
+		vbo_max_size = 4194304;
 #ifndef OPENGL_DEBUG
 		GLbitfield vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		GLbitfield vbo_map_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
