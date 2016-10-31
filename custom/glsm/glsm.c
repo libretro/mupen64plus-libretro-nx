@@ -1955,6 +1955,13 @@ void *rglMapBufferRange( 	GLenum target,
 #endif
 }
 
+void rglFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
+{
+#ifndef HAVE_OPENGLES2
+   glFlushMappedBufferRange(target, offset, length);
+#endif
+}
+
 /*
  *
  * Core in:

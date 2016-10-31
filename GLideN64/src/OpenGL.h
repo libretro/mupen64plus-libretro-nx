@@ -269,7 +269,6 @@ private:
 	char* tri_vbo_data;
 	char* rect_vbo_data;
 	char* ibo_data;
-	GLbitfield vbo_access;
 	u32 ibo_offset_bytes, tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
