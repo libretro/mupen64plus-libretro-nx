@@ -37,6 +37,7 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 #ifdef HAVE_OPENGLES
 	config.frameBufferEmulation.bufferSwapMode = 2;
+	config.generalEmulation.enableFragmentDepthWrite = 0;
 #endif
 	config.generalEmulation.hacks = hacks;
 }
