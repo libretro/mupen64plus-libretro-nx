@@ -786,18 +786,24 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
 }
 
 
-void rglDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
-{
-   #ifndef HAVE_OPENGLES2
-   glDrawElementsBaseVertex(mode, count, type, indices, basevertex);
-   #endif
-}
-
-
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
    #ifndef HAVE_OPENGLES2
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+   #endif
+}
+
+void rglDrawRangeElementsBaseVertexOES(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
+{
+   #ifdef HAVE_OPENGLES
+   glDrawRangeElementsBaseVertexOES(mode, start, end, count, type, indices, basevertex);
+   #endif
+}
+
+void rglDrawRangeElementsBaseVertexEXT(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
+{
+   #ifdef HAVE_OPENGLES
+   glDrawRangeElementsBaseVertexEXT(mode, start, end, count, type, indices, basevertex);
    #endif
 }
 
@@ -851,6 +857,16 @@ void rglBufferStorage(GLenum target,
 {
 #ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
+#endif
+}
+
+void rglBufferStorageEXT(GLenum target,
+                       GLsizeiptr size,
+                       const GLvoid * data,
+                       GLbitfield flags)
+{
+#ifdef HAVE_OPENGLES
+   glBufferStorageEXT(target, size, data, flags);
 #endif
 }
 

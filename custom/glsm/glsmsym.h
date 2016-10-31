@@ -38,8 +38,9 @@ RETRO_BEGIN_DECLS
 #define glVertexAttrib4fv           rglVertexAttrib4fv
 #define glDrawArrays                rglDrawArrays
 #define glDrawElements              rglDrawElements
-#define glDrawElementsBaseVertex    rglDrawElementsBaseVertex
 #define glDrawRangeElementsBaseVertex rglDrawRangeElementsBaseVertex
+#define glDrawRangeElementsBaseVertexOES rglDrawRangeElementsBaseVertexOES
+#define glDrawRangeElementsBaseVertexEXT rglDrawRangeElementsBaseVertexEXT
 #define glCompressedTexImage2D      rglCompressedTexImage2D
 #define glBindTexture               rglBindTexture
 #define glActiveTexture             rglActiveTexture
@@ -169,12 +170,17 @@ RETRO_BEGIN_DECLS
 #define glFenceSync                 rglFenceSync
 #define glUnmapBuffer               rglUnmapBuffer
 #define glBufferStorage             rglBufferStorage
+#define glBufferStorageEXT          rglBufferStorageEXT
 
 #define GL_MAP_PERSISTENT_BIT         0x0040
 #define GL_MAP_COHERENT_BIT           0x0080
 #define GL_MAP_UNSYNCHRONIZED_BIT     0x0020
 
 void rglBufferStorage(GLenum target,
+                       GLsizeiptr size,
+                       const GLvoid * data,
+                       GLbitfield flags);
+void rglBufferStorageEXT(GLenum target,
                        GLsizeiptr size,
                        const GLvoid * data,
                        GLbitfield flags);
@@ -261,12 +267,21 @@ void rglPixelStorei(GLenum pname, GLint param);
 void rglTexCoord2f(GLfloat s, GLfloat t);
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
                            const GLvoid * indices);
-void rglDrawElementsBaseVertex(GLenum mode,
+void rglDrawRangeElementsBaseVertex(GLenum mode,
+	GLuint start,
+	GLuint end,
 	GLsizei count,
 	GLenum type,
 	GLvoid *indices,
 	GLint basevertex);
-void rglDrawRangeElementsBaseVertex(GLenum mode,
+void rglDrawRangeElementsBaseVertexOES(GLenum mode,
+	GLuint start,
+	GLuint end,
+	GLsizei count,
+	GLenum type,
+	GLvoid *indices,
+	GLint basevertex);
+void rglDrawRangeElementsBaseVertexEXT(GLenum mode,
 	GLuint start,
 	GLuint end,
 	GLsizei count,
