@@ -97,6 +97,7 @@ class OGLRender
 {
 public:
 	bool use_vbo;
+	int base_vertex;
 	void updateIBO(GLsizeiptr length, void *pointer);
 	void updateVBO(bool _tri, GLsizeiptr length, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);

@@ -1444,7 +1444,16 @@ void OGLRender::drawTriangles()
 		}
 		updateIBO(sizeof(GLubyte) * triangles.num, temp_elements);
 		updateVBO(true, sizeof(SPVertex) * total_verts, temp_verts);
+#ifndef GLESX
 		glDrawRangeElementsBaseVertex(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + ibo_offset_bytes, tri_vbo_offset);
+#else
+		if (base_vertex == 1)
+			glDrawRangeElementsBaseVertex(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + ibo_offset_bytes, tri_vbo_offset);
+		else if (base_vertex == 2)
+			glDrawRangeElementsBaseVertexOES(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + ibo_offset_bytes, tri_vbo_offset);
+		else if (base_vertex == 3)
+			glDrawRangeElementsBaseVertexEXT(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + ibo_offset_bytes, tri_vbo_offset);
+#endif
 		ibo_offset_bytes += sizeof(GLubyte) * triangles.num;
 		tri_vbo_offset += total_verts;
 	}
@@ -2265,10 +2274,17 @@ void OGLRender::_initVBO()
 {
 	rect_vbo_offset = 0;
 	tri_vbo_offset = 0;
+	base_vertex = 0;
 #if defined(GLES2)
 	use_vbo = false;
 #elif defined(GLESX)
-	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE) && majorVersion >= 3 && minorVersion >= 2;
+	if (majorVersion >= 3 && minorVersion >= 2)
+		base_vertex = 1;
+	else if (OGLVideo::isExtensionSupported("GL_OES_draw_elements_base_vertex"))
+		base_vertex = 2;
+	else if (OGLVideo::isExtensionSupported("GL_EXT_draw_elements_base_vertex"))
+		base_vertex = 3;
+	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE) && base_vertex > 0;
 #else
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #endif
@@ -2286,10 +2302,18 @@ void OGLRender::_initVBO()
 		vbo_max_size = 16777216;
 		vbo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		glBindBuffer(GL_ARRAY_BUFFER, tri_vbo);
+#ifndef GLESX
 		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
+#else
+		glBufferStorageEXT(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
+#endif
 		tri_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
 		glBindBuffer(GL_ARRAY_BUFFER, rect_vbo);
+#ifndef GLESX
 		glBufferStorage(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
+#else
+		glBufferStorageEXT(GL_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);
+#endif
 		rect_vbo_data = (char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo_max_size, vbo_access);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, vbo_max_size, NULL, vbo_access);

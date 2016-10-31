@@ -849,9 +849,7 @@ void rglBufferStorage(GLenum target,
                        const GLvoid * data,
                        GLbitfield flags)
 {
-#if defined(HAVE_OPENGLES)
-   glBufferStorageEXT(target, size, data, flags);
-#else
+#ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
 #endif
 }
