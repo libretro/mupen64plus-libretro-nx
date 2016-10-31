@@ -232,6 +232,11 @@ static int window_first = 0;
 static int resetting_context = 0;
 static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 
+static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, void *userParam)
+{
+   printf("%s\n", message);
+}
+
 /* GL wrapper-side */
 
 /*
@@ -2225,6 +2230,16 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 
 static void glsm_state_setup(void)
 {
+#ifdef OPENGL_DEBUG
+#ifdef HAVE_OPENGLES
+   glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
+   glDebugMessageCallbackKHR(on_gl_error, NULL);
+#else
+   glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+   glDebugMessageCallback(on_gl_error, NULL);
+#endif
+#endif
+
    memset(&gl_state, 0, sizeof(struct gl_cached_state));
 
    gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
@@ -2412,6 +2427,9 @@ static bool glsm_state_ctx_init(void *data)
    hw_render.depth              = true;
    hw_render.bottom_left_origin = true;
    hw_render.cache_context      = true;
+#ifdef OPENGL_DEBUG
+   hw_render.debug_context      = true;
+#endif
 
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
