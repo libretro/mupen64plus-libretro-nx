@@ -844,7 +844,7 @@ void ir_print_glsl_visitor::visit(ir_texture *ir)
 		sampler_uv_dim += 1;
 	if (is_array)
 		sampler_uv_dim += 1;
-	const bool is_proj = (uv_dim > sampler_uv_dim);
+	const bool is_proj = ((ir->op == ir_tex || ir->op == ir_txb || ir->op == ir_txl || ir->op == ir_txd) && uv_dim > sampler_uv_dim);
 	const bool is_lod = (ir->op == ir_txl);
 	
 	if (is_lod && state->es_shader && state->language_version < 300 && state->stage == MESA_SHADER_FRAGMENT)
@@ -886,7 +886,7 @@ void ir_print_glsl_visitor::visit(ir_texture *ir)
     }
     else 
     {
-        if (ir->op == ir_txf)
+        if (ir->op == ir_txf || ir->op == ir_txf_ms)
             buffer.asprintf_append ("texelFetch");
         else
             buffer.asprintf_append ("texture");
@@ -937,6 +937,13 @@ void ir_print_glsl_visitor::visit(ir_texture *ir)
 		ir->lod_info.lod->accept(this);
 	}
 	
+	// sample index
+	if (ir->op == ir_txf_ms)
+	{
+		buffer.asprintf_append (", ");
+		ir->lod_info.sample_index->accept(this);
+	}
+
 	// grad
 	if (ir->op == ir_txd)
 	{
