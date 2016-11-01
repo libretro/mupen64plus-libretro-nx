@@ -2067,7 +2067,7 @@ void rglGetProgramBinary( 	GLuint program,
   	GLenum *binaryFormat,
   	void *binary)
 {
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glGetProgramBinary(program, bufsize, length, binaryFormat, binary);
 #else
    printf("WARNING! Not implemented.\n");
@@ -2085,7 +2085,7 @@ void rglProgramBinary(GLuint program,
   	const void *binary,
   	GLsizei length)
 {
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES2
    glProgramBinary(program, binaryFormat, binary, length);
 #else
    printf("WARNING! Not implemented.\n");
