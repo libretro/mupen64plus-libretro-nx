@@ -98,8 +98,7 @@ class OGLRender
 public:
 	bool use_vbo;
 	int base_vertex;
-	void updateIBO(GLsizeiptr length, void *pointer);
-	void updateVBO(bool _tri, GLsizeiptr length, void *pointer);
+	void updateVBO(int buffer, u32 size, u32 count, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
 	void drawScreenSpaceTriangle(u32 _numVtx);
@@ -265,11 +264,18 @@ private:
 	bool m_bFlatColors;
 	bool m_bDmaVertices;
 	GLint majorVersion, minorVersion;
-	GLuint tri_vbo, rect_vbo, ibo, vao;
-	char* tri_vbo_data;
-	char* rect_vbo_data;
-	char* ibo_data;
-	u32 ibo_offset_bytes, tri_vbo_offset, tri_vbo_offset_bytes, rect_vbo_offset, rect_vbo_offset_bytes, vbo_max_size;
+	GLuint vao;
+	enum {
+		TRI_VBO = 0,
+		RECT_VBO,
+		IBO,
+		VBO_COUNT
+	};
+	GLuint vbos[VBO_COUNT];
+	char* vbo_data[VBO_COUNT];
+	u32 vbo_offset_bytes[VBO_COUNT];
+	u32 vbo_offset[VBO_COUNT];
+	u32 vbo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;
