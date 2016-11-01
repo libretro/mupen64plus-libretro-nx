@@ -816,7 +816,7 @@ void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
-   #ifndef HAVE_OPENGLES2
+   #ifndef HAVE_OPENGLES
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
    #endif
 }

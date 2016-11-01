@@ -16,7 +16,7 @@ script:
   - docker exec ubuntu apt-get -qq update
   - docker exec ubuntu apt-get -qq -y dist-upgrade
   - docker exec ubuntu apt-get -qq -y install build-essential git libgl1-mesa-dev libgles2-mesa-dev libz-mingw-w64-dev g++-mingw-w64-x86-64 zlib1g-dev flex bison wget unzip zip python awscli
-  - docker exec ubuntu /bin/bash -c "if [[ $PLATFORM == "android*" ]]; then wget -q https://dl.google.com/android/repository/android-ndk-r13-linux-x86_64.zip; unzip -qq android-ndk-r13-linux-x86_64.zip; ./android-ndk-r13/build/tools/make_standalone_toolchain.py --arch arm --api 24 --install-dir /mychain; fi"
+  - docker exec ubuntu /bin/bash -c "if [[ $PLATFORM == "android*" ]]; then wget -q https://dl.google.com/android/repository/android-ndk-r13-linux-x86_64.zip; unzip -qq android-ndk-r13-linux-x86_64.zip; ./android-ndk-r13/build/tools/make_standalone_toolchain.py --arch arm --api 21 --install-dir /mychain; fi"
   - docker exec ubuntu git clone --depth 25 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
   - docker exec ubuntu /bin/bash -c "export PATH=$PATH:/mychain/bin; cd GLupeN64; if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then git checkout $TRAVIS_COMMIT; else git fetch origin pull/$TRAVIS_PULL_REQUEST/head:temp; git checkout temp; fi; platform=$PLATFORM make"
   - docker exec ubuntu /bin/bash -c "cd GLupeN64; zip glupen64_$PLATFORM.zip glupen64_*"
