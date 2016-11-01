@@ -30,6 +30,9 @@
 
 #define MAX_UNIFORMS 500
 #define MAX_TEXTURES 128000
+#ifndef GL_DRAW_INDIRECT_BUFFER
+#define GL_DRAW_INDIRECT_BUFFER 0x8F3F
+#endif
 
 struct gl_cached_state
 {
@@ -716,12 +719,14 @@ void rglBindBuffer(GLenum target, GLuint buffer)
          glBindBuffer(target, buffer);
       }
    }
+#ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_INDIRECT_BUFFER) {
       if (gl_state.indirect_buffer != buffer) {
          gl_state.indirect_buffer = buffer;
          glBindBuffer(target, buffer);
       }
    }
+#endif
    else
       glBindBuffer(target, buffer);
 }
@@ -787,7 +792,9 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 
 void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 {
+#ifndef HAVE_OPENGLES2
    glDrawArraysIndirect(mode, indirect);
+#endif
 }
 /*
  *
@@ -802,7 +809,9 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
 
 void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 {
+#ifndef HAVE_OPENGLES2
    glDrawElementsIndirect(mode, type, indirect);
+#endif
 }
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
