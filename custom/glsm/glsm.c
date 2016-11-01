@@ -193,6 +193,7 @@ struct gl_cached_state
 
    GLuint array_buffer;
    GLuint index_buffer;
+   GLuint indirect_buffer;
    GLuint vao;
    GLuint program;
    int cap_state[SGL_CAP_MAX];
@@ -715,6 +716,12 @@ void rglBindBuffer(GLenum target, GLuint buffer)
          glBindBuffer(target, buffer);
       }
    }
+   else if (target == GL_DRAW_INDIRECT_BUFFER) {
+      if (gl_state.indirect_buffer != buffer) {
+         gl_state.indirect_buffer = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
    else
       glBindBuffer(target, buffer);
 }
@@ -778,7 +785,10 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
    glDrawArrays(mode, first, count);
 }
 
-
+void rglDrawArraysIndirect(GLenum mode, const void *indirect)
+{
+   glDrawArraysIndirect(mode, indirect);
+}
 /*
  *
  * Core in:
@@ -790,6 +800,10 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
    glDrawElements(mode, count, type, indices);
 }
 
+void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
+{
+   glDrawElementsIndirect(mode, type, indirect);
+}
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {

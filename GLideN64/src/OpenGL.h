@@ -97,8 +97,9 @@ class OGLRender
 {
 public:
 	bool use_vbo;
-	int base_vertex;
-	void updateVBO(int buffer, u32 size, u32 count, void *pointer);
+	bool use_indirect;
+	void drawArrayIndirect(GLenum mode, GLuint first, GLuint count);
+	void updateBO(int buffer, u32 size, u32 count, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
 	void drawScreenSpaceTriangle(u32 _numVtx);
@@ -269,13 +270,29 @@ private:
 		TRI_VBO = 0,
 		RECT_VBO,
 		IBO,
-		VBO_COUNT
+		INDIRECT,
+		BO_COUNT
 	};
-	GLuint vbos[VBO_COUNT];
-	char* vbo_data[VBO_COUNT];
-	u32 vbo_offset_bytes[VBO_COUNT];
-	u32 vbo_offset[VBO_COUNT];
-	u32 vbo_max_size;
+	typedef  struct {
+		GLuint  count;
+		GLuint  primCount;
+		GLuint  firstIndex;
+		GLuint  baseVertex;
+		GLuint  baseInstance;
+	} DrawElementsIndirectCommand;
+	DrawElementsIndirectCommand element_command;
+	typedef  struct {
+		GLuint  count;
+		GLuint  primCount;
+		GLuint  first;
+		GLuint  baseInstance;
+	} DrawArraysIndirectCommand;
+	DrawArraysIndirectCommand array_command;
+	GLuint bos[BO_COUNT];
+	char* bo_data[BO_COUNT];
+	u32 bo_offset_bytes[BO_COUNT];
+	u32 bo_offset[BO_COUNT];
+	u32 bo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;
