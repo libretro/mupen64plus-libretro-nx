@@ -1023,7 +1023,7 @@ void rglProgramParameteri( 	GLuint program,
   	GLenum pname,
   	GLint value)
 {
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && (defined(HAVE_OPENGLES3) || defined(HAVE_OPENGLES_3_1))
+#ifndef HAVE_OPENGLES2
    glProgramParameteri(program, pname, value);
 #else
    printf("WARNING! Not implemented.\n");
@@ -1054,9 +1054,8 @@ void rglGetActiveUniformBlockiv(GLuint program,
   	GLenum pname,
   	GLint *params)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetActiveUniformBlockiv(program, uniformBlockIndex,
-         pname, params);
+#ifndef HAVE_OPENGLES2
+   glGetActiveUniformBlockiv(program, uniformBlockIndex, pname, params);
 #else
    printf("WARNING! Not implemented.\n");
 #endif
@@ -1074,9 +1073,8 @@ void rglGetActiveUniformsiv( 	GLuint program,
   	GLenum pname,
   	GLint *params)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetActiveUniformsiv(program, uniformCount,
-         uniformIndices, pname, params);
+#ifndef HAVE_OPENGLES2
+   glGetActiveUniformsiv(program, uniformCount, uniformIndices, pname, params);
 #else
    printf("WARNING! Not implemented.\n");
 #endif
@@ -1093,9 +1091,8 @@ void rglGetUniformIndices(GLuint program,
   	const GLchar **uniformNames,
   	GLuint *uniformIndices)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetUniformIndices(program, uniformCount,
-         uniformNames, uniformIndices);
+#ifndef HAVE_OPENGLES2
+   glGetUniformIndices(program, uniformCount, uniformNames, uniformIndices);
 #else
    printf("WARNING! Not implemented.\n");
 #endif
@@ -1112,7 +1109,7 @@ void rglBindBufferBase( 	GLenum target,
   	GLuint index,
   	GLuint buffer)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glBindBufferBase(target, index, buffer);
 #else
    printf("WARNING! Not implemented.\n");
@@ -1130,7 +1127,7 @@ void rglBindBufferBase( 	GLenum target,
 GLuint rglGetUniformBlockIndex( 	GLuint program,
   	const GLchar *uniformBlockName)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    return glGetUniformBlockIndex(program, uniformBlockName);
 #else
    printf("WARNING! Not implemented.\n");
@@ -1149,9 +1146,8 @@ void rglUniformBlockBinding( 	GLuint program,
   	GLuint uniformBlockIndex,
   	GLuint uniformBlockBinding)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniformBlockBinding(program, uniformBlockIndex,
-         uniformBlockBinding);
+#ifndef HAVE_OPENGLES2
+   glUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding);
 #else
    printf("WARNING! Not implemented.\n");
 #endif
@@ -1165,7 +1161,7 @@ void rglUniformBlockBinding( 	GLuint program,
  */
 void rglUniform1ui(GLint location, GLuint v)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glUniform1ui(location ,v);
 #endif
 }
@@ -1178,7 +1174,7 @@ void rglUniform1ui(GLint location, GLuint v)
  */
 void rglUniform2ui(GLint location, GLuint v0, GLuint v1)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glUniform2ui(location, v0, v1);
 #endif
 }
@@ -1191,7 +1187,7 @@ void rglUniform2ui(GLint location, GLuint v0, GLuint v1)
  */
 void rglUniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glUniform3ui(location, v0, v1, v2);
 #endif
 }
@@ -1204,7 +1200,7 @@ void rglUniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
  */
 void rglUniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glUniform4ui(location, v0, v1, v2, v3);
 #endif
 }
