@@ -313,6 +313,8 @@ void rglTexSubImage2D(
   	GLenum type,
   	const GLvoid * pixels)
 {
+   //This is a fix for https://github.com/loganmc10/GLupeN64/issues/13
+   glPixelStorei(GL_UNPACK_ALIGNMENT,1);
    glTexSubImage2D(target, level, xoffset, yoffset,
          width, height, format, type, pixels);
 }
@@ -1999,6 +2001,8 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
 #if defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
    glTexStorage2DMultisample(target, samples, internalformat,
          width, height, fixedsamplelocations);
+#else
+   printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -2010,8 +2014,10 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
 void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
       GLsizei width, GLsizei height)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glTexStorage2D(target, levels, internalFormat, width, height);
+#else
+   printf("WARNING! Not implemented.\n");
 #endif
 }
 

@@ -275,125 +275,125 @@ const struct TextureLoadParameters
 { // G_TT_NONE
 	{ //		Get16					glType16	glInternalFormat16		Get32					glType32	glInternalFormat32	autoFormat
 		{ // 4-bit
-			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 4, 8192 }, // RGBA as I
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 4, 8192 }, // YUV
-			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 4, 8192 }, // CI without palette
-			{ GetIA31_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA31_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 4, 8192 }, // IA
-			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 4, 8192 }, // I
+			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 4, 8192 }, // RGBA as I
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 4, 8192 }, // YUV
+			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 4, 8192 }, // CI without palette
+			{ GetIA31_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA31_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 4, 8192 }, // IA
+			{ GetI4_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI4_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 4, 8192 }, // I
 		},
 		{ // 8-bit
-			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  3, 4096 }, // RGBA as I
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 4096 }, // YUV
-			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  3, 4096 }, // CI without palette
-			{ GetIA44_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA44_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 3, 4096 }, // IA
-			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,			GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  3, 4096 }, // I
+			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  3, 4096 }, // RGBA as I
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 4096 }, // YUV
+			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  3, 4096 }, // CI without palette
+			{ GetIA44_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA44_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 3, 4096 }, // IA
+			{ GetI8_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetI8_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  3, 4096 }, // I
 		},
 		{ // 16-bit
-			{ GetRGBA5551_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1, GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	2, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	2, 2048 }, // YUV
-			{ GetIA88_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA88_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,		2, 2048 }, // CI as IA
-			{ GetIA88_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA88_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,		2, 2048 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	0, 2048 }, // I
+			{ GetRGBA5551_RGBA5551,		GL_UNSIGNED_SHORT_5_5_5_1, GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	2, 2048 }, // RGBA
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	2, 2048 }, // YUV
+			{ GetIA88_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA88_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,		2, 2048 }, // CI as IA
+			{ GetIA88_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetIA88_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,		2, 2048 }, // IA
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	0, 2048 }, // I
 		},
 		{ // 32-bit
-			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  2, 1024 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // I
+			{ GetRGBA8888_RGBA4444,		GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  2, 1024 }, // RGBA
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // YUV
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // CI
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // IA
+			{ GetNone,			GL_UNSIGNED_SHORT_4_4_4_4, GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // I
 		}
 	},
 	// DUMMY
 	{ //		Get16					glType16	glInternalFormat16			Get32				glType32	glInternalFormat32	autoFormat
 		{ // 4-bit
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	4, 4096 }, // CI (Banjo-Kazooie uses this, doesn't make sense, but it works...)
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	4, 8192 }, // YUV
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	4, 4096 }, // CI
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	4, 4096 }, // IA as CI
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	4, 4096 }, // I as CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	4, 4096 }, // CI (Banjo-Kazooie uses this, doesn't make sense, but it works...)
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	4, 8192 }, // YUV
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	4, 4096 }, // CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	4, 4096 }, // IA as CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	4, 4096 }, // I as CI
 		},
 		{ // 8-bit
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,   0, 4096 }, // YUV
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // CI
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // IA as CI
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // I as CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,   0, 4096 }, // YUV
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // IA as CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // I as CI
 		},
 		{ // 16-bit
-			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	2, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	2, 2048 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	0, 2048 }, // CI
-			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI16RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	2, 2048 }, // IA as CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	0, 2048 }, // I
+			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	2, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	2, 2048 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	0, 2048 }, // CI
+			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI16RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	2, 2048 }, // IA as CI
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	0, 2048 }, // I
 		},
 		{ // 32-bit
-			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  2, 1024 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // I
+			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  2, 1024 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // CI
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // IA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // I
 		}
 	},
 	// G_TT_RGBA16
 	{ //		Get16					glType16			glInternalFormat16	Get32				glType32	glInternalFormat32	autoFormat
 		{ // 4-bit
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 4, 4096 }, // CI (Banjo-Kazooie uses this, doesn't make sense, but it works...)
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,   4, 8192 }, // YUV
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 4, 4096 }, // CI
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 4, 4096 }, // IA as CI
-			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 4, 4096 }, // I as CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 4, 4096 }, // CI (Banjo-Kazooie uses this, doesn't make sense, but it works...)
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,   4, 8192 }, // YUV
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 4, 4096 }, // CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 4, 4096 }, // IA as CI
+			{ GetCI4RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI4RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 4, 4096 }, // I as CI
 		},
 		{ // 8-bit
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,   0, 4096 }, // YUV
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // CI
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // IA as CI
-			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1, 3, 2048 }, // I as CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,   0, 4096 }, // YUV
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // IA as CI
+			{ GetCI8RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI8RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1, 3, 2048 }, // I as CI
 		},
 		{ // 16-bit
-			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	2, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	2, 2048 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	0, 2048 }, // CI
-			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI16RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGB5_A1,	2, 2048 }, // IA as CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4,	0, 2048 }, // I
+			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetRGBA5551_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	2, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	2, 2048 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	0, 2048 }, // CI
+			{ GetCI16RGBA_RGBA5551,	GL_UNSIGNED_SHORT_5_5_5_1,	GL_RGB5_A1,	GetCI16RGBA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGB5_A1,	2, 2048 }, // IA as CI
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4,	0, 2048 }, // I
 		},
 		{ // 32-bit
-			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA,  2, 1024 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA4, 0, 1024 }, // I
+			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA,  2, 1024 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // CI
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // IA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA4, 0, 1024 }, // I
 		}
 	},
 	// G_TT_IA16
 	{ //		Get16					glType16			glInternalFormat16	Get32				glType32	glInternalFormat32	autoFormat
 		{ // 4-bit
-			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 4, 4096 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 4, 8192 }, // YUV
-			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 4, 4096 }, // CI
-			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 4, 4096 }, // IA
-			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 4, 4096 }, // I
+			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 4, 4096 }, // IA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 4, 8192 }, // YUV
+			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 4, 4096 }, // CI
+			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 4, 4096 }, // IA
+			{ GetCI4IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI4IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 4, 4096 }, // I
 		},
 		{ // 8-bit
-			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 3, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 4096 }, // YUV
-			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 3, 2048 }, // CI
-			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 3, 2048 }, // IA
-			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 3, 2048 }, // I
+			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 3, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 4096 }, // YUV
+			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 3, 2048 }, // CI
+			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 3, 2048 }, // IA
+			{ GetCI8IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI8IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 3, 2048 }, // I
 		},
 		{ // 16-bit
-			{ GetCI16IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI16IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 2, 2048 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 2, 2048 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 2048 }, // CI
-			{ GetCI16IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI16IA_RGBA8888,		GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 2, 2048 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 2048 }, // I
+			{ GetCI16IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI16IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 2, 2048 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 2, 2048 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 2048 }, // CI
+			{ GetCI16IA_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetCI16IA_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 2, 2048 }, // IA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 2048 }, // I
 		},
 		{ // 32-bit
-			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 2, 1024 }, // RGBA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 1024 }, // YUV
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 1024 }, // CI
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 1024 }, // IA
-			{ GetNone,				GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,				GL_UNSIGNED_BYTE, GL_RGBA, GL_RGBA, 0, 1024 }, // I
+			{ GetRGBA8888_RGBA4444,	GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetRGBA8888_RGBA8888,	GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 2, 1024 }, // RGBA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 1024 }, // YUV
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 1024 }, // CI
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 1024 }, // IA
+			{ GetNone,		GL_UNSIGNED_SHORT_4_4_4_4,	GL_RGBA4,	GetNone,		GL_UNSIGNED_BYTE, GL_RGBA8, GL_RGBA, 0, 1024 }, // I
 		}
 	}
 };
@@ -475,8 +475,12 @@ void TextureCache::init()
 	_initDummyTexture(m_pDummy);
 
 	glBindTexture(GL_TEXTURE_2D, m_pDummy->glName);
+#ifdef GLES2
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, dummyTexture );
-
+#else
+	glTexStorage2D( GL_TEXTURE_2D, 1, GL_RGBA8, 2, 2);
+	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, dummyTexture);
+#endif
 	m_cachedBytes = m_pDummy->textureBytes;
 	activateDummy( 0 );
 	activateDummy( 1 );
@@ -489,13 +493,8 @@ void TextureCache::init()
 
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_pMSDummy->glName);
 
-#if defined(GLES3_1)
 		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling,
 					GL_RGBA8, m_pMSDummy->realWidth, m_pMSDummy->realHeight, false);
-#else
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling,
-					GL_RGBA8, m_pMSDummy->realWidth, m_pMSDummy->realHeight, false);
-#endif
 
 		activateMSDummy(0);
 		activateMSDummy(1);
@@ -740,9 +739,14 @@ bool TextureCache::_loadHiresBackground(CachedTexture *_pTexture)
 						bpl, paladdr);
 	GHQTexInfo ghqTexInfo;
 	if (txfilter_hirestex(_pTexture->crc, ricecrc, palette, &ghqTexInfo)) {
+#ifdef GLES2
 		glTexImage2D(GL_TEXTURE_2D, 0, ghqTexInfo.format,
 			ghqTexInfo.width, ghqTexInfo.height, 0, ghqTexInfo.texture_format,
 			ghqTexInfo.pixel_type, ghqTexInfo.data);
+#else
+		glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
+#endif
 		assert(!isGLError());
 		_updateCachedTexture(ghqTexInfo, _pTexture);
 		return true;
@@ -799,7 +803,7 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 		for (x = 0; x < pTexture->realWidth; x++) {
 			tx = min(x, (u32)clampSClamp);
 
-			if (glInternalFormat == GL_RGBA)
+			if (glInternalFormat == GL_RGBA || glInternalFormat == GL_RGBA8)
 				((u32*)pDest)[j++] = GetTexel((u64*)pSrc, tx, 0, pTexture->palette);
 			else
 				((u16*)pDest)[j++] = GetTexel((u64*)pSrc, tx, 0, pTexture->palette);
@@ -818,23 +822,28 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 					ghqTexInfo.format != GL_RGBA &&
 					m_curUnpackAlignment > 1)
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+#ifdef GLES2
 			glTexImage2D(GL_TEXTURE_2D, 0, ghqTexInfo.format,
 					ghqTexInfo.width, ghqTexInfo.height, 0,
 					ghqTexInfo.texture_format, ghqTexInfo.pixel_type,
 					ghqTexInfo.data);
+#else
+			glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
+#endif
 			_updateCachedTexture(ghqTexInfo, pTexture);
 			bLoaded = true;
 		}
 	}
 	if (!bLoaded) {
-		if (pTexture->realWidth % 2 != 0 && glInternalFormat != GL_RGBA)
+		if (pTexture->realWidth % 2 != 0 && glInternalFormat != GL_RGBA && glInternalFormat != GL_RGBA8)
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 #ifdef GLES2
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pTexture->realWidth,
 				pTexture->realHeight, 0, GL_RGBA, glType, pDest);
 #else
-		glTexImage2D(GL_TEXTURE_2D, 0, glInternalFormat, pTexture->realWidth,
-				pTexture->realHeight, 0, GL_RGBA, glType, pDest);
+		glTexStorage2D(GL_TEXTURE_2D, 1, glInternalFormat, pTexture->realWidth, pTexture->realHeight);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pTexture->realWidth, pTexture->realHeight, GL_RGBA, glType, pDest);
 #endif
 	}
 	if (m_curUnpackAlignment > 1)
@@ -890,7 +899,8 @@ bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & 
 #ifdef GLES2
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ghqTexInfo.width, ghqTexInfo.height, 0, GL_RGBA, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #else
-		glTexImage2D(GL_TEXTURE_2D, 0, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height, 0, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
+		glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 		assert(!isGLError());
 		_updateCachedTexture(ghqTexInfo, _pTexture);
@@ -911,7 +921,8 @@ void TextureCache::_loadDepthTexture(CachedTexture * _pTexture, u16* _pDest)
 	for (u32 t = 0; t < numTexels; ++t)
 		pDestF[t] = _pDest[t] / 65535.0f;
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, _pTexture->realWidth, _pTexture->realHeight, 0, GL_RED, GL_FLOAT, pDestF);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32F, _pTexture->realWidth, _pTexture->realHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, pDestF);
 	free(pDestF);
 #endif
 }
@@ -997,7 +1008,7 @@ void TextureCache::_getTextureDestData(CachedTexture& tmptex,
 		for (y = 0; y < tmptex.realHeight; ++y) {
 			pSrc = &TMEM[tmptex.tMem] + *pLine * y;
 			for (x = 0; x < tmptex.realWidth / 2; x++) {
-				if (glInternalFormat == GL_RGBA) {
+				if (glInternalFormat == GL_RGBA || glInternalFormat == GL_RGBA8) {
 					GetYUV_RGBA8888(pSrc, pDest + j, x);
 				} else {
 					GetYUV_RGBA4444(pSrc, (u16*)pDest + j, x);
@@ -1024,7 +1035,7 @@ void TextureCache::_getTextureDestData(CachedTexture& tmptex,
 					tx ^= maskSMask;
 				}
 
-				if (glInternalFormat == GL_RGBA) {
+				if (glInternalFormat == GL_RGBA || glInternalFormat == GL_RGBA8) {
 					pDest[j++] = GetTexel(pSrc, tx, i, tmptex.palette);
 				} else {
 					((u16*)pDest)[j++] = GetTexel(pSrc, tx, i, tmptex.palette);
@@ -1078,7 +1089,9 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 	memcpy(&tmptex, _pTexture, sizeof(CachedTexture));
 
 	line = tmptex.line;
-
+#ifndef GLES2
+	glTexStorage2D(GL_TEXTURE_2D, maxLevel + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
+#endif
 	while (true) {
 		_getTextureDestData(tmptex, pDest, glInternalFormat, GetTexel, &line);
 
@@ -1113,10 +1126,8 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 						0, GL_RGBA, ghqTexInfo.pixel_type,
 						ghqTexInfo.data);
 #else
-				glTexImage2D(GL_TEXTURE_2D, 0, ghqTexInfo.format,
-						ghqTexInfo.width, ghqTexInfo.height,
-						0, ghqTexInfo.texture_format, ghqTexInfo.pixel_type,
-						ghqTexInfo.data);
+				glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 				_updateCachedTexture(ghqTexInfo, _pTexture);
 				bLoaded = true;
@@ -1124,15 +1135,14 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		}
 		if (!bLoaded) {
 			if (tmptex.realWidth % 2 != 0 &&
-					glInternalFormat != GL_RGBA &&
+					glInternalFormat != GL_RGBA && glInternalFormat != GL_RGBA8 &&
 					m_curUnpackAlignment > 1)
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 #ifdef GLES2
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tmptex.realWidth,
 					tmptex.realHeight, 0, GL_RGBA, glType, pDest);
 #else
-			glTexImage2D(GL_TEXTURE_2D, mipLevel, glInternalFormat, tmptex.realWidth,
-					tmptex.realHeight, 0, GL_RGBA, glType, pDest);
+			glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, pDest);
 #endif
 		}
 		if (mipLevel == maxLevel)

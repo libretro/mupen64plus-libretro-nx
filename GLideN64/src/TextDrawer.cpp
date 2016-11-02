@@ -157,7 +157,11 @@ struct Atlas {
 		glGenTextures(1, &tex);
 		glBindTexture(GL_TEXTURE_2D, tex);
 
+#ifdef GLES2
 		glTexImage2D(GL_TEXTURE_2D, 0, monohromeInternalformat, w, h, 0, monohromeformat, GL_UNSIGNED_BYTE, 0);
+#else
+		glTexStorage2D(GL_TEXTURE_2D, 1, monohromeInternalformat, w, h);
+#endif
 
 		/* We require 1 byte alignment when uploading texture data */
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

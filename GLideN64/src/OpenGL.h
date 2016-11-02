@@ -17,6 +17,7 @@
 #elif GLES2
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#define GL_RGBA8 GL_RGBA
 #define GL_DRAW_FRAMEBUFFER GL_FRAMEBUFFER
 #define GL_READ_FRAMEBUFFER GL_FRAMEBUFFER
 #define NO_BLIT_BUFFER_COPY

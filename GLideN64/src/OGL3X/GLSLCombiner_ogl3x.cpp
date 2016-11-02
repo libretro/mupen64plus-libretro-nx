@@ -73,7 +73,7 @@ void NoiseTexture::init()
 	m_pTexture->textureBytes = m_pTexture->realWidth * m_pTexture->realHeight;
 	textureCache().addFrameBufferTextureSize(m_pTexture->textureBytes);
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, m_pTexture->realWidth, m_pTexture->realHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, m_pTexture->realWidth, m_pTexture->realHeight);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -174,7 +174,7 @@ void InitShadowMapShader()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.lutInternalFormat, 256, 1, 0, fboFormats.lutFormat, fboFormats.lutType, nullptr);
+	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.lutInternalFormat, 256, 1);
 
 	g_draw_shadow_map_program = createShaderProgram(default_vertex_shader, shadow_map_fragment_shader_float);
 }

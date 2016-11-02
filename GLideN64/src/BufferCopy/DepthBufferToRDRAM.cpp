@@ -71,12 +71,20 @@ void DepthBufferToRDRAM::init()
 	textureCache().addFrameBufferTextureSize(m_pDepthTexture->textureBytes);
 
 	glBindTexture(GL_TEXTURE_2D, m_pColorTexture->glName);
+#ifdef GLES2
 	glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.monochromeInternalFormat, m_pColorTexture->realWidth, m_pColorTexture->realHeight, 0, fboFormats.monochromeFormat, fboFormats.monochromeType, nullptr);
+#else
+	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.monochromeInternalFormat, m_pColorTexture->realWidth, m_pColorTexture->realHeight);
+#endif
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glBindTexture(GL_TEXTURE_2D, m_pDepthTexture->glName);
+#ifdef GLES2
 	glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.depthInternalFormat, m_pDepthTexture->realWidth, m_pDepthTexture->realHeight, 0, GL_DEPTH_COMPONENT, fboFormats.depthType, nullptr);
+#else
+	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.depthInternalFormat, m_pDepthTexture->realWidth, m_pDepthTexture->realHeight);
+#endif
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 

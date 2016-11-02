@@ -92,7 +92,11 @@ void DepthBuffer::initDepthImageTexture(FrameBuffer * _pBuffer)
 	textureCache().addFrameBufferTextureSize(m_pDepthImageTexture->textureBytes);
 
 	glBindTexture(GL_TEXTURE_2D, m_pDepthImageTexture->glName);
+#ifdef GLES2
 	glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.depthImageInternalFormat, m_pDepthImageTexture->realWidth, m_pDepthImageTexture->realHeight, 0, fboFormats.depthImageFormat, fboFormats.depthImageType, nullptr);
+#else
+	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.depthImageInternalFormat, m_pDepthImageTexture->realWidth, m_pDepthImageTexture->realHeight);
+#endif
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -145,17 +149,17 @@ void DepthBuffer::_initDepthBufferTexture(FrameBuffer * _pBuffer, CachedTexture 
 #ifdef GL_MULTISAMPLING_SUPPORT
 	if (_multisample) {
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, _pTexture->glName);
-#if defined(GLES3_1)
 		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling, GL_DEPTH_COMPONENT24, _pTexture->realWidth, _pTexture->realHeight, false);
-#else
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling, GL_DEPTH_COMPONENT, _pTexture->realWidth, _pTexture->realHeight, false);
-#endif
 		_pTexture->frameBufferTexture = CachedTexture::fbMultiSample;
 	} else
 #endif // GL_MULTISAMPLING_SUPPORT
 	{
 		glBindTexture(GL_TEXTURE_2D, _pTexture->glName);
+#ifdef GLES2
 		glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.depthInternalFormat, _pTexture->realWidth, _pTexture->realHeight, 0, GL_DEPTH_COMPONENT, fboFormats.depthType, nullptr);
+#else
+		glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.depthInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
+#endif
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

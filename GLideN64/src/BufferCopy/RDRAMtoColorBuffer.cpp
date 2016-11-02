@@ -38,7 +38,11 @@ void RDRAMtoColorBuffer::init()
 	m_pTexture->textureBytes = m_pTexture->realWidth * m_pTexture->realHeight * 4;
 	textureCache().addFrameBufferTextureSize(m_pTexture->textureBytes);
 	glBindTexture( GL_TEXTURE_2D, m_pTexture->glName );
+#ifdef GLES2
 	glTexImage2D(GL_TEXTURE_2D, 0, fboFormats.colorInternalFormat, m_pTexture->realWidth, m_pTexture->realHeight, 0, fboFormats.colorFormat, fboFormats.colorType, nullptr);
+#else
+	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.colorInternalFormat, m_pTexture->realWidth, m_pTexture->realHeight);
+#endif
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	glBindTexture(GL_TEXTURE_2D, 0);
