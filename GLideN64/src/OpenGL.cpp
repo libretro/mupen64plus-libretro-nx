@@ -2314,7 +2314,7 @@ void OGLRender::_initVBO()
 		use_indirect = 1;
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE) && use_indirect;
 #else
-	use_indirect = OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
+	use_indirect = majorVersion >= 4 || OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
 	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 #endif
 	if (use_vbo) {
