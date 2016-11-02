@@ -178,6 +178,7 @@ RETRO_BEGIN_DECLS
 #define GL_MAP_PERSISTENT_BIT         0x0040
 #define GL_MAP_COHERENT_BIT           0x0080
 #define GL_MAP_UNSYNCHRONIZED_BIT     0x0020
+#define GL_MAP_FLUSH_EXPLICIT_BIT     0x0010
 #define GL_DRAW_INDIRECT_BUFFER       0x8F3F
 
 void rglBufferStorage(GLenum target,
