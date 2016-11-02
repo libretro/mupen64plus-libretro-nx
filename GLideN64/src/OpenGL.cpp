@@ -2336,9 +2336,10 @@ void OGLRender::_initVBO()
 		for (i = 0; i < BO_COUNT; ++i) {
 			if (i == IBO)
 				buffer_type = GL_ELEMENT_ARRAY_BUFFER;
-			else if (i == INDIRECT)
+			else if (i == INDIRECT) {
+				if (!use_indirect) continue;
 				buffer_type = GL_DRAW_INDIRECT_BUFFER;
-			else
+			} else
 				buffer_type = GL_ARRAY_BUFFER;
 			bo_offset[i] = 0;
 			bo_offset_bytes[i] = 0;
