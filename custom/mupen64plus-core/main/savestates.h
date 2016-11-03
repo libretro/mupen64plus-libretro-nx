@@ -34,7 +34,9 @@ typedef enum _savestates_job
 
 int savestates_load_m64p(const unsigned char *data, size_t size);
 int savestates_save_m64p(unsigned char *data, size_t size);
-
+int savestates_load(void);
+int savestates_save(void);
+savestates_job savestates_get_job(void);
 
 #endif /* __SAVESTAVES_H__ */
 

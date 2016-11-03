@@ -26,7 +26,6 @@
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 #include "glsl_optimizer.h"
-#include "plugin/plugin.h"
 
 #define MAX_UNIFORMS 500
 #define MAX_TEXTURES 128000
@@ -2476,6 +2475,8 @@ GLuint glsm_get_current_framebuffer(void)
    return hw_render.get_current_framebuffer();
 }
 
+extern void retroChangeWindow();
+
 bool glsm_ctl(enum glsm_state_ctl state, void *data)
 {
    switch (state)
@@ -2503,7 +2504,7 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          if (window_first > 0) {
             resetting_context = 1;
             glsm_state_setup();
-            gfx.changeWindow();
+            retroChangeWindow();
             resetting_context = 0;
 	 }
          else
