@@ -17,6 +17,9 @@
 #include "main/main.h"
 #include "main/version.h"
 #include "main/savestates.h"
+#include "main/mupen64plus.ini.h"
+#include "api/m64p_config.h"
+#include "osal_files.h"
 #include "main/rom.h"
 #include "pi/pi_controller.h"
 #include "si/pif.h"
@@ -31,6 +34,8 @@
 #ifndef PRESCALE_HEIGHT
 #define PRESCALE_HEIGHT 625
 #endif
+
+#define PATH_SIZE 2048
 
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
@@ -320,6 +325,30 @@ unsigned retro_get_region (void)
 
 void retro_init(void)
 {
+   char* sys_pathname;
+   wchar_t w_pathname[PATH_SIZE];
+   wchar_t w_filename[PATH_SIZE];
+   environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys_pathname);
+   char pathname[PATH_SIZE];
+   strncpy(pathname, sys_pathname, PATH_SIZE);
+   if (pathname[(strlen(pathname)-1)] != '/' && pathname[(strlen(pathname)-1)] != '\\')
+      strcat(pathname, "/");
+   strcat(pathname, "GLupeN64/");
+   mbstowcs(w_pathname, pathname, PATH_SIZE);
+   if (!osal_path_existsW(w_pathname) || !osal_is_directory(w_pathname)) {
+      osal_mkdirp(w_pathname);
+   }
+   const char* filename = ConfigGetSharedDataFilepath("mupen64plus.ini");
+   mbstowcs(w_filename, filename, PATH_SIZE);
+   if (!osal_path_existsW(w_filename)) {
+      FILE *fp = fopen(filename, "w");
+      if (fp != NULL)
+      {
+         fputs(inifile, fp);
+         fclose(fp);
+      }
+   }
+
    struct retro_log_callback log;
    unsigned colorMode = RETRO_PIXEL_FORMAT_XRGB8888;
 

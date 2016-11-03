@@ -378,7 +378,7 @@ static m64p_error write_configlist_file(void)
     if (filepath == NULL)
         return M64ERR_NO_MEMORY;
 
-    fPtr = fopen(filepath, "wb"); 
+    fPtr = fopen(filepath, "wb");
     if (fPtr == NULL)
     {
         DebugMessage(M64MSG_ERROR, "Couldn't open configuration file '%s' for writing.", filepath);
@@ -1283,10 +1283,19 @@ EXPORT const char * CALL ConfigGetParamString(m64p_handle ConfigSectionHandle, c
 /* ------------------------------------------------------ */
 /* OS Abstraction functions, exported outside of the Core */
 /* ------------------------------------------------------ */
+extern retro_environment_t environ_cb;
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-  return "";
+  char* sys_systemDir;
+  environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&sys_systemDir);
+  static char systemDir[2048];
+  strncpy(systemDir, sys_systemDir, 2048);
+  if (systemDir[(strlen(systemDir)-1)] != '/' && systemDir[(strlen(systemDir)-1)] != '\\')
+     strcat(systemDir, "/");
+  strcat(systemDir, "GLupeN64/");
+  strcat(systemDir, filename);
+  return systemDir;
 }
 
 EXPORT const char * CALL ConfigGetUserConfigPath(void)
