@@ -61,7 +61,6 @@ endif
 SOURCES_C += \
 	$(CORE_DIR)/src/ai/ai_controller.c \
 	$(CORE_DIR)/src/api/callbacks.c \
-	$(CORE_DIR)/src/api/common.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
 	$(CORE_DIR)/src/api/debugger.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
@@ -94,7 +93,7 @@ SOURCES_C += \
 	$(CORE_DIR)/src/r4300/cp1.c \
 	$(CORE_DIR)/src/r4300/exception.c \
 	$(CORE_DIR)/src/r4300/instr_counters.c \
-	$(ROOT_DIR)/custom/mupen64plus-core/r4300/interupt.c \
+	$(CORE_DIR)/src/r4300/interupt.c \
 	$(CORE_DIR)/src/r4300/mi_controller.c \
 	$(CORE_DIR)/src/r4300/pure_interp.c \
 	$(CORE_DIR)/src/r4300/r4300_core.c \
@@ -197,7 +196,7 @@ endif
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
-	$(ROOT_DIR)/custom/GLideN64/CommonPluginAPI.cpp \
+	$(VIDEODIR_GLIDEN64)/src/CommonPluginAPI.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Config.cpp \
 	$(VIDEODIR_GLIDEN64)/src/convert.cpp \
 	$(VIDEODIR_GLIDEN64)/src/DepthBuffer.cpp \

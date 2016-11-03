@@ -69,34 +69,6 @@ static void DebugMessage(int level, const char *message, ...)
   va_end(args);
 }
 
-EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Context,
-                                     void (*DebugCallback)(void *, int, const char *))
-{
-    ptr_CoreGetAPIVersions CoreAPIVersionFunc;
-
-    int ConfigAPIVersion, DebugAPIVersion, VidextAPIVersion, bSaveConfig;
-    float fConfigParamsVersion = 0.0f;
-
-    if (l_PluginInit)
-        return M64ERR_ALREADY_INIT;
-
-    /* first thing is to set the callback function for debug info */
-    l_DebugCallback = DebugCallback;
-    l_DebugCallContext = Context;
-
-    l_PluginInit = 1;
-    return M64ERR_SUCCESS;
-}
-
-EXPORT m64p_error CALL PluginShutdown(void)
-{
-    if (!l_PluginInit)
-        return M64ERR_NOT_INIT;
-
-    l_PluginInit = 0;
-    return M64ERR_SUCCESS;
-}
-
 EXPORT m64p_error CALL llePluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion, int *APIVersion, const char **PluginNamePtr, int *Capabilities)
 {
     /* set version info */
@@ -118,15 +90,6 @@ EXPORT m64p_error CALL llePluginGetVersion(m64p_plugin_type *PluginType, int *Pl
     }
 
     return M64ERR_SUCCESS;
-}
-
-EXPORT int CALL RomOpen(void)
-{
-    if (!l_PluginInit)
-        return 0;
-
-    update_conf(CFG_FILE);
-    return 1;
 }
 
 #else

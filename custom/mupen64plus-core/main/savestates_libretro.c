@@ -525,3 +525,18 @@ int savestates_save_m64p(unsigned char *data, size_t size)
 
    return 1;
 }
+
+savestates_job savestates_get_job(void)
+{
+    return savestates_job_nothing;
+}
+
+int savestates_save(void)
+{
+    return 0;
+}
+
+int savestates_load(void)
+{
+    return 0;
+}

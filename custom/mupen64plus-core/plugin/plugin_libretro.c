@@ -54,43 +54,43 @@ static m64p_error EmptyGetVersionFunc(m64p_plugin_type *PluginType, int *PluginV
 }
 /* local data structures and functions */
 #define DEFINE_GFX(X) \
-    EXPORT m64p_error CALL X##PluginGetVersion(m64p_plugin_type *, int *, int *, const char **, int *); \
-    EXPORT void CALL X##ChangeWindow(void); \
-    EXPORT int  CALL X##InitiateGFX(GFX_INFO Gfx_Info); \
-    EXPORT void CALL X##MoveScreen(int x, int y); \
-    EXPORT void CALL X##ProcessDList(void); \
-    EXPORT void CALL X##ProcessRDPList(void); \
-    EXPORT void CALL X##RomClosed(void); \
-    EXPORT int  CALL X##RomOpen(void); \
-    EXPORT void CALL X##ShowCFB(void); \
-    EXPORT void CALL X##UpdateScreen(void); \
-    EXPORT void CALL X##ViStatusChanged(void); \
-    EXPORT void CALL X##ViWidthChanged(void); \
-    EXPORT void CALL X##ReadScreen2(void *dest, int *width, int *height, int front); \
-    EXPORT void CALL X##SetRenderingCallback(void (*callback)(int)); \
-    EXPORT void CALL X##ResizeVideoOutput(int width, int height); \
-    EXPORT void CALL X##FBRead(unsigned int addr); \
-    EXPORT void CALL X##FBWrite(unsigned int addr, unsigned int size); \
-    EXPORT void CALL X##FBGetFrameBufferInfo(void *p); \
+    EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *, int *, int *, const char **, int *); \
+    EXPORT void CALL ChangeWindow(void); \
+    EXPORT int  CALL InitiateGFX(GFX_INFO Gfx_Info); \
+    EXPORT void CALL MoveScreen(int x, int y); \
+    EXPORT void CALL ProcessDList(void); \
+    EXPORT void CALL ProcessRDPList(void); \
+    EXPORT void CALL RomClosed(void); \
+    EXPORT int  CALL RomOpen(void); \
+    EXPORT void CALL ShowCFB(void); \
+    EXPORT void CALL UpdateScreen(void); \
+    EXPORT void CALL ViStatusChanged(void); \
+    EXPORT void CALL ViWidthChanged(void); \
+    EXPORT void CALL ReadScreen2(void *dest, int *width, int *height, int front); \
+    EXPORT void CALL SetRenderingCallback(void (*callback)(int)); \
+    EXPORT void CALL ResizeVideoOutput(int width, int height); \
+    EXPORT void CALL FBRead(unsigned int addr); \
+    EXPORT void CALL FBWrite(unsigned int addr, unsigned int size); \
+    EXPORT void CALL FBGetFrameBufferInfo(void *p); \
     \
     static const gfx_plugin_functions gfx_##X = { \
-        X##PluginGetVersion, \
-        X##ChangeWindow, \
-        X##InitiateGFX, \
-        X##MoveScreen, \
-        X##ProcessDList, \
-        X##ProcessRDPList, \
-        X##RomClosed, \
-        X##RomOpen, \
-        X##ShowCFB, \
-        X##UpdateScreen, \
-        X##ViStatusChanged, \
-        X##ViWidthChanged, \
-        X##ReadScreen2, \
-        X##SetRenderingCallback, \
-        X##FBRead, \
-        X##FBWrite, \
-        X##FBGetFrameBufferInfo \
+        PluginGetVersion, \
+        ChangeWindow, \
+        InitiateGFX, \
+        MoveScreen, \
+        ProcessDList, \
+        ProcessRDPList, \
+        RomClosed, \
+        RomOpen, \
+        ShowCFB, \
+        UpdateScreen, \
+        ViStatusChanged, \
+        ViWidthChanged, \
+        ReadScreen2, \
+        SetRenderingCallback, \
+        FBRead, \
+        FBWrite, \
+        FBGetFrameBufferInfo \
     }
 
 DEFINE_GFX(gln64);

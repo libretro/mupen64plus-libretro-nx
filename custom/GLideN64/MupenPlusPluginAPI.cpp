@@ -4,13 +4,13 @@
 
 extern "C" {
 
-EXPORT int CALL gln64RomOpen(void)
+EXPORT int CALL RomOpen(void)
 {
 	api().RomOpen();
 	return 1;
 }
 
-EXPORT m64p_error CALL gln64PluginGetVersion(
+EXPORT m64p_error CALL PluginGetVersion(
 	m64p_plugin_type * _PluginType,
 	int * _PluginVersion,
 	int * _APIVersion,
@@ -21,7 +21,7 @@ EXPORT m64p_error CALL gln64PluginGetVersion(
 	return M64ERR_SUCCESS;
 }
 
-EXPORT m64p_error CALL gln64PluginStartup(
+EXPORT m64p_error CALL PluginStartup(
 	m64p_dynlib_handle CoreLibHandle,
 	void *Context,
 	void (*DebugCallback)(void *, int, const char *)
@@ -30,17 +30,17 @@ EXPORT m64p_error CALL gln64PluginStartup(
 	return M64ERR_SUCCESS;
 }
 
-EXPORT m64p_error CALL gln64PluginShutdown(void)
+EXPORT m64p_error CALL PluginShutdown(void)
 {
 	video().stop();
 	return M64ERR_SUCCESS;
 }
 
-EXPORT void CALL gln64ReadScreen2(void *dest, int *width, int *height, int front)
+EXPORT void CALL ReadScreen2(void *dest, int *width, int *height, int front)
 {
 }
 
-EXPORT void CALL gln64SetRenderingCallback(void (*callback)(int))
+EXPORT void CALL SetRenderingCallback(void (*callback)(int))
 {
 }
 
