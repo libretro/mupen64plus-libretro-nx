@@ -18,6 +18,7 @@
 #include "main/version.h"
 #include "main/savestates.h"
 #include "main/mupen64plus.ini.h"
+#include "GLideN64.custom.ini.h"
 #include "api/m64p_config.h"
 #include "osal_files.h"
 #include "main/rom.h"
@@ -327,7 +328,8 @@ void retro_init(void)
 {
    char* sys_pathname;
    wchar_t w_pathname[PATH_SIZE];
-   wchar_t w_filename[PATH_SIZE];
+   wchar_t w_mupen_filename[PATH_SIZE];
+   wchar_t w_gliden_filename[PATH_SIZE];
    environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys_pathname);
    char pathname[PATH_SIZE];
    strncpy(pathname, sys_pathname, PATH_SIZE);
@@ -338,13 +340,23 @@ void retro_init(void)
    if (!osal_path_existsW(w_pathname) || !osal_is_directory(w_pathname)) {
       osal_mkdirp(w_pathname);
    }
-   const char* filename = ConfigGetSharedDataFilepath("mupen64plus.ini");
-   mbstowcs(w_filename, filename, PATH_SIZE);
-   if (!osal_path_existsW(w_filename)) {
-      FILE *fp = fopen(filename, "w");
+   const char* mupen_filename = ConfigGetSharedDataFilepath("mupen64plus.ini");
+   mbstowcs(w_mupen_filename, mupen_filename, PATH_SIZE);
+   if (!osal_path_existsW(w_mupen_filename)) {
+      FILE *fp = fopen(mupen_filename, "w");
       if (fp != NULL)
       {
          fputs(inifile, fp);
+         fclose(fp);
+      }
+   }
+   const char* gliden_filename = ConfigGetSharedDataFilepath("GLupeN64.custom.ini");
+   mbstowcs(w_gliden_filename, gliden_filename, PATH_SIZE);
+   if (!osal_path_existsW(w_gliden_filename)) {
+      FILE *fp = fopen(gliden_filename, "w");
+      if (fp != NULL)
+      {
+         fputs(customini, fp);
          fclose(fp);
       }
    }
