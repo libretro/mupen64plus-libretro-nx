@@ -1530,13 +1530,7 @@ void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
  */
 void rglVertexAttrib4fv(GLuint name, GLfloat* v)
 {
-   if (gl_state.vertex_attribs.v0[name] != v[0] || gl_state.vertex_attribs.v1[name] != v[1] || gl_state.vertex_attribs.v2[name] != v[2] || gl_state.vertex_attribs.v3[name] != v[3]) {
-      glVertexAttrib4fv(name, v);
-      gl_state.vertex_attribs.v0[name] = v[0];
-      gl_state.vertex_attribs.v1[name] = v[1];
-      gl_state.vertex_attribs.v2[name] = v[2];
-      gl_state.vertex_attribs.v3[name] = v[3];
-   }
+   glVertexAttrib4fv(name, v);
 }
 
 /*
