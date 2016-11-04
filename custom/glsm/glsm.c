@@ -2279,33 +2279,33 @@ static void glsm_state_bind(void)
       }
    }
 
+   glClearColor(
+         gl_state.clear_color.r,
+         gl_state.clear_color.g,
+         gl_state.clear_color.b,
+         gl_state.clear_color.a);
+
+   if (gl_state.framebuf[0].location == gl_state.framebuf[1].location)
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
+#ifndef HAVE_OPENGLES2
+   else {
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].location);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].location);
+   }
+#endif
+   if (gl_state.framebuf[0].location == default_framebuffer)
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
    for(i = 0; i < SGL_CAP_MAX; i ++)
    {
       if (gl_state.cap_state[i])
          glEnable(gl_state.cap_translate[i]);
    }
 
-#ifdef HAVE_OPENGLES2
-   glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
-#else
-   if (gl_state.framebuf[0].location == gl_state.framebuf[1].location)
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
-   else {
-      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].location);
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].location);
-   }
-#endif
-
    if (gl_state.blendfunc.used)
       glBlendFunc(
             gl_state.blendfunc.sfactor,
             gl_state.blendfunc.dfactor);
-
-   glClearColor(
-         gl_state.clear_color.r,
-         gl_state.clear_color.g,
-         gl_state.clear_color.b,
-         gl_state.clear_color.a);
 
    glUseProgram(gl_state.program);
 
