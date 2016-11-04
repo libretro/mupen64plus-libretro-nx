@@ -142,7 +142,7 @@ static void setup_variables(void)
       { "glupen64-EnableCopyColorToRDRAM",
          "Color buffer to RDRAM; Async|Sync|Off" },
       { "glupen64-EnableCopyDepthToRDRAM",
-         "Depth buffer to RDRAM; Off|FromMem|Software" },
+         "Depth buffer to RDRAM; Software|FromMem|Off" },
       { "glupen64-EnableCopyColorFromRDRAM",
          "Color buffer from RDRAM; False|True" },
       { "glupen64-EnableHWLighting",
