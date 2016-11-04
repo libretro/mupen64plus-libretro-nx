@@ -182,7 +182,6 @@ struct gl_cached_state
    struct
    {
       GLuint location;
-      int has_depth;
    } framebuf[2];
 
    GLuint array_buffer;
@@ -225,7 +224,6 @@ static struct gl_cached_state gl_state;
 glslopt_ctx* ctx;
 static int window_first = 0;
 static int resetting_context = 0;
-static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 
 static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, void *userParam)
 {
@@ -745,16 +743,6 @@ void rglLinkProgram(GLuint program)
 void rglFramebufferTexture2D(GLenum target, GLenum attachment,
       GLenum textarget, GLuint texture, GLint level)
 {
-   if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (target == GL_FRAMEBUFFER)
-         gl_state.framebuf[0].has_depth = 1;
-#ifndef HAVE_OPENGLES2
-      else if (target == GL_DRAW_FRAMEBUFFER)
-         gl_state.framebuf[0].has_depth = 1;
-      else if (target == GL_READ_FRAMEBUFFER)
-         gl_state.framebuf[1].has_depth = 1;
-#endif
-   }
    glFramebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
@@ -959,16 +947,6 @@ GLenum rglCheckFramebufferStatus(GLenum target)
 void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
       GLenum renderbuffertarget, GLuint renderbuffer)
 {
-   if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (target == GL_FRAMEBUFFER)
-         gl_state.framebuf[0].has_depth = 1;
-#ifndef HAVE_OPENGLES2
-      else if (target == GL_DRAW_FRAMEBUFFER)
-         gl_state.framebuf[0].has_depth = 1;
-      else if (target == GL_READ_FRAMEBUFFER)
-         gl_state.framebuf[1].has_depth = 1;
-#endif
-   }
    glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
 }
 
@@ -1880,22 +1858,6 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
       framebuffer = default_framebuffer;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
-#ifdef HAVE_OPENGLES
-         if (gl_state.framebuf[0].has_depth) {
-#ifdef HAVE_OPENGLES2
-            glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
-#else
-            glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, discards);
-#endif
-            gl_state.framebuf[0].has_depth = 0;
-         }
-#ifndef HAVE_OPENGLES2
-         if (gl_state.framebuf[1].has_depth) {
-            glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, 1, discards);
-            gl_state.framebuf[1].has_depth = 0;
-         }
-#endif
-#endif
          glBindFramebuffer(target, framebuffer);
          gl_state.framebuf[0].location = framebuffer;
          gl_state.framebuf[1].location = framebuffer;
@@ -1904,24 +1866,12 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 #ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer) {
-#ifdef HAVE_OPENGLES
-         if (gl_state.framebuf[0].has_depth) {
-            glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, discards);
-            gl_state.framebuf[0].has_depth = 0;
-         }
-#endif
          glBindFramebuffer(target, framebuffer);
          gl_state.framebuf[0].location = framebuffer;
       }
    }
    else if (target == GL_READ_FRAMEBUFFER) {
       if (gl_state.framebuf[1].location != framebuffer) {
-#ifdef HAVE_OPENGLES
-         if (gl_state.framebuf[1].has_depth) {
-            glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, 1, discards);
-            gl_state.framebuf[1].has_depth = 0;
-         }
-#endif
          glBindFramebuffer(target, framebuffer);
          gl_state.framebuf[1].location = framebuffer;
       }
@@ -2273,8 +2223,6 @@ static void glsm_state_setup(void)
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;
    gl_state.framebuf[1].location        = default_framebuffer;
-   gl_state.framebuf[0].has_depth       = 0;
-   gl_state.framebuf[1].has_depth       = 0;
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
