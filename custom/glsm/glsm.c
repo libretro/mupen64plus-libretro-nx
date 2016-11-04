@@ -62,14 +62,6 @@ struct gl_cached_state
 
    struct
    {
-      GLfloat v0[MAX_ATTRIB];
-      GLfloat v1[MAX_ATTRIB];
-      GLfloat v2[MAX_ATTRIB];
-      GLfloat v3[MAX_ATTRIB];
-   } vertex_attribs;
-
-   struct
-   {
       GLenum pname;
       GLint param;
    } pixelstore_i;
@@ -1514,13 +1506,7 @@ void rglBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
       GLfloat z, GLfloat w)
 {
-   if (gl_state.vertex_attribs.v0[name] != x || gl_state.vertex_attribs.v1[name] != y || gl_state.vertex_attribs.v2[name] != z || gl_state.vertex_attribs.v3[name] != w) {
-      glVertexAttrib4f(name, x, y, z, w);
-      gl_state.vertex_attribs.v0[name] = x;
-      gl_state.vertex_attribs.v1[name] = y;
-      gl_state.vertex_attribs.v2[name] = z;
-      gl_state.vertex_attribs.v3[name] = w;
-   }
+   glVertexAttrib4f(name, x, y, z, w);
 }
 
 /*
