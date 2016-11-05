@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (vector_3.h).
+ * The following license statement only applies to this file (float_minmax.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -19,35 +19,44 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#ifndef __LIBRETRO_SDK_GFX_MATH_VECTOR_3_H__
-#define __LIBRETRO_SDK_GFX_MATH_VECTOR_3_H__
+#ifndef __LIBRETRO_SDK_MATH_FLOAT_MINMAX_H__
+#define __LIBRETRO_SDK_MATH_FLOAT_MINMAX_H__
 
 #include <stdint.h>
+#include <math.h>
 
-#include <retro_common_api.h>
+#include <retro_inline.h>
+#include <retro_miscellaneous.h>
+#include <retro_environment.h>
 
-RETRO_BEGIN_DECLS
-
-typedef float vec3_t[3];
-
-float vec3_dot(const float *a, const float *b);
-
-void vec3_cross(float* dst, const float *a, const float *b);
-
-float vec3_length(const float *a);
-
-void vec3_add(float *dst, const float *src);
-
-void vec3_subtract(float *dst, const float *src);
-
-void vec3_scale(float *dst, const float scale);
-
-void vec3_copy(float *dst, const float *src);
-
-void vec3_normalize(float *dst);
-
-RETRO_END_DECLS
-
+#ifdef __SSE2__
+#include <emmintrin.h>
+#include <mmintrin.h>
 #endif
 
+static INLINE float float_min(float a, float b)
+{
+#ifdef __SSE2__
+   _mm_store_ss( &a, _mm_min_ss(_mm_set_ss(a),_mm_set_ss(b)) );
+   return a;
+#elif defined(__STDC_C99__) || defined(__STDC_C11__)
+   return fminf(a, b);
+#else
+   return MIN(a, b);
+#endif
+}
+
+static INLINE float float_max(float a, float b)
+{
+#ifdef __SSE2__
+   _mm_store_ss( &a, _mm_max_ss(_mm_set_ss(a),_mm_set_ss(b)) );
+   return a;
+#elif defined(__STDC_C99__) || defined(__STDC_C11__)
+   return fmaxf(a, b);
+#else
+   return MAX(a, b);
+#endif
+}
+
+
+#endif
