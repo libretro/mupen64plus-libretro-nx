@@ -752,23 +752,37 @@ size_t retro_get_memory_size(unsigned type)
 
 size_t retro_serialize_size (void)
 {
-    return 16788288 + 1024; // < 16MB and some change... ouch
+   return 16788288 + 1024 + 4; // < 16MB and some change... ouch
 }
 
 bool retro_serialize(void *data, size_t size)
 {
-    if (savestates_save_m64p(data, size))
-        return true;
+   const char* filename = ConfigGetSharedDataFilepath("savestate.temp");
+   int success = savestates_save_m64p((char*)filename);
+   FILE *read_ptr;
+   read_ptr = fopen(filename, "rb");
+   fread(data, size, 1, read_ptr);
+   fclose(read_ptr);
+   remove(filename);
+   if (success)
+      return true;
 
-    return false;
+   return false;
 }
 
 bool retro_unserialize(const void * data, size_t size)
 {
-    if (savestates_load_m64p(data, size))
-        return true;
+   FILE *write_ptr;
+   const char* filename = ConfigGetSharedDataFilepath("savestate.temp");
+   write_ptr = fopen(filename,"wb");
+   fwrite(data, size, 1, write_ptr);
+   fclose(write_ptr);
+   int success = savestates_load_m64p((char*)filename);
+   remove(filename);
+   if (success)
+      return true;
 
-    return false;
+   return false;
 }
 
 //Needed to be able to detach controllers for Lylat Wars multiplayer
