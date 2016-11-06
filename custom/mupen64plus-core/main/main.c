@@ -221,10 +221,25 @@ void new_frame(void)
     l_CurrentFrame++;
 }
 
+static void gs_apply_cheats(void)
+{
+    if(g_gs_vi_counter < 60)
+    {
+        if (g_gs_vi_counter == 0)
+            cheat_apply_cheats(ENTRY_BOOT);
+        g_gs_vi_counter++;
+    }
+    else
+    {
+        cheat_apply_cheats(ENTRY_VI);
+    }
+}
+
 /* called on vertical interrupt.
  * Allow the core to perform various things */
 void new_vi(void)
 {
+    gs_apply_cheats();
     main_check_inputs();
     //timed_sections_refresh();
     //apply_speed_limiter();
@@ -281,6 +296,7 @@ m64p_error main_run(void)
     count_per_op = 0;
     if (count_per_op <= 0)
         count_per_op = ROM_PARAMS.countperop;
+    cheat_add_hacks();
 
     /* do byte-swapping if it's not been done yet */
     if (g_MemHasBeenBSwapped == 0)

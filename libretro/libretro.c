@@ -832,3 +832,23 @@ uint32_t get_retro_screen_height()
 {
    return retro_screen_height;
 }
+
+static int GamesharkActive = 0;
+
+int event_gameshark_active(void)
+{
+    return GamesharkActive;
+}
+
+void event_set_gameshark(int active)
+{
+    // if boolean value doesn't change then just return
+    if (!active == !GamesharkActive)
+        return;
+
+    // set the button state
+    GamesharkActive = (active ? 1 : 0);
+
+    // notify front-end application that gameshark button state has changed
+    StateChanged(M64CORE_INPUT_GAMESHARK, GamesharkActive);
+}

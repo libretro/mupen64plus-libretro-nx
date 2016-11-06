@@ -14,12 +14,6 @@ GLupeN64 uses GLideN64 (a graphics plugin that is not available in mupen64plus-l
 
 By choosing one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
 
-#### What is not supported:
-
-Cheats
-
-32-bit Windows, iOS. I don't have those types of systems so I can't test them. I am more than willing to accept pull requests however.
-
 #### Acknowledgments
 
 A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64. I haven't really written any code for this project, I'm just putting together the work by other people.
