@@ -51,12 +51,7 @@ void _getWSPath(const char * _path, wchar_t * _strPath)
 	_cutLastPathSeparator(_strPath);
 }
 
-void PluginAPI::GetUserDataPath(wchar_t * _strPath)
-{
-	_getWSPath(ConfigGetUserDataPath(), _strPath);
-}
-
-void PluginAPI::GetUserCachePath(wchar_t * _strPath)
+void getRetroArchDir(wchar_t * _strPath)
 {
 	char* systemDir;
 	environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
@@ -65,6 +60,15 @@ void PluginAPI::GetUserCachePath(wchar_t * _strPath)
 		str += "/";
 	str += "GLupeN64/";
 	_getWSPath(str.c_str(), _strPath);
+}
+void PluginAPI::GetUserDataPath(wchar_t * _strPath)
+{
+	getRetroArchDir(_strPath);
+}
+
+void PluginAPI::GetUserCachePath(wchar_t * _strPath)
+{
+	getRetroArchDir(_strPath);
 }
 
 void PluginAPI::FindPluginPath(wchar_t * _strPath)

@@ -165,7 +165,7 @@ else ifneq (,$(findstring ios,$(platform)))
 # Android
 else ifneq (,$(findstring android,$(platform)))
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
-   LDFLAGS += -llog
+   LDFLAGS += -llog -L$(ROOT_DIR)/custom/android
    ifneq (,$(findstring gles3,$(platform)))
       GL_LIB := -lGLESv3
       GLES3 = 1
@@ -267,11 +267,11 @@ OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o) $(
 CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 
-ifneq ($(platform), emscripten)
-   LDFLAGS    += -lz
+ifeq (,$(findstring android,$(platform)))
+   LDFLAGS    += -lpthread
 endif
 
-LDFLAGS    += $(fpic) -O3
+LDFLAGS    += $(fpic) -O3 -lz -lpng
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)

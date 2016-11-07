@@ -60,6 +60,9 @@ extern u32 EnableCopyColorToRDRAM;
 extern u32 EnableCopyDepthToRDRAM;
 extern u32 EnableCopyColorFromRDRAM;
 extern u32 AspectRatio;
+extern u32 txFilterMode;
+extern u32 txEnhancementMode;
+extern u32 txHiresEnable;
 
 #ifdef GLESX
 #undef GL_NUM_EXTENSIONS

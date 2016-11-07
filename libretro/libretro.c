@@ -83,6 +83,9 @@ u32 EnableCopyColorToRDRAM = 0;
 u32 EnableCopyDepthToRDRAM = 0;
 u32 EnableCopyColorFromRDRAM = 0;
 u32 AspectRatio = 0;
+u32 txFilterMode = 0;
+u32 txEnhancementMode = 0;
+u32 txHiresEnable = 0;
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -157,6 +160,12 @@ static void setup_variables(void)
 #else
          "Less accurate blending mode; False|True" },
 #endif
+      { "glupen64-txFilterMode",
+         "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
+      { "glupen64-txEnhancementMode",
+         "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
+      { "glupen64-txHiresEnable",
+         "Use High-Res textures; False|True" },
       {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       {"glupen64-pak1",
@@ -585,6 +594,70 @@ void update_variables()
          enableNativeResTexrects = 1;
       else
          enableNativeResTexrects = 0;
+   }
+
+   var.key = "glupen64-txFilterMode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "Smooth filtering 1"))
+         txFilterMode = 1;
+      else if (!strcmp(var.value, "Smooth filtering 2"))
+         txFilterMode = 2;
+      else if (!strcmp(var.value, "Smooth filtering 3"))
+         txFilterMode = 3;
+      else if (!strcmp(var.value, "Smooth filtering 4"))
+         txFilterMode = 4;
+      else if (!strcmp(var.value, "Sharp filtering 1"))
+         txFilterMode = 5;
+      else if (!strcmp(var.value, "Sharp filtering 2"))
+         txFilterMode = 6;
+      else
+         txFilterMode = 0;
+   }
+
+   var.key = "glupen64-txEnhancementMode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "As Is"))
+         txEnhancementMode = 1;
+      else if (!strcmp(var.value, "X2"))
+         txEnhancementMode = 2;
+      else if (!strcmp(var.value, "X2SAI"))
+         txEnhancementMode = 3;
+      else if (!strcmp(var.value, "HQ2X"))
+         txEnhancementMode = 4;
+      else if (!strcmp(var.value, "HQ2XS"))
+         txEnhancementMode = 5;
+      else if (!strcmp(var.value, "LQ2X"))
+         txEnhancementMode = 6;
+      else if (!strcmp(var.value, "LQ2XS"))
+         txEnhancementMode = 7;
+      else if (!strcmp(var.value, "HQ4X"))
+         txEnhancementMode = 8;
+      else if (!strcmp(var.value, "2xBRZ"))
+         txEnhancementMode = 9;
+      else if (!strcmp(var.value, "3xBRZ"))
+         txEnhancementMode = 10;
+      else if (!strcmp(var.value, "4xBRZ"))
+         txEnhancementMode = 11;
+      else if (!strcmp(var.value, "5xBRZ"))
+         txEnhancementMode = 12;
+      else if (!strcmp(var.value, "6xBRZ"))
+         txEnhancementMode = 13;
+      else
+         txEnhancementMode = 0;
+   }
+
+   var.key = "glupen64-txHiresEnable";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         txHiresEnable = 1;
+      else
+         txHiresEnable = 0;
    }
 
    var.key = "glupen64-EnableLegacyBlending";

@@ -19,6 +19,8 @@ INCFLAGS += \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
 	-I$(ROOT_DIR)/custom/GLideN64 \
+	-I$(VIDEODIR_GLIDEN64)/src/inc \
+	-I$(VIDEODIR_GLIDEN64)/src/GLideNHQ/inc \
 	-I$(GLSL_OPT_DIR)/src/glsl \
 	-I$(GLSL_OPT_DIR)/include \
 	-I$(GLSL_OPT_DIR)/src \
@@ -27,10 +29,9 @@ INCFLAGS += \
 ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
 endif
+
 # libco
-ifneq ($(platform), emscripten)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
-endif
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
 
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
@@ -193,11 +194,8 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
-	$(LIBRETRO_COMM_DIR)/features/features_cpu.c
-
-ifneq ($(platform), emscripten)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/streams/file_stream.c
-endif
+	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
+	$(LIBRETRO_COMM_DIR)/streams/file_stream.c
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
@@ -248,10 +246,30 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GLUniforms/UniformSet.cpp \
 	$(VIDEODIR_GLIDEN64)/src/common/CommonAPIImpl_common.cpp \
 	$(ROOT_DIR)/custom/GLideN64/MupenPlusPluginAPI.cpp \
-	$(VIDEODIR_GLIDEN64)/src/TxFilterStub.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/OpenGL_mupenplus.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
+
+ifneq (,$(findstring android,$(platform)))
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp
+endif
+
+SOURCES_CXX   += \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_2xsai.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_hq2x.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_hq4x.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_xbrz.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxDbg.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilter.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilterExport.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxHiResCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxImage.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxQuantize.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxReSample.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxTexCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxUtil.cpp
 
 ifneq (,$(findstring rpi3,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
@@ -295,9 +313,7 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
 endif
 
 #GLSL OPT
-ifeq ($(platform), emscripten)
-GLSL_OPT = 0
-else ifeq ($(GLES),1)
+ifeq ($(GLES),1)
 GLSL_OPT = 1
 else ifeq ($(GLES3),1)
 GLSL_OPT = 1

@@ -88,6 +88,9 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.bufferSwapMode = 2;
 	config.generalEmulation.enableFragmentDepthWrite = 0;
 #endif
+	config.textureFilter.txFilterMode = txFilterMode;
+	config.textureFilter.txEnhancementMode = txEnhancementMode;
+	config.textureFilter.txHiresEnable = txHiresEnable;
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings();
 }
