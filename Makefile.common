@@ -19,7 +19,6 @@ INCFLAGS += \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
 	-I$(ROOT_DIR)/custom/GLideN64 \
-	-I$(ROOT_DIR)/custom/glsl-optimizer \
 	-I$(GLSL_OPT_DIR)/src/glsl \
 	-I$(GLSL_OPT_DIR)/include \
 	-I$(GLSL_OPT_DIR)/src \
