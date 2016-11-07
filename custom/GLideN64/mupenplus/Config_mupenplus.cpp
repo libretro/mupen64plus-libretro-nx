@@ -52,15 +52,15 @@ void LoadCustomSettings()
 			case INI_PROPERTY:
 			{
 				if (found) {
-					if (!strcmp(l.name, "frameBufferEmulation.copyToRDRAM"))
+					if (!strcmp(l.name, "frameBufferEmulation\\copyToRDRAM"))
 						config.frameBufferEmulation.copyToRDRAM = atoi(l.value);
-					else if (!strcmp(l.name, "frameBufferEmulation.copyFromRDRAM"))
+					else if (!strcmp(l.name, "frameBufferEmulation\\copyFromRDRAM"))
 						config.frameBufferEmulation.copyFromRDRAM = atoi(l.value);
-					else if (!strcmp(l.name, "frameBufferEmulation.copyDepthToRDRAM"))
+					else if (!strcmp(l.name, "frameBufferEmulation\\copyDepthToRDRAM"))
 						config.frameBufferEmulation.copyDepthToRDRAM = atoi(l.value);
-					else if (!strcmp(l.name, "frameBufferEmulation.copyAuxToRDRAM"))
+					else if (!strcmp(l.name, "frameBufferEmulation\\copyAuxToRDRAM"))
 						config.frameBufferEmulation.copyAuxToRDRAM = atoi(l.value);
-					else if (!strcmp(l.name, "frameBufferEmulation.N64DepthCompare"))
+					else if (!strcmp(l.name, "frameBufferEmulation\\N64DepthCompare"))
 						config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
 				}
 			}
