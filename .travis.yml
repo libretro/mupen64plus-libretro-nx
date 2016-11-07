@@ -8,13 +8,14 @@ before_install:
   - docker run --name fedora -it -d fedora /bin/bash
 env:
   - PLATFORM=linux
-  - PLATFORM=win
+  - PLATFORM=win64
+  - PLATFORM=win32
   - PLATFORM=android
   - PLATFORM=android-gles3
 
 script:
   - docker exec fedora dnf -q -y update
-  - docker exec fedora dnf -q -y install make git gcc-c++ mesa-libGL-devel mingw64-gcc-c++ mingw64-zlib zlib-devel flex bison wget unzip zip python awscli
+  - docker exec fedora dnf -q -y install make git gcc-c++ mesa-libGL-devel mingw64-gcc-c++ mingw64-zlib mingw32-gcc-c++ mingw32-zlib zlib-devel flex bison wget unzip zip python awscli nasm
   - docker exec fedora /bin/bash -c "if [[ $PLATFORM == "android*" ]]; then wget -q https://dl.google.com/android/repository/android-ndk-r13b-linux-x86_64.zip; unzip -qq android-ndk-r13b-linux-x86_64.zip; ./android-ndk-r13b/build/tools/make_standalone_toolchain.py --arch arm --api 21 --install-dir /mychain; fi"
   - docker exec fedora git clone --depth 25 -b $TRAVIS_BRANCH https://github.com/loganmc10/GLupeN64.git
   - docker exec fedora /bin/bash -c "export PATH=$PATH:/mychain/bin; cd GLupeN64; if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then git checkout $TRAVIS_COMMIT; else git fetch origin pull/$TRAVIS_PULL_REQUEST/head:temp; git checkout temp; fi; platform=$PLATFORM make"

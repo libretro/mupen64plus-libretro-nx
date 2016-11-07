@@ -219,8 +219,15 @@ else ifneq (,$(findstring win,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
-   CC = x86_64-w64-mingw32-gcc
-   CXX = x86_64-w64-mingw32-g++
+   ifneq (,$(findstring win32,$(platform)))
+      CC = i686-w64-mingw32-gcc
+      CXX = i686-w64-mingw32-g++
+      WITH_DYNAREC = x86
+   else
+      CC = x86_64-w64-mingw32-gcc
+      CXX = x86_64-w64-mingw32-g++
+      WITH_DYNAREC = x86_64
+   endif
 endif
 
 ifneq (,$(findstring win,$(platform)))
