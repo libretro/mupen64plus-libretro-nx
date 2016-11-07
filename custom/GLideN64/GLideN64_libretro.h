@@ -61,10 +61,6 @@ extern u32 EnableCopyDepthToRDRAM;
 extern u32 EnableCopyColorFromRDRAM;
 extern u32 AspectRatio;
 
-#if defined(MINGW) && defined(__cplusplus)
-#include "mingw.thread.h"
-#endif
-
 #ifdef GLESX
 #undef GL_NUM_EXTENSIONS
 #endif
