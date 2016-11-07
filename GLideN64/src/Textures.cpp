@@ -1077,13 +1077,11 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 	pDest = (u32*)malloc(_pTexture->textureBytes);
 	assert(pDest != nullptr);
 
-	GLint mipLevel = 0, maxLevel = 0;
-#ifndef GLES2
-	if (config.generalEmulation.enableLOD != 0 && gSP.texture.level > 1)
-		maxLevel = _tile == 0 ? 0 : gSP.texture.level - 1;
-#endif
+	GLint mipLevel = 0;
+	_pTexture->max_level = 0;
 
-	_pTexture->max_level = maxLevel;
+	if (config.generalEmulation.enableLOD != 0 && gSP.texture.level > 1)
+		_pTexture->max_level = static_cast<u8>(_tile == 0 ? 0 : gSP.texture.level - 1);
 
 	CachedTexture tmptex(0);
 	memcpy(&tmptex, _pTexture, sizeof(CachedTexture));
@@ -1112,7 +1110,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 
 		bool bLoaded = false;
 		if ((config.textureFilter.txEnhancementMode | config.textureFilter.txFilterMode) != 0 &&
-				maxLevel == 0 &&
+				_pTexture->max_level == 0 &&
 				(config.textureFilter.txFilterIgnoreBG == 0 || (RSP.cmd != G_TEXRECT && RSP.cmd != G_TEXRECTFLIP)) &&
 				TFH.isInited())
 		{
@@ -1145,7 +1143,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 			glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, pDest);
 #endif
 		}
-		if (mipLevel == maxLevel)
+		if (mipLevel == _pTexture->max_level)
 			break;
 		++mipLevel;
 		const u32 tileMipLevel = gSP.texture.tile + mipLevel + 1;
