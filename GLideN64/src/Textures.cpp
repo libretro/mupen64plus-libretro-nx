@@ -1088,7 +1088,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 
 	line = tmptex.line;
 #ifndef GLES2
-	glTexStorage2D(GL_TEXTURE_2D, maxLevel + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
+	glTexStorage2D(GL_TEXTURE_2D, _pTexture->max_level + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
 #endif
 	while (true) {
 		_getTextureDestData(tmptex, pDest, glInternalFormat, GetTexel, &line);
