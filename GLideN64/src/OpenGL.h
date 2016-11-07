@@ -99,6 +99,7 @@ class OGLRender
 public:
 	bool use_vbo;
 	bool use_indirect;
+	bool buffer_storage;
 	void drawArrayIndirect(GLenum mode, GLuint first, GLuint count);
 	void updateBO(int buffer, u32 size, u32 count, void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);

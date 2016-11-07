@@ -761,7 +761,7 @@ bool retro_serialize(void *data, size_t size)
    int success = savestates_save_m64p((char*)filename);
    FILE *read_ptr;
    read_ptr = fopen(filename, "rb");
-   fread(data, size, 1, read_ptr);
+   int read_size = fread(data, size, 1, read_ptr);
    fclose(read_ptr);
    remove(filename);
    if (success)

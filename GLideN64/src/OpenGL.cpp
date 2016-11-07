@@ -694,8 +694,6 @@ void OGLRender::updateBO(int buffer, u32 size, u32 count, void *pointer) {
 		bo_offset[buffer] = 0;
 		bo_offset_bytes[buffer] = 0;
 	}
-	memcpy(&bo_data[buffer][bo_offset_bytes[buffer]], pointer, length);
-#ifdef OPENGL_DEBUG
 	GLenum buffer_type;
 	if (buffer == IBO)
 		buffer_type = GL_ELEMENT_ARRAY_BUFFER;
@@ -703,9 +701,18 @@ void OGLRender::updateBO(int buffer, u32 size, u32 count, void *pointer) {
 		buffer_type = GL_DRAW_INDIRECT_BUFFER;
 	else
 		buffer_type = GL_ARRAY_BUFFER;
-	glBindBuffer(buffer_type, bos[buffer]);
-	glFlushMappedBufferRange(buffer_type, bo_offset_bytes[buffer], length);
+	if (buffer_storage) {
+		memcpy(&bo_data[buffer][bo_offset_bytes[buffer]], pointer, length);
+#ifdef OPENGL_DEBUG
+		glBindBuffer(buffer_type, bos[buffer]);
+		glFlushMappedBufferRange(buffer_type, bo_offset_bytes[buffer], length);
 #endif
+	} else {
+		glBindBuffer(buffer_type, bos[buffer]);
+		void *temp = glMapBufferRange(buffer_type, bo_offset_bytes[buffer], length, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+		memcpy (temp, pointer, length);
+		glUnmapBuffer(buffer_type);
+	}
 	bo_offset[buffer] += count;
 	bo_offset_bytes[buffer] += length;
 }
@@ -2316,10 +2323,12 @@ void OGLRender::_initVBO()
 #elif defined(GLESX)
 	if (majorVersion >= 3 && minorVersion >= 1)
 		use_indirect = 1;
-	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE) && use_indirect;
+	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	use_vbo = buffer_storage && use_indirect;
 #else
 	use_indirect = majorVersion >= 4 || OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
-	use_vbo = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
+	use_vbo = true;
 #endif
 	if (use_vbo) {
 		glGenBuffers(BO_COUNT, bos);
@@ -2348,12 +2357,15 @@ void OGLRender::_initVBO()
 			bo_offset[i] = 0;
 			bo_offset_bytes[i] = 0;
 			glBindBuffer(buffer_type, bos[i]);
+			if (buffer_storage) {
 #ifndef GLESX
-			glBufferStorage(buffer_type, bo_max_size, NULL, bo_access);
+				glBufferStorage(buffer_type, bo_max_size, NULL, bo_access);
 #else
-			glBufferStorageEXT(buffer_type, bo_max_size, NULL, bo_access);
+				glBufferStorageEXT(buffer_type, bo_max_size, NULL, bo_access);
 #endif
-			bo_data[i] = (char*)glMapBufferRange(buffer_type, 0, bo_max_size, bo_map_access);
+				bo_data[i] = (char*)glMapBufferRange(buffer_type, 0, bo_max_size, bo_map_access);
+			} else
+				glBufferData(buffer_type, bo_max_size, NULL, GL_DYNAMIC_DRAW);
 		}
 	}
 }
