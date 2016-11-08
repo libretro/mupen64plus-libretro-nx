@@ -5,7 +5,9 @@
 #include <stddef.h>
 
 #ifdef OS_WINDOWS
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #else
 #include "winlnxdefs.h"

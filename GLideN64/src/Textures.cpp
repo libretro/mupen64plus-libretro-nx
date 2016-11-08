@@ -1087,8 +1087,13 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 	memcpy(&tmptex, _pTexture, sizeof(CachedTexture));
 
 	line = tmptex.line;
+	bool use_txfilter = (config.textureFilter.txEnhancementMode | config.textureFilter.txFilterMode) != 0 &&
+				_pTexture->max_level == 0 &&
+				(config.textureFilter.txFilterIgnoreBG == 0 || (RSP.cmd != G_TEXRECT && RSP.cmd != G_TEXRECTFLIP)) &&
+				TFH.isInited();
 #ifndef GLES2
-	glTexStorage2D(GL_TEXTURE_2D, _pTexture->max_level + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
+	if (!use_txfilter)
+		glTexStorage2D(GL_TEXTURE_2D, _pTexture->max_level + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
 #endif
 	while (true) {
 		_getTextureDestData(tmptex, pDest, glInternalFormat, GetTexel, &line);
@@ -1109,10 +1114,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		}
 
 		bool bLoaded = false;
-		if ((config.textureFilter.txEnhancementMode | config.textureFilter.txFilterMode) != 0 &&
-				_pTexture->max_level == 0 &&
-				(config.textureFilter.txFilterIgnoreBG == 0 || (RSP.cmd != G_TEXRECT && RSP.cmd != G_TEXRECTFLIP)) &&
-				TFH.isInited())
+		if (use_txfilter)
 		{
 			GHQTexInfo ghqTexInfo;
 			if (txfilter_filter((u8*)pDest, tmptex.realWidth, tmptex.realHeight,
