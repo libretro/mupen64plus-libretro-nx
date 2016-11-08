@@ -313,12 +313,6 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
 endif
 
 #GLSL OPT
-ifeq ($(GLES),1)
-GLSL_OPT = 1
-else ifeq ($(GLES3),1)
-GLSL_OPT = 1
-endif
-
 ifeq ($(GLSL_OPT),1)
 
 SETUP_GLSL:=$(shell sh ./glsl-optimizer/glsl_setup.sh)

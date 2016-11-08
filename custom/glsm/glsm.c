@@ -221,7 +221,9 @@ static GLuint default_framebuffer;
 static GLint glsm_max_textures;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
+#ifdef GLSL_OPT
 glslopt_ctx* ctx;
+#endif
 static int window_first = 0;
 static int resetting_context = 0;
 
@@ -1240,7 +1242,7 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-#ifdef HAVE_OPENGLES
+#ifdef GLSL_OPT
    glslopt_shader_type type;
    GLint _type;
    glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
@@ -2340,7 +2342,7 @@ static void glsm_state_unbind(void)
 
 static bool glsm_state_ctx_destroy(void *data)
 {
-#ifdef HAVE_OPENGLES
+#ifdef GLSL_OPT
    glslopt_cleanup (ctx);
 #endif
 
@@ -2386,7 +2388,7 @@ static bool glsm_state_ctx_init(void *data)
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
 
-#ifdef HAVE_OPENGLES
+#ifdef GLSL_OPT
 #ifdef HAVE_OPENGLES2
    glslopt_target target = kGlslTargetOpenGLES20;
 #else

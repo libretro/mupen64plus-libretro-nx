@@ -3,6 +3,7 @@ DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
 HAVE_OPENGL=1
+GLSL_OPT=0
 
 DYNAFLAGS :=
 INCFLAGS  :=
@@ -68,7 +69,8 @@ else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    GLES = 1
-   CPUFLAGS += -DVC
+   GLSL_OPT = 1
+   CPUFLAGS += -DVC -DGLSL_OPT
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
    else
@@ -164,8 +166,21 @@ else ifneq (,$(findstring ios,$(platform)))
 
 # Android
 else ifneq (,$(findstring android,$(platform)))
-   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -march=armv7-a -Wl,--fix-cortex-a8
-   LDFLAGS += -llog -L$(ROOT_DIR)/custom/android
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -llog
+   ifneq (,$(findstring x86,$(platform)))
+      CC = i686-linux-android-gcc
+      CXX = i686-linux-android-g++
+      WITH_DYNAREC = x86
+      LDFLAGS += -L$(ROOT_DIR)/custom/android/x86
+   else
+      CC = arm-linux-androideabi-gcc
+      CXX = arm-linux-androideabi-g++
+      WITH_DYNAREC = arm
+      HAVE_NEON = 1
+      GLSL_OPT = 1
+      CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -mno-unaligned-access -DGLSL_OPT
+      LDFLAGS += -march=armv7-a -Wl,--fix-cortex-a8 -L$(ROOT_DIR)/custom/android/arm
+   endif
    ifneq (,$(findstring gles3,$(platform)))
       GL_LIB := -lGLESv3
       GLES3 = 1
@@ -175,11 +190,7 @@ else ifneq (,$(findstring android,$(platform)))
       GLES = 1
       TARGET := $(TARGET_NAME)_libretro_android.so
    endif
-   CC = arm-linux-androideabi-gcc
-   CXX = arm-linux-androideabi-g++
-   WITH_DYNAREC=arm
-   HAVE_NEON = 1
-   CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM_ASM -DANDROID -mno-unaligned-access
+   CPUFLAGS += -DANDROID
 
 # emscripten
 else ifeq ($(platform), emscripten)
