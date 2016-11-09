@@ -377,7 +377,7 @@ m64p_error main_run(void)
 
     g_pi.sram.user_data = NULL;
     g_pi.sram.save = dummy_save;
-    g_pi.sram.data = saved_memory.flashram;
+    g_pi.sram.data = saved_memory.sram;
 
 #ifdef WITH_LIRC
     lircStart();
