@@ -20,9 +20,6 @@
 #include <features/features_cpu.h>
 
 #include "audio_resampler_driver.h"
-#ifdef RARCH_INTERNAL
-#include "../performance_counters.h"
-#endif
 
 static const rarch_resampler_t *resampler_drivers[] = {
    &sinc_resampler,
