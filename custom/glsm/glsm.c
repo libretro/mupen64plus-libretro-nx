@@ -33,6 +33,14 @@
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
 #endif
 
+#ifdef HAVE_OPENGLES
+#include <EGL/egl.h>
+typedef void (GL_APIENTRYP PFNGLDRAWARRAYSINDIRECTPROC) (GLenum mode, const void *indirect);
+typedef void (GL_APIENTRYP PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const void *indirect);
+PFNGLDRAWARRAYSINDIRECTPROC m_glDrawArraysIndirect;
+PFNGLDRAWELEMENTSINDIRECTPROC m_glDrawElementsIndirect;
+#endif
+
 struct gl_cached_state
 {
    struct
@@ -776,7 +784,11 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 {
 #ifndef HAVE_OPENGLES2
+#ifdef HAVE_OPENGLES
+   m_glDrawArraysIndirect(mode, indirect);
+#else
    glDrawArraysIndirect(mode, indirect);
+#endif
 #endif
 }
 /*
@@ -793,7 +805,11 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
 void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 {
 #ifndef HAVE_OPENGLES2
+#ifdef HAVE_OPENGLES
+   m_glDrawElementsIndirect(mode, type, indirect);
+#else
    glDrawElementsIndirect(mode, type, indirect);
+#endif
 #endif
 }
 
@@ -2186,6 +2202,11 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 
 static void glsm_state_setup(void)
 {
+#ifdef HAVE_OPENGLES
+   m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
+   m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
+#endif
+
 #ifdef OPENGL_DEBUG
 #ifdef HAVE_OPENGLES
    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
