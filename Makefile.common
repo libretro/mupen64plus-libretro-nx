@@ -20,7 +20,6 @@ INCFLAGS += \
 	-I$(LIBRETRO_DIR) \
 	-I$(ROOT_DIR)/custom/GLideN64 \
 	-I$(VIDEODIR_GLIDEN64)/src/inc \
-	-I$(VIDEODIR_GLIDEN64)/src/GLideNHQ/inc \
 	-I$(GLSL_OPT_DIR)/src/glsl \
 	-I$(GLSL_OPT_DIR)/include \
 	-I$(GLSL_OPT_DIR)/src \

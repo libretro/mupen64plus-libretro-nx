@@ -169,6 +169,7 @@ else ifneq (,$(findstring ios,$(platform)))
 # Android
 else ifneq (,$(findstring android,$(platform)))
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -llog
+   INCFLAGS += -I$(ROOT_DIR)/GLideN64/src/GLideNHQ/inc
    ifneq (,$(findstring x86,$(platform)))
       CC = i686-linux-android-gcc
       CXX = i686-linux-android-g++
