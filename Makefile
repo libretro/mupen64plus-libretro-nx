@@ -292,7 +292,11 @@ LDFLAGS    += $(fpic) -O3 -lz -lpng
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
+ifeq ($(STATIC_LINKING), 1)
+	$(AR) rcs $@ $(OBJECTS)
+else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+endif
 
 %.o: %.asm
 	nasm $(ASFLAGS) $< -o $@
