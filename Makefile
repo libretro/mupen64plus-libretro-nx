@@ -81,10 +81,10 @@ else ifneq (,$(findstring rpi,$(platform)))
    endif
    WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
-      CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mno-unaligned-access
+      CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
       HAVE_NEON = 1
    else ifneq (,$(findstring rpi3,$(platform)))
-      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mno-unaligned-access
+      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
       HAVE_NEON = 1
    endif
 
@@ -181,7 +181,7 @@ else ifneq (,$(findstring android,$(platform)))
       WITH_DYNAREC = arm
       HAVE_NEON = 1
       GLSL_OPT = 1
-      CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -mno-unaligned-access
+      CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon
       LDFLAGS += -march=armv7-a -Wl,--fix-cortex-a8 -L$(ROOT_DIR)/custom/android/arm
    endif
    ifneq (,$(findstring gles3,$(platform)))
@@ -256,8 +256,6 @@ include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
    COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT
-else
-   COREFLAGS += -mstackrealign -DARCH_MIN_SSE2 -msse -msse2
 endif
 
 ifeq ($(GLSL_OPT), 1)
