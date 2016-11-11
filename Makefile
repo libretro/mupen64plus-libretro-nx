@@ -252,6 +252,16 @@ else
    ASFLAGS = -f elf -d ELF_TYPE
 endif
 
+ifeq ($(STATIC_LINKING), 1)
+   ifneq (,$(findstring win,$(platform)))
+      TARGET := $(TARGET:.dll=.lib)
+   else ifneq ($(platform), $(filter $(platform), osx ios))
+      TARGET := $(TARGET:.dylib=.a)            
+   else
+      TARGET := $(TARGET:.so=.a)
+   endif
+endif
+
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
