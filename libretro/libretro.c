@@ -335,16 +335,11 @@ unsigned retro_get_region (void)
 
 void copy_file(char * ininame, char * fileName)
 {
-   wchar_t w_filename[PATH_SIZE];
    const char* filename = ConfigGetSharedDataFilepath(fileName);
-   mbstowcs(w_filename, filename, PATH_SIZE);
-   if (!osal_path_existsW(w_filename)) {
-      FILE *fp = fopen(filename, "w");
-      if (fp != NULL)
-      {
-         fputs(ininame, fp);
-         fclose(fp);
-      }
+   FILE *fp = fopen(filename, "w");
+   if (fp != NULL)    {
+      fputs(ininame, fp);
+      fclose(fp);
    }
 }
 
