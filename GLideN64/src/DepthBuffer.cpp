@@ -149,7 +149,7 @@ void DepthBuffer::_initDepthBufferTexture(FrameBuffer * _pBuffer, CachedTexture 
 #ifdef GL_MULTISAMPLING_SUPPORT
 	if (_multisample) {
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, _pTexture->glName);
-		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling, GL_DEPTH_COMPONENT24, _pTexture->realWidth, _pTexture->realHeight, false);
+		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, config.video.multisampling, fboFormats.depthInternalFormat, _pTexture->realWidth, _pTexture->realHeight, false);
 		_pTexture->frameBufferTexture = CachedTexture::fbMultiSample;
 	} else
 #endif // GL_MULTISAMPLING_SUPPORT
