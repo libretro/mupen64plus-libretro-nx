@@ -47,6 +47,7 @@ struct gl_cached_state
    struct
    {
       GLuint ids[32];
+      GLenum target[32];
    } bind_textures;
 
    struct
@@ -607,9 +608,10 @@ void rglActiveTexture(GLenum texture)
  */
 void rglBindTexture(GLenum target, GLuint texture)
 {
-   if (gl_state.bind_textures.ids[active_texture] != texture) {
+   if (gl_state.bind_textures.ids[active_texture] != texture || gl_state.bind_textures.target[active_texture] != target) {
       glBindTexture(target, texture);
       gl_state.bind_textures.ids[active_texture] = texture;
+      gl_state.bind_textures.target[active_texture] = target;
    }
 }
 
@@ -875,6 +877,7 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
       free(texture_params[textures[i]]);
       if (textures[i] == gl_state.bind_textures.ids[active_texture])
          gl_state.bind_textures.ids[active_texture] = 0;
+         gl_state.bind_textures.target[active_texture] = 0;
    }
    glDeleteTextures(n, textures);
 }
@@ -1984,7 +1987,7 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
       GLenum internalformat, GLsizei width, GLsizei height,
       GLboolean fixedsamplelocations)
 {
-#if defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glTexStorage2DMultisample(target, samples, internalformat,
          width, height, fixedsamplelocations);
 #else
@@ -2280,6 +2283,12 @@ static void glsm_state_setup(void)
    if (glsm_max_textures > 32)
       glsm_max_textures = 32;
 
+   int i;
+   for (i = 0; i < glsm_max_textures; ++i) {
+      gl_state.bind_textures.target[i] = GL_TEXTURE_2D;
+      gl_state.bind_textures.ids[i] = 0;
+   }
+
    gl_state.array_buffer                = 0;
    gl_state.index_buffer                = 0;
    gl_state.bindvertex.array            = 0;
@@ -2379,7 +2388,7 @@ static void glsm_state_bind(void)
          gl_state.viewport.h);
 
    glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[0]);
+   glBindTexture(gl_state.bind_textures.target[0], gl_state.bind_textures.ids[0]);
    glActiveTexture(GL_TEXTURE0 + active_texture);
 }
 
