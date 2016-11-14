@@ -237,7 +237,7 @@ else ifneq (,$(findstring win,$(platform)))
       CC = i686-w64-mingw32-gcc
       CXX = i686-w64-mingw32-g++
       WITH_DYNAREC = x86
-   else
+   else ifneq (,$(findstring win64,$(platform)))
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
       WITH_DYNAREC = x86_64
