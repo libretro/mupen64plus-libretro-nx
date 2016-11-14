@@ -29,6 +29,7 @@
 
 #define MAX_UNIFORMS 500
 #define MAX_TEXTURES 128000
+#define MAX_FRAMEBUFFER 500
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
 #endif
@@ -224,6 +225,7 @@ struct gl_texture_params
 
 static struct gl_texture_params* texture_params[MAX_TEXTURES];
 static struct gl_program_uniforms* program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
+static GLuint gl_framebuffer_depth[MAX_FRAMEBUFFER];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
@@ -754,6 +756,16 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
       GLenum textarget, GLuint texture, GLint level)
 {
    glFramebufferTexture2D(target, attachment, textarget, texture, level);
+   if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (target == GL_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[0].location] = 1;
+#ifndef HAVE_OPENGLES2
+      else if (target == GL_DRAW_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[0].location] = 1;
+      else if (target == GL_READ_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[1].location] = 1;
+#endif
+   }
 }
 
 /*
@@ -845,14 +857,15 @@ void rglCompressedTexImage2D(GLenum target, GLint level,
 
 void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 {
-   glDeleteFramebuffers(n, framebuffers);
    int i, p;
    for (i = 0; i < n; ++i) {
+      gl_framebuffer_depth[framebuffers[i]] = 0;
       for (p = 0; p < 2; ++p) {
          if (framebuffers[i] == gl_state.framebuf[p].location)
             gl_state.framebuf[p].location = 0;
       }
    }
+   glDeleteFramebuffers(n, framebuffers);
 }
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
@@ -966,6 +979,16 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
       GLenum renderbuffertarget, GLuint renderbuffer)
 {
    glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+   if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (target == GL_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[0].location] = 1;
+#ifndef HAVE_OPENGLES2
+      else if (target == GL_DRAW_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[0].location] = 1;
+      else if (target == GL_READ_FRAMEBUFFER)
+         gl_framebuffer_depth[gl_state.framebuf[1].location] = 1;
+#endif
+   }
 }
 
 /*
@@ -1864,6 +1887,19 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
    glGenFramebuffers(n, ids);
 }
 
+void clearDepth(GLuint framebuffer)
+{
+   if (gl_framebuffer_depth[framebuffer] || framebuffer == default_framebuffer) {
+      int temp_scissor = gl_state.cap_state[SGL_SCISSOR_TEST];
+      GLboolean temp_depthmask = gl_state.depthmask.mask;
+      rglDisable(SGL_SCISSOR_TEST);
+      rglDepthMask(GL_TRUE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      rglDepthMask(temp_depthmask);
+      if (temp_scissor)
+         rglEnable(SGL_SCISSOR_TEST);
+   }
+}
 /*
  * Category: FBO
  *
@@ -1877,6 +1913,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
          glBindFramebuffer(target, framebuffer);
+         clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
          gl_state.framebuf[1].location = framebuffer;
       }
@@ -1885,12 +1922,14 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    else if (target == GL_DRAW_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer) {
          glBindFramebuffer(target, framebuffer);
+         clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
       }
    }
    else if (target == GL_READ_FRAMEBUFFER) {
       if (gl_state.framebuf[1].location != framebuffer) {
          glBindFramebuffer(target, framebuffer);
+         clearDepth(framebuffer);
          gl_state.framebuf[1].location = framebuffer;
       }
    }
@@ -2218,6 +2257,7 @@ static void glsm_state_setup(void)
 #endif
 
    memset(&gl_state, 0, sizeof(struct gl_cached_state));
+   memset(&gl_framebuffer_depth, 0, sizeof(GLuint) * MAX_FRAMEBUFFER);
 
    gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
    gl_state.cap_translate[SGL_BLEND]                    = GL_BLEND;
