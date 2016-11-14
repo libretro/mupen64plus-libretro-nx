@@ -174,13 +174,13 @@ static void setup_variables(void)
       {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       {"glupen64-pak1",
-        "Player 1 Pak; memory|rumble|none"},
+        "Player 1 Pak; none|memory|rumble"},
       {"glupen64-pak2",
-        "Player 2 Pak; memory|rumble|none"},
+        "Player 2 Pak; none|memory|rumble"},
       {"glupen64-pak3",
-        "Player 3 Pak; memory|rumble|none"},
+        "Player 3 Pak; none|memory|rumble"},
       {"glupen64-pak4",
-        "Player 4 Pak; memory|rumble|none"},
+        "Player 4 Pak; none|memory|rumble"},
       { NULL, NULL },
    };
 
@@ -725,7 +725,7 @@ void update_variables()
 static void format_saved_memory(void)
 {
    format_sram(saved_memory.sram);
-   format_eeprom(saved_memory.eeprom, sizeof(saved_memory.eeprom));
+   format_eeprom(saved_memory.eeprom, EEPROM_MAX_SIZE);
    format_flashram(saved_memory.flashram);
    format_mempak(saved_memory.mempack[0]);
    format_mempak(saved_memory.mempack[1]);
