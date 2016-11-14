@@ -2254,9 +2254,9 @@ void OGLRender::_initExtensions()
 #ifndef GLES2
 	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
 	LOG(LOG_VERBOSE, "OpenGL major version: %d\n", majorVersion);
+	assert(majorVersion >= 3 && "Plugin requires GL version 3 or higher.");
 	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
 	LOG(LOG_VERBOSE, "OpenGL minor version: %d\n", minorVersion);
-	assert(majorVersion >= 3 && "Plugin requires GL version 3 or higher.");
 #endif
 
 #ifdef GL_MULTISAMPLING_SUPPORT
@@ -2276,6 +2276,7 @@ void OGLRender::_initExtensions()
 #else
 	m_bImageTexture = false;
 #endif
+
 	LOG(LOG_VERBOSE, "ImageTexture support: %s\n", m_bImageTexture ? "yes" : "no");
 	if (!m_bImageTexture)
 		LOG(LOG_WARNING, "N64 depth compare and depth based fog will not work without Image Textures support provided in OpenGL >= 4.3 or GLES >= 3.1\n");
