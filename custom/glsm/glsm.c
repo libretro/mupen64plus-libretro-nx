@@ -877,7 +877,7 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
       free(texture_params[textures[i]]);
       if (textures[i] == gl_state.bind_textures.ids[active_texture])
          gl_state.bind_textures.ids[active_texture] = 0;
-         gl_state.bind_textures.target[active_texture] = 0;
+         gl_state.bind_textures.target[active_texture] = GL_TEXTURE_2D;
    }
    glDeleteTextures(n, textures);
 }
