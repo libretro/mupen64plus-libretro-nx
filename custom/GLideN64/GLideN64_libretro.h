@@ -63,6 +63,7 @@ extern u32 AspectRatio;
 extern u32 txFilterMode;
 extern u32 txEnhancementMode;
 extern u32 txHiresEnable;
+extern u32 MultiSampling;
 
 #ifdef GLESX
 #undef GL_NUM_EXTENSIONS

@@ -86,6 +86,7 @@ u32 AspectRatio = 0;
 u32 txFilterMode = 0;
 u32 txEnhancementMode = 0;
 u32 txHiresEnable = 0;
+u32 MultiSampling = 0;
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -132,6 +133,10 @@ static void setup_variables(void)
          "Aspect Ratio; 4:3|16:9" },
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
+#ifndef HAVE_OPENGLES
+      { "glupen64-MultiSampling",
+         "MSAA level; 0|2|4|8|16" },
+#endif
       { "glupen64-EnableFBEmulation",
 #ifdef VC
          "Framebuffer emulation; False|True" },
@@ -487,6 +492,13 @@ void update_variables()
          bilinearMode = 0;
       else
          bilinearMode = 1;
+   }
+
+   var.key = "glupen64-MultiSampling";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      MultiSampling = atoi(var.value);
    }
 
    var.key = "glupen64-EnableFBEmulation";
