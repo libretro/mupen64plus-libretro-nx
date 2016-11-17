@@ -180,6 +180,7 @@ RETRO_BEGIN_DECLS
 #define GL_MAP_UNSYNCHRONIZED_BIT     0x0020
 #define GL_MAP_FLUSH_EXPLICIT_BIT     0x0010
 #define GL_DRAW_INDIRECT_BUFFER       0x8F3F
+#define GL_PIXEL_UNPACK_BUFFER        0x88EC
 
 void rglBufferStorage(GLenum target,
                        GLsizeiptr size,

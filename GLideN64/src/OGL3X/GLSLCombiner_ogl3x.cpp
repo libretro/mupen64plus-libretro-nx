@@ -77,11 +77,6 @@ void NoiseTexture::init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Generate Pixel Buffer Object. Initialize it with max buffer size.
-	glGenBuffers(1, &m_PBO);
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, 640*580, nullptr, GL_DYNAMIC_DRAW);
 }
 
 void NoiseTexture::destroy()
@@ -103,19 +98,22 @@ void NoiseTexture::update()
 	const u32 dataSize = VI.width*VI.height;
 	if (dataSize == 0)
 		return;
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, dataSize, GL_MAP_WRITE_BIT);
-	if (ptr == nullptr)
-		return;
+	OGLVideo & ogl = video();
+	OGLRender & render = ogl.getRender();
+	GLubyte ptr[dataSize];
 	for (u32 y = 0; y < VI.height; ++y)	{
 		for (u32 x = 0; x < VI.width; ++x)
 			ptr[x + y*VI.width] = rand()&0xFF;
 	}
-	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 
 	glActiveTexture(GL_TEXTURE0 + g_noiseTexIndex);
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, 0);
+	if (render.use_vbo) {
+		render.updateBO(render.PIX_UNPACK, dataSize, 1, ptr);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
+	} else
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, ptr);
 	m_DList = video().getBuffersSwapCount();
 }
 
@@ -126,6 +124,8 @@ void InitZlutTexture()
 {
 	if (!video().getRender().isImageTexturesSupported())
 		return;
+	OGLVideo & ogl = video();
+	OGLRender & render = ogl.getRender();
 
 #ifdef GLESX
 	std::vector<u32> vecZLUT(0x40000);
@@ -144,7 +144,13 @@ void InitZlutTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	//glBindImageTexture requires an immutable texture object, glTexStorage2D does this
 	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.lutInternalFormat, 512, 512);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, zLUT);
+	if (render.use_vbo) {
+		u32 length = 512 * 512 * sizeof(fboFormats.lutInternalFormat);
+		render.updateBO(render.PIX_UNPACK, length, 1, zLUT);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
+	} else
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, zLUT);
 	glBindImageTexture(ZlutImageUnit, g_zlut_tex, 0, GL_FALSE, GL_FALSE, GL_READ_ONLY, fboFormats.lutInternalFormat);
 }
 
@@ -878,6 +884,8 @@ void SetDepthFogCombiner()
 	if (!video().getRender().isImageTexturesSupported())
 		return;
 
+	OGLVideo & ogl = video();
+	OGLRender & render = ogl.getRender();
 	if (g_paletteCRC256 != gDP.paletteCRC256) {
 		g_paletteCRC256 = gDP.paletteCRC256;
 
@@ -891,7 +899,13 @@ void SetDepthFogCombiner()
 			palette[i] = swapword(src[i*4]);
 		glBindImageTexture(TlutImageUnit, 0, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 		glBindTexture(GL_TEXTURE_2D, g_tlut_tex);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, palette);
+		if (render.use_vbo) {
+			u32 length = 256 * 1 * sizeof(fboFormats.lutInternalFormat);
+			render.updateBO(render.PIX_UNPACK, length, 1, palette);
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
+		} else
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, palette);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindImageTexture(TlutImageUnit, g_tlut_tex, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 	}

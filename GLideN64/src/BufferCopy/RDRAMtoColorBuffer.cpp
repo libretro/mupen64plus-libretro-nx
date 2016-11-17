@@ -196,14 +196,10 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 	m_pTexture->width = width;
 	m_pTexture->height = height;
 	const u32 dataSize = width*height * 4;
-#ifndef GLES2
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, dataSize, nullptr, GL_DYNAMIC_DRAW);
-	GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, dataSize, GL_MAP_WRITE_BIT);
-#else
+
+	OGLVideo & ogl = video();
+	OGLRender & render = ogl.getRender();
 	GLubyte* ptr = (GLubyte*)malloc(dataSize);
-	PBOBinder binder(ptr);
-#endif // GLES2
 	if (ptr == nullptr)
 		return;
 
@@ -229,18 +225,16 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 		memset(RDRAM + address, 0, totalBytes);
 	}
 
-#ifndef GLES2
-	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-#endif
 	if (!bCopy)
 		return;
 
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-#ifndef GLES2
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-#else
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
-#endif
+	if (render.use_vbo) {
+		render.updateBO(render.PIX_UNPACK, dataSize, 1, ptr);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
+	} else
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
 
 	m_pTexture->scaleS = 1.0f / (float)m_pTexture->realWidth;
 	m_pTexture->scaleT = 1.0f / (float)m_pTexture->realHeight;

@@ -688,7 +688,7 @@ void OGLRender::drawArrayIndirect(GLenum mode, GLuint first, GLuint count) {
 	glDrawArraysIndirect(mode, (char*)NULL + (bo_offset_bytes[INDIRECT] - sizeof(DrawArraysIndirectCommand)));
 }
 
-void OGLRender::updateBO(int buffer, u32 size, u32 count, void *pointer) {
+void OGLRender::updateBO(int buffer, u32 size, u32 count, const void *pointer) {
 	u32 length = size * count;
 	if (bo_offset_bytes[buffer] + length > bo_max_size) {
 		bo_offset[buffer] = 0;
@@ -699,6 +699,8 @@ void OGLRender::updateBO(int buffer, u32 size, u32 count, void *pointer) {
 		buffer_type = GL_ELEMENT_ARRAY_BUFFER;
 	else if (buffer == INDIRECT)
 		buffer_type = GL_DRAW_INDIRECT_BUFFER;
+	else if (buffer == PIX_UNPACK)
+		buffer_type = GL_PIXEL_UNPACK_BUFFER;
 	else
 		buffer_type = GL_ARRAY_BUFFER;
 	if (buffer_storage) {
@@ -2366,7 +2368,9 @@ void OGLRender::_initVBO()
 			else if (i == INDIRECT) {
 				if (!use_indirect) continue;
 				buffer_type = GL_DRAW_INDIRECT_BUFFER;
-			} else
+			} else if (i == PIX_UNPACK)
+				buffer_type = GL_PIXEL_UNPACK_BUFFER;
+			else
 				buffer_type = GL_ARRAY_BUFFER;
 			bo_offset[i] = 0;
 			bo_offset_bytes[i] = 0;
@@ -2428,6 +2432,7 @@ void OGLRender::_destroyVBO()
 	if (use_vbo) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glDeleteBuffers(BO_COUNT, bos);
 #ifndef GLES2
 		glBindVertexArray(0);

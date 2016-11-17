@@ -103,7 +103,7 @@ public:
 	bool use_indirect;
 	bool buffer_storage;
 	void drawArrayIndirect(GLenum mode, GLuint first, GLuint count);
-	void updateBO(int buffer, u32 size, u32 count, void *pointer);
+	void updateBO(int buffer, u32 size, u32 count, const void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
 	void drawScreenSpaceTriangle(u32 _numVtx);
@@ -178,6 +178,20 @@ public:
 	OGL_RENDERER getRenderer() const { return m_oglRenderer; }
 
 	void dropRenderState() {m_renderState = rsNone;}
+
+	enum {
+		TRI_VBO = 0,
+		RECT_VBO,
+		IBO,
+		INDIRECT,
+		PIX_UNPACK,
+		BO_COUNT
+	};
+	GLuint bos[BO_COUNT];
+	char* bo_data[BO_COUNT];
+	u32 bo_offset_bytes[BO_COUNT];
+	u32 bo_offset[BO_COUNT];
+	u32 bo_max_size;
 
 private:
 	OGLRender()
@@ -270,13 +284,6 @@ private:
 	bool m_bDmaVertices;
 	GLint majorVersion, minorVersion;
 	GLuint vao;
-	enum {
-		TRI_VBO = 0,
-		RECT_VBO,
-		IBO,
-		INDIRECT,
-		BO_COUNT
-	};
 	typedef  struct {
 		GLuint  count;
 		GLuint  primCount;
@@ -292,11 +299,6 @@ private:
 		GLuint  baseInstance;
 	} DrawArraysIndirectCommand;
 	DrawArraysIndirectCommand array_command;
-	GLuint bos[BO_COUNT];
-	char* bo_data[BO_COUNT];
-	u32 bo_offset_bytes[BO_COUNT];
-	u32 bo_offset[BO_COUNT];
-	u32 bo_max_size;
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;

@@ -197,6 +197,7 @@ struct gl_cached_state
    GLuint array_buffer;
    GLuint index_buffer;
    GLuint indirect_buffer;
+   GLuint pix_unpack_buffer;
    GLuint vao;
    GLuint program;
    int cap_state[SGL_CAP_MAX];
@@ -729,6 +730,12 @@ void rglBindBuffer(GLenum target, GLuint buffer)
    else if (target == GL_DRAW_INDIRECT_BUFFER) {
       if (gl_state.indirect_buffer != buffer) {
          gl_state.indirect_buffer = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
+   else if (target == GL_PIXEL_UNPACK_BUFFER) {
+      if (gl_state.pix_unpack_buffer != buffer) {
+         gl_state.pix_unpack_buffer = buffer;
          glBindBuffer(target, buffer);
       }
    }
@@ -2294,6 +2301,7 @@ static void glsm_state_setup(void)
 
    gl_state.array_buffer                = 0;
    gl_state.index_buffer                = 0;
+   gl_state.pix_unpack_buffer           = 0;
    gl_state.bindvertex.array            = 0;
    framebuffer_emulation                = 0;
    default_framebuffer                  = hw_render.get_current_framebuffer();
