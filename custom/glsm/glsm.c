@@ -230,6 +230,7 @@ static GLuint gl_framebuffer_depth[MAX_FRAMEBUFFER];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
+static bool framebuffer_emulation = 0;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 #ifdef GLSL_OPT
@@ -1913,6 +1914,8 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
    if (framebuffer == 0)
       framebuffer = default_framebuffer;
+   else
+      framebuffer_emulation = 1;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
          glBindFramebuffer(target, framebuffer);
@@ -2292,6 +2295,7 @@ static void glsm_state_setup(void)
    gl_state.array_buffer                = 0;
    gl_state.index_buffer                = 0;
    gl_state.bindvertex.array            = 0;
+   framebuffer_emulation                = 0;
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;
    gl_state.framebuf[1].location        = default_framebuffer;
@@ -2357,16 +2361,14 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
-   if (gl_state.framebuf[0].location == gl_state.framebuf[1].location)
-      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].location);
-#ifndef HAVE_OPENGLES2
-   else {
-      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].location);
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].location);
-   }
-#endif
-   if (gl_state.framebuf[0].location == default_framebuffer)
+   if (!framebuffer_emulation) {
+      glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   } else {
+      gl_state.framebuf[0].location = 0;
+      gl_state.framebuf[1].location = 0;
+   }
+   framebuffer_emulation = 0;
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
    {
