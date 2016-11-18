@@ -2524,6 +2524,7 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
             resetting_context = 1;
             glsm_state_setup();
             retroChangeWindow();
+            glsm_state_unbind();
             resetting_context = 0;
 	 }
          else
