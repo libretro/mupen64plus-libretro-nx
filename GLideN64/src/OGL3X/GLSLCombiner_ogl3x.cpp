@@ -44,14 +44,13 @@ static std::string strFragmentShader;
 class NoiseTexture
 {
 public:
-	NoiseTexture() : m_pTexture(nullptr), m_PBO(0), m_DList(0) {}
+	NoiseTexture() : m_pTexture(nullptr), m_DList(0) {}
 	void init();
 	void destroy();
 	void update();
 
 private:
 	CachedTexture * m_pTexture;
-	GLuint m_PBO;
 	u32 m_DList;
 } noiseTex;
 
@@ -85,13 +84,11 @@ void NoiseTexture::destroy()
 		textureCache().removeFrameBufferTexture(m_pTexture);
 		m_pTexture = nullptr;
 	}
-	glDeleteBuffers(1, &m_PBO);
-	m_PBO = 0;
 }
 
 void NoiseTexture::update()
 {
-	if (m_PBO == 0 || m_pTexture == nullptr)
+	if (m_pTexture == nullptr)
 		return;
 	if (m_DList == video().getBuffersSwapCount() || config.generalEmulation.enableNoise == 0)
 		return;
