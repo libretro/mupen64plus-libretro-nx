@@ -2343,6 +2343,8 @@ static void glsm_state_bind(void)
 #endif
    if (gl_state.array_buffer != 0)
       glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
+   if (gl_state.pix_unpack_buffer != 0)
+      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gl_state.pix_unpack_buffer);
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
@@ -2418,6 +2420,9 @@ static void glsm_state_unbind(void)
          glDisableVertexAttribArray(i);
    }
    glActiveTexture(GL_TEXTURE0);
+
+   if (gl_state.pix_unpack_buffer != 0)
+      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 
 static bool glsm_state_ctx_destroy(void *data)
