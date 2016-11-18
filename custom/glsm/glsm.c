@@ -1900,6 +1900,7 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 
 void clearDepth(GLuint framebuffer)
 {
+#ifdef HAVE_OPENGLES
    if (gl_framebuffer_depth[framebuffer] || framebuffer == default_framebuffer) {
       int temp_scissor = gl_state.cap_state[SGL_SCISSOR_TEST];
       GLboolean temp_depthmask = gl_state.depthmask.mask;
@@ -1910,6 +1911,7 @@ void clearDepth(GLuint framebuffer)
       if (temp_scissor)
          rglEnable(SGL_SCISSOR_TEST);
    }
+#endif
 }
 /*
  * Category: FBO
@@ -2340,11 +2342,11 @@ static void glsm_state_bind(void)
    unsigned i;
 #ifndef HAVE_OPENGLES2
    glBindVertexArray(gl_state.bindvertex.array);
+   if (gl_state.pix_unpack_buffer != 0)
+      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gl_state.pix_unpack_buffer);
 #endif
    if (gl_state.array_buffer != 0)
       glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
-   if (gl_state.pix_unpack_buffer != 0)
-      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gl_state.pix_unpack_buffer);
 
    for (i = 0; i < MAX_ATTRIB; i++)
    {
@@ -2421,8 +2423,10 @@ static void glsm_state_unbind(void)
    }
    glActiveTexture(GL_TEXTURE0);
 
+#ifndef HAVE_OPENGLES2
    if (gl_state.pix_unpack_buffer != 0)
       glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+#endif
 }
 
 static bool glsm_state_ctx_destroy(void *data)
