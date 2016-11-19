@@ -1,4 +1,5 @@
 #include "Types.h"
+#include <glsym/glsym.h>
 
 #ifndef GLIDEN64_LIBRETRO_H
 #define GLIDEN64_LIBRETRO_H

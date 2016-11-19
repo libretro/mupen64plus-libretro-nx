@@ -842,20 +842,6 @@ void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsiz
    #endif
 }
 
-void rglDrawRangeElementsBaseVertexOES(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
-{
-   #ifdef HAVE_OPENGLES
-   glDrawRangeElementsBaseVertexOES(mode, start, end, count, type, indices, basevertex);
-   #endif
-}
-
-void rglDrawRangeElementsBaseVertexEXT(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
-{
-   #ifdef HAVE_OPENGLES
-   glDrawRangeElementsBaseVertexEXT(mode, start, end, count, type, indices, basevertex);
-   #endif
-}
-
 void rglCompressedTexImage2D(GLenum target, GLint level,
       GLenum internalformat, GLsizei width, GLsizei height,
       GLint border, GLsizei imageSize, const GLvoid *data)
@@ -908,16 +894,6 @@ void rglBufferStorage(GLenum target,
 {
 #ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
-#endif
-}
-
-void rglBufferStorageEXT(GLenum target,
-                       GLsizeiptr size,
-                       const GLvoid * data,
-                       GLbitfield flags)
-{
-#ifdef HAVE_OPENGLES
-   glBufferStorageEXT(target, size, data, flags);
 #endif
 }
 

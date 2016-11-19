@@ -40,8 +40,6 @@ RETRO_BEGIN_DECLS
 #define glDrawArraysIndirect        rglDrawArraysIndirect
 #define glDrawElements              rglDrawElements
 #define glDrawRangeElementsBaseVertex rglDrawRangeElementsBaseVertex
-#define glDrawRangeElementsBaseVertexOES rglDrawRangeElementsBaseVertexOES
-#define glDrawRangeElementsBaseVertexEXT rglDrawRangeElementsBaseVertexEXT
 #define glDrawElementsIndirect      rglDrawElementsIndirect
 #define glCompressedTexImage2D      rglCompressedTexImage2D
 #define glBindTexture               rglBindTexture
@@ -173,7 +171,6 @@ RETRO_BEGIN_DECLS
 #define glFenceSync                 rglFenceSync
 #define glUnmapBuffer               rglUnmapBuffer
 #define glBufferStorage             rglBufferStorage
-#define glBufferStorageEXT          rglBufferStorageEXT
 
 #define GL_MAP_PERSISTENT_BIT         0x0040
 #define GL_MAP_COHERENT_BIT           0x0080
@@ -183,10 +180,6 @@ RETRO_BEGIN_DECLS
 #define GL_PIXEL_UNPACK_BUFFER        0x88EC
 
 void rglBufferStorage(GLenum target,
-                       GLsizeiptr size,
-                       const GLvoid * data,
-                       GLbitfield flags);
-void rglBufferStorageEXT(GLenum target,
                        GLsizeiptr size,
                        const GLvoid * data,
                        GLbitfield flags);
@@ -280,20 +273,6 @@ void rglDrawElementsIndirect(	GLenum mode,
 	GLenum type,
 	const void *indirect);
 void rglDrawRangeElementsBaseVertex(GLenum mode,
-	GLuint start,
-	GLuint end,
-	GLsizei count,
-	GLenum type,
-	GLvoid *indices,
-	GLint basevertex);
-void rglDrawRangeElementsBaseVertexOES(GLenum mode,
-	GLuint start,
-	GLuint end,
-	GLsizei count,
-	GLenum type,
-	GLvoid *indices,
-	GLint basevertex);
-void rglDrawRangeElementsBaseVertexEXT(GLenum mode,
 	GLuint start,
 	GLuint end,
 	GLsizei count,
