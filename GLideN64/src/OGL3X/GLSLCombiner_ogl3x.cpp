@@ -142,7 +142,11 @@ void InitZlutTexture()
 	//glBindImageTexture requires an immutable texture object, glTexStorage2D does this
 	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.lutInternalFormat, 512, 512);
 	if (render.use_vbo) {
-		u32 length = 512 * 512 * sizeof(fboFormats.lutInternalFormat);
+#ifdef GLESX
+		u32 length = sizeof(u32) * 0x40000;
+#else
+		u32 length = sizeof(u16) * 0x40000;
+#endif
 		render.updateBO(render.PIX_UNPACK, length, 1, zLUT);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
@@ -897,7 +901,11 @@ void SetDepthFogCombiner()
 		glBindImageTexture(TlutImageUnit, 0, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 		glBindTexture(GL_TEXTURE_2D, g_tlut_tex);
 		if (render.use_vbo) {
-			u32 length = 256 * 1 * sizeof(fboFormats.lutInternalFormat);
+#ifdef GLESX
+			u32 length = sizeof(u32) * 256;
+#else
+			u32 length = sizeof(u16) * 256;
+#endif
 			render.updateBO(render.PIX_UNPACK, length, 1, palette);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
