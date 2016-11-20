@@ -191,7 +191,7 @@ public:
 	char* bo_data[BO_COUNT];
 	u32 bo_offset_bytes[BO_COUNT];
 	u32 bo_offset[BO_COUNT];
-	u32 bo_max_size;
+	u32 bo_max_size[BO_COUNT];
 
 private:
 	OGLRender()

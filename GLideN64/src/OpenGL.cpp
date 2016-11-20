@@ -690,7 +690,7 @@ void OGLRender::drawArrayIndirect(GLenum mode, GLuint first, GLuint count) {
 
 void OGLRender::updateBO(int buffer, u32 size, u32 count, const void *pointer) {
 	u32 length = size * count;
-	if (bo_offset_bytes[buffer] + length > bo_max_size) {
+	if (bo_offset_bytes[buffer] + length > bo_max_size[buffer]) {
 		bo_offset[buffer] = 0;
 		bo_offset_bytes[buffer] = 0;
 	}
@@ -2352,7 +2352,6 @@ void OGLRender::_initVBO()
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 #endif
-		bo_max_size = 4194304 * 4;
 #ifndef OPENGL_DEBUG
 		GLbitfield bo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		GLbitfield bo_map_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
@@ -2363,27 +2362,25 @@ void OGLRender::_initVBO()
 		int i;
 		GLenum buffer_type;
 		for (i = 0; i < BO_COUNT; ++i) {
+			bo_max_size[i] = 4194304;
 			if (i == IBO)
 				buffer_type = GL_ELEMENT_ARRAY_BUFFER;
 			else if (i == INDIRECT) {
 				if (!use_indirect) continue;
 				buffer_type = GL_DRAW_INDIRECT_BUFFER;
-			} else if (i == PIX_UNPACK)
+			} else if (i == PIX_UNPACK) {
 				buffer_type = GL_PIXEL_UNPACK_BUFFER;
-			else
+				bo_max_size[i] = 4194304 * 8;
+			} else
 				buffer_type = GL_ARRAY_BUFFER;
 			bo_offset[i] = 0;
 			bo_offset_bytes[i] = 0;
 			glBindBuffer(buffer_type, bos[i]);
 			if (buffer_storage) {
-#ifndef GLESX
-				glBufferStorage(buffer_type, bo_max_size, NULL, bo_access);
-#else
-				glBufferStorageEXT(buffer_type, bo_max_size, NULL, bo_access);
-#endif
-				bo_data[i] = (char*)glMapBufferRange(buffer_type, 0, bo_max_size, bo_map_access);
+				glBufferStorage(buffer_type, bo_max_size[i], NULL, bo_access);
+				bo_data[i] = (char*)glMapBufferRange(buffer_type, 0, bo_max_size[i], bo_map_access);
 			} else
-				glBufferData(buffer_type, bo_max_size, NULL, GL_DYNAMIC_DRAW);
+				glBufferData(buffer_type, bo_max_size[i], NULL, GL_DYNAMIC_DRAW);
 		}
 	}
 }

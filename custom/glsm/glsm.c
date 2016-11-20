@@ -894,6 +894,8 @@ void rglBufferStorage(GLenum target,
 {
 #ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
+#else
+   glBufferStorageEXT(target, size, data, flags);
 #endif
 }
 
