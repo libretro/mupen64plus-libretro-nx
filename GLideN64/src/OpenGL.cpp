@@ -713,7 +713,7 @@ void OGLRender::unmapBO(int buffer, u32 length, u32 count)
 	if (buffer_storage) {
 	#ifdef OPENGL_DEBUG
 		glBindBuffer(buffer_type[buffer], bos[buffer]);
-		glFlushMappedBufferRange(buffer_type[i], bo_offset_bytes[buffer], length);
+		glFlushMappedBufferRange(buffer_type[buffer], bo_offset_bytes[buffer], length);
 	#endif
 	} else
 		glUnmapBuffer(buffer_type[buffer]);
