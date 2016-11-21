@@ -224,6 +224,7 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/L3D.cpp \
 	$(VIDEODIR_GLIDEN64)/src/L3DEX2.cpp \
 	$(VIDEODIR_GLIDEN64)/src/L3DEX.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Log.cpp \
 	$(VIDEODIR_GLIDEN64)/src/N64.cpp \
 	$(VIDEODIR_GLIDEN64)/src/OpenGL.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Performance.cpp \
