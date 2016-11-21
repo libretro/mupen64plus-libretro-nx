@@ -133,7 +133,7 @@ static void setup_variables(void)
          "Aspect Ratio; 4:3|16:9" },
       { "glupen64-BilinearMode",
          "Bilinear filtering mode; standard|3point" },
-#ifndef HAVE_OPENGLES
+#ifndef HAVE_OPENGLES2
       { "glupen64-MultiSampling",
          "MSAA level; 0|2|4|8|16" },
 #endif

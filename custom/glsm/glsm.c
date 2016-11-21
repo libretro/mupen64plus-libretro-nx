@@ -38,8 +38,16 @@
 #include <EGL/egl.h>
 typedef void (GL_APIENTRYP PFNGLDRAWARRAYSINDIRECTPROC) (GLenum mode, const void *indirect);
 typedef void (GL_APIENTRYP PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const void *indirect);
+typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
+typedef void (GL_APIENTRYP PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
+typedef void (GL_APIENTRYP PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
 PFNGLDRAWARRAYSINDIRECTPROC m_glDrawArraysIndirect;
 PFNGLDRAWELEMENTSINDIRECTPROC m_glDrawElementsIndirect;
+PFNGLBUFFERSTORAGEEXTPROC m_glBufferStorage;
+PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
+PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
+PFNGLTEXSTORAGE2DMULTISAMPLEPROC m_glTexStorage2DMultisample;
 #endif
 
 struct gl_cached_state
@@ -895,7 +903,7 @@ void rglBufferStorage(GLenum target,
 #ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
 #else
-   glBufferStorageEXT(target, size, data, flags);
+   m_glBufferStorage(target, size, data, flags);
 #endif
 }
 
@@ -1981,7 +1989,8 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
    glTexStorage2DMultisample(target, samples, internalformat,
          width, height, fixedsamplelocations);
 #else
-   printf("WARNING! Not implemented.\n");
+   m_glTexStorage2DMultisample(target, samples, internalformat,
+         width, height, fixedsamplelocations);
 #endif
 }
 
@@ -2006,12 +2015,12 @@ void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
  * OpenGL    : 4.2
  * OpenGLES  : 3.1
  */
-void rglMemoryBarrier( 	GLbitfield barriers)
+void rglMemoryBarrier(GLbitfield barriers)
 {
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glMemoryBarrier(barriers);
 #else
-   printf("WARNING! Not implemented.\n");
+   m_glMemoryBarrier(barriers);
 #endif
 }
 
@@ -2021,7 +2030,7 @@ void rglMemoryBarrier( 	GLbitfield barriers)
  * OpenGL    : 4.2
  * OpenGLES  : 3.1
  */
-void rglBindImageTexture( 	GLuint unit,
+void rglBindImageTexture(GLuint unit,
   	GLuint texture,
   	GLint level,
   	GLboolean layered,
@@ -2029,10 +2038,10 @@ void rglBindImageTexture( 	GLuint unit,
   	GLenum access,
   	GLenum format)
 {
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glBindImageTexture(unit, texture, level, layered, layer, access, format);
 #else
-   printf("WARNING! Not implemented.\n");
+   m_glBindImageTexture(unit, texture, level, layered, layer, access, format);
 #endif
 }
 
@@ -2237,6 +2246,10 @@ static void glsm_state_setup(void)
 #ifdef HAVE_OPENGLES
    m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
    m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
+   m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)eglGetProcAddress("glBufferStorageEXT");
+   m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
+   m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
+   m_glTexStorage2DMultisample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)eglGetProcAddress("glTexStorage2DMultisample");
 #endif
 
 #ifdef OPENGL_DEBUG
