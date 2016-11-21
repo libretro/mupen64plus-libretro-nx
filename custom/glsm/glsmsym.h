@@ -178,6 +178,7 @@ RETRO_BEGIN_DECLS
 #define GL_MAP_FLUSH_EXPLICIT_BIT     0x0010
 #define GL_DRAW_INDIRECT_BUFFER       0x8F3F
 #define GL_PIXEL_UNPACK_BUFFER        0x88EC
+#define GL_TEXTURE_2D_MULTISAMPLE     0x9100
 
 void rglBufferStorage(GLenum target,
                        GLsizeiptr size,
