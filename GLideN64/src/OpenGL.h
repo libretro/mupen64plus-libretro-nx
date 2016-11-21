@@ -103,6 +103,8 @@ public:
 	bool use_indirect;
 	bool buffer_storage;
 	void drawArrayIndirect(GLenum mode, GLuint first, GLuint count);
+	void* mapBO(int buffer, u32 length);
+	void unmapBO(int buffer, u32 length, u32 count);
 	void updateBO(int buffer, u32 size, u32 count, const void *pointer);
 	void addTriangle(int _v0, int _v1, int _v2);
 	void drawTriangles();
@@ -192,6 +194,7 @@ public:
 	u32 bo_offset_bytes[BO_COUNT];
 	u32 bo_offset[BO_COUNT];
 	u32 bo_max_size[BO_COUNT];
+	GLenum buffer_type[BO_COUNT];
 
 private:
 	OGLRender()
@@ -291,14 +294,14 @@ private:
 		GLuint  baseVertex;
 		GLuint  baseInstance;
 	} DrawElementsIndirectCommand;
-	DrawElementsIndirectCommand element_command;
+
 	typedef  struct {
 		GLuint  count;
 		GLuint  primCount;
 		GLuint  first;
 		GLuint  baseInstance;
 	} DrawArraysIndirectCommand;
-	DrawArraysIndirectCommand array_command;
+
 	TexrectDrawer m_texrectDrawer;
 
 	GLuint m_programCopyTex;

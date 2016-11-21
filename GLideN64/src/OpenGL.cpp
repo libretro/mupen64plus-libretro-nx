@@ -685,43 +685,46 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 /*---------------OGLRender-------------*/
 
 void OGLRender::drawArrayIndirect(GLenum mode, GLuint first, GLuint count) {
-	array_command.count = count;
-	array_command.primCount = 1;
-	array_command.first = first;
-	array_command.baseInstance = 0;
-	updateBO(INDIRECT, sizeof(DrawArraysIndirectCommand), 1, &array_command);
+	DrawArraysIndirectCommand* array_command = (DrawArraysIndirectCommand*)mapBO(INDIRECT, sizeof(DrawArraysIndirectCommand));
+	array_command->count = count;
+	array_command->primCount = 1;
+	array_command->first = first;
+	array_command->baseInstance = 0;
+	unmapBO(INDIRECT, sizeof(DrawArraysIndirectCommand), 1);
 	glDrawArraysIndirect(mode, (char*)NULL + (bo_offset_bytes[INDIRECT] - sizeof(DrawArraysIndirectCommand)));
 }
 
-void OGLRender::updateBO(int buffer, u32 size, u32 count, const void *pointer) {
-	u32 length = size * count;
+void* OGLRender::mapBO(int buffer, u32 length)
+{
 	if (bo_offset_bytes[buffer] + length > bo_max_size[buffer]) {
 		bo_offset[buffer] = 0;
 		bo_offset_bytes[buffer] = 0;
 	}
-	GLenum buffer_type;
-	if (buffer == IBO)
-		buffer_type = GL_ELEMENT_ARRAY_BUFFER;
-	else if (buffer == INDIRECT)
-		buffer_type = GL_DRAW_INDIRECT_BUFFER;
-	else if (buffer == PIX_UNPACK)
-		buffer_type = GL_PIXEL_UNPACK_BUFFER;
-	else
-		buffer_type = GL_ARRAY_BUFFER;
-	if (buffer_storage) {
-		memcpy(&bo_data[buffer][bo_offset_bytes[buffer]], pointer, length);
-#ifdef OPENGL_DEBUG
-		glBindBuffer(buffer_type, bos[buffer]);
-		glFlushMappedBufferRange(buffer_type, bo_offset_bytes[buffer], length);
-#endif
-	} else {
-		glBindBuffer(buffer_type, bos[buffer]);
-		void *temp = glMapBufferRange(buffer_type, bo_offset_bytes[buffer], length, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
-		memcpy (temp, pointer, length);
-		glUnmapBuffer(buffer_type);
+	if (buffer_storage)
+		return &bo_data[buffer][bo_offset_bytes[buffer]];
+	else {
+		glBindBuffer(buffer_type[buffer], bos[buffer]);
+		return glMapBufferRange(buffer_type[buffer], bo_offset_bytes[buffer], length, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
 	}
+}
+
+void OGLRender::unmapBO(int buffer, u32 length, u32 count)
+{
+	if (buffer_storage) {
+	#ifdef OPENGL_DEBUG
+		glBindBuffer(buffer_type[buffer], bos[buffer]);
+		glFlushMappedBufferRange(buffer_type[i], bo_offset_bytes[buffer], length);
+	#endif
+	} else
+		glUnmapBuffer(buffer_type[buffer]);
 	bo_offset[buffer] += count;
 	bo_offset_bytes[buffer] += length;
+}
+void OGLRender::updateBO(int buffer, u32 size, u32 count, const void *pointer) {
+	u32 length = size * count;
+	void* buffer_pointer = mapBO(buffer, length);
+	memcpy(buffer_pointer, pointer, length);
+	unmapBO(buffer, length, count);
 }
 
 void OGLRender::addTriangle(int _v0, int _v1, int _v2)
@@ -1465,8 +1468,8 @@ void OGLRender::drawTriangles()
 	if (!use_vbo)
 		glDrawElements(GL_TRIANGLES, triangles.num, GL_UNSIGNED_BYTE, triangles.elements);
 	else {
-		SPVertex temp_verts[VERTBUFF_SIZE];
-		GLubyte temp_elements[ELEMBUFF_SIZE];
+		SPVertex* temp_verts = (SPVertex*)mapBO(TRI_VBO, VERTBUFF_SIZE * sizeof(SPVertex));;
+		GLubyte* temp_elements = (GLubyte*)mapBO(IBO, ELEMBUFF_SIZE * sizeof(GLubyte));;
 		u32 i, p;
 		u32 total_verts = 0;
 		for(i = 0; i < triangles.num; ++i) {
@@ -1482,15 +1485,16 @@ void OGLRender::drawTriangles()
 				++total_verts;
 			}
 		}
-		updateBO(IBO, sizeof(GLubyte), triangles.num, temp_elements);
-		updateBO(TRI_VBO, sizeof(SPVertex), total_verts, temp_verts);
+		unmapBO(TRI_VBO, total_verts * sizeof(SPVertex), total_verts);
+		unmapBO(IBO, triangles.num * sizeof(GLubyte), triangles.num);
 		if (use_indirect) {
-			element_command.count = triangles.num;
-			element_command.primCount = 1;
-			element_command.firstIndex = bo_offset[IBO] - triangles.num;
-			element_command.baseVertex = bo_offset[TRI_VBO] - total_verts;
-			element_command.baseInstance = 0;
-			updateBO(INDIRECT, sizeof(DrawElementsIndirectCommand), 1, &element_command);
+			DrawElementsIndirectCommand* element_command = (DrawElementsIndirectCommand*)mapBO(INDIRECT, sizeof(DrawElementsIndirectCommand));
+			element_command->count = triangles.num;
+			element_command->primCount = 1;
+			element_command->firstIndex = bo_offset[IBO] - triangles.num;
+			element_command->baseVertex = bo_offset[TRI_VBO] - total_verts;
+			element_command->baseInstance = 0;
+			unmapBO(INDIRECT, sizeof(DrawElementsIndirectCommand), 1);
 			glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_BYTE, (char*)NULL + (bo_offset_bytes[INDIRECT] - sizeof(DrawElementsIndirectCommand)));
 		}
 #ifndef GLESX
@@ -1637,10 +1641,10 @@ void OGLRender::drawLine(int _v0, int _v1, float _width)
 		elem[1] = _v1;
 		glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, elem);
 	} else {
-		SPVertex temp[2];
+		SPVertex* temp = (SPVertex*)mapBO(TRI_VBO, 2 * sizeof(SPVertex));
 		temp[0] = triangles.vertices[_v0];
 		temp[1] = triangles.vertices[_v1];
-		updateBO(TRI_VBO, sizeof(SPVertex), 2, temp);
+		unmapBO(TRI_VBO, 2 * sizeof(SPVertex), 2);
 		if (use_indirect)
 			drawArrayIndirect(GL_LINES, bo_offset[TRI_VBO] - 2, 2);
 		else
@@ -2365,27 +2369,26 @@ void OGLRender::_initVBO()
 		GLbitfield bo_map_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
 #endif
 		int i;
-		GLenum buffer_type;
 		for (i = 0; i < BO_COUNT; ++i) {
 			bo_max_size[i] = 4194304;
 			if (i == IBO)
-				buffer_type = GL_ELEMENT_ARRAY_BUFFER;
+				buffer_type[i] = GL_ELEMENT_ARRAY_BUFFER;
 			else if (i == INDIRECT) {
 				if (!use_indirect) continue;
-				buffer_type = GL_DRAW_INDIRECT_BUFFER;
+				buffer_type[i] = GL_DRAW_INDIRECT_BUFFER;
 			} else if (i == PIX_UNPACK) {
-				buffer_type = GL_PIXEL_UNPACK_BUFFER;
+				buffer_type[i] = GL_PIXEL_UNPACK_BUFFER;
 				bo_max_size[i] = 4194304 * 8;
 			} else
-				buffer_type = GL_ARRAY_BUFFER;
+				buffer_type[i] = GL_ARRAY_BUFFER;
 			bo_offset[i] = 0;
 			bo_offset_bytes[i] = 0;
-			glBindBuffer(buffer_type, bos[i]);
+			glBindBuffer(buffer_type[i], bos[i]);
 			if (buffer_storage) {
-				glBufferStorage(buffer_type, bo_max_size[i], NULL, bo_access);
-				bo_data[i] = (char*)glMapBufferRange(buffer_type, 0, bo_max_size[i], bo_map_access);
+				glBufferStorage(buffer_type[i], bo_max_size[i], NULL, bo_access);
+				bo_data[i] = (char*)glMapBufferRange(buffer_type[i], 0, bo_max_size[i], bo_map_access);
 			} else
-				glBufferData(buffer_type, bo_max_size[i], NULL, GL_DYNAMIC_DRAW);
+				glBufferData(buffer_type[i], bo_max_size[i], NULL, GL_DYNAMIC_DRAW);
 		}
 	}
 }

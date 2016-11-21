@@ -801,7 +801,10 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 	pSwapped = (u8*)malloc(numBytes);
 	assert(pSwapped != nullptr);
 	UnswapCopyWrap(RDRAM, gSP.bgImage.address, pSwapped, 0, RDRAMSize, numBytes);
-	pDest = (u32*)malloc(pTexture->textureBytes);
+	if (render.use_vbo)
+		pDest = (u32*)render.mapBO(render.PIX_UNPACK, pTexture->textureBytes);
+	else
+		pDest = (u32*)malloc(pTexture->textureBytes);
 	assert(pDest != nullptr);
 
 	clampSClamp = pTexture->width - 1;
@@ -858,7 +861,7 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 #else
 		glTexStorage2D(GL_TEXTURE_2D, 1, glInternalFormat, pTexture->realWidth, pTexture->realHeight);
 		if (render.use_vbo) {
-			render.updateBO(render.PIX_UNPACK, pTexture->textureBytes, 1, pDest);
+			render.unmapBO(render.PIX_UNPACK, pTexture->textureBytes, 1);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pTexture->realWidth, pTexture->realHeight, GL_RGBA, glType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - pTexture->textureBytes));
 		} else
@@ -868,7 +871,8 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 	if (m_curUnpackAlignment > 1)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, m_curUnpackAlignment);
 	free(pSwapped);
-	free(pDest);
+	if (!render.use_vbo)
+		free(pDest);
 }
 
 bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & _ricecrc)
@@ -939,7 +943,11 @@ void TextureCache::_loadDepthTexture(CachedTexture * _pTexture, u16* _pDest)
 	OGLRender & render = ogl.getRender();
 	const u32 numTexels = _pTexture->realWidth * _pTexture->realHeight;
 	_pTexture->textureBytes = numTexels * sizeof(GLfloat);
-	GLfloat * pDestF = (GLfloat*)malloc(_pTexture->textureBytes);
+	GLfloat * pDestF;
+	if (render.use_vbo)
+		pDestF = (GLfloat*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
+	else
+		pDestF = (GLfloat*)malloc(_pTexture->textureBytes);
 	assert(pDestF != nullptr);
 
 	for (u32 t = 0; t < numTexels; ++t)
@@ -947,12 +955,13 @@ void TextureCache::_loadDepthTexture(CachedTexture * _pTexture, u16* _pDest)
 
 	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32F, _pTexture->realWidth, _pTexture->realHeight);
 	if (render.use_vbo) {
-		render.updateBO(render.PIX_UNPACK, _pTexture->textureBytes, 1, pDestF);
+		render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - _pTexture->textureBytes));
-	} else
+	} else {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, pDestF);
-	free(pDestF);
+		free(pDestF);
+	}
 #endif
 }
 
@@ -1105,7 +1114,10 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		glType = loadParams.glType16;
 	}
 
-	pDest = (u32*)malloc(_pTexture->textureBytes);
+	if(render.use_vbo)
+		pDest = (u32*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
+	else
+		pDest = (u32*)malloc(_pTexture->textureBytes);
 	assert(pDest != nullptr);
 
 	GLint mipLevel = 0;
@@ -1175,7 +1187,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 					tmptex.realHeight, 0, GL_RGBA, glType, pDest);
 #else
 			if (render.use_vbo) {
-				render.updateBO(render.PIX_UNPACK, _pTexture->textureBytes, 1, pDest);
+				render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 				glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - _pTexture->textureBytes));
 			} else
@@ -1207,7 +1219,8 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 	}
 	if (m_curUnpackAlignment > 1)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, m_curUnpackAlignment);
-	free(pDest);
+	if (!render.use_vbo)
+		free(pDest);
 }
 
 struct TextureParams

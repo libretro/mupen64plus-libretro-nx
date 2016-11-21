@@ -187,7 +187,11 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 
 	OGLVideo & ogl = video();
 	OGLRender & render = ogl.getRender();
-	GLubyte* ptr = (GLubyte*)malloc(dataSize);
+	GLubyte* ptr;
+	if (render.use_vbo)
+		ptr = (GLubyte*)render.mapBO(render.PIX_UNPACK, dataSize);
+	else
+		ptr = (GLubyte*)malloc(dataSize);
 	if (ptr == nullptr)
 		return;
 
@@ -218,11 +222,13 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
 	if (render.use_vbo) {
-		render.updateBO(render.PIX_UNPACK, dataSize, 1, ptr);
+		render.unmapBO(render.PIX_UNPACK, dataSize, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
-	} else
+	} else {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+		free(ptr);
+	}
 
 	m_pTexture->scaleS = 1.0f / (float)m_pTexture->realWidth;
 	m_pTexture->scaleT = 1.0f / (float)m_pTexture->realHeight;

@@ -97,7 +97,11 @@ void NoiseTexture::update()
 		return;
 	OGLVideo & ogl = video();
 	OGLRender & render = ogl.getRender();
-	GLubyte ptr[dataSize];
+	GLubyte* ptr;
+	if (render.use_vbo)
+		ptr = (GLubyte*)render.mapBO(render.PIX_UNPACK, dataSize);
+	else
+		ptr = (GLubyte*)malloc(dataSize);
 	for (u32 y = 0; y < VI.height; ++y)	{
 		for (u32 x = 0; x < VI.width; ++x)
 			ptr[x + y*VI.width] = rand()&0xFF;
@@ -106,11 +110,13 @@ void NoiseTexture::update()
 	glActiveTexture(GL_TEXTURE0 + g_noiseTexIndex);
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
 	if (render.use_vbo) {
-		render.updateBO(render.PIX_UNPACK, dataSize, 1, ptr);
+		render.unmapBO(render.PIX_UNPACK, dataSize, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
-	} else
+	} else {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, ptr);
+		free(ptr);
+	}
 	m_DList = video().getBuffersSwapCount();
 }
 
@@ -891,9 +897,19 @@ void SetDepthFogCombiner()
 		g_paletteCRC256 = gDP.paletteCRC256;
 
 #ifdef GLESX
-		u32 palette[256];
+		u32 length = sizeof(u32) * 256;
+		u32* palette;
+		if (render.use_vbo)
+			palette = (u32*)render.mapBO(render.PIX_UNPACK, length);
+		else
+			palette = (u32*)malloc(length);
 #else
-		u16 palette[256];
+		u32 length = sizeof(u16) * 256;
+		u16* palette;
+		if (render.use_vbo)
+			palette = (u16*)render.mapBO(render.PIX_UNPACK, length);
+		else
+			palette = (u16*)malloc(length);
 #endif
 		u16 *src = (u16*)&TMEM[256];
 		for (int i = 0; i < 256; ++i)
@@ -901,16 +917,13 @@ void SetDepthFogCombiner()
 		glBindImageTexture(TlutImageUnit, 0, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 		glBindTexture(GL_TEXTURE_2D, g_tlut_tex);
 		if (render.use_vbo) {
-#ifdef GLESX
-			u32 length = sizeof(u32) * 256;
-#else
-			u32 length = sizeof(u16) * 256;
-#endif
-			render.updateBO(render.PIX_UNPACK, length, 1, palette);
+			render.unmapBO(render.PIX_UNPACK, length, 1);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
-		} else
+		} else {
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, palette);
+			free(palette);
+		}
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindImageTexture(TlutImageUnit, g_tlut_tex, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 	}
