@@ -2346,7 +2346,7 @@ void OGLRender::_initVBO()
 #elif defined(GLESX)
 	use_indirect = majorVersion >= 3 && minorVersion >= 1;
 	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-	use_vbo = use_indirect;
+	use_vbo = buffer_storage && use_indirect;
 #else
 	use_indirect = majorVersion >= 4 || OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
 	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
