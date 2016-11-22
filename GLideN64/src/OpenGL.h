@@ -87,6 +87,7 @@ typedef char GLchar;
 #define INDEXMAP_SIZE 80U
 #define VERTBUFF_SIZE 256U
 #define ELEMBUFF_SIZE 1024U
+#define BO_MAX_SIZE 4194304
 
 extern const char * strTexrectDrawerVertexShader;
 extern const char * strTexrectDrawerTex3PointFilter;

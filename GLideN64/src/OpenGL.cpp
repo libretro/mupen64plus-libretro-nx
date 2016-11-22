@@ -2368,7 +2368,7 @@ void OGLRender::_initVBO()
 #endif
 		int i;
 		for (i = 0; i < BO_COUNT; ++i) {
-			bo_max_size[i] = 4194304;
+			bo_max_size[i] = BO_MAX_SIZE;
 			if (i == IBO)
 				buffer_type[i] = GL_ELEMENT_ARRAY_BUFFER;
 			else if (i == INDIRECT) {
@@ -2376,7 +2376,7 @@ void OGLRender::_initVBO()
 				buffer_type[i] = GL_DRAW_INDIRECT_BUFFER;
 			} else if (i == PIX_UNPACK) {
 				buffer_type[i] = GL_PIXEL_UNPACK_BUFFER;
-				bo_max_size[i] = 4194304 * 8;
+				bo_max_size[i] = BO_MAX_SIZE * 16;
 			} else
 				buffer_type[i] = GL_ARRAY_BUFFER;
 			bo_offset[i] = 0;
