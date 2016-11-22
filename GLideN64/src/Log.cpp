@@ -5,7 +5,6 @@
 #include "Log.h"
 #include "PluginAPI.h"
 #include "wst.h"
-#include <osal_files.h>
 
 void LOG(u16 type, const char * format, ...) {
 	if (type > LOG_LEVEL)
@@ -18,8 +17,9 @@ void LOG(u16 type, const char * format, ...) {
 #ifdef OS_WINDOWS
 	FILE *dumpFile = _wfopen(logPath, wst("a+"));
 #else
-	char cbuf[PATH_MAX];
-	wcstombs(cbuf, logPath, PATH_MAX);
+	constexpr size_t bufSize = PLUGIN_PATH_SIZE * 6;
+	char cbuf[bufSize];
+	wcstombs(cbuf, logPath, bufSize);
 	FILE *dumpFile = fopen(cbuf, "a+");
 #endif
 

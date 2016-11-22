@@ -11,7 +11,7 @@
 #include <libretro_private.h>
 
 #ifndef EGL
-#if !defined(OS_WINDOWS) || defined(GLES2) || defined(GLES3) || defined(GLES3_1) || defined(MINGW)
+#if !defined(OS_WINDOWS) || defined(GLESX) || defined(MINGW)
 
 void initGLFunctions()
 {
