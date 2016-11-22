@@ -1114,9 +1114,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		glType = loadParams.glType16;
 	}
 
-	if(render.use_vbo)
-		pDest = (u32*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
-	else
+	if (!render.use_vbo)
 		pDest = (u32*)malloc(_pTexture->textureBytes);
 	assert(pDest != nullptr);
 
@@ -1139,11 +1137,15 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		glTexStorage2D(GL_TEXTURE_2D, _pTexture->max_level + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
 #endif
 	while (true) {
+		if (render.use_vbo)
+			pDest = (u32*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
+
 		_getTextureDestData(tmptex, pDest, glInternalFormat, GetTexel, &line);
 
 		if ((config.generalEmulation.hacks&hack_LoadDepthTextures) != 0 && gDP.colorImage.address == gDP.depthImageAddress) {
 			_loadDepthTexture(_pTexture, (u16*)pDest);
-			free(pDest);
+			if (!render.use_vbo)
+				free(pDest);
 			return;
 		}
 
