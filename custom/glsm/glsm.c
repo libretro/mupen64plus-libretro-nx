@@ -42,12 +42,14 @@ typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr
 typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
 typedef void (GL_APIENTRYP PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
 typedef void (GL_APIENTRYP PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+typedef void (GL_APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
 PFNGLDRAWARRAYSINDIRECTPROC m_glDrawArraysIndirect;
 PFNGLDRAWELEMENTSINDIRECTPROC m_glDrawElementsIndirect;
 PFNGLBUFFERSTORAGEEXTPROC m_glBufferStorage;
 PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
 PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
 PFNGLTEXSTORAGE2DMULTISAMPLEPROC m_glTexStorage2DMultisample;
+PFNGLCOPYIMAGESUBDATAPROC m_glCopyImageSubData;
 #endif
 
 struct gl_cached_state
@@ -2149,8 +2151,24 @@ void rglCopyImageSubData( 	GLuint srcName,
   	GLsizei srcHeight,
   	GLsizei srcDepth)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
+#ifndef HAVE_OPENGLES
    glCopyImageSubData(srcName,
+         srcTarget,
+         srcLevel,
+         srcX,
+         srcY,
+         srcZ,
+         dstName,
+         dstTarget,
+         dstLevel,
+         dstX,
+         dstY,
+         dstZ,
+         srcWidth,
+         srcHeight,
+         srcDepth);
+#else
+   m_glCopyImageSubData(srcName,
          srcTarget,
          srcLevel,
          srcX,
@@ -2254,6 +2272,9 @@ static void glsm_state_setup(void)
    m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
    m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
    m_glTexStorage2DMultisample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)eglGetProcAddress("glTexStorage2DMultisample");
+   m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubData");
+   if (m_glCopyImageSubData == NULL)
+      m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubDataEXT");
 #endif
 
 #ifdef OPENGL_DEBUG
