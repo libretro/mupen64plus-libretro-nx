@@ -189,11 +189,11 @@ else ifneq (,$(findstring android,$(platform)))
       GLES3 = 1
       TARGET := $(TARGET_NAME)_gles3_libretro_android.so
    else
-      GL_LIB := -lGLESv2
+      GL_LIB := -lGLESv2 -lui
       GLES = 1
       TARGET := $(TARGET_NAME)_libretro_android.so
    endif
-   CPUFLAGS += -DANDROID
+   CPUFLAGS += -DANDROID -DEGL_EGLEXT_PROTOTYPES
 
 # emscripten
 else ifeq ($(platform), emscripten)

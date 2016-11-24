@@ -2222,7 +2222,6 @@ GLsync rglFenceSync(GLenum condition, GLbitfield flags)
 {
    return glFenceSync(condition, flags);
 }
-#endif
 /*
  *
  * Core in:
@@ -2231,26 +2230,19 @@ GLsync rglFenceSync(GLenum condition, GLbitfield flags)
  */
 void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 {
-#ifndef HAVE_OPENGLES2
    glWaitSync((GLsync)sync, flags, (GLuint64)timeout);
-#endif
 }
 
 void rglDeleteSync(GLsync sync)
 {
-#ifndef HAVE_OPENGLES2
    glDeleteSync(sync);
-#endif
 }
 
 GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
-#ifndef HAVE_OPENGLES2
    return glClientWaitSync(sync, flags, timeout);
-#else
-   return 0;
-#endif
 }
+#endif
 /* GLSM-side */
 
 static void glsm_state_setup(void)
