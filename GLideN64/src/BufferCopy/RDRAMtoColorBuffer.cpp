@@ -224,9 +224,9 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 	if (render.use_vbo) {
 		render.unmapBO(render.PIX_UNPACK, dataSize, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, fboFormats.colorFormat, fboFormats.colorType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, fboFormats.colorFormat, fboFormats.colorType, ptr);
 		free(ptr);
 	}
 

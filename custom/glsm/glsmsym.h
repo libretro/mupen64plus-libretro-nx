@@ -168,7 +168,11 @@ RETRO_BEGIN_DECLS
 #define glClearBufferfv             rglClearBufferfv
 #define glClearBufferfi             rglClearBufferfi
 #define glWaitSync                  rglWaitSync
+#ifndef HAVE_OPENGLES2
 #define glFenceSync                 rglFenceSync
+#endif
+#define glDeleteSync                rglDeleteSync
+#define glClientWaitSync            rglClientWaitSync
 #define glUnmapBuffer               rglUnmapBuffer
 #define glBufferStorage             rglBufferStorage
 
@@ -453,8 +457,12 @@ void rglTexSubImage2D( 	GLenum target,
   	GLenum type,
   	const GLvoid * pixels);
 void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays);
-void *rglFenceSync(GLenum condition, GLbitfield flags);
+#ifndef HAVE_OPENGLES2
+GLsync rglFenceSync(GLenum condition, GLbitfield flags);
+#endif
 void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout);
+void rglDeleteSync(GLsync sync);
+GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout);
 
 RETRO_END_DECLS
 

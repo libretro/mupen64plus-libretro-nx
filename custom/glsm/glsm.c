@@ -2177,7 +2177,7 @@ void rglCopyImageSubData( 	GLuint srcName,
  */
 void rglBindVertexArray(GLuint array)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    gl_state.bindvertex.array = array;
    glBindVertexArray(array);
 #endif
@@ -2192,7 +2192,7 @@ void rglBindVertexArray(GLuint array)
  */
 void rglGenVertexArrays(GLsizei n, GLuint *arrays)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glGenVertexArrays(n, arrays);
 #endif
 }
@@ -2206,7 +2206,7 @@ void rglGenVertexArrays(GLsizei n, GLuint *arrays)
  */
 void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glDeleteVertexArrays(n, arrays);
 #endif
 }
@@ -2217,15 +2217,12 @@ void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void *rglFenceSync(GLenum condition, GLbitfield flags)
+#ifndef HAVE_OPENGLES2
+GLsync rglFenceSync(GLenum condition, GLbitfield flags)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   return (GLsync)glFenceSync(condition, flags);
-#else
-   return NULL;
-#endif
+   return glFenceSync(condition, flags);
 }
-
+#endif
 /*
  *
  * Core in:
@@ -2234,11 +2231,26 @@ void *rglFenceSync(GLenum condition, GLbitfield flags)
  */
 void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glWaitSync((GLsync)sync, flags, (GLuint64)timeout);
 #endif
 }
 
+void rglDeleteSync(GLsync sync)
+{
+#ifndef HAVE_OPENGLES2
+   glDeleteSync(sync);
+#endif
+}
+
+GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
+{
+#ifndef HAVE_OPENGLES2
+   return glClientWaitSync(sync, flags, timeout);
+#else
+   return 0;
+#endif
+}
 /* GLSM-side */
 
 static void glsm_state_setup(void)
