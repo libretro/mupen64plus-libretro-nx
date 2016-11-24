@@ -355,7 +355,7 @@ void rglBlitFramebuffer(
       GLint dstX1, GLint dstY1,
       GLbitfield mask, GLenum filter)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
          dstX0, dstY0, dstX1, dstY1,
          mask, filter);
@@ -369,7 +369,7 @@ void rglBlitFramebuffer(
  */
 void rglReadBuffer(GLenum mode)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glReadBuffer(mode);
    gl_state.readbuffer.mode = mode;
 #endif
@@ -845,9 +845,9 @@ void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
-   #ifndef HAVE_OPENGLES
+#ifndef HAVE_OPENGLES
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
-   #endif
+#endif
 }
 
 void rglCompressedTexImage2D(GLenum target, GLint level,
@@ -1464,7 +1464,7 @@ void rglVertexAttribIPointer(
       GLsizei stride,
       const GLvoid * pointer)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glVertexAttribIPointer(index, size, type, stride, pointer);
 #endif
 }
@@ -1652,7 +1652,7 @@ void rglClearBufferfv( 	GLenum buffer,
   	GLint drawBuffer,
   	const GLfloat * value)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
+#ifndef HAVE_OPENGLES2
    glClearBufferfv(buffer, drawBuffer, value);
 #endif
 }
@@ -1672,7 +1672,7 @@ void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
  */
 const GLubyte* rglGetStringi(GLenum name, GLuint index)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
+#ifndef HAVE_OPENGLES2
    return glGetStringi(name, index);
 #else
    return NULL;
@@ -1684,7 +1684,7 @@ void rglClearBufferfi( 	GLenum buffer,
   	GLfloat depth,
   	GLint stencil)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
+#ifndef HAVE_OPENGLES2
    glClearBufferfi(buffer, drawBuffer, depth, stencil);
 #endif
 }
@@ -1701,7 +1701,7 @@ void rglRenderbufferStorageMultisample( 	GLenum target,
   	GLsizei width,
   	GLsizei height)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
+#ifndef HAVE_OPENGLES2
    glRenderbufferStorageMultisample(target, samples, internalformat, width, height);
 #endif
 }
@@ -1946,7 +1946,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
  */
 void rglDrawBuffers(GLsizei n, const GLenum *bufs)
 {
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+#ifndef HAVE_OPENGLES2
    glDrawBuffers(n, bufs);
 #endif
 }
