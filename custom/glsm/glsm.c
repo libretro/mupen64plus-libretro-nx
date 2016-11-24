@@ -815,12 +815,10 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 
 void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 {
-#ifndef HAVE_OPENGLES2
 #ifdef HAVE_OPENGLES
    m_glDrawArraysIndirect(mode, indirect);
 #else
    glDrawArraysIndirect(mode, indirect);
-#endif
 #endif
 }
 /*
@@ -836,12 +834,10 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
 
 void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 {
-#ifndef HAVE_OPENGLES2
 #ifdef HAVE_OPENGLES
    m_glDrawElementsIndirect(mode, type, indirect);
 #else
    glDrawElementsIndirect(mode, type, indirect);
-#endif
 #endif
 }
 
