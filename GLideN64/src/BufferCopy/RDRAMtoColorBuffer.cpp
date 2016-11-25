@@ -217,8 +217,11 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 		memset(RDRAM + address, 0, totalBytes);
 	}
 
-	if (!bCopy)
+	if (!bCopy) {
+		if (render.use_vbo)
+			render.unmapBO(render.PIX_UNPACK, dataSize, 1);
 		return;
+	}
 
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
 	if (render.use_vbo) {
