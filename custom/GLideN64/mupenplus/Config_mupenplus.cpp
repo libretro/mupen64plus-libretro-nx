@@ -91,6 +91,7 @@ void Config_LoadConfig()
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txHiresEnable = txHiresEnable;
+	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.multisampling = MultiSampling;
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings();

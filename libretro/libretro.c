@@ -86,6 +86,7 @@ u32 AspectRatio = 0;
 u32 txFilterMode = 0;
 u32 txEnhancementMode = 0;
 u32 txHiresEnable = 0;
+u32 txHiresFullAlphaChannel = 0;
 u32 MultiSampling = 0;
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -171,6 +172,8 @@ static void setup_variables(void)
          "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
       { "glupen64-txHiresEnable",
          "Use High-Res textures; False|True" },
+      { "glupen64-txHiresFullAlphaChannel",
+         "Use High-Res Full Alpha Channel; False|True" },
       {"glupen64-astick-deadzone",
         "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       {"glupen64-pak1",
@@ -665,6 +668,16 @@ void update_variables()
          txHiresEnable = 1;
       else
          txHiresEnable = 0;
+   }
+
+   var.key = "glupen64-txHiresFullAlphaChannel";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         txHiresFullAlphaChannel = 1;
+      else
+         txHiresFullAlphaChannel = 0;
    }
 
    var.key = "glupen64-EnableLegacyBlending";
