@@ -845,7 +845,10 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 					ghqTexInfo.data);
 #else
 			glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+			if (render.use_vbo) {
+				render.unmapBO(render.PIX_UNPACK, pTexture->textureBytes, 1);
+				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+			}
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 			_updateCachedTexture(ghqTexInfo, pTexture);
@@ -1144,7 +1147,9 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 
 		if ((config.generalEmulation.hacks&hack_LoadDepthTextures) != 0 && gDP.colorImage.address == gDP.depthImageAddress) {
 			_loadDepthTexture(_pTexture, (u16*)pDest);
-			if (!render.use_vbo)
+			if (render.use_vbo)
+				render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
+			else
 				free(pDest);
 			return;
 		}
@@ -1172,7 +1177,10 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 						ghqTexInfo.data);
 #else
 				glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+				if (render.use_vbo) {
+					render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
+					glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+				}
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 				_updateCachedTexture(ghqTexInfo, _pTexture);
