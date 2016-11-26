@@ -1892,17 +1892,21 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 void clearDepth(GLuint framebuffer)
 {
 #ifdef HAVE_OPENGLES
-   if (framebuffer_depth[framebuffer] != NULL) {
-      if (framebuffer_depth[framebuffer]->depth == 1 || framebuffer == default_framebuffer) {
-         int temp_scissor = gl_state.cap_state[SGL_SCISSOR_TEST];
-         GLboolean temp_depthmask = gl_state.depthmask.mask;
-         rglDisable(SGL_SCISSOR_TEST);
-         rglDepthMask(GL_TRUE);
-         glClear(GL_DEPTH_BUFFER_BIT);
-         rglDepthMask(temp_depthmask);
-         if (temp_scissor)
-            rglEnable(SGL_SCISSOR_TEST);
-      }
+   bool cleardepth = false;
+   if (framebuffer == default_framebuffer)
+      cleardepth = true;
+   else if (framebuffer_depth[framebuffer]->depth == 1)
+      cleardepth = true;
+
+   if (cleardepth) {
+      int temp_scissor = gl_state.cap_state[SGL_SCISSOR_TEST];
+      GLboolean temp_depthmask = gl_state.depthmask.mask;
+      rglDisable(SGL_SCISSOR_TEST);
+      rglDepthMask(GL_TRUE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      rglDepthMask(temp_depthmask);
+      if (temp_scissor)
+         rglEnable(SGL_SCISSOR_TEST);
    }
 #endif
 }
