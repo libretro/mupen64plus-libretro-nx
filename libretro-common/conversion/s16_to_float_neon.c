@@ -21,56 +21,51 @@
  */
 #if defined(__ARM_NEON__)
 
-#ifndef __MACH__
-.arm
+#if defined(__thumb__)
+#define DECL_ARMMODE(x) "  .align 2\n" "  .global " x "\n" "  .thumb\n" "  .thumb_func\n" "  .type " x ", %function\n" x ":\n"
+#else
+#define DECL_ARMMODE(x) "  .align 4\n" "  .global " x "\n" "  .arm\n" x ":\n"
 #endif
 
-.align 4
-.globl convert_s16_float_asm
-#ifndef __MACH__
-.type convert_s16_float_asm, %function
-#endif
-.globl _convert_s16_float_asm
-#ifndef __MACH__
-.type _convert_s16_float_asm, %function
-#endif
-# convert_s16_float_asm(float *out, const int16_t *in, size_t samples, const float *gain)
-convert_s16_float_asm:
-_convert_s16_float_asm:
-   # Hacky way to get a constant of 2^-15.
-   # Might be faster to just load a constant from memory.
-   # It's just done once however ...
-   vmov.f32 q8, #0.25
-   vmul.f32 q8, q8, q8
-   vmul.f32 q8, q8, q8
-   vmul.f32 q8, q8, q8
-   vadd.f32 q8, q8, q8
-
-   # Apply gain
-   vld1.f32 {d6[0]}, [r3]
-   vmul.f32 q8, q8, d6[0]
-
-1:
-   # Preload here?
-   vld1.s16 {q0}, [r1]!
-
-   # Widen to 32-bit
-   vmovl.s16 q1, d0
-   vmovl.s16 q2, d1
-
-   # Convert to float
-   vcvt.f32.s32 q1, q1
-   vcvt.f32.s32 q2, q2
-
-   vmul.f32 q1, q1, q8
-   vmul.f32 q2, q2, q8
-
-   vst1.f32 {q1-q2}, [r0]!
-
-   # Guaranteed to get samples in multiples of 8.
-   subs r2, r2, #8
-   bne 1b
-
-   bx lr
-
+asm(
+    DECL_ARMMODE("convert_s16_float_asm")
+    DECL_ARMMODE("_convert_s16_float_asm")
+    "# convert_s16_float_asm(float *out, const int16_t *in, size_t samples, const float *gain)\n"
+    "   # Hacky way to get a constant of 2^-15.\n"
+    "   # Might be faster to just load a constant from memory.\n"
+    "   # It's just done once however ...\n"
+    "   vmov.f32 q8, #0.25\n"
+    "   vmul.f32 q8, q8, q8\n"
+    "   vmul.f32 q8, q8, q8\n"
+    "   vmul.f32 q8, q8, q8\n"
+    "   vadd.f32 q8, q8, q8\n"
+    "\n"
+    "   # Apply gain\n"
+    "   vld1.f32 {d6[0]}, [r3]\n"
+    "   vmul.f32 q8, q8, d6[0]\n"
+    "\n"
+    "1:\n"
+    "   # Preload here?\n"
+    "   vld1.s16 {q0}, [r1]!\n"
+    "\n"
+    "   # Widen to 32-bit\n"
+    "   vmovl.s16 q1, d0\n"
+    "   vmovl.s16 q2, d1\n"
+    "\n"
+    "   # Convert to float\n"
+    "   vcvt.f32.s32 q1, q1\n"
+    "   vcvt.f32.s32 q2, q2\n"
+    "\n"
+    "   vmul.f32 q1, q1, q8\n"
+    "   vmul.f32 q2, q2, q8\n"
+    "\n"
+    "   vst1.f32 {q1-q2}, [r0]!\n"
+    "\n"
+    "   # Guaranteed to get samples in multiples of 8.\n"
+    "   subs r2, r2, #8\n"
+    "   bne 1b\n"
+    "\n"
+    "   bx lr\n"
+    "\n"
+    );
 #endif

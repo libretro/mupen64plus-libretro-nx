@@ -21,49 +21,44 @@
  */
 #if defined(__ARM_NEON__)
 
-#ifndef __MACH__
-.arm
+#if defined(__thumb__)
+#define DECL_ARMMODE(x) "  .align 2\n" "  .global " x "\n" "  .thumb\n" "  .thumb_func\n" "  .type " x ", %function\n" x ":\n"
+#else
+#define DECL_ARMMODE(x) "  .align 4\n" "  .global " x "\n" "  .arm\n" x ":\n"
 #endif
 
-.align 4
-.globl convert_float_s16_asm
-#ifndef __MACH__
-.type convert_float_s16_asm, %function
-#endif
-.globl _convert_float_s16_asm
-#ifndef __MACH__
-.type _convert_float_s16_asm, %function
-#endif
-# convert_float_s16_asm(int16_t *out, const float *in, size_t samples)
-convert_float_s16_asm:
-_convert_float_s16_asm:
-   # Hacky way to get a constant of 2^15.
-   # ((2^4)^2)^2 * 0.5 = 2^15
-   vmov.f32 q8, #16.0
-   vmov.f32 q9, #0.5
-   vmul.f32 q8, q8, q8
-   vmul.f32 q8, q8, q8
-   vmul.f32 q8, q8, q9
-
-1:
-   # Preload here?
-   vld1.f32 {q0-q1}, [r1]!
-
-   vmul.f32 q0, q0, q8
-   vmul.f32 q1, q1, q8
-
-   vcvt.s32.f32 q0, q0
-   vcvt.s32.f32 q1, q1
-
-   vqmovn.s32 d4, q0
-   vqmovn.s32 d5, q1
-
-   vst1.f32 {d4-d5}, [r0]!
-
-   # Guaranteed to get samples in multiples of 8.
-   subs r2, r2, #8
-   bne 1b
-
-   bx lr
-
+asm(
+    DECL_ARMMODE("convert_float_s16_asm")
+    DECL_ARMMODE("_convert_float_s16_asm")
+    "# convert_float_s16_asm(int16_t *out, const float *in, size_t samples)\n"
+    "   # Hacky way to get a constant of 2^15.\n"
+    "   # ((2^4)^2)^2 * 0.5 = 2^15\n"
+    "   vmov.f32 q8, #16.0\n"
+    "   vmov.f32 q9, #0.5\n"
+    "   vmul.f32 q8, q8, q8\n"
+    "   vmul.f32 q8, q8, q8\n"
+    "   vmul.f32 q8, q8, q9\n"
+    "\n"
+    "1:\n"
+    "   # Preload here?\n"
+    "   vld1.f32 {q0-q1}, [r1]!\n"
+    "\n"
+    "   vmul.f32 q0, q0, q8\n"
+    "   vmul.f32 q1, q1, q8\n"
+    "\n"
+    "   vcvt.s32.f32 q0, q0\n"
+    "   vcvt.s32.f32 q1, q1\n"
+    "\n"
+    "   vqmovn.s32 d4, q0\n"
+    "   vqmovn.s32 d5, q1\n"
+    "\n"
+    "   vst1.f32 {d4-d5}, [r0]!\n"
+    "\n"
+    "   # Guaranteed to get samples in multiples of 8.\n"
+    "   subs r2, r2, #8\n"
+    "   bne 1b\n"
+    "\n"
+    "   bx lr\n"
+    "\n"
+    );
 #endif
