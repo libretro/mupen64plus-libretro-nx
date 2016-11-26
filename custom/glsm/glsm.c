@@ -27,9 +27,9 @@
 #include <glsm/glsm.h>
 #include "glsl_optimizer.h"
 
-#define MAX_UNIFORMS 500
+#define MAX_UNIFORMS 1024
 #define MAX_TEXTURES 128000
-#define MAX_FRAMEBUFFER 500
+#define MAX_FRAMEBUFFER 1024
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
 #endif
