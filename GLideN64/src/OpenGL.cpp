@@ -1242,7 +1242,7 @@ void OGLRender::_updateStates(RENDER_STATE _renderState) const
 	if (gSP.changed & CHANGED_VIEWPORT)
 		_updateViewport();
 
-	if (gSP.changed & CHANGED_LIGHT)
+	if (gSP.changed & CHANGED_HW_LIGHT)
 		cmbInfo.updateLightParameters();
 
 	if ((gSP.changed & CHANGED_TEXTURE) ||
