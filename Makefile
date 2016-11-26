@@ -2,7 +2,6 @@ GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags)"
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
-HAVE_OPENGL=1
 GLSL_OPT=0
 
 DYNAFLAGS :=
