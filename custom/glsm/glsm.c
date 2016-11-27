@@ -255,6 +255,7 @@ glslopt_ctx* ctx;
 #endif
 static int window_first = 0;
 static int resetting_context = 0;
+static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 
 static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, void *userParam)
 {
@@ -1917,6 +1918,35 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 #endif
 }
 
+void invalidateDepth(GLenum target)
+{
+#ifdef HAVE_OPENGLES
+   int location;
+   if (target == GL_FRAMEBUFFER)
+      location = 0;
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER)
+      location = 0;
+   else if (target == GL_READ_FRAMEBUFFER)
+      location = 1;
+#endif
+   bool invalidatedepth = false;
+   if (gl_state.framebuf[location].location == default_framebuffer)
+      invalidatedepth = true;
+   else if (framebuffer_depth[gl_state.framebuf[location].location] != NULL) {
+      if (framebuffer_depth[gl_state.framebuf[location].location]->depth == 1)
+         invalidatedepth = true;
+   }
+   if (invalidatedepth) {
+#ifdef HAVE_OPENGLES2
+      glDiscardFramebufferEXT(target, 1, discards);
+#else
+      glInvalidateFramebuffer(target, 1, discards);
+#endif
+   }
+#endif
+}
+
 void clearDepth(GLuint framebuffer)
 {
 #ifdef HAVE_OPENGLES
@@ -1954,6 +1984,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
       framebuffer_emulation = 1;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
+         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
          clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
@@ -1963,6 +1994,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 #ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer) {
+         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
          clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
@@ -1970,6 +2002,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    }
    else if (target == GL_READ_FRAMEBUFFER) {
       if (gl_state.framebuf[1].location != framebuffer) {
+         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
          clearDepth(framebuffer);
          gl_state.framebuf[1].location = framebuffer;
