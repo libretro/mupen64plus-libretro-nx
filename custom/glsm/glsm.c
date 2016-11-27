@@ -2498,6 +2498,7 @@ static void glsm_state_unbind(void)
 {
    unsigned i;
 
+   invalidateDepth(GL_FRAMEBUFFER);
    for (i = 0; i < SGL_CAP_MAX; i ++)
    {
       if (gl_state.cap_state[i])
