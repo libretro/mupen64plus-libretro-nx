@@ -786,16 +786,16 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
 #ifdef HAVE_OPENGLES
    if (attachment == GL_DEPTH_ATTACHMENT) {
       if (target == GL_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
       }
 #ifndef HAVE_OPENGLES2
       else if (target == GL_DRAW_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
       }
       else if (target == GL_READ_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL && gl_state.framebuf[1].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[1].location]->depth = 1;
       }
 #endif
@@ -996,16 +996,16 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
 #ifdef HAVE_OPENGLES
    if (attachment == GL_DEPTH_ATTACHMENT) {
       if (target == GL_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
       }
 #ifndef HAVE_OPENGLES2
       else if (target == GL_DRAW_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
       }
       else if (target == GL_READ_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL)
+         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL && gl_state.framebuf[1].location < MAX_POINTERS)
             framebuffer_depth[gl_state.framebuf[1].location]->depth = 1;
       }
 #endif
@@ -1408,32 +1408,33 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   if (pname == GL_TEXTURE_MIN_FILTER && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
+   bool valid_pointer = texture_params[gl_state.bind_textures.ids[active_texture]] != NULL && gl_state.bind_textures.ids[active_texture] < MAX_POINTERS;
+   if (pname == GL_TEXTURE_MIN_FILTER && valid_pointer) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->min_filter != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->min_filter = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_MAG_FILTER && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
+   else if (pname == GL_TEXTURE_MAG_FILTER && valid_pointer) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->mag_filter != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->mag_filter = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_WRAP_S && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
+   else if (pname == GL_TEXTURE_WRAP_S && valid_pointer) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_s != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_s = param;
          glTexParameteri(target, pname, param);
       }
    }
-   else if (pname == GL_TEXTURE_WRAP_T && texture_params[gl_state.bind_textures.ids[active_texture]] != NULL) {
+   else if (pname == GL_TEXTURE_WRAP_T && valid_pointer) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_t != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->wrap_t = param;
          glTexParameteri(target, pname, param);
       }
    }
 #ifndef HAVE_OPENGLES2
-   else if (pname == GL_TEXTURE_MAX_LEVEL && texture_params[gl_state.bind_textures.ids[active_texture]] !=NULL) {
+   else if (pname == GL_TEXTURE_MAX_LEVEL && valid_pointer) {
       if (texture_params[gl_state.bind_textures.ids[active_texture]]->max_level != param) {
          texture_params[gl_state.bind_textures.ids[active_texture]]->max_level = param;
          glTexParameteri(target, pname, param);
@@ -1933,7 +1934,7 @@ void invalidateDepth(GLenum target)
    bool invalidatedepth = false;
    if (gl_state.framebuf[location].location == default_framebuffer)
       invalidatedepth = true;
-   else if (framebuffer_depth[gl_state.framebuf[location].location] != NULL) {
+   else if (framebuffer_depth[gl_state.framebuf[location].location] != NULL && gl_state.framebuf[location].location < MAX_POINTERS) {
       if (framebuffer_depth[gl_state.framebuf[location].location]->depth == 1)
          invalidatedepth = true;
    }
@@ -1953,7 +1954,7 @@ void clearDepth(GLuint framebuffer)
    bool cleardepth = false;
    if (framebuffer == default_framebuffer)
       cleardepth = true;
-   else if (framebuffer_depth[framebuffer] != NULL) {
+   else if (framebuffer_depth[framebuffer] != NULL && framebuffer < MAX_POINTERS) {
       if (framebuffer_depth[framebuffer]->depth == 1)
          cleardepth = true;
    }
