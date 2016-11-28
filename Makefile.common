@@ -146,7 +146,7 @@ ifeq ($(WITH_DYNAREC), arm)
 		$(CORE_DIR)/src/r4300/new_dynarec/arm/linkage_arm.S
 endif
 ifeq ($(WITH_DYNAREC), x86)
-	COREFLAGS += -mstackrealign -DARCH_MIN_SSE2 -msse -msse2
+	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
 	DYNAREC_USED = 1
 	DYNAFLAGS += -DNEW_DYNAREC=1
 	SOURCES_C += \
@@ -157,7 +157,7 @@ ifeq ($(WITH_DYNAREC), x86)
 		$(CORE_DIR)/src/r4300/new_dynarec/x86/linkage_x86.asm
 endif
 ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
-	COREFLAGS += -mstackrealign -DARCH_MIN_SSE2 -msse -msse2
+	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
 	DYNAREC_USED = 1
 	SOURCES_C += $(CORE_DIR)/src/r4300/x86_64/assemble.c \
 		$(CORE_DIR)/src/r4300/x86_64/gbc.c \
