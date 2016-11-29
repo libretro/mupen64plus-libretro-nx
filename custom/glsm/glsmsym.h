@@ -183,6 +183,9 @@ RETRO_BEGIN_DECLS
 #define GL_DRAW_INDIRECT_BUFFER       0x8F3F
 #define GL_PIXEL_UNPACK_BUFFER        0x88EC
 #define GL_TEXTURE_2D_MULTISAMPLE     0x9100
+#define GL_READ_WRITE                 0x88BA
+#define GL_READ_ONLY                  0x88B8
+#define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
 
 void rglBufferStorage(GLenum target,
                        GLsizeiptr size,
