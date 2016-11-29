@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
 
 #include "../Config.h"
 #include "../GLideN64.h"
@@ -36,6 +37,7 @@ void LoadCustomSettings()
 		printf("Unable to open GLideN64 settings file '%s'.", pathname);
 		return;
 	}
+	std::transform(myString.begin(), myString.end(), myString.begin(), ::toupper);
 	for (lineno = 1; fgets(buffer, 255, fPtr) != NULL; lineno++)
 	{
 		char *line = buffer;
