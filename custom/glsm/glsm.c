@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
-#include "glsl_optimizer.h"
 
 #define MAX_POINTERS 128000
 #define MAX_UNIFORMS 1024
@@ -250,9 +249,6 @@ static GLint glsm_max_textures;
 static bool framebuffer_emulation = 0;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
-#ifdef GLSL_OPT
-glslopt_ctx* ctx;
-#endif
 static int window_first = 0;
 static int resetting_context = 0;
 static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
@@ -1303,24 +1299,7 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
 void rglShaderSource(GLuint shader, GLsizei count,
       const GLchar **string, const GLint *length)
 {
-#ifdef GLSL_OPT
-   glslopt_shader_type type;
-   GLint _type;
-   glGetShaderiv(shader, GL_SHADER_TYPE, &_type);
-   if (_type == GL_VERTEX_SHADER)
-      type = kGlslOptShaderVertex;
-   else if (_type == GL_FRAGMENT_SHADER)
-      type = kGlslOptShaderFragment;
-   glslopt_shader* new_shader = glslopt_optimize (ctx, type, *string, 0);
-   if (glslopt_get_status (new_shader)) {
-      const char* newSource = glslopt_get_output (new_shader);
-      glShaderSource(shader, count, &newSource, length);
-   } else
-      printf("%s\n",glslopt_get_log (new_shader));
-   glslopt_shader_delete (new_shader);
-#else
    glShaderSource(shader, count, string, length);
-#endif
 }
 
 /*
@@ -2521,10 +2500,6 @@ static void glsm_state_unbind(void)
 
 static bool glsm_state_ctx_destroy(void *data)
 {
-#ifdef GLSL_OPT
-   glslopt_cleanup (ctx);
-#endif
-
    return true;
 }
 
@@ -2566,15 +2541,6 @@ static bool glsm_state_ctx_init(void *data)
 
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
-
-#ifdef GLSL_OPT
-#ifdef HAVE_OPENGLES2
-   glslopt_target target = kGlslTargetOpenGLES20;
-#else
-   glslopt_target target = kGlslTargetOpenGLES30;
-#endif
-   ctx = glslopt_initialize(target);
-#endif
 
    return true;
 }

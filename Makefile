@@ -2,7 +2,6 @@ GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags)"
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
-GLSL_OPT=0
 
 DYNAFLAGS :=
 INCFLAGS  :=
@@ -55,11 +54,9 @@ ifneq (,$(findstring linux,$(real_platform)))
 
    ifeq ($(FORCE_GLES),1)
       GLES = 1
-      GLSL_OPT = 1
       GL_LIB := -lGLESv2
    else ifeq ($(FORCE_GLES3),1)
       GLES3 = 1
-      GLSL_OPT = 1
       GL_LIB := -lGLESv2
    else
       GL_LIB := -lGL
@@ -70,7 +67,6 @@ else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    GLES = 1
-   GLSL_OPT = 1
    CPUFLAGS += -DVC
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
@@ -179,7 +175,6 @@ else ifneq (,$(findstring android,$(platform)))
       CXX = arm-linux-androideabi-g++
       WITH_DYNAREC = arm
       HAVE_NEON = 1
-      GLSL_OPT = 1
       CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon
       LDFLAGS += -march=armv7-a -Wl,--fix-cortex-a8 -L$(ROOT_DIR)/custom/android/arm
    endif
@@ -265,10 +260,6 @@ include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
    COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT
-endif
-
-ifeq ($(GLSL_OPT), 1)
-   COREFLAGS += -DGLSL_OPT
 endif
 
 COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT -DGIT_VERSION=\"$(GIT_VERSION)\"
