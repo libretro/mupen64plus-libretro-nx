@@ -2407,21 +2407,20 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
+   gl_state.pix_unpack_buffer = 0;
 #ifndef HAVE_OPENGLES2
-   glBindVertexArray(gl_state.bindvertex.array);
-   if (gl_state.pix_unpack_buffer != 0)
-      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gl_state.pix_unpack_buffer);
+   if (gl_state.bindvertex.array != 0) {
+      glBindVertexArray(gl_state.bindvertex.array);
+      gl_state.array_buffer = 0;
+   } else
 #endif
-   if (gl_state.array_buffer != 0)
-      glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
-
-   for (i = 0; i < MAX_ATTRIB; i++)
    {
-      if (gl_state.vertex_attrib_pointer.enabled[i])
-         glEnableVertexAttribArray(i);
+      for (i = 0; i < MAX_ATTRIB; i++)
+      {
+         if (gl_state.vertex_attrib_pointer.enabled[i])
+            glEnableVertexAttribArray(i);
 
-      if (gl_state.attrib_pointer.used[i]) {
-         if (gl_state.attrib_pointer.buffer[i] == gl_state.array_buffer) {
+         if (gl_state.attrib_pointer.used[i]) {
             glVertexAttribPointer(
                i,
                gl_state.attrib_pointer.size[i],
@@ -2429,8 +2428,7 @@ static void glsm_state_bind(void)
                gl_state.attrib_pointer.normalized[i],
                gl_state.attrib_pointer.stride[i],
                gl_state.attrib_pointer.pointer[i]);
-         } else
-            gl_state.attrib_pointer.buffer[i] = 0;
+         }
       }
    }
 
@@ -2485,10 +2483,17 @@ static void glsm_state_unbind(void)
          glDisable(gl_state.cap_translate[i]);
    }
 
-   for (i = 0; i < MAX_ATTRIB; i++)
+#ifndef HAVE_OPENGLES2
+   if (gl_state.bindvertex.array != 0)
+      glBindVertexArray(0);
+   else
+#endif
    {
-      if (gl_state.vertex_attrib_pointer.enabled[i])
-         glDisableVertexAttribArray(i);
+      for (i = 0; i < MAX_ATTRIB; i++)
+      {
+         if (gl_state.vertex_attrib_pointer.enabled[i])
+            glDisableVertexAttribArray(i);
+      }
    }
    glActiveTexture(GL_TEXTURE0);
 
