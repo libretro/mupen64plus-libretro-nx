@@ -1843,7 +1843,6 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
    glGenFramebuffers(n, ids);
 }
 
-}
 /*
  * Category: FBO
  *
