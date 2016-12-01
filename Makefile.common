@@ -216,7 +216,6 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/L3D.cpp \
 	$(VIDEODIR_GLIDEN64)/src/L3DEX2.cpp \
 	$(VIDEODIR_GLIDEN64)/src/L3DEX.cpp \
-	$(VIDEODIR_GLIDEN64)/src/Log.cpp \
 	$(VIDEODIR_GLIDEN64)/src/N64.cpp \
 	$(VIDEODIR_GLIDEN64)/src/OpenGL.cpp \
 	$(VIDEODIR_GLIDEN64)/src/Performance.cpp \
@@ -246,7 +245,10 @@ SOURCES_CXX   += \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
 
 ifneq (,$(findstring android,$(platform)))
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp \
+		$(VIDEODIR_GLIDEN64)/src/Log_android.cpp
+else
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Log.cpp
 endif
 
 SOURCES_CXX   += \
