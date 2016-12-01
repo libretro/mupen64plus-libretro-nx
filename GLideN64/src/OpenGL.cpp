@@ -2223,6 +2223,11 @@ void OGLRender::clearDepthBuffer(u32 _ulx, u32 _uly, u32 _lrx, u32 _lry)
 
 	glDisable( GL_SCISSOR_TEST );
 
+#ifdef ANDROID
+	glDepthMask( GL_FALSE );
+	glClear( GL_DEPTH_BUFFER_BIT );
+#endif
+
 	glDepthMask( GL_TRUE );
 	glClear( GL_DEPTH_BUFFER_BIT );
 

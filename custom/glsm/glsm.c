@@ -1898,57 +1898,6 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 #endif
 }
 
-void invalidateDepth(GLenum target)
-{
-#ifdef HAVE_OPENGLES
-   int location;
-   if (target == GL_FRAMEBUFFER)
-      location = 0;
-#ifndef HAVE_OPENGLES2
-   else if (target == GL_DRAW_FRAMEBUFFER)
-      location = 0;
-   else if (target == GL_READ_FRAMEBUFFER)
-      location = 1;
-#endif
-   bool invalidatedepth = false;
-   if (gl_state.framebuf[location].location == default_framebuffer)
-      invalidatedepth = true;
-   else if (framebuffer_depth[gl_state.framebuf[location].location] != NULL && gl_state.framebuf[location].location < MAX_POINTERS) {
-      if (framebuffer_depth[gl_state.framebuf[location].location]->depth == 1)
-         invalidatedepth = true;
-   }
-   if (invalidatedepth) {
-#ifdef HAVE_OPENGLES2
-      glDiscardFramebufferEXT(target, 1, discards);
-#else
-      glInvalidateFramebuffer(target, 1, discards);
-#endif
-   }
-#endif
-}
-
-void clearDepth(GLuint framebuffer)
-{
-#ifdef HAVE_OPENGLES
-   bool cleardepth = false;
-   if (framebuffer == default_framebuffer)
-      cleardepth = true;
-   else if (framebuffer_depth[framebuffer] != NULL && framebuffer < MAX_POINTERS) {
-      if (framebuffer_depth[framebuffer]->depth == 1)
-         cleardepth = true;
-   }
-
-   if (cleardepth) {
-      int temp_scissor = gl_state.cap_state[SGL_SCISSOR_TEST];
-      GLboolean temp_depthmask = gl_state.depthmask.mask;
-      rglDisable(SGL_SCISSOR_TEST);
-      rglDepthMask(GL_TRUE);
-      glClear(GL_DEPTH_BUFFER_BIT);
-      rglDepthMask(temp_depthmask);
-      if (temp_scissor)
-         rglEnable(SGL_SCISSOR_TEST);
-   }
-#endif
 }
 /*
  * Category: FBO
@@ -1964,9 +1913,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
       framebuffer_emulation = 1;
    if (target == GL_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
-         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
-         clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
          gl_state.framebuf[1].location = framebuffer;
       }
@@ -1974,17 +1921,13 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 #ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_FRAMEBUFFER) {
       if (gl_state.framebuf[0].location != framebuffer) {
-         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
-         clearDepth(framebuffer);
          gl_state.framebuf[0].location = framebuffer;
       }
    }
    else if (target == GL_READ_FRAMEBUFFER) {
       if (gl_state.framebuf[1].location != framebuffer) {
-         invalidateDepth(target);
          glBindFramebuffer(target, framebuffer);
-         clearDepth(framebuffer);
          gl_state.framebuf[1].location = framebuffer;
       }
    }
@@ -2476,7 +2419,6 @@ static void glsm_state_unbind(void)
 {
    unsigned i;
 
-   invalidateDepth(GL_FRAMEBUFFER);
    for (i = 0; i < SGL_CAP_MAX; i ++)
    {
       if (gl_state.cap_state[i])
