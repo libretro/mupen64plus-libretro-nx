@@ -233,16 +233,8 @@ struct gl_texture_params
    GLint max_level;
 };
 
-struct gl_framebuffer_depth
-{
-   GLuint depth;
-};
-
 static struct gl_texture_params* texture_params[MAX_POINTERS];
 static struct gl_program_uniforms* program_uniforms[MAX_POINTERS][MAX_UNIFORMS];
-#ifdef HAVE_OPENGLES
-static struct gl_framebuffer_depth* framebuffer_depth[MAX_POINTERS];
-#endif
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
@@ -779,24 +771,6 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
       GLenum textarget, GLuint texture, GLint level)
 {
    glFramebufferTexture2D(target, attachment, textarget, texture, level);
-#ifdef HAVE_OPENGLES
-   if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (target == GL_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
-      }
-#ifndef HAVE_OPENGLES2
-      else if (target == GL_DRAW_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
-      }
-      else if (target == GL_READ_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL && gl_state.framebuf[1].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[1].location]->depth = 1;
-      }
-#endif
-   }
-#endif
 }
 
 /*
@@ -872,10 +846,6 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 {
    int i, p;
    for (i = 0; i < n; ++i) {
-#ifdef HAVE_OPENGLES
-      if (framebuffers[i] < MAX_POINTERS)
-         free(framebuffer_depth[framebuffers[i]]);
-#endif
       for (p = 0; p < 2; ++p) {
          if (framebuffers[i] == gl_state.framebuf[p].location)
             gl_state.framebuf[p].location = 0;
@@ -989,24 +959,6 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
       GLenum renderbuffertarget, GLuint renderbuffer)
 {
    glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
-#ifdef HAVE_OPENGLES
-   if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (target == GL_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
-      }
-#ifndef HAVE_OPENGLES2
-      else if (target == GL_DRAW_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[0].location] != NULL && gl_state.framebuf[0].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[0].location]->depth = 1;
-      }
-      else if (target == GL_READ_FRAMEBUFFER) {
-         if (framebuffer_depth[gl_state.framebuf[1].location] != NULL && gl_state.framebuf[1].location < MAX_POINTERS)
-            framebuffer_depth[gl_state.framebuf[1].location]->depth = 1;
-      }
-#endif
-   }
-#endif
 }
 
 /*
@@ -1889,13 +1841,6 @@ void rglPolygonOffset(GLfloat factor, GLfloat units)
 void rglGenFramebuffers(GLsizei n, GLuint *ids)
 {
    glGenFramebuffers(n, ids);
-#ifdef HAVE_OPENGLES
-   int i;
-   for (i = 0; i < n; ++i) {
-      if (ids[i] < MAX_POINTERS)
-         framebuffer_depth[ids[i]] = calloc(1, sizeof(struct gl_framebuffer_depth));
-   }
-#endif
 }
 
 }
