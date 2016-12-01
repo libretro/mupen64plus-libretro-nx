@@ -65,6 +65,7 @@ extern u32 txFilterMode;
 extern u32 txEnhancementMode;
 extern u32 txHiresEnable;
 extern u32 txHiresFullAlphaChannel;
+extern u32 txFilterIgnoreBG;
 extern u32 MultiSampling;
 
 #endif

@@ -87,6 +87,7 @@ u32 txFilterMode = 0;
 u32 txEnhancementMode = 0;
 u32 txHiresEnable = 0;
 u32 txHiresFullAlphaChannel = 0;
+u32 txFilterIgnoreBG = 0;
 u32 MultiSampling = 0;
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -170,6 +171,8 @@ static void setup_variables(void)
          "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
       { "glupen64-txEnhancementMode",
          "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
+      { "glupen64-txFilterIgnoreBG",
+         "Filter background textures; True|False" },
       { "glupen64-txHiresEnable",
          "Use High-Res textures; False|True" },
       { "glupen64-txHiresFullAlphaChannel",
@@ -658,6 +661,16 @@ void update_variables()
          txEnhancementMode = 13;
       else
          txEnhancementMode = 0;
+   }
+
+   var.key = "glupen64-txFilterIgnoreBG";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         txFilterIgnoreBG = 0;
+      else
+         txFilterIgnoreBG = 1;
    }
 
    var.key = "glupen64-txHiresEnable";

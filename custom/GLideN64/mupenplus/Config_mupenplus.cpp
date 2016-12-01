@@ -92,6 +92,7 @@ void Config_LoadConfig()
 #endif
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
+	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
 	config.textureFilter.txHiresEnable = txHiresEnable;
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.multisampling = MultiSampling;
