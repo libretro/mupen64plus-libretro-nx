@@ -188,8 +188,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
 	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
-	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
-	$(ROOT_DIR)/custom/glsm/glsm.c
+	$(LIBRETRO_COMM_DIR)/streams/file_stream.c
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
@@ -242,7 +241,8 @@ SOURCES_CXX   += \
 	$(ROOT_DIR)/custom/GLideN64/MupenPlusPluginAPI.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/OpenGL_mupenplus.cpp \
-	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp \
+	$(ROOT_DIR)/custom/glsm/glsm.cpp
 
 ifneq (,$(findstring android,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp \

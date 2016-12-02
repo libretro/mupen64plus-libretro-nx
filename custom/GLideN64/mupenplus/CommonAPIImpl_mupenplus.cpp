@@ -11,12 +11,10 @@
 
 extern retro_environment_t environ_cb;
 
-extern "C" {
 void retroChangeWindow()
 {
 	video().setToggleFullscreen();
 	video().changeWindow();
-}
 }
 
 int PluginAPI::InitiateGFX(const GFX_INFO & _gfxInfo)

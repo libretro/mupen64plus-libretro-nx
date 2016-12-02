@@ -27,8 +27,6 @@
 
 #include <retro_common_api.h>
 
-RETRO_BEGIN_DECLS
-
 /* deprecated old FF-style GL symbols */
 #define glTexCoord2f                rglTexCoord2f
 
@@ -466,7 +464,5 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout);
 void rglDeleteSync(GLsync sync);
 GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout);
 #endif
-
-RETRO_END_DECLS
 
 #endif
