@@ -223,15 +223,6 @@ struct gl_program_uniforms
    GLint uniform4i[4];
 };
 
-struct gl_texture_params
-{
-   GLint min_filter;
-   GLint mag_filter;
-   GLint wrap_s;
-   GLint wrap_t;
-   GLint max_level;
-};
-
 static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
