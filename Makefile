@@ -176,7 +176,7 @@ else ifneq (,$(findstring android,$(platform)))
       WITH_DYNAREC = arm
       HAVE_NEON = 1
       CPUFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon
-      LDFLAGS += -march=armv7-a -Wl,--fix-cortex-a8 -L$(ROOT_DIR)/custom/android/arm
+      LDFLAGS += -march=armv7-a -L$(ROOT_DIR)/custom/android/arm
    endif
    ifneq (,$(findstring gles3,$(platform)))
       GL_LIB := -lGLESv3
@@ -259,7 +259,7 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations
 endif
 
 COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT -DGIT_VERSION=\"$(GIT_VERSION)\"
@@ -268,7 +268,8 @@ ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g
    CPUOPTS += -DOPENGL_DEBUG
 else
-   CPUOPTS += -O3 -DNDEBUG
+   CPUOPTS += -O3 -DNDEBUG -fsigned-char -ffast-math -fno-strict-aliasing -fomit-frame-pointer -frename-registers -fvisibility=hidden
+   CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
 CXXFLAGS += -std=c++11
