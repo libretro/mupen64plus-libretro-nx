@@ -79,12 +79,6 @@ struct gl_cached_state
 
    struct
    {
-      GLenum pname;
-      GLint param;
-   } pixelstore_i;
-
-   struct
-   {
       GLuint array;
    } bindvertex;
 
@@ -295,8 +289,6 @@ void rglTexImage2D(
  	GLenum type,
  	const GLvoid * data)
 {
-   //This is a fix for https://github.com/loganmc10/GLupeN64/issues/13
-   glPixelStorei(GL_UNPACK_ALIGNMENT,1);
    glTexImage2D(target, level, internalformat, width, height, border, format, type, data);
 }
 
@@ -311,8 +303,6 @@ void rglTexSubImage2D(
   	GLenum type,
   	const GLvoid * pixels)
 {
-   //This is a fix for https://github.com/loganmc10/GLupeN64/issues/13
-   glPixelStorei(GL_UNPACK_ALIGNMENT,1);
    glTexSubImage2D(target, level, xoffset, yoffset,
          width, height, format, type, pixels);
 }
@@ -385,11 +375,7 @@ void rglReadPixels(	GLint x,
  */
 void rglPixelStorei(GLenum pname, GLint param)
 {
-   if (gl_state.pixelstore_i.pname != pname || gl_state.pixelstore_i.param != param) {
-      glPixelStorei(pname, param);
-      gl_state.pixelstore_i.pname = pname;
-      gl_state.pixelstore_i.param = param;
-   }
+   glPixelStorei(pname, param);
 }
 
 /*
