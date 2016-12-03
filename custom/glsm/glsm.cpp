@@ -26,7 +26,6 @@
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 
-#define MAX_POINTERS 16000
 #define MAX_UNIFORMS 1024
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
@@ -233,8 +232,7 @@ struct gl_texture_params
    GLint max_level;
 };
 
-static struct gl_texture_params texture_params[MAX_POINTERS];
-static struct gl_program_uniforms program_uniforms[MAX_POINTERS][MAX_UNIFORMS];
+static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
@@ -1286,13 +1284,6 @@ GLuint rglCreateProgram(void)
 void rglGenTextures(GLsizei n, GLuint *textures)
 {
    glGenTextures(n, textures);
-   int i;
-   for (i = 0; i < n; ++i) {
-      if (textures[i] < MAX_POINTERS) {
-         memset(&texture_params[textures[i]], 0, sizeof(struct gl_texture_params));
-         texture_params[textures[i]].max_level = 1000;
-      }
-   }
 }
 
 /*
@@ -1337,42 +1328,7 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
 
 void rglTexParameteri(GLenum target, GLenum pname, GLint param)
 {
-   if (gl_state.bind_textures.ids[active_texture] >= MAX_POINTERS)
-      glTexParameteri(target, pname, param);
-   else if (pname == GL_TEXTURE_MIN_FILTER) {
-      if (texture_params[gl_state.bind_textures.ids[active_texture]].min_filter != param) {
-         texture_params[gl_state.bind_textures.ids[active_texture]].min_filter = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_MAG_FILTER) {
-      if (texture_params[gl_state.bind_textures.ids[active_texture]].mag_filter != param) {
-         texture_params[gl_state.bind_textures.ids[active_texture]].mag_filter = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_WRAP_S) {
-      if (texture_params[gl_state.bind_textures.ids[active_texture]].wrap_s != param) {
-         texture_params[gl_state.bind_textures.ids[active_texture]].wrap_s = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-   else if (pname == GL_TEXTURE_WRAP_T) {
-      if (texture_params[gl_state.bind_textures.ids[active_texture]].wrap_t != param) {
-         texture_params[gl_state.bind_textures.ids[active_texture]].wrap_t = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-#ifndef HAVE_OPENGLES2
-   else if (pname == GL_TEXTURE_MAX_LEVEL) {
-      if (texture_params[gl_state.bind_textures.ids[active_texture]].max_level != param) {
-         texture_params[gl_state.bind_textures.ids[active_texture]].max_level = param;
-         glTexParameteri(target, pname, param);
-      }
-   }
-#endif
-   else
-      glTexParameteri(target, pname, param);
+   glTexParameteri(target, pname, param);
 }
 
 void rglTexParameterf(GLenum target, GLenum pname, GLfloat param)
