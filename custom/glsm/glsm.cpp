@@ -26,6 +26,7 @@
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 
+#define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
@@ -193,6 +194,7 @@ struct gl_cached_state
    struct
    {
       GLuint location;
+      GLuint desired_location;
    } framebuf[2];
 
    GLuint array_buffer;
@@ -217,11 +219,21 @@ struct gl_program_uniforms
    GLint uniform4i[4];
 };
 
+struct gl_framebuffers
+{
+   int draw_buf_set;
+   GLuint color_attachment;
+   GLuint depth_attachment;
+   GLenum target;
+};
+
 static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
+static struct gl_framebuffers* framebuffers[MAX_FRAMEBUFFERS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
 static bool framebuffer_emulation = 0;
+static bool copy_image_support = 0;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 static int window_first = 0;
@@ -231,6 +243,28 @@ static const GLenum discards[]  = {GL_DEPTH_ATTACHMENT};
 static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, void *userParam)
 {
    printf("%s\n", message);
+}
+
+void bindFBO(GLenum target)
+{
+   if (target == GL_FRAMEBUFFER && (gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location || gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location))
+   {
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
+      gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
+      gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
+   }
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER && gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location)
+   {
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
+      gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
+   }
+   else if (target == GL_READ_FRAMEBUFFER && gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location)
+   {
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].desired_location);
+      gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
+   }
+#endif
 }
 
 /* GL wrapper-side */
@@ -252,6 +286,11 @@ GLenum rglGetError(void)
  */
 void rglClear(GLbitfield mask)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
    glClear(mask);
 }
 
@@ -318,6 +357,63 @@ void rglLineWidth(GLfloat width)
 }
 
 /*
+ *
+ * Core in:
+ * OpenGL    : 2.0
+ * OpenGLES  : 3.2
+ */
+void rglCopyImageSubData( 	GLuint srcName,
+	GLenum srcTarget,
+	GLint srcLevel,
+	GLint srcX,
+	GLint srcY,
+	GLint srcZ,
+	GLuint dstName,
+	GLenum dstTarget,
+	GLint dstLevel,
+	GLint dstX,
+	GLint dstY,
+	GLint dstZ,
+	GLsizei srcWidth,
+	GLsizei srcHeight,
+	GLsizei srcDepth)
+{
+#ifndef HAVE_OPENGLES
+   glCopyImageSubData(srcName,
+         srcTarget,
+         srcLevel,
+         srcX,
+         srcY,
+         srcZ,
+         dstName,
+         dstTarget,
+         dstLevel,
+         dstX,
+         dstY,
+         dstZ,
+         srcWidth,
+         srcHeight,
+         srcDepth);
+#else
+   m_glCopyImageSubData(srcName,
+         srcTarget,
+         srcLevel,
+         srcX,
+         srcY,
+         srcZ,
+         dstName,
+         dstTarget,
+         dstLevel,
+         dstX,
+         dstY,
+         dstZ,
+         srcWidth,
+         srcHeight,
+         srcDepth);
+#endif
+}
+
+/*
  * Category: FBO
  *
  * Core in:
@@ -332,9 +428,27 @@ void rglBlitFramebuffer(
       GLbitfield mask, GLenum filter)
 {
 #ifndef HAVE_OPENGLES2
-   glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
+   GLuint src_attachment;
+   GLuint dst_attachment;
+   const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
+   //Unfortunately we can't count on the libretro framebuffer to have a workable internal format, this may change in future releases of RetroArch
+   if (sameSize && copy_image_support && gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer) {
+      if (mask == GL_COLOR_BUFFER_BIT) {
+         src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->color_attachment;
+         dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->color_attachment;
+      } else if (mask == GL_DEPTH_BUFFER_BIT) {
+         src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->depth_attachment;
+         dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->depth_attachment;
+      }
+      rglCopyImageSubData(src_attachment, framebuffers[gl_state.framebuf[1].desired_location]->target, 0, srcX0, srcY0, 0,
+         dst_attachment, framebuffers[gl_state.framebuf[0].desired_location]->target, 0, dstX0, dstY0, 0, srcX1 - srcX0, srcY1 - srcY0, 1);
+   } else {
+      bindFBO(GL_DRAW_FRAMEBUFFER);
+      bindFBO(GL_READ_FRAMEBUFFER);
+      glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
          dstX0, dstY0, dstX1, dstY1,
          mask, filter);
+   }
 #endif
 }
 
@@ -359,6 +473,11 @@ void rglReadPixels(	GLint x,
  	GLenum type,
  	GLvoid * data)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_READ_FRAMEBUFFER);
+#endif
    glReadPixels(x, y, width, height, format, type, data);
 }
 
@@ -745,7 +864,30 @@ void rglLinkProgram(GLuint program)
 void rglFramebufferTexture2D(GLenum target, GLenum attachment,
       GLenum textarget, GLuint texture, GLint level)
 {
-   glFramebufferTexture2D(target, attachment, textarget, texture, level);
+   int type;
+   if (target == GL_FRAMEBUFFER)
+      type = 0;
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER)
+      type = 0;
+   else if (target == GL_READ_FRAMEBUFFER)
+      type = 1;
+#endif
+   framebuffers[gl_state.framebuf[type].desired_location]->target = textarget;
+   if (attachment == GL_COLOR_ATTACHMENT0) {
+      if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != texture) {
+         bindFBO(target);
+         glFramebufferTexture2D(target, attachment, textarget, texture, level);
+         framebuffers[gl_state.framebuf[type].location]->color_attachment = texture;
+      }
+   }
+   else if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != texture) {
+         bindFBO(target);
+         glFramebufferTexture2D(target, attachment, textarget, texture, level);
+         framebuffers[gl_state.framebuf[type].location]->depth_attachment = texture;
+      }
+   }
 }
 
 /*
@@ -758,6 +900,7 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
 void rglFramebufferTexture(GLenum target, GLenum attachment,
   	GLuint texture, GLint level)
 {
+   bindFBO(target);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
    glFramebufferTexture(target, attachment, texture, level);
 #endif
@@ -770,11 +913,21 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
  */
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
    glDrawArrays(mode, first, count);
 }
 
 void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
 #ifdef HAVE_OPENGLES
    m_glDrawArraysIndirect(mode, indirect);
 #else
@@ -789,11 +942,21 @@ void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
                            const GLvoid * indices)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
    glDrawElements(mode, count, type, indices);
 }
 
 void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
 #ifdef HAVE_OPENGLES
    m_glDrawElementsIndirect(mode, type, indirect);
 #else
@@ -803,6 +966,11 @@ void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+#endif
 #ifndef HAVE_OPENGLES
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #endif
@@ -817,16 +985,17 @@ void rglCompressedTexImage2D(GLenum target, GLint level,
 }
 
 
-void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
+void rglDeleteFramebuffers(GLsizei n, const GLuint *_framebuffers)
 {
    int i, p;
    for (i = 0; i < n; ++i) {
+      free(framebuffers[_framebuffers[i]]);
       for (p = 0; p < 2; ++p) {
-         if (framebuffers[i] == gl_state.framebuf[p].location)
+         if (_framebuffers[i] == gl_state.framebuf[p].location)
             gl_state.framebuf[p].location = 0;
       }
    }
-   glDeleteFramebuffers(n, framebuffers);
+   glDeleteFramebuffers(n, _framebuffers);
 }
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
@@ -918,6 +1087,7 @@ void rglGenerateMipmap(GLenum target)
  */
 GLenum rglCheckFramebufferStatus(GLenum target)
 {
+   bindFBO(target);
    return glCheckFramebufferStatus(target);
 }
 
@@ -931,7 +1101,30 @@ GLenum rglCheckFramebufferStatus(GLenum target)
 void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
       GLenum renderbuffertarget, GLuint renderbuffer)
 {
-   glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+   int type;
+   if (target == GL_FRAMEBUFFER)
+      type = 0;
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER)
+      type = 0;
+   else if (target == GL_READ_FRAMEBUFFER)
+      type = 1;
+#endif
+   framebuffers[gl_state.framebuf[type].desired_location]->target = renderbuffertarget;
+   if (attachment == GL_COLOR_ATTACHMENT0) {
+      if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != renderbuffer) {
+         bindFBO(target);
+         glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+         framebuffers[gl_state.framebuf[type].location]->color_attachment = renderbuffer;
+      }
+   }
+   else if (attachment == GL_DEPTH_ATTACHMENT) {
+      if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != renderbuffer) {
+         bindFBO(target);
+         glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+         framebuffers[gl_state.framebuf[type].location]->depth_attachment = renderbuffer;
+      }
+   }
 }
 
 /*
@@ -1770,6 +1963,9 @@ void rglPolygonOffset(GLfloat factor, GLfloat units)
 void rglGenFramebuffers(GLsizei n, GLuint *ids)
 {
    glGenFramebuffers(n, ids);
+   int i;
+   for (i = 0; i < n; ++i)
+      framebuffers[ids[i]] = (gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
 }
 
 /*
@@ -1785,24 +1981,15 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
    else
       framebuffer_emulation = 1;
    if (target == GL_FRAMEBUFFER) {
-      if (gl_state.framebuf[0].location != framebuffer || gl_state.framebuf[1].location != framebuffer) {
-         glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[0].location = framebuffer;
-         gl_state.framebuf[1].location = framebuffer;
-      }
+         gl_state.framebuf[0].desired_location = framebuffer;
+         gl_state.framebuf[1].desired_location = framebuffer;
    }
 #ifndef HAVE_OPENGLES2
    else if (target == GL_DRAW_FRAMEBUFFER) {
-      if (gl_state.framebuf[0].location != framebuffer) {
-         glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[0].location = framebuffer;
-      }
+         gl_state.framebuf[0].desired_location = framebuffer;
    }
    else if (target == GL_READ_FRAMEBUFFER) {
-      if (gl_state.framebuf[1].location != framebuffer) {
-         glBindFramebuffer(target, framebuffer);
-         gl_state.framebuf[1].location = framebuffer;
-      }
+         gl_state.framebuf[1].desired_location = framebuffer;
    }
 #endif
 }
@@ -1817,7 +2004,12 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 void rglDrawBuffers(GLsizei n, const GLenum *bufs)
 {
 #ifndef HAVE_OPENGLES2
-   glDrawBuffers(n, bufs);
+   if (framebuffers[gl_state.framebuf[0].desired_location]->draw_buf_set == 0)
+   {
+      bindFBO(GL_DRAW_FRAMEBUFFER);
+      glDrawBuffers(n, bufs);
+      framebuffers[gl_state.framebuf[0].location]->draw_buf_set = 1;
+   }
 #endif
 }
 
@@ -1998,63 +2190,6 @@ void rglBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
 }
 
 /*
- *
- * Core in:
- * OpenGL    : 2.0
- * OpenGLES  : 3.2
- */
-void rglCopyImageSubData( 	GLuint srcName,
-  	GLenum srcTarget,
-  	GLint srcLevel,
-  	GLint srcX,
-  	GLint srcY,
-  	GLint srcZ,
-  	GLuint dstName,
-  	GLenum dstTarget,
-  	GLint dstLevel,
-  	GLint dstX,
-  	GLint dstY,
-  	GLint dstZ,
-  	GLsizei srcWidth,
-  	GLsizei srcHeight,
-  	GLsizei srcDepth)
-{
-#ifndef HAVE_OPENGLES
-   glCopyImageSubData(srcName,
-         srcTarget,
-         srcLevel,
-         srcX,
-         srcY,
-         srcZ,
-         dstName,
-         dstTarget,
-         dstLevel,
-         dstX,
-         dstY,
-         dstZ,
-         srcWidth,
-         srcHeight,
-         srcDepth);
-#else
-   m_glCopyImageSubData(srcName,
-         srcTarget,
-         srcLevel,
-         srcX,
-         srcY,
-         srcZ,
-         dstName,
-         dstTarget,
-         dstLevel,
-         dstX,
-         dstY,
-         dstZ,
-         srcWidth,
-         srcHeight,
-         srcDepth);
-#endif
-}
-
-/*
  * Category: VAO
  *
  * Core in:
@@ -2131,8 +2266,47 @@ GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 #endif
 /* GLSM-side */
 
+bool isExtensionSupported(const char *extension)
+{
+#ifdef GL_NUM_EXTENSIONS
+	GLint count = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+	for (int i = 0; i < count; ++i) {
+		const char* name = (const char*)glGetStringi(GL_EXTENSIONS, i);
+		if (name == nullptr)
+			continue;
+		if (strcmp(extension, name) == 0)
+			return true;
+	}
+	return false;
+#else
+	GLubyte *where = (GLubyte *)strchr(extension, ' ');
+	if (where || *extension == '\0')
+		return false;
+
+	const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+
+	const GLubyte *start = extensions;
+	for (;;) {
+		where = (GLubyte *)strstr((const char *)start, extension);
+		if (where == nullptr)
+			break;
+
+		GLubyte *terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+		if (*terminator == ' ' || *terminator == '\0')
+			return true;
+
+		start = terminator;
+	}
+
+	return false;
+#endif // GL_NUM_EXTENSIONS
+}
+
 static void glsm_state_setup(void)
 {
+   copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image");
 #ifdef HAVE_OPENGLES
    m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
    m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
@@ -2192,6 +2366,17 @@ static void glsm_state_setup(void)
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;
    gl_state.framebuf[1].location        = default_framebuffer;
+   gl_state.framebuf[0].desired_location        = default_framebuffer;
+   gl_state.framebuf[1].desired_location        = default_framebuffer;
+   glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+   GLint params;
+   if (!resetting_context)
+      framebuffers[default_framebuffer] = (gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
+   glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &params);
+   framebuffers[default_framebuffer]->color_attachment = params;
+   glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &params);
+   framebuffers[default_framebuffer]->depth_attachment = params;
+   framebuffers[default_framebuffer]->target = GL_TEXTURE_2D;
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
