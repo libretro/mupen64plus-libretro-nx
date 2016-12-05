@@ -432,7 +432,8 @@ void rglBlitFramebuffer(
    GLuint dst_attachment;
    const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
    //Unfortunately we can't count on the libretro framebuffer to have a workable internal format, this may change in future releases of RetroArch
-   if (sameSize && copy_image_support && gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer) {
+   if (sameSize && copy_image_support && gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer &&
+      gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS) {
       if (mask == GL_COLOR_BUFFER_BIT) {
          src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->color_attachment;
          dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->color_attachment;
@@ -873,20 +874,25 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
    else if (target == GL_READ_FRAMEBUFFER)
       type = 1;
 #endif
-   framebuffers[gl_state.framebuf[type].desired_location]->target = textarget;
-   if (attachment == GL_COLOR_ATTACHMENT0) {
-      if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != texture) {
-         bindFBO(target);
-         glFramebufferTexture2D(target, attachment, textarget, texture, level);
-         framebuffers[gl_state.framebuf[type].location]->color_attachment = texture;
+   if (gl_state.framebuf[type].desired_location < MAX_FRAMEBUFFERS) {
+      framebuffers[gl_state.framebuf[type].desired_location]->target = textarget;
+      if (attachment == GL_COLOR_ATTACHMENT0) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != texture) {
+            bindFBO(target);
+            glFramebufferTexture2D(target, attachment, textarget, texture, level);
+            framebuffers[gl_state.framebuf[type].location]->color_attachment = texture;
+         }
       }
-   }
-   else if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != texture) {
-         bindFBO(target);
-         glFramebufferTexture2D(target, attachment, textarget, texture, level);
-         framebuffers[gl_state.framebuf[type].location]->depth_attachment = texture;
+      else if (attachment == GL_DEPTH_ATTACHMENT) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != texture) {
+            bindFBO(target);
+            glFramebufferTexture2D(target, attachment, textarget, texture, level);
+            framebuffers[gl_state.framebuf[type].location]->depth_attachment = texture;
+         }
       }
+   } else {
+      bindFBO(target);
+      glFramebufferTexture2D(target, attachment, textarget, texture, level);
    }
 }
 
@@ -989,7 +995,8 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *_framebuffers)
 {
    int i, p;
    for (i = 0; i < n; ++i) {
-      free(framebuffers[_framebuffers[i]]);
+      if (_framebuffers[i] < MAX_FRAMEBUFFERS)
+         free(framebuffers[_framebuffers[i]]);
       for (p = 0; p < 2; ++p) {
          if (_framebuffers[i] == gl_state.framebuf[p].location)
             gl_state.framebuf[p].location = 0;
@@ -1110,20 +1117,25 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
    else if (target == GL_READ_FRAMEBUFFER)
       type = 1;
 #endif
-   framebuffers[gl_state.framebuf[type].desired_location]->target = renderbuffertarget;
-   if (attachment == GL_COLOR_ATTACHMENT0) {
-      if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != renderbuffer) {
-         bindFBO(target);
-         glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
-         framebuffers[gl_state.framebuf[type].location]->color_attachment = renderbuffer;
+   if (gl_state.framebuf[type].desired_location < MAX_FRAMEBUFFERS) {
+      framebuffers[gl_state.framebuf[type].desired_location]->target = renderbuffertarget;
+      if (attachment == GL_COLOR_ATTACHMENT0) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != renderbuffer) {
+            bindFBO(target);
+            glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+            framebuffers[gl_state.framebuf[type].location]->color_attachment = renderbuffer;
+         }
       }
-   }
-   else if (attachment == GL_DEPTH_ATTACHMENT) {
-      if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != renderbuffer) {
-         bindFBO(target);
-         glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
-         framebuffers[gl_state.framebuf[type].location]->depth_attachment = renderbuffer;
+      else if (attachment == GL_DEPTH_ATTACHMENT) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != renderbuffer) {
+            bindFBO(target);
+            glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+            framebuffers[gl_state.framebuf[type].location]->depth_attachment = renderbuffer;
+         }
       }
+   } else {
+      bindFBO(target);
+      glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
    }
 }
 
@@ -1964,8 +1976,10 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
 {
    glGenFramebuffers(n, ids);
    int i;
-   for (i = 0; i < n; ++i)
-      framebuffers[ids[i]] = (gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
+   for (i = 0; i < n; ++i) {
+      if (ids[i] < MAX_FRAMEBUFFERS)
+         framebuffers[ids[i]] = (gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
+   }
 }
 
 /*
@@ -2004,11 +2018,16 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 void rglDrawBuffers(GLsizei n, const GLenum *bufs)
 {
 #ifndef HAVE_OPENGLES2
-   if (framebuffers[gl_state.framebuf[0].desired_location]->draw_buf_set == 0)
-   {
+   if (gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS) {
+      if (framebuffers[gl_state.framebuf[0].desired_location]->draw_buf_set == 0)
+      {
+         bindFBO(GL_DRAW_FRAMEBUFFER);
+         glDrawBuffers(n, bufs);
+         framebuffers[gl_state.framebuf[0].location]->draw_buf_set = 1;
+      }
+   } else {
       bindFBO(GL_DRAW_FRAMEBUFFER);
       glDrawBuffers(n, bufs);
-      framebuffers[gl_state.framebuf[0].location]->draw_buf_set = 1;
    }
 #endif
 }
