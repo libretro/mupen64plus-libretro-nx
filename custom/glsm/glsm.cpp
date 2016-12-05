@@ -2325,7 +2325,21 @@ bool isExtensionSupported(const char *extension)
 
 static void glsm_state_setup(void)
 {
-   copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image");
+   GLint majorVersion = 0;
+   GLint minorVersion = 0;
+   bool copy_image_support_version = 0;
+#ifndef HAVE_OPENGLES2
+   glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+   glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+#endif
+#ifdef HAVE_OPENGLES
+   if (majorVersion >= 3 && minorVersion >= 2)
+      copy_image_support_version = 1;
+#else
+   if (majorVersion >= 4 && minorVersion >= 3)
+      copy_image_support_version = 1;
+#endif
+   copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image") || copy_image_support_version;
 #ifdef HAVE_OPENGLES
    m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
    m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
