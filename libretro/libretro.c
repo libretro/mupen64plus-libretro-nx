@@ -89,6 +89,8 @@ u32 txHiresEnable = 0;
 u32 txHiresFullAlphaChannel = 0;
 u32 txFilterIgnoreBG = 0;
 u32 MultiSampling = 0;
+u32 EnableFragmentDepthWrite = 0;
+
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -161,11 +163,16 @@ static void setup_variables(void)
          "Continuous texrect coords; Off|Auto|Force" },
       { "glupen64-EnableNativeResTexrects",
          "Native res. 2D texrects; False|True" },
-      { "glupen64-EnableLegacyBlending",
 #if defined(HAVE_OPENGLES)
+      { "glupen64-EnableLegacyBlending",
          "Less accurate blending mode; True|False" },
+      { "glupen64-EnableFragmentDepthWrite",
+         "GPU shader depth write; False|True" },
 #else
+      { "glupen64-EnableLegacyBlending",
          "Less accurate blending mode; False|True" },
+      { "glupen64-EnableFragmentDepthWrite",
+         "GPU shader depth write; True|False" },
 #endif
       { "glupen64-txFilterMode",
          "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
@@ -700,6 +707,16 @@ void update_variables()
          enableLegacyBlending = 1;
       else
          enableLegacyBlending = 0;
+   }
+
+   var.key = "glupen64-EnableFragmentDepthWrite";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableFragmentDepthWrite = 1;
+      else
+         EnableFragmentDepthWrite = 0;
    }
 
    var.key = "glupen64-cpucore";
