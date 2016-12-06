@@ -333,8 +333,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.max_width    = retro_screen_width;
    info->geometry.max_height   = retro_screen_height;
    info->geometry.aspect_ratio = retro_screen_aspect;
-   //info->timing.fps = (region == SYSTEM_PAL) ? 50.0 : (60/1.001);
-   info->timing.fps = (double)ROM_PARAMS.vilimit;
+   info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
    info->timing.sample_rate = 44100.0;
 }
 
@@ -753,10 +752,10 @@ static void format_saved_memory(void)
    format_sram(saved_memory.sram);
    format_eeprom(saved_memory.eeprom, EEPROM_MAX_SIZE);
    format_flashram(saved_memory.flashram);
-   format_mempak(saved_memory.mempack[0]);
-   format_mempak(saved_memory.mempack[1]);
-   format_mempak(saved_memory.mempack[2]);
-   format_mempak(saved_memory.mempack[3]);
+   format_mempak(saved_memory.mempack + 0 * MEMPAK_SIZE);
+   format_mempak(saved_memory.mempack + 1 * MEMPAK_SIZE);
+   format_mempak(saved_memory.mempack + 2 * MEMPAK_SIZE);
+   format_mempak(saved_memory.mempack + 3 * MEMPAK_SIZE);
 }
 
 static void context_reset(void)

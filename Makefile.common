@@ -63,16 +63,19 @@ SOURCES_C += \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/main/main.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/frontend_libretro.c \
+	$(CORE_DIR)/src/backends/audio_out_backend.c \
+	$(CORE_DIR)/src/backends/clock_backend.c \
+	$(CORE_DIR)/src/backends/controller_input_backend.c \
+	$(CORE_DIR)/src/backends/rumble_backend.c \
+	$(CORE_DIR)/src/backends/storage_backend.c \
 	$(CORE_DIR)/src/main/cheat.c \
 	$(CORE_DIR)/src/main/util.c \
-	$(CORE_DIR)/src/main/eep_file.c \
-	$(CORE_DIR)/src/main/fla_file.c \
+	$(CORE_DIR)/src/main/device.c \
 	$(CORE_DIR)/src/main/md5.c \
-	$(CORE_DIR)/src/main/mpk_file.c \
 	$(CORE_DIR)/src/main/profile.c \
 	$(CORE_DIR)/src/main/rom.c \
 	$(CORE_DIR)/src/main/savestates.c \
-	$(CORE_DIR)/src/main/sra_file.c \
+	$(CORE_DIR)/src/main/storage_file.c \
 	$(CORE_DIR)/src/main/zip/zip.c \
 	$(CORE_DIR)/src/main/zip/unzip.c \
 	$(CORE_DIR)/src/main/zip/ioapi.c \

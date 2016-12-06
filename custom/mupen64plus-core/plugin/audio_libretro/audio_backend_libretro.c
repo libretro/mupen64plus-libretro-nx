@@ -97,10 +97,11 @@ void init_audio_libretro(unsigned max_audio_frames)
 void set_audio_format_via_audio_plugin(void* user_data,
       unsigned int frequency, unsigned int bits)
 {
-   uint32_t saved_ai_dacrate = g_ai.regs[AI_DACRATE_REG];
+   struct ai_controller* ai = (struct ai_controller*)user_data;
+   uint32_t saved_ai_dacrate = g_dev.ai.regs[AI_DACRATE_REG];
 
    /* notify plugin of the new frequency (can't do the same for bits) */
-   g_ai.regs[AI_DACRATE_REG] = (ROM_PARAMS.aidacrate / frequency) - 1;
+   g_dev.ai.regs[AI_DACRATE_REG] = (ai->vi->clock / frequency) - 1;
 
    GameFreq        = frequency;
    BytesPerSecond  = frequency * 4;
@@ -112,7 +113,7 @@ void set_audio_format_via_audio_plugin(void* user_data,
 #endif
 
    /* restore original registers values */
-   g_ai.regs[AI_DACRATE_REG] = saved_ai_dacrate;
+   g_dev.ai.regs[AI_DACRATE_REG] = saved_ai_dacrate;
 }
 
 /* Abuse core & audio plugin implementation details to obtain the desired effect. */
@@ -128,13 +129,13 @@ void push_audio_samples_via_audio_plugin(void* user_data, const void* buffer, si
    uint8_t *p        = (uint8_t*)buffer;
 
    /* save registers values */
-   uint32_t saved_ai_length = g_ai.regs[AI_LEN_REG];
-   uint32_t saved_ai_dram = g_ai.regs[AI_DRAM_ADDR_REG];
+   uint32_t saved_ai_length = g_dev.ai.regs[AI_LEN_REG];
+   uint32_t saved_ai_dram = g_dev.ai.regs[AI_DRAM_ADDR_REG];
 
    /* notify plugin of new samples to play.
     * Exploit the fact that buffer points in g_rdram to retreive dram_addr_reg value */
-   g_ai.regs[AI_DRAM_ADDR_REG] = (uint8_t*)buffer - (uint8_t*)g_rdram;
-   g_ai.regs[AI_LEN_REG] = size;
+   g_dev.ai.regs[AI_DRAM_ADDR_REG] = (uint8_t*)buffer - (uint8_t*)g_rdram;
+   g_dev.ai.regs[AI_LEN_REG] = size;
 
    for (i = 0; i < size; i += 4)
    {
@@ -185,6 +186,6 @@ audio_batch:
    }
 
    /* restore original registers vlaues */
-   g_ai.regs[AI_LEN_REG]       = saved_ai_length;
-   g_ai.regs[AI_DRAM_ADDR_REG] = saved_ai_dram;
+   g_dev.ai.regs[AI_LEN_REG]       = saved_ai_length;
+   g_dev.ai.regs[AI_DRAM_ADDR_REG] = saved_ai_dram;
 }

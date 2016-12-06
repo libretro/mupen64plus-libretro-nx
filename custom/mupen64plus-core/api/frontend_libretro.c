@@ -221,14 +221,6 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             return M64ERR_SUCCESS;
-        case M64CMD_READ_SCREEN:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (ParamPtr == NULL)
-                return M64ERR_INPUT_ASSERT;
-            if (ParamInt < 0 || ParamInt > 1)
-                return M64ERR_INPUT_INVALID;
-            return main_read_screen(ParamPtr, ParamInt);
         case M64CMD_RESET:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
