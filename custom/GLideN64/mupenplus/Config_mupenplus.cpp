@@ -89,7 +89,11 @@ void Config_LoadConfig()
 #ifdef HAVE_OPENGLES
 	config.frameBufferEmulation.bufferSwapMode = 2;
 #endif
+#ifdef HAVE_OPENGLES2
+	config.generalEmulation.enableFragmentDepthWrite = 0;
+#else
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
+#endif
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
