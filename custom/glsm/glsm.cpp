@@ -2475,6 +2475,7 @@ static void glsm_state_bind(void)
    if (!framebuffer_emulation) {
       glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
       gl_state.framebuf[0].location = default_framebuffer;
+      gl_state.framebuf[1].location = default_framebuffer;
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    } else {
       gl_state.framebuf[0].location = 0;
