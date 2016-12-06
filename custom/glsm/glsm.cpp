@@ -188,6 +188,12 @@ struct gl_cached_state
 
    struct
    {
+     GLint pack;
+     GLint unpack;
+   } pixelstore;
+
+   struct
+   {
       GLenum mode;
    } readbuffer;
 
@@ -495,7 +501,18 @@ void rglReadPixels(	GLint x,
  */
 void rglPixelStorei(GLenum pname, GLint param)
 {
-   glPixelStorei(pname, param);
+   if (pname == GL_UNPACK_ALIGNMENT) {
+      if (param != gl_state.pixelstore.unpack) {
+         glPixelStorei(pname, param);
+         gl_state.pixelstore.unpack = param;
+      }
+   } else if (pname == GL_PACK_ALIGNMENT) {
+      if (param != gl_state.pixelstore.pack) {
+         glPixelStorei(pname, param);
+         gl_state.pixelstore.pack = param;
+      }
+   } else
+      glPixelStorei(pname, param);
 }
 
 /*
@@ -2391,6 +2408,8 @@ static void glsm_state_setup(void)
       gl_state.bind_textures.ids[i] = 0;
    }
 
+   gl_state.pixelstore.pack             = 4;
+   gl_state.pixelstore.unpack           = 4;
    gl_state.array_buffer                = 0;
    gl_state.index_buffer                = 0;
    gl_state.pix_unpack_buffer           = 0;
@@ -2465,6 +2484,9 @@ static void glsm_state_bind(void)
          }
       }
    }
+
+   glPixelStorei(GL_UNPACK_ALIGNMENT, gl_state.pixelstore.unpack);
+   glPixelStorei(GL_PACK_ALIGNMENT, gl_state.pixelstore.pack);
 
    glClearColor(
          gl_state.clear_color.r,
