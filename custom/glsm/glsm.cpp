@@ -435,8 +435,9 @@ void rglBlitFramebuffer(
 #ifndef HAVE_OPENGLES2
    GLuint src_attachment;
    GLuint dst_attachment;
+   const bool not_default_fb = gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer;
    const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
-   if (sameSize && copy_image_support && gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS) {
+   if (sameSize && copy_image_support && not_default_fb && gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS) {
       if (mask == GL_COLOR_BUFFER_BIT) {
          src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->color_attachment;
          dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->color_attachment;
