@@ -2471,8 +2471,7 @@ void OGLRender::_destroyData()
 
 	m_renderState = rsNone;
 	m_texrectDrawer.destroy();
-	if (config.bloomFilter.enable != 0)
-		PostProcessor::get().destroy();
+	PostProcessor::get().destroy();
 	if (TFH.optionsChanged())
 		TFH.shutdown();
 	TextDrawer::get().destroy();
