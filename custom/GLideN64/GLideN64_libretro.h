@@ -68,5 +68,6 @@ extern u32 txHiresFullAlphaChannel;
 extern u32 txFilterIgnoreBG;
 extern u32 MultiSampling;
 extern u32 EnableFragmentDepthWrite;
+extern u32 EnableShadersStorage;
 
 #endif

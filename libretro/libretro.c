@@ -90,6 +90,7 @@ u32 txHiresFullAlphaChannel = 0;
 u32 txFilterIgnoreBG = 0;
 u32 MultiSampling = 0;
 u32 EnableFragmentDepthWrite = 0;
+u32 EnableShadersStorage = 0;
 
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -174,6 +175,8 @@ static void setup_variables(void)
       { "glupen64-EnableFragmentDepthWrite",
          "GPU shader depth write; True|False" },
 #endif
+      { "glupen64-EnableShadersStorage",
+         "Cache GPU Shaders; True|False" },
       { "glupen64-txFilterMode",
          "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
       { "glupen64-txEnhancementMode",
@@ -717,6 +720,16 @@ void update_variables()
          EnableFragmentDepthWrite = 1;
       else
          EnableFragmentDepthWrite = 0;
+   }
+
+   var.key = "glupen64-EnableShadersStorage";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "True"))
+         EnableShadersStorage = 1;
+      else
+         EnableShadersStorage = 0;
    }
 
    var.key = "glupen64-cpucore";

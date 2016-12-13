@@ -94,6 +94,7 @@ void Config_LoadConfig()
 #else
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 #endif
+	config.generalEmulation.enableShadersStorage = EnableShadersStorage;
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
