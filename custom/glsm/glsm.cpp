@@ -1024,11 +1024,20 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *_framebuffers)
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
 {
-   int i;
+   int i, p;
    for (i = 0; i < n; ++i) {
-      if (textures[i] == gl_state.bind_textures.ids[active_texture])
+      if (textures[i] == gl_state.bind_textures.ids[active_texture]) {
          gl_state.bind_textures.ids[active_texture] = 0;
          gl_state.bind_textures.target[active_texture] = GL_TEXTURE_2D;
+      }
+      for (p = 0; p < MAX_FRAMEBUFFERS; ++p) {
+         if (framebuffers[p] != NULL) {
+            if (framebuffers[p]->color_attachment == textures[i])
+               framebuffers[p]->color_attachment = 0;
+            if (framebuffers[p]->depth_attachment == textures[i])
+               framebuffers[p]->depth_attachment = 0;
+         }
+      }
    }
    glDeleteTextures(n, textures);
 }
