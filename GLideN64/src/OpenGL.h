@@ -101,9 +101,7 @@ class OGLRender
 {
 public:
 	bool use_vbo;
-	bool use_indirect;
 	bool buffer_storage;
-	void drawArrayIndirect(GLenum mode, GLuint first, GLuint count);
 	void* mapBO(int buffer, u32 length);
 	void unmapBO(int buffer, u32 length, u32 count);
 	void updateBO(int buffer, u32 size, u32 count, const void *pointer);
@@ -186,7 +184,6 @@ public:
 		TRI_VBO = 0,
 		RECT_VBO,
 		IBO,
-		INDIRECT,
 		PIX_UNPACK,
 		BO_COUNT
 	};
@@ -288,20 +285,6 @@ private:
 	bool m_bDmaVertices;
 	GLint majorVersion, minorVersion;
 	GLuint vao;
-	typedef  struct {
-		GLuint  count;
-		GLuint  primCount;
-		GLuint  firstIndex;
-		GLuint  baseVertex;
-		GLuint  baseInstance;
-	} DrawElementsIndirectCommand;
-
-	typedef  struct {
-		GLuint  count;
-		GLuint  primCount;
-		GLuint  first;
-		GLuint  baseInstance;
-	} DrawArraysIndirectCommand;
 
 	TexrectDrawer m_texrectDrawer;
 

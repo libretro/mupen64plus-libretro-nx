@@ -28,21 +28,16 @@
 
 #define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
-#ifndef GL_DRAW_INDIRECT_BUFFER
-#define GL_DRAW_INDIRECT_BUFFER 0x8F3F
-#endif
 
 #ifdef HAVE_OPENGLES
 #include <EGL/egl.h>
-typedef void (GL_APIENTRYP PFNGLDRAWARRAYSINDIRECTPROC) (GLenum mode, const void *indirect);
-typedef void (GL_APIENTRYP PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const void *indirect);
+typedef void (GL_APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
 typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
 typedef void (GL_APIENTRYP PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
 typedef void (GL_APIENTRYP PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
 typedef void (GL_APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
-PFNGLDRAWARRAYSINDIRECTPROC m_glDrawArraysIndirect;
-PFNGLDRAWELEMENTSINDIRECTPROC m_glDrawElementsIndirect;
+PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC m_glDrawRangeElementsBaseVertex;
 PFNGLBUFFERSTORAGEEXTPROC m_glBufferStorage;
 PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
 PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
@@ -205,7 +200,6 @@ struct gl_cached_state
 
    GLuint array_buffer;
    GLuint index_buffer;
-   GLuint indirect_buffer;
    GLuint pix_unpack_buffer;
    GLuint vao;
    GLuint program;
@@ -845,12 +839,6 @@ void rglBindBuffer(GLenum target, GLuint buffer)
       }
    }
 #ifndef HAVE_OPENGLES2
-   else if (target == GL_DRAW_INDIRECT_BUFFER) {
-      if (gl_state.indirect_buffer != buffer) {
-         gl_state.indirect_buffer = buffer;
-         glBindBuffer(target, buffer);
-      }
-   }
    else if (target == GL_PIXEL_UNPACK_BUFFER) {
       if (gl_state.pix_unpack_buffer != buffer) {
          gl_state.pix_unpack_buffer = buffer;
@@ -952,9 +940,7 @@ void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 #else
    bindFBO(GL_DRAW_FRAMEBUFFER);
 #endif
-#ifdef HAVE_OPENGLES
-   m_glDrawArraysIndirect(mode, indirect);
-#else
+#ifndef HAVE_OPENGLES
    glDrawArraysIndirect(mode, indirect);
 #endif
 }
@@ -981,9 +967,7 @@ void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 #else
    bindFBO(GL_DRAW_FRAMEBUFFER);
 #endif
-#ifdef HAVE_OPENGLES
-   m_glDrawElementsIndirect(mode, type, indirect);
-#else
+#ifndef HAVE_OPENGLES
    glDrawElementsIndirect(mode, type, indirect);
 #endif
 }
@@ -997,6 +981,8 @@ void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsiz
 #endif
 #ifndef HAVE_OPENGLES
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+#else
+   m_glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #endif
 }
 
@@ -2370,8 +2356,7 @@ static void glsm_state_setup(void)
 #endif
    copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image") || copy_image_support_version;
 #ifdef HAVE_OPENGLES
-   m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
-   m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
+   m_glDrawRangeElementsBaseVertex = (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)eglGetProcAddress("glDrawRangeElementsBaseVertex");
    m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)eglGetProcAddress("glBufferStorageEXT");
    m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
    m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
