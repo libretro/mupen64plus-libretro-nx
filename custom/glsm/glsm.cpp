@@ -432,9 +432,13 @@ void rglBlitFramebuffer(
    GLuint dst_attachment;
    const bool good_pointer = gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS;
    const bool good_target = framebuffers[gl_state.framebuf[0].desired_location]->target == framebuffers[gl_state.framebuf[1].desired_location]->target;
-   const bool not_default_fb = !maliGPU || (gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer);
+   bool good_fb;
+   if (maliGPU)
+      good_fb = gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer;
+   else
+      good_fb = true;
    const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
-   if (sameSize && copy_image_support && not_default_fb && good_pointer && good_target) {
+   if (sameSize && copy_image_support && good_fb && good_pointer && good_target) {
       if (mask == GL_COLOR_BUFFER_BIT) {
          src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->color_attachment;
          dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->color_attachment;
