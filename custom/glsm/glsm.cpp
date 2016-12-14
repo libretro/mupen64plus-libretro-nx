@@ -244,6 +244,7 @@ static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 static int window_first = 0;
 static int resetting_context = 0;
+static bool maliGPU;
 
 static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, void *userParam)
 {
@@ -437,7 +438,7 @@ void rglBlitFramebuffer(
    GLuint dst_attachment;
    const bool good_pointer = gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS;
    const bool good_target = framebuffers[gl_state.framebuf[0].desired_location]->target == framebuffers[gl_state.framebuf[1].desired_location]->target;
-   const bool not_default_fb = gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer;
+   const bool not_default_fb = !maliGPU || (gl_state.framebuf[0].desired_location != default_framebuffer && gl_state.framebuf[1].desired_location != default_framebuffer);
    const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
    if (sameSize && copy_image_support && not_default_fb && good_pointer && good_target) {
       if (mask == GL_COLOR_BUFFER_BIT) {
@@ -2354,6 +2355,8 @@ static void glsm_state_setup(void)
    GLint majorVersion = 0;
    GLint minorVersion = 0;
    bool copy_image_support_version = 0;
+   const char * strRenderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+   maliGPU = strstr(strRenderer, "Mali") != NULL;
 #ifndef HAVE_OPENGLES2
    glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
    glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
