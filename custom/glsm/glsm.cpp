@@ -246,14 +246,15 @@ static void on_gl_error(GLenum source, GLenum type, GLuint id, GLenum severity, 
 
 void bindFBO(GLenum target)
 {
+#ifdef HAVE_OPENGLES2
    if (target == GL_FRAMEBUFFER && (gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location || gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location))
    {
       glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
       gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
       gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
    }
-#ifndef HAVE_OPENGLES2
-   else if (target == GL_DRAW_FRAMEBUFFER && gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location)
+#else
+   if ((target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER) && gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location)
    {
       glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
       gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
@@ -285,11 +286,7 @@ GLenum rglGetError(void)
  */
 void rglClear(GLbitfield mask)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
    glClear(mask);
 }
 
@@ -923,21 +920,13 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
  */
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
    glDrawArrays(mode, first, count);
 }
 
 void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
 #ifndef HAVE_OPENGLES
    glDrawArraysIndirect(mode, indirect);
 #endif
@@ -950,21 +939,13 @@ void rglDrawArraysIndirect(GLenum mode, const void *indirect)
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
                            const GLvoid * indices)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
    glDrawElements(mode, count, type, indices);
 }
 
 void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
 #ifndef HAVE_OPENGLES
    glDrawElementsIndirect(mode, type, indirect);
 #endif
@@ -972,11 +953,7 @@ void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
 
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
-#ifdef HAVE_OPENGLES2
    bindFBO(GL_FRAMEBUFFER);
-#else
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-#endif
 #ifndef HAVE_OPENGLES
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #else
