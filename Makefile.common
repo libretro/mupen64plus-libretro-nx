@@ -188,8 +188,8 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler.c \
 	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
-	$(LIBRETRO_COMM_DIR)/conversion/float_to_s16.c \
-	$(LIBRETRO_COMM_DIR)/conversion/s16_to_float.c \
+	$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
+	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
 	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c
 

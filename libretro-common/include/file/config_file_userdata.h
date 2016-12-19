@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (gl_capabilities.h).
+ * The following license statement only applies to this file (config_file_userdata.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,45 +20,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _GL_CAPABILITIES_H
-#define _GL_CAPABILITIES_H
+#ifndef _LIBRETRO_SDK_CONFIG_FILE_USERDATA_H
+#define _LIBRETRO_SDK_CONFIG_FILE_USERDATA_H
 
-#include <boolean.h>
-#include <retro_common_api.h>
+#include <string.h>
 
-enum gl_capability_enum
+#include <file/config_file.h>
+
+struct config_file_userdata
 {
-   GL_CAPS_NONE = 0,
-   GL_CAPS_EGLIMAGE,
-   GL_CAPS_SYNC,
-   GL_CAPS_MIPMAP,
-   GL_CAPS_VAO,
-   GL_CAPS_FBO,
-   GL_CAPS_ARGB8,
-   GL_CAPS_DEBUG,
-   GL_CAPS_PACKED_DEPTH_STENCIL,
-   GL_CAPS_ES2_COMPAT,
-   GL_CAPS_UNPACK_ROW_LENGTH,
-   GL_CAPS_FULL_NPOT_SUPPORT,
-   GL_CAPS_SRGB_FBO,
-   GL_CAPS_SRGB_FBO_ES3,
-   GL_CAPS_FP_FBO,
-   GL_CAPS_BGRA8888,
-   GL_CAPS_GLES3_SUPPORTED,
-   GL_CAPS_TEX_STORAGE,
-   GL_CAPS_TEX_STORAGE_EXT
+   config_file_t *conf;
+   const char *prefix[2];
 };
 
-bool gl_check_error(char **error_string);
+int config_userdata_get_float(void *userdata, const char *key_str,
+      float *value, float default_value);
 
-bool gl_query_core_context_in_use(void);
+int config_userdata_get_int(void *userdata, const char *key_str,
+      int *value, int default_value);
 
-void gl_query_core_context_set(bool set);
+int config_userdata_get_float_array(void *userdata, const char *key_str,
+      float **values, unsigned *out_num_values,
+      const float *default_values, unsigned num_default_values);
 
-void gl_query_core_context_unset(void);
+int config_userdata_get_int_array(void *userdata, const char *key_str,
+      int **values, unsigned *out_num_values,
+      const int *default_values, unsigned num_default_values);
 
-bool gl_check_capability(enum gl_capability_enum enum_idx);
+int config_userdata_get_string(void *userdata, const char *key_str,
+      char **output, const char *default_output);
 
-bool gl_query_extension(const char *ext);
+void config_userdata_free(void *ptr);
 
 #endif

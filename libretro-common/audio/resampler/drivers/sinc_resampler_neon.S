@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (gl_capabilities.h).
+ * The following license statement only applies to this file (sinc_resampler_neon.S).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,45 +20,55 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _GL_CAPABILITIES_H
-#define _GL_CAPABILITIES_H
+#if defined(__ARM_NEON__)
 
-#include <boolean.h>
-#include <retro_common_api.h>
+#ifndef __MACH__
+.arm
+#endif
+.align 4
+.globl process_sinc_neon_asm
+#ifndef __MACH__
+.type process_sinc_neon_asm, %function
+#endif
+.globl _process_sinc_neon_asm
+#ifndef __MACH__
+.type _process_sinc_neon_asm, %function
+#endif
+# void process_sinc_neon(float *out, const float *left, const float *right, const float *coeff, unsigned taps)
+# Assumes taps is >= 8, and a multiple of 8.
+process_sinc_neon_asm:
+_process_sinc_neon_asm:
 
-enum gl_capability_enum
-{
-   GL_CAPS_NONE = 0,
-   GL_CAPS_EGLIMAGE,
-   GL_CAPS_SYNC,
-   GL_CAPS_MIPMAP,
-   GL_CAPS_VAO,
-   GL_CAPS_FBO,
-   GL_CAPS_ARGB8,
-   GL_CAPS_DEBUG,
-   GL_CAPS_PACKED_DEPTH_STENCIL,
-   GL_CAPS_ES2_COMPAT,
-   GL_CAPS_UNPACK_ROW_LENGTH,
-   GL_CAPS_FULL_NPOT_SUPPORT,
-   GL_CAPS_SRGB_FBO,
-   GL_CAPS_SRGB_FBO_ES3,
-   GL_CAPS_FP_FBO,
-   GL_CAPS_BGRA8888,
-   GL_CAPS_GLES3_SUPPORTED,
-   GL_CAPS_TEX_STORAGE,
-   GL_CAPS_TEX_STORAGE_EXT
-};
+   push {r4, lr}   
+   vmov.f32 q0, #0.0
+   vmov.f32 q8, #0.0
 
-bool gl_check_error(char **error_string);
+   # Taps argument (r4) goes on stack in armeabi.
+   ldr r4, [sp, #8]
 
-bool gl_query_core_context_in_use(void);
+1:
+   # Left
+   vld1.f32 {q2-q3}, [r1]!
+   # Right
+   vld1.f32 {q10-q11}, [r2]!
+   # Coeff
+   vld1.f32 {q12-q13}, [r3, :128]!
 
-void gl_query_core_context_set(bool set);
+   # Left / Right
+   vmla.f32 q0, q2, q12
+   vmla.f32 q8, q10, q12
+   vmla.f32 q0, q3, q13
+   vmla.f32 q8, q11, q13
 
-void gl_query_core_context_unset(void);
+   subs r4, r4, #8
+   bne 1b
 
-bool gl_check_capability(enum gl_capability_enum enum_idx);
-
-bool gl_query_extension(const char *ext);
+   # Add everything together
+   vadd.f32 d0, d0, d1
+   vadd.f32 d16, d16, d17
+   vpadd.f32 d0, d0, d16
+   vst1.f32 d0, [r0]
+   
+   pop {r4, pc}
 
 #endif

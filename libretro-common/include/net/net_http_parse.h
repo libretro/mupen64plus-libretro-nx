@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (gl_capabilities.h).
+ * The following license statement only applies to this file (net_http.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,45 +20,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _GL_CAPABILITIES_H
-#define _GL_CAPABILITIES_H
+#ifndef _LIBRETRO_SDK_NET_HTTP_PARSE_H
+#define _LIBRETRO_SDK_NET_HTTP_PARSE_H
 
+#include <stdint.h>
 #include <boolean.h>
+#include <string.h>
+
 #include <retro_common_api.h>
 
-enum gl_capability_enum
-{
-   GL_CAPS_NONE = 0,
-   GL_CAPS_EGLIMAGE,
-   GL_CAPS_SYNC,
-   GL_CAPS_MIPMAP,
-   GL_CAPS_VAO,
-   GL_CAPS_FBO,
-   GL_CAPS_ARGB8,
-   GL_CAPS_DEBUG,
-   GL_CAPS_PACKED_DEPTH_STENCIL,
-   GL_CAPS_ES2_COMPAT,
-   GL_CAPS_UNPACK_ROW_LENGTH,
-   GL_CAPS_FULL_NPOT_SUPPORT,
-   GL_CAPS_SRGB_FBO,
-   GL_CAPS_SRGB_FBO_ES3,
-   GL_CAPS_FP_FBO,
-   GL_CAPS_BGRA8888,
-   GL_CAPS_GLES3_SUPPORTED,
-   GL_CAPS_TEX_STORAGE,
-   GL_CAPS_TEX_STORAGE_EXT
-};
+RETRO_BEGIN_DECLS
 
-bool gl_check_error(char **error_string);
+/**
+ * string_parse_html_anchor:
+ * @line               : Buffer where the <a> tag is stored
+ * @link               : Buffer to store the link URL in
+ * @name               : Buffer to store the link URL in
+ * @link_size          : Size of the link buffer including the NUL-terminator
+ * @name_size          : Size of the name buffer including the NUL-terminator
+ *
+ * Parses an HTML anchor link stored in @line in the form of: <a href="/path/to/url">Title</a>
+ * The buffer pointed to by @link is filled with the URL path the link points to,
+ * and @name is filled with the title portion of the link.
+ *
+ * Returns: 0 if URL was parsed completely, otherwise 1.
+ **/
+int string_parse_html_anchor(const char *line, char *link, char *name,
+      size_t link_size, size_t name_size);
 
-bool gl_query_core_context_in_use(void);
-
-void gl_query_core_context_set(bool set);
-
-void gl_query_core_context_unset(void);
-
-bool gl_check_capability(enum gl_capability_enum enum_idx);
-
-bool gl_query_extension(const char *ext);
+RETRO_END_DECLS
 
 #endif
