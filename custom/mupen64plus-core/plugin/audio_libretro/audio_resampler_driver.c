@@ -23,7 +23,6 @@
 
 static const rarch_resampler_t *resampler_drivers[] = {
    &sinc_resampler,
-   &CC_resampler,
    NULL,
 };
 

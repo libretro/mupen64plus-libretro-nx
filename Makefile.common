@@ -185,8 +185,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/memmap/memalign.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_backend_libretro.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_resampler_driver.c \
-	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler.c \
-	$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
@@ -285,8 +284,7 @@ ifeq ($(HAVE_NEON),1)
 
 	SOURCES_ASM += $(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16_neon.S \
 		$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float_neon.S \
-		$(AUDIO_LIBRETRO_DIR)/drivers_resampler/sinc_resampler_neon.S \
-		$(AUDIO_LIBRETRO_DIR)/drivers_resampler/cc_resampler_neon.S
+		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler_neon.S
 else
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
