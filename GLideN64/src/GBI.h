@@ -24,7 +24,8 @@
 #define ZSortp		15
 #define F3DSETA		16
 #define F3DGOLDEN	17
-#define NONE		18
+#define F3DEX2MM	18
+#define NONE		19
 
 // Fixed point conversion factors
 #define FIXED2FLOATRECIP1	0.5f
@@ -684,7 +685,6 @@ struct MicrocodeInfo
 	bool NoN;
 	bool textureGen;
 	bool texturePersp;
-	bool branchLessZ;
 };
 
 struct GBIInfo
@@ -701,7 +701,6 @@ struct GBIInfo
 	bool isNoN() const { return m_pCurrent != nullptr ? m_pCurrent->NoN : false; }
 	bool isTextureGen() const { return m_pCurrent != nullptr ? m_pCurrent->textureGen: true; }
 	bool isTexturePersp() const { return m_pCurrent != nullptr ? m_pCurrent->texturePersp: true; }
-	bool isBranchLessZ() const { return m_pCurrent != nullptr ? m_pCurrent->branchLessZ : true; }
 
 private:
 	void _flushCommands();

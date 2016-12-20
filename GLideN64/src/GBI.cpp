@@ -25,6 +25,7 @@
 #include "F3DSETA.h"
 #include "F3DGOLDEN.h"
 #include "F3DEX2CBFD.h"
+#include "F3DEX2MM.h"
 #include "ZSort.h"
 #include "CRC.h"
 #include "Log.h"
@@ -187,6 +188,7 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case F3DEX2CBFD:F3DEX2CBFD_Init();	break;
 			case F3DSETA:	F3DSETA_Init();		break;
 			case F3DGOLDEN:	F3DGOLDEN_Init();	break;
+			case F3DEX2MM:	F3DEX2MM_Init();	break;
 		}
 
 #ifndef GLESX
@@ -243,7 +245,6 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 	current.NoN = false;
 	current.textureGen = true;
 	current.texturePersp = true;
-	current.branchLessZ = true;
 	current.type = NONE;
 
 	// See if we can identify it by CRC
@@ -289,7 +290,7 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 					if (strncmp(&uc_str[14], "F3DF", 4) == 0)
 						current.textureGen = false;
 					else if (strncmp(&uc_str[14], "F3DZ", 4) == 0)
-						current.branchLessZ = false;
+						type = F3DEX2MM;
 					else if (strncmp(&uc_str[14], "F3DLX.Rej", 9) == 0)
 						current.NoN = true;
 					else if (strncmp(&uc_str[14], "F3DLP.Rej", 9) == 0) {
