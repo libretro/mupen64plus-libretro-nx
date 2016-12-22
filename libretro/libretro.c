@@ -200,7 +200,21 @@ static void setup_variables(void)
       { NULL, NULL },
    };
 
+   static const struct retro_controller_description port[] = {
+      { "Controller", RETRO_DEVICE_JOYPAD },
+      { "RetroPad", RETRO_DEVICE_JOYPAD },
+   };
+
+   static const struct retro_controller_info ports[] = {
+      { port, 2 },
+      { port, 2 },
+      { port, 2 },
+      { port, 2 },
+      { 0, 0 }
+   };
+
    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+   environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
 
