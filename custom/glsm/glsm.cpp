@@ -232,7 +232,6 @@ static struct gl_framebuffers* framebuffers[MAX_FRAMEBUFFERS];
 static GLenum active_texture;
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
-static bool framebuffer_emulation = 0;
 static bool copy_image_support = 0;
 static struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
@@ -1980,8 +1979,7 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
    if (framebuffer == 0)
       framebuffer = default_framebuffer;
-   else
-      framebuffer_emulation = 1;
+
    if (target == GL_FRAMEBUFFER) {
          gl_state.framebuf[0].desired_location = framebuffer;
          gl_state.framebuf[1].desired_location = framebuffer;
@@ -2384,7 +2382,6 @@ static void glsm_state_setup(void)
    gl_state.index_buffer                = 0;
    gl_state.pix_unpack_buffer           = 0;
    gl_state.bindvertex.array            = 0;
-   framebuffer_emulation                = 0;
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;
    gl_state.framebuf[1].location        = default_framebuffer;
@@ -2464,16 +2461,8 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
-   if (!framebuffer_emulation) {
-      glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
-      gl_state.framebuf[0].location = default_framebuffer;
-      gl_state.framebuf[1].location = default_framebuffer;
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   } else {
-      gl_state.framebuf[0].location = 0;
-      gl_state.framebuf[1].location = 0;
-   }
-   framebuffer_emulation = 0;
+   gl_state.framebuf[0].location = 0;
+   gl_state.framebuf[1].location = 0;
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
    {

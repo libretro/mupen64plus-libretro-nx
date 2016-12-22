@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "libretro.h"
+#include "libretro_private.h"
 #include "GLideN64_libretro.h"
 
 #include <libco.h>
@@ -76,7 +77,6 @@ u32 EnableHWLighting = 0;
 u32 CorrectTexrectCoords = 0;
 u32 enableNativeResTexrects = 0;
 u32 enableLegacyBlending = 0;
-u32 EnableFBEmulation = 0;
 u32 UseNativeResolutionFactor = 0;
 u32 EnableCopyAuxiliaryToRDRAM = 0;
 u32 EnableCopyColorToRDRAM = 0;
@@ -141,12 +141,6 @@ static void setup_variables(void)
 #ifndef HAVE_OPENGLES2
       { "glupen64-MultiSampling",
          "MSAA level; 0|2|4|8|16" },
-#endif
-      { "glupen64-EnableFBEmulation",
-#ifdef VC
-         "Framebuffer emulation; False|True" },
-#else
-         "Framebuffer emulation; True|False" },
 #endif
       { "glupen64-UseNativeResolutionFactor",
          "Frame buffer size factor; 0x|1x|2x|3x|4x" },
@@ -517,16 +511,6 @@ void update_variables()
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       MultiSampling = atoi(var.value);
-   }
-
-   var.key = "glupen64-EnableFBEmulation";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "False"))
-         EnableFBEmulation = 0;
-      else
-         EnableFBEmulation = 1;
    }
 
    var.key = "glupen64-UseNativeResolutionFactor";

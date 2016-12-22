@@ -75,7 +75,6 @@ void Config_LoadConfig()
 	u32 hacks = config.generalEmulation.hacks;
 	config.resetToDefaults();
 	config.frameBufferEmulation.aspect = AspectRatio;
-	config.frameBufferEmulation.enable = EnableFBEmulation;
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
@@ -86,9 +85,6 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
-#ifdef HAVE_OPENGLES
-	config.frameBufferEmulation.bufferSwapMode = 2;
-#endif
 #ifdef HAVE_OPENGLES2
 	config.generalEmulation.enableFragmentDepthWrite = 0;
 #else

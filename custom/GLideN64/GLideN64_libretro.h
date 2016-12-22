@@ -54,7 +54,6 @@ extern u32 EnableHWLighting;
 extern u32 CorrectTexrectCoords;
 extern u32 enableNativeResTexrects;
 extern u32 enableLegacyBlending;
-extern u32 EnableFBEmulation;
 extern u32 UseNativeResolutionFactor;
 extern u32 EnableCopyAuxiliaryToRDRAM;
 extern u32 EnableCopyColorToRDRAM;
