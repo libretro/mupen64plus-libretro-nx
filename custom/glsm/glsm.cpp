@@ -28,21 +28,16 @@
 
 #define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
-#ifndef GL_DRAW_INDIRECT_BUFFER
-#define GL_DRAW_INDIRECT_BUFFER 0x8F3F
-#endif
 
 #ifdef HAVE_OPENGLES
 #include <EGL/egl.h>
-typedef void (GL_APIENTRYP PFNGLDRAWARRAYSINDIRECTPROC) (GLenum mode, const void *indirect);
-typedef void (GL_APIENTRYP PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const void *indirect);
+typedef void (GL_APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
 typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
 typedef void (GL_APIENTRYP PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
 typedef void (GL_APIENTRYP PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
 typedef void (GL_APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
-PFNGLDRAWARRAYSINDIRECTPROC m_glDrawArraysIndirect;
-PFNGLDRAWELEMENTSINDIRECTPROC m_glDrawElementsIndirect;
+PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC m_glDrawRangeElementsBaseVertex;
 PFNGLBUFFERSTORAGEEXTPROC m_glBufferStorage;
 PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
 PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
@@ -205,8 +200,6 @@ struct gl_cached_state
 
    GLuint array_buffer;
    GLuint index_buffer;
-   GLuint indirect_buffer;
-   GLuint pix_unpack_buffer;
    GLuint vao;
    GLuint program;
    int cap_state[SGL_CAP_MAX];
@@ -838,20 +831,6 @@ void rglBindBuffer(GLenum target, GLuint buffer)
          glBindBuffer(target, buffer);
       }
    }
-#ifndef HAVE_OPENGLES2
-   else if (target == GL_DRAW_INDIRECT_BUFFER) {
-      if (gl_state.indirect_buffer != buffer) {
-         gl_state.indirect_buffer = buffer;
-         glBindBuffer(target, buffer);
-      }
-   }
-   else if (target == GL_PIXEL_UNPACK_BUFFER) {
-      if (gl_state.pix_unpack_buffer != buffer) {
-         gl_state.pix_unpack_buffer = buffer;
-         glBindBuffer(target, buffer);
-      }
-   }
-#endif
    else
       glBindBuffer(target, buffer);
 }
@@ -935,15 +914,6 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
    glDrawArrays(mode, first, count);
 }
 
-void rglDrawArraysIndirect(GLenum mode, const void *indirect)
-{
-   bindFBO(GL_FRAMEBUFFER);
-#ifdef HAVE_OPENGLES
-   m_glDrawArraysIndirect(mode, indirect);
-#else
-   glDrawArraysIndirect(mode, indirect);
-#endif
-}
 /*
  *
  * Core in:
@@ -956,20 +926,12 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
    glDrawElements(mode, count, type, indices);
 }
 
-void rglDrawElementsIndirect(GLenum mode, GLenum type, const void *indirect)
-{
-   bindFBO(GL_FRAMEBUFFER);
-#ifdef HAVE_OPENGLES
-   m_glDrawElementsIndirect(mode, type, indirect);
-#else
-   glDrawElementsIndirect(mode, type, indirect);
-#endif
-}
-
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
    bindFBO(GL_FRAMEBUFFER);
-#ifndef HAVE_OPENGLES
+#ifdef HAVE_OPENGLES
+   m_glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+#else
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #endif
 }
@@ -2341,8 +2303,7 @@ static void glsm_state_setup(void)
 #endif
    copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image") || copy_image_support_version;
 #ifdef HAVE_OPENGLES
-   m_glDrawArraysIndirect = (PFNGLDRAWARRAYSINDIRECTPROC)eglGetProcAddress("glDrawArraysIndirect");
-   m_glDrawElementsIndirect = (PFNGLDRAWELEMENTSINDIRECTPROC)eglGetProcAddress("glDrawElementsIndirect");
+   m_glDrawRangeElementsBaseVertex = (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)eglGetProcAddress("glDrawRangeElementsBaseVertex");
    m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)eglGetProcAddress("glBufferStorageEXT");
    m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
    m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
@@ -2395,7 +2356,6 @@ static void glsm_state_setup(void)
    gl_state.pixelstore.unpack           = 4;
    gl_state.array_buffer                = 0;
    gl_state.index_buffer                = 0;
-   gl_state.pix_unpack_buffer           = 0;
    gl_state.bindvertex.array            = 0;
    default_framebuffer                  = hw_render.get_current_framebuffer();
    gl_state.framebuf[0].location        = default_framebuffer;
@@ -2442,7 +2402,6 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
-   gl_state.pix_unpack_buffer = 0;
 #ifndef HAVE_OPENGLES2
    if (gl_state.bindvertex.array != 0) {
       glBindVertexArray(gl_state.bindvertex.array);
@@ -2526,11 +2485,6 @@ static void glsm_state_unbind(void)
       }
    }
    glActiveTexture(GL_TEXTURE0);
-
-#ifndef HAVE_OPENGLES2
-   if (gl_state.pix_unpack_buffer != 0)
-      glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-#endif
 }
 
 static bool glsm_state_ctx_destroy(void *data)

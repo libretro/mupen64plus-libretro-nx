@@ -466,8 +466,6 @@ void TextureCache::_initDummyTexture(CachedTexture * _pDummy)
 
 void TextureCache::init()
 {
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	m_maxBytes = config.texture.maxBytes;
 	m_curUnpackAlignment = 0;
 
@@ -481,13 +479,7 @@ void TextureCache::init()
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, dummyTexture );
 #else
 	glTexStorage2D( GL_TEXTURE_2D, 1, GL_RGBA8, 2, 2);
-	if (render.use_vbo) {
-		u32 length = sizeof(u32) * 16;
-		render.updateBO(render.PIX_UNPACK, length, 1, dummyTexture);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-		glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
-	} else
-		glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, dummyTexture);
+	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, dummyTexture);
 #endif
 	m_cachedBytes = m_pDummy->textureBytes;
 	activateDummy( 0 );
@@ -724,8 +716,6 @@ bool TextureCache::_loadHiresBackground(CachedTexture *_pTexture)
 	if (!TFH.isInited())
 		return false;
 
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	u8 * addr = (u8*)(RDRAM + gSP.bgImage.address);
 	int tile_width = gSP.bgImage.width;
 	int tile_height = gSP.bgImage.height;
@@ -755,7 +745,6 @@ bool TextureCache::_loadHiresBackground(CachedTexture *_pTexture)
 			ghqTexInfo.pixel_type, ghqTexInfo.data);
 #else
 		glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 		assert(!isGLError());
@@ -770,8 +759,6 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 	if (_loadHiresBackground(pTexture))
 		return;
 
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	u32 *pDest;
 
 	u8 *pSwapped, *pSrc;
@@ -801,10 +788,7 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 	pSwapped = (u8*)malloc(numBytes);
 	assert(pSwapped != nullptr);
 	UnswapCopyWrap(RDRAM, gSP.bgImage.address, pSwapped, 0, RDRAMSize, numBytes);
-	if (render.use_vbo)
-		pDest = (u32*)render.mapBO(render.PIX_UNPACK, pTexture->textureBytes);
-	else
-		pDest = (u32*)malloc(pTexture->textureBytes);
+	pDest = (u32*)malloc(pTexture->textureBytes);
 	assert(pDest != nullptr);
 
 	clampSClamp = pTexture->width - 1;
@@ -845,10 +829,6 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 					ghqTexInfo.data);
 #else
 			glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-			if (render.use_vbo) {
-				render.unmapBO(render.PIX_UNPACK, pTexture->textureBytes, 1);
-				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-			}
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 			_updateCachedTexture(ghqTexInfo, pTexture);
@@ -863,19 +843,13 @@ void TextureCache::_loadBackground(CachedTexture *pTexture)
 				pTexture->realHeight, 0, GL_RGBA, glType, pDest);
 #else
 		glTexStorage2D(GL_TEXTURE_2D, 1, glInternalFormat, pTexture->realWidth, pTexture->realHeight);
-		if (render.use_vbo) {
-			render.unmapBO(render.PIX_UNPACK, pTexture->textureBytes, 1);
-			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pTexture->realWidth, pTexture->realHeight, GL_RGBA, glType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - pTexture->textureBytes));
-		} else
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pTexture->realWidth, pTexture->realHeight, GL_RGBA, glType, pDest);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pTexture->realWidth, pTexture->realHeight, GL_RGBA, glType, pDest);
 #endif
 	}
 	if (m_curUnpackAlignment > 1)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, m_curUnpackAlignment);
 	free(pSwapped);
-	if (!render.use_vbo)
-		free(pDest);
+	free(pDest);
 }
 
 bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & _ricecrc)
@@ -883,8 +857,6 @@ bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & 
 	if (config.textureFilter.txHiresEnable == 0 || !TFH.isInited())
 		return false;
 
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	gDPLoadTileInfo & info = gDP.loadInfo[_pTexture->tMem];
 
 	int bpl;
@@ -928,7 +900,6 @@ bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ghqTexInfo.width, ghqTexInfo.height, 0, GL_RGBA, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #else
 		glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 		assert(!isGLError());
@@ -942,29 +913,17 @@ bool TextureCache::_loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & 
 void TextureCache::_loadDepthTexture(CachedTexture * _pTexture, u16* _pDest)
 {
 #ifndef GLES2
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	const u32 numTexels = _pTexture->realWidth * _pTexture->realHeight;
 	_pTexture->textureBytes = numTexels * sizeof(GLfloat);
-	GLfloat * pDestF;
-	if (render.use_vbo)
-		pDestF = (GLfloat*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
-	else
-		pDestF = (GLfloat*)malloc(_pTexture->textureBytes);
+	GLfloat * pDestF = (GLfloat*)malloc(_pTexture->textureBytes);
 	assert(pDestF != nullptr);
 
 	for (u32 t = 0; t < numTexels; ++t)
 		pDestF[t] = _pDest[t] / 65535.0f;
 
 	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32F, _pTexture->realWidth, _pTexture->realHeight);
-	if (render.use_vbo) {
-		render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - _pTexture->textureBytes));
-	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, pDestF);
-		free(pDestF);
-	}
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _pTexture->realWidth, _pTexture->realHeight, GL_RED, GL_FLOAT, pDestF);
+	free(pDestF);
 #endif
 }
 
@@ -1088,8 +1047,6 @@ void TextureCache::_getTextureDestData(CachedTexture& tmptex,
 
 void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 {
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	u64 ricecrc = 0;
 	if (_loadHiresTexture(_tile, _pTexture, ricecrc))
 		return;
@@ -1117,8 +1074,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		glType = loadParams.glType16;
 	}
 
-	if (!render.use_vbo)
-		pDest = (u32*)malloc(_pTexture->textureBytes);
+	pDest = (u32*)malloc(_pTexture->textureBytes);
 	assert(pDest != nullptr);
 
 	GLint mipLevel = 0;
@@ -1140,17 +1096,11 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 		glTexStorage2D(GL_TEXTURE_2D, _pTexture->max_level + 1, glInternalFormat, _pTexture->realWidth, _pTexture->realHeight);
 #endif
 	while (true) {
-		if (render.use_vbo)
-			pDest = (u32*)render.mapBO(render.PIX_UNPACK, _pTexture->textureBytes);
-
 		_getTextureDestData(tmptex, pDest, glInternalFormat, GetTexel, &line);
 
 		if ((config.generalEmulation.hacks&hack_LoadDepthTextures) != 0 && gDP.colorImage.address == gDP.depthImageAddress) {
 			_loadDepthTexture(_pTexture, (u16*)pDest);
-			if (render.use_vbo)
-				render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
-			else
-				free(pDest);
+			free(pDest);
 			return;
 		}
 
@@ -1177,10 +1127,6 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 						ghqTexInfo.data);
 #else
 				glTexStorage2D(GL_TEXTURE_2D, 1, ghqTexInfo.format, ghqTexInfo.width, ghqTexInfo.height);
-				if (render.use_vbo) {
-					render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
-					glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-				}
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ghqTexInfo.width, ghqTexInfo.height, ghqTexInfo.texture_format, ghqTexInfo.pixel_type, ghqTexInfo.data);
 #endif
 				_updateCachedTexture(ghqTexInfo, _pTexture);
@@ -1196,12 +1142,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tmptex.realWidth,
 					tmptex.realHeight, 0, GL_RGBA, glType, pDest);
 #else
-			if (render.use_vbo) {
-				render.unmapBO(render.PIX_UNPACK, _pTexture->textureBytes, 1);
-				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-				glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - _pTexture->textureBytes));
-			} else
-				glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, pDest);
+			glTexSubImage2D(GL_TEXTURE_2D, mipLevel, 0, 0, tmptex.realWidth, tmptex.realHeight, GL_RGBA, glType, pDest);
 #endif
 		}
 		if (mipLevel == _pTexture->max_level)
@@ -1229,8 +1170,7 @@ void TextureCache::_load(u32 _tile, CachedTexture *_pTexture)
 	}
 	if (m_curUnpackAlignment > 1)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, m_curUnpackAlignment);
-	if (!render.use_vbo)
-		free(pDest);
+	free(pDest);
 }
 
 struct TextureParams

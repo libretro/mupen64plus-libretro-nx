@@ -44,13 +44,14 @@ static std::string strFragmentShader;
 class NoiseTexture
 {
 public:
-	NoiseTexture() : m_pTexture(nullptr), m_DList(0) {}
+	NoiseTexture() : m_pTexture(nullptr), m_PBO(0), m_DList(0) {}
 	void init();
 	void destroy();
 	void update();
 
 private:
 	CachedTexture * m_pTexture;
+	GLuint m_PBO;
 	u32 m_DList;
 } noiseTex;
 
@@ -76,6 +77,11 @@ void NoiseTexture::init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Generate Pixel Buffer Object. Initialize it with max buffer size.
+	glGenBuffers(1, &m_PBO);
+	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, 640*580, nullptr, GL_DYNAMIC_DRAW);
 }
 
 void NoiseTexture::destroy()
@@ -84,39 +90,32 @@ void NoiseTexture::destroy()
 		textureCache().removeFrameBufferTexture(m_pTexture);
 		m_pTexture = nullptr;
 	}
+	glDeleteBuffers(1, &m_PBO);
+	m_PBO = 0;
 }
 
 void NoiseTexture::update()
 {
-	if (m_pTexture == nullptr)
+	if (m_PBO == 0 || m_pTexture == nullptr)
 		return;
 	if (m_DList == video().getBuffersSwapCount() || config.generalEmulation.enableNoise == 0)
 		return;
 	const u32 dataSize = VI.width*VI.height;
 	if (dataSize == 0)
 		return;
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
-	GLubyte* ptr;
-	if (render.use_vbo)
-		ptr = (GLubyte*)render.mapBO(render.PIX_UNPACK, dataSize);
-	else
-		ptr = (GLubyte*)malloc(dataSize);
+	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
+	GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, dataSize, GL_MAP_WRITE_BIT);
+	if (ptr == nullptr)
+		return;
 	for (u32 y = 0; y < VI.height; ++y)	{
 		for (u32 x = 0; x < VI.width; ++x)
 			ptr[x + y*VI.width] = rand()&0xFF;
 	}
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 
 	glActiveTexture(GL_TEXTURE0 + g_noiseTexIndex);
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	if (render.use_vbo) {
-		render.unmapBO(render.PIX_UNPACK, dataSize, 1);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - dataSize));
-	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, ptr);
-		free(ptr);
-	}
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, 0);
 	m_DList = video().getBuffersSwapCount();
 }
 
@@ -127,8 +126,6 @@ void InitZlutTexture()
 {
 	if (!video().getRender().isImageTexturesSupported())
 		return;
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 
 #ifdef GLESX
 	std::vector<u32> vecZLUT(0x40000);
@@ -147,17 +144,7 @@ void InitZlutTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	//glBindImageTexture requires an immutable texture object, glTexStorage2D does this
 	glTexStorage2D(GL_TEXTURE_2D, 1, fboFormats.lutInternalFormat, 512, 512);
-	if (render.use_vbo) {
-#ifdef GLESX
-		u32 length = sizeof(u32) * 0x40000;
-#else
-		u32 length = sizeof(u16) * 0x40000;
-#endif
-		render.updateBO(render.PIX_UNPACK, length, 1, zLUT);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
-	} else
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, zLUT);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, fboFormats.lutFormat, fboFormats.lutType, zLUT);
 	glBindImageTexture(ZlutImageUnit, g_zlut_tex, 0, GL_FALSE, GL_FALSE, GL_READ_ONLY, fboFormats.lutInternalFormat);
 }
 
@@ -891,39 +878,20 @@ void SetDepthFogCombiner()
 	if (!video().getRender().isImageTexturesSupported())
 		return;
 
-	OGLVideo & ogl = video();
-	OGLRender & render = ogl.getRender();
 	if (g_paletteCRC256 != gDP.paletteCRC256) {
 		g_paletteCRC256 = gDP.paletteCRC256;
 
 #ifdef GLESX
-		u32 length = sizeof(u32) * 256;
-		u32* palette;
-		if (render.use_vbo)
-			palette = (u32*)render.mapBO(render.PIX_UNPACK, length);
-		else
-			palette = (u32*)malloc(length);
+		u32 palette[256];
 #else
-		u32 length = sizeof(u16) * 256;
-		u16* palette;
-		if (render.use_vbo)
-			palette = (u16*)render.mapBO(render.PIX_UNPACK, length);
-		else
-			palette = (u16*)malloc(length);
+		u16 palette[256];
 #endif
 		u16 *src = (u16*)&TMEM[256];
 		for (int i = 0; i < 256; ++i)
 			palette[i] = swapword(src[i*4]);
 		glBindImageTexture(TlutImageUnit, 0, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 		glBindTexture(GL_TEXTURE_2D, g_tlut_tex);
-		if (render.use_vbo) {
-			render.unmapBO(render.PIX_UNPACK, length, 1);
-			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, render.bos[render.PIX_UNPACK]);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, (char*)NULL + (render.bo_offset_bytes[render.PIX_UNPACK] - length));
-		} else {
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, palette);
-			free(palette);
-		}
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, fboFormats.lutFormat, fboFormats.lutType, palette);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindImageTexture(TlutImageUnit, g_tlut_tex, 0, GL_FALSE, 0, GL_READ_ONLY, fboFormats.lutInternalFormat);
 	}

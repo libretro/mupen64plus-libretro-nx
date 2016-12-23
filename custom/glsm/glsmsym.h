@@ -35,10 +35,8 @@
 #define glVertexAttrib4f            rglVertexAttrib4f
 #define glVertexAttrib4fv           rglVertexAttrib4fv
 #define glDrawArrays                rglDrawArrays
-#define glDrawArraysIndirect        rglDrawArraysIndirect
 #define glDrawElements              rglDrawElements
 #define glDrawRangeElementsBaseVertex rglDrawRangeElementsBaseVertex
-#define glDrawElementsIndirect      rglDrawElementsIndirect
 #define glCompressedTexImage2D      rglCompressedTexImage2D
 #define glBindTexture               rglBindTexture
 #define glActiveTexture             rglActiveTexture
@@ -177,8 +175,6 @@
 #define GL_MAP_PERSISTENT_BIT         0x0040
 #define GL_MAP_UNSYNCHRONIZED_BIT     0x0020
 #define GL_MAP_FLUSH_EXPLICIT_BIT     0x0010
-#define GL_DRAW_INDIRECT_BUFFER       0x8F3F
-#define GL_PIXEL_UNPACK_BUFFER        0x88EC
 #define GL_TEXTURE_2D_MULTISAMPLE     0x9100
 #define GL_READ_WRITE                 0x88BA
 #define GL_READ_ONLY                  0x88B8
@@ -274,9 +270,6 @@ void rglPixelStorei(GLenum pname, GLint param);
 void rglTexCoord2f(GLfloat s, GLfloat t);
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
                            const GLvoid * indices);
-void rglDrawElementsIndirect(	GLenum mode,
-	GLenum type,
-	const void *indirect);
 void rglDrawRangeElementsBaseVertex(GLenum mode,
 	GLuint start,
 	GLuint end,
@@ -371,7 +364,6 @@ void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass);
 void rglFrontFace(GLenum mode);
 void rglPolygonOffset(GLfloat factor, GLfloat units);
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count);
-void rglDrawArraysIndirect(GLenum mode, const void *indirect);
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
       GLfloat z, GLfloat w);
 void rglVertexAttrib4fv(GLuint name, GLfloat* v);
