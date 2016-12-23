@@ -85,6 +85,7 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxiliaryToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+	config.frameBufferEmulation.bufferSwapMode = Config::bsOnColorImageChange;
 #ifdef HAVE_OPENGLES2
 	config.generalEmulation.enableFragmentDepthWrite = 0;
 #else
