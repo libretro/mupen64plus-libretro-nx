@@ -530,7 +530,10 @@ void OGLRender::TexrectDrawer::add()
 
 	if (render.use_vbo) {
 		render.updateBO(RECT_VBO, sizeof(GLVertex), 4, pRect);
-		glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		if (render.use_indirect)
+			render.drawArrayIndirect(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	RectCoords coords;
@@ -636,7 +639,10 @@ bool OGLRender::TexrectDrawer::draw()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_pBuffer != nullptr ? m_pBuffer->m_FBO : 0);
 	if (render.use_vbo) {
 		render.updateBO(RECT_VBO, sizeof(GLVertex), 4, rect);
-		glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		if (render.use_indirect)
+			render.drawArrayIndirect(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -656,7 +662,10 @@ bool OGLRender::TexrectDrawer::draw()
 	glDisable(GL_SCISSOR_TEST);
 	if (render.use_vbo) {
 		render.updateBO(RECT_VBO, sizeof(GLVertex), 4, rect);
-		glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		if (render.use_indirect)
+			render.drawArrayIndirect(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, render.bo_offset[RECT_VBO] - 4, 4);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glEnable(GL_SCISSOR_TEST);
@@ -678,6 +687,16 @@ bool OGLRender::TexrectDrawer::isEmpty() {
 }
 
 /*---------------OGLRender-------------*/
+
+void OGLRender::drawArrayIndirect(GLenum mode, GLuint first, GLuint count) {
+	DrawArraysIndirectCommand* array_command = (DrawArraysIndirectCommand*)mapBO(INDIRECT, sizeof(DrawArraysIndirectCommand));
+	array_command->count = count;
+	array_command->primCount = 1;
+	array_command->first = first;
+	array_command->baseInstance = 0;
+	unmapBO(INDIRECT, sizeof(DrawArraysIndirectCommand), 1);
+	glDrawArraysIndirect(mode, (char*)NULL + (bo_offset_bytes[INDIRECT] - sizeof(DrawArraysIndirectCommand)));
+}
 
 void* OGLRender::mapBO(int buffer, u32 length)
 {
@@ -1409,7 +1428,10 @@ void OGLRender::drawScreenSpaceTriangle(u32 _numVtx)
 	glDisable(GL_CULL_FACE);
 	if (use_vbo) {
 		updateBO(TRI_VBO, sizeof(SPVertex), _numVtx, triangles.dmaVertices.data());
-		glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[TRI_VBO] - _numVtx, _numVtx);
+		if (use_indirect)
+			drawArrayIndirect(GL_TRIANGLE_STRIP, bo_offset[TRI_VBO] - _numVtx, _numVtx);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[TRI_VBO] - _numVtx, _numVtx);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, _numVtx);
 	frameBufferList().setBufferChanged();
@@ -1423,7 +1445,10 @@ void OGLRender::drawDMATriangles(u32 _numVtx)
 	_prepareDrawTriangle(true);
 	if (use_vbo) {
 		updateBO(TRI_VBO, sizeof(SPVertex), _numVtx, triangles.dmaVertices.data());
-		glDrawArrays(GL_TRIANGLES, bo_offset[TRI_VBO] - _numVtx, _numVtx);
+		if (use_indirect)
+			drawArrayIndirect(GL_TRIANGLES, bo_offset[TRI_VBO] - _numVtx, _numVtx);
+		else
+			glDrawArrays(GL_TRIANGLES, bo_offset[TRI_VBO] - _numVtx, _numVtx);
 	} else
 		glDrawArrays(GL_TRIANGLES, 0, _numVtx);
 	if (config.frameBufferEmulation.enable != 0 &&
@@ -1466,7 +1491,20 @@ void OGLRender::drawTriangles()
 		}
 		unmapBO(TRI_VBO, total_verts * sizeof(SPVertex), total_verts);
 		unmapBO(IBO, triangles.num * sizeof(GLubyte), triangles.num);
-		glDrawRangeElementsBaseVertex(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + (bo_offset_bytes[IBO] - (sizeof(GLubyte) * triangles.num)), bo_offset[TRI_VBO] - total_verts);
+		if (use_indirect) {
+			DrawElementsIndirectCommand* element_command = (DrawElementsIndirectCommand*)mapBO(INDIRECT, sizeof(DrawElementsIndirectCommand));
+			element_command->count = triangles.num;
+			element_command->primCount = 1;
+			element_command->firstIndex = bo_offset[IBO] - triangles.num;
+			element_command->baseVertex = bo_offset[TRI_VBO] - total_verts;
+			element_command->baseInstance = 0;
+			unmapBO(INDIRECT, sizeof(DrawElementsIndirectCommand), 1);
+			glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_BYTE, (char*)NULL + (bo_offset_bytes[INDIRECT] - sizeof(DrawElementsIndirectCommand)));
+		}
+#ifndef GLESX
+		else
+			glDrawRangeElementsBaseVertex(GL_TRIANGLES, 0, total_verts - 1, triangles.num, GL_UNSIGNED_BYTE, (char*)NULL + (bo_offset_bytes[IBO] - (sizeof(GLubyte) * triangles.num)), bo_offset[TRI_VBO] - total_verts);
+#endif
 	}
 //	glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT);
 
@@ -1611,7 +1649,10 @@ void OGLRender::drawLine(int _v0, int _v1, float _width)
 		temp[0] = triangles.vertices[_v0];
 		temp[1] = triangles.vertices[_v1];
 		unmapBO(TRI_VBO, 2 * sizeof(SPVertex), 2);
-		glDrawArrays(GL_LINES, bo_offset[TRI_VBO] - 2, 2);
+		if (use_indirect)
+			drawArrayIndirect(GL_LINES, bo_offset[TRI_VBO] - 2, 2);
+		else
+			glDrawArrays(GL_LINES, bo_offset[TRI_VBO] - 2, 2);
 	}
 }
 
@@ -1687,7 +1728,10 @@ void OGLRender::drawRect(int _ulx, int _uly, int _lrx, int _lry, float *_pColor)
 
 	if (use_vbo) {
 		updateBO(RECT_VBO, sizeof(GLVertex), 4, m_rect);
-		glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+		if (use_indirect)
+			drawArrayIndirect(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	gSP.changed |= CHANGED_GEOMETRYMODE | CHANGED_VIEWPORT;
@@ -2066,7 +2110,10 @@ void OGLRender::drawTexturedRect(const TexturedRectParams & _params)
 			glViewport(0, 0, pCurrentBuffer->m_width*pCurrentBuffer->m_scaleX, pCurrentBuffer->m_height*pCurrentBuffer->m_scaleY);
 		if (use_vbo) {
 			updateBO(RECT_VBO, sizeof(GLVertex), 4, m_rect);
-			glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+			if (use_indirect)
+				drawArrayIndirect(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+			else
+				glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
 		} else
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		gSP.changed |= CHANGED_GEOMETRYMODE | CHANGED_VIEWPORT;
@@ -2315,9 +2362,11 @@ void OGLRender::_initVBO()
 #if defined(GLES2)
 	use_vbo = false;
 #elif defined(GLESX)
+	use_indirect = majorVersion >= 3 && minorVersion >= 1;
 	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
-	use_vbo = buffer_storage && majorVersion >= 3 && minorVersion >= 2;
+	use_vbo = buffer_storage && use_indirect;
 #else
+	use_indirect = majorVersion >= 4 || OGLVideo::isExtensionSupported("GL_ARB_draw_indirect");
 	buffer_storage = OGLVideo::isExtensionSupported(GET_BUFFER_STORAGE);
 	use_vbo = true;
 #endif
@@ -2339,7 +2388,10 @@ void OGLRender::_initVBO()
 			bo_max_size[i] = BO_MAX_SIZE;
 			if (i == IBO)
 				buffer_type[i] = GL_ELEMENT_ARRAY_BUFFER;
-			else if (i == PIX_UNPACK) {
+			else if (i == INDIRECT) {
+				if (!use_indirect) continue;
+				buffer_type[i] = GL_DRAW_INDIRECT_BUFFER;
+			} else if (i == PIX_UNPACK) {
 				buffer_type[i] = GL_PIXEL_UNPACK_BUFFER;
 				bo_max_size[i] = BO_MAX_SIZE * 16;
 			} else
@@ -2528,7 +2580,10 @@ void OGLRender::copyTexturedRect(GLint _srcX0, GLint _srcY0, GLint _srcX1, GLint
 	glDisable(GL_SCISSOR_TEST);
 	if (use_vbo) {
 		updateBO(RECT_VBO, sizeof(GLVertex), 4, m_rect);
-		glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+		if (use_indirect)
+			drawArrayIndirect(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
+		else
+			glDrawArrays(GL_TRIANGLE_STRIP, bo_offset[RECT_VBO] - 4, 4);
 	} else
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glEnable(GL_SCISSOR_TEST);
