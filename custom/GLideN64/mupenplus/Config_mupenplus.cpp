@@ -98,6 +98,7 @@ void Config_LoadConfig()
 	config.textureFilter.txHiresEnable = txHiresEnable;
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.multisampling = MultiSampling;
+	config.video.cropMode = Config::cmAuto;
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings();
 }
