@@ -134,7 +134,7 @@ static void setup_variables(void)
         { "glupen64-43screensize",
             "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440" },
         { "glupen64-169screensize",
-            "16:9 Resolution; 320x180|640x360|960x540|1280x720|1920x1080|3840x2160" },
+            "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|3840x2160" },
         { "glupen64-aspect",
             "Aspect Ratio; 4:3|16:9" },
         { "glupen64-BilinearMode",
