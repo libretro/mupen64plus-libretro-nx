@@ -54,11 +54,8 @@ extern u32 EnableHWLighting;
 extern u32 CorrectTexrectCoords;
 extern u32 enableNativeResTexrects;
 extern u32 enableLegacyBlending;
-extern u32 UseNativeResolutionFactor;
-extern u32 EnableCopyAuxiliaryToRDRAM;
 extern u32 EnableCopyColorToRDRAM;
 extern u32 EnableCopyDepthToRDRAM;
-extern u32 EnableCopyColorFromRDRAM;
 extern u32 AspectRatio;
 extern u32 txFilterMode;
 extern u32 txEnhancementMode;
@@ -68,5 +65,6 @@ extern u32 txFilterIgnoreBG;
 extern u32 MultiSampling;
 extern u32 EnableFragmentDepthWrite;
 extern u32 EnableShadersStorage;
+extern u32 CropMode;
 
 #endif

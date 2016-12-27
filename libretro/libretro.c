@@ -80,11 +80,8 @@ u32 EnableHWLighting = 0;
 u32 CorrectTexrectCoords = 0;
 u32 enableNativeResTexrects = 0;
 u32 enableLegacyBlending = 0;
-u32 UseNativeResolutionFactor = 0;
-u32 EnableCopyAuxiliaryToRDRAM = 0;
 u32 EnableCopyColorToRDRAM = 0;
 u32 EnableCopyDepthToRDRAM = 0;
-u32 EnableCopyColorFromRDRAM = 0;
 u32 AspectRatio = 0;
 u32 txFilterMode = 0;
 u32 txEnhancementMode = 0;
@@ -94,6 +91,7 @@ u32 txFilterIgnoreBG = 0;
 u32 MultiSampling = 0;
 u32 EnableFragmentDepthWrite = 0;
 u32 EnableShadersStorage = 0;
+u32 CropMode = 0;
 
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -145,16 +143,10 @@ static void setup_variables(void)
         { "glupen64-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
-        { "glupen64-UseNativeResolutionFactor",
-            "Frame buffer size factor; 0x|1x|2x|3x|4x" },
-        { "glupen64-EnableCopyAuxiliaryToRDRAM",
-            "Aux buffers to RDRAM; False|True" },
         { "glupen64-EnableCopyColorToRDRAM",
             "Color buffer to RDRAM; Async|Sync|Off" },
         { "glupen64-EnableCopyDepthToRDRAM",
             "Depth buffer to RDRAM; Software|FromMem|Off" },
-        { "glupen64-EnableCopyColorFromRDRAM",
-            "Color buffer from RDRAM; False|True" },
         { "glupen64-EnableHWLighting",
             "Hardware per-pixel lighting; False|True" },
         { "glupen64-CorrectTexrectCoords",
@@ -174,6 +166,8 @@ static void setup_variables(void)
 #endif
         { "glupen64-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
+        { "glupen64-CropMode",
+            "Crop Mode; Auto|Off" },
         { "glupen64-txFilterMode",
             "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
         { "glupen64-txEnhancementMode",
@@ -486,32 +480,6 @@ void update_variables()
         MultiSampling = atoi(var.value);
     }
 
-    var.key = "glupen64-UseNativeResolutionFactor";
-    var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "4x"))
-            UseNativeResolutionFactor = 4;
-        else if (!strcmp(var.value, "3x"))
-            UseNativeResolutionFactor = 3;
-        else if (!strcmp(var.value, "2x"))
-            UseNativeResolutionFactor = 2;
-        else if (!strcmp(var.value, "1x"))
-            UseNativeResolutionFactor = 1;
-        else
-            UseNativeResolutionFactor = 0;
-    }
-
-    var.key = "glupen64-EnableCopyAuxiliaryToRDRAM";
-    var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "True"))
-            EnableCopyAuxiliaryToRDRAM = 1;
-        else
-            EnableCopyAuxiliaryToRDRAM = 0;
-    }
-
     var.key = "glupen64-EnableCopyColorToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -534,16 +502,6 @@ void update_variables()
             EnableCopyDepthToRDRAM = 1;
         else
             EnableCopyDepthToRDRAM = 0;
-    }
-
-    var.key = "glupen64-EnableCopyColorFromRDRAM";
-    var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "True"))
-            EnableCopyColorFromRDRAM = 1;
-        else
-            EnableCopyColorFromRDRAM = 0;
     }
 
     var.key = "glupen64-EnableHWLighting";
@@ -690,6 +648,16 @@ void update_variables()
             EnableShadersStorage = 1;
         else
             EnableShadersStorage = 0;
+    }
+
+    var.key = "glupen64-CropMode";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "Auto"))
+            CropMode = 1;
+        else
+            CropMode = 0;
     }
 
     var.key = "glupen64-cpucore";
