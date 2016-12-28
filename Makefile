@@ -72,7 +72,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       GL_LIB := -lGLESv2
    else
       GL_LIB := -L/opt/vc/lib -lGLESv2
-      INCFLAGS += -I/opt/vc/include
+      INCFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vcos -I/opt/vc/include/interface/vcos/pthreads
    endif
    WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
