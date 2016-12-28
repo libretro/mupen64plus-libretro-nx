@@ -81,7 +81,11 @@ void Config_LoadConfig()
 	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
+#if defined(GLES2) && !defined(ANDROID)
+	config.frameBufferEmulation.copyToRDRAM = Config::ctDisable;
+#else
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+#endif
 	config.frameBufferEmulation.bufferSwapMode = Config::bsOnColorImageChange;
 #ifdef HAVE_OPENGLES2
 	config.generalEmulation.enableFragmentDepthWrite = 0;

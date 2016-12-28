@@ -247,6 +247,12 @@ void bindFBO(GLenum target)
 #ifdef HAVE_OPENGLES2
    if (target == GL_FRAMEBUFFER && (gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location || gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location))
    {
+#ifdef VC
+      if (framebuffers[gl_state.framebuf[0].location]->depth_attachment != 0) {
+         const GLenum discards[] = {GL_DEPTH_ATTACHMENT};
+         glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
+      }
+#endif
       glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
       gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
       gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
