@@ -696,8 +696,10 @@ void* OGLRender::mapBO(int buffer, u32 length)
 void OGLRender::unmapBO(int buffer, u32 length, u32 count)
 {
 	if (buffer_storage) {
+	#ifdef OPENGL_DEBUG
 		glBindBuffer(buffer_type[buffer], bos[buffer]);
 		glFlushMappedBufferRange(buffer_type[buffer], bo_offset_bytes[buffer], length);
+	#endif
 	} else
 		glUnmapBuffer(buffer_type[buffer]);
 	bo_offset[buffer] += count;
@@ -2325,8 +2327,13 @@ void OGLRender::_initVBO()
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 #endif
+#ifndef OPENGL_DEBUG
+		GLbitfield bo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+		GLbitfield bo_map_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+#else
 		GLbitfield bo_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT;
 		GLbitfield bo_map_access = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
+#endif
 		int i;
 		for (i = 0; i < BO_COUNT; ++i) {
 			bo_max_size[i] = BO_MAX_SIZE;
