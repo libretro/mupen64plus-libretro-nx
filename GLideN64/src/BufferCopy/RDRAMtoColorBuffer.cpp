@@ -12,8 +12,7 @@
 
 RDRAMtoColorBuffer::RDRAMtoColorBuffer()
 	: m_pCurBuffer(nullptr)
-	, m_pTexture(nullptr)
-	, m_PBO(0) {
+	, m_pTexture(nullptr) {
 }
 
 RDRAMtoColorBuffer & RDRAMtoColorBuffer::get()
@@ -46,11 +45,6 @@ void RDRAMtoColorBuffer::init()
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Generate Pixel Buffer Object. Initialize it later
-#ifndef GLES2
-	glGenBuffers(1, &m_PBO);
-#endif
 }
 
 void RDRAMtoColorBuffer::destroy()
@@ -59,12 +53,6 @@ void RDRAMtoColorBuffer::destroy()
 		textureCache().removeFrameBufferTexture(m_pTexture);
 		m_pTexture = nullptr;
 	}
-#ifndef GLES2
-	if (m_PBO != 0) {
-		glDeleteBuffers(1, &m_PBO);
-		m_PBO = 0;
-	}
-#endif
 }
 
 void RDRAMtoColorBuffer::addAddress(u32 _address, u32 _size)
@@ -196,16 +184,7 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 	m_pTexture->width = width;
 	m_pTexture->height = height;
 	const u32 dataSize = width*height * 4;
-#ifndef GLES2
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, dataSize, nullptr, GL_DYNAMIC_DRAW);
-	GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, dataSize, GL_MAP_WRITE_BIT);
-#else
-	GLubyte* ptr = (GLubyte*)malloc(dataSize);
-	PBOBinder binder(ptr);
-#endif // GLES2
-	if (ptr == nullptr)
-		return;
+	GLubyte ptr[dataSize];
 
 	u32 * dst = (u32*)ptr;
 	bool bCopy;
@@ -229,18 +208,11 @@ void RDRAMtoColorBuffer::copyFromRDRAM(u32 _address, bool _bCFB)
 		memset(RDRAM + address, 0, totalBytes);
 	}
 
-#ifndef GLES2
-	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-#endif
 	if (!bCopy)
 		return;
 
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-#ifndef GLES2
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, fboFormats.colorFormat, fboFormats.colorType, 0);
-#else
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, fboFormats.colorFormat, fboFormats.colorType, ptr);
-#endif
 
 	m_pTexture->scaleS = 1.0f / (float)m_pTexture->realWidth;
 	m_pTexture->scaleT = 1.0f / (float)m_pTexture->realHeight;

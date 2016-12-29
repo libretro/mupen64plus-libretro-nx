@@ -44,14 +44,13 @@ static std::string strFragmentShader;
 class NoiseTexture
 {
 public:
-	NoiseTexture() : m_pTexture(nullptr), m_PBO(0), m_DList(0) {}
+	NoiseTexture() : m_pTexture(nullptr), m_DList(0) {}
 	void init();
 	void destroy();
 	void update();
 
 private:
 	CachedTexture * m_pTexture;
-	GLuint m_PBO;
 	u32 m_DList;
 } noiseTex;
 
@@ -77,11 +76,6 @@ void NoiseTexture::init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Generate Pixel Buffer Object. Initialize it with max buffer size.
-	glGenBuffers(1, &m_PBO);
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, 640*580, nullptr, GL_DYNAMIC_DRAW);
 }
 
 void NoiseTexture::destroy()
@@ -90,32 +84,27 @@ void NoiseTexture::destroy()
 		textureCache().removeFrameBufferTexture(m_pTexture);
 		m_pTexture = nullptr;
 	}
-	glDeleteBuffers(1, &m_PBO);
-	m_PBO = 0;
 }
 
 void NoiseTexture::update()
 {
-	if (m_PBO == 0 || m_pTexture == nullptr)
+	if (m_pTexture == nullptr)
 		return;
 	if (m_DList == video().getBuffersSwapCount() || config.generalEmulation.enableNoise == 0)
 		return;
 	const u32 dataSize = VI.width*VI.height;
 	if (dataSize == 0)
 		return;
-	PBOBinder binder(GL_PIXEL_UNPACK_BUFFER, m_PBO);
-	GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, dataSize, GL_MAP_WRITE_BIT);
-	if (ptr == nullptr)
-		return;
+
+	GLubyte ptr[dataSize];
 	for (u32 y = 0; y < VI.height; ++y)	{
 		for (u32 x = 0; x < VI.width; ++x)
 			ptr[x + y*VI.width] = rand()&0xFF;
 	}
-	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 
 	glActiveTexture(GL_TEXTURE0 + g_noiseTexIndex);
 	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, 0);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, ptr);
 	m_DList = video().getBuffersSwapCount();
 }
 

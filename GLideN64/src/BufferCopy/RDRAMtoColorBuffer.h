@@ -38,7 +38,6 @@ private:
 
 	FrameBuffer * m_pCurBuffer;
 	CachedTexture * m_pTexture;
-	GLuint m_PBO;
 	std::vector<u32> m_vecAddress;
 };
 
