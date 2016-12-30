@@ -18,6 +18,8 @@
 
 #include "Shaders_ogl3x.h"
 
+#define NOISE_TEX_NUM 30
+
 using namespace std;
 
 static GLuint  g_vertex_shader_object;
@@ -44,13 +46,13 @@ static std::string strFragmentShader;
 class NoiseTexture
 {
 public:
-	NoiseTexture() : m_pTexture(nullptr), m_DList(0) {}
+	NoiseTexture() : m_DList(0) {}
 	void init();
 	void destroy();
 	void update();
 
 private:
-	CachedTexture * m_pTexture;
+	CachedTexture * m_pTexture[NOISE_TEX_NUM];
 	u32 m_DList;
 } noiseTex;
 
@@ -58,53 +60,56 @@ void NoiseTexture::init()
 {
 	if (config.generalEmulation.enableNoise == 0)
 		return;
-	m_pTexture = textureCache().addFrameBufferTexture();
-	m_pTexture->format = G_IM_FMT_RGBA;
-	m_pTexture->clampS = 1;
-	m_pTexture->clampT = 1;
-	m_pTexture->frameBufferTexture = CachedTexture::fbOneSample;
-	m_pTexture->maskS = 0;
-	m_pTexture->maskT = 0;
-	m_pTexture->mirrorS = 0;
-	m_pTexture->mirrorT = 0;
-	m_pTexture->realWidth = 640;
-	m_pTexture->realHeight = 580;
-	m_pTexture->textureBytes = m_pTexture->realWidth * m_pTexture->realHeight;
-	textureCache().addFrameBufferTextureSize(m_pTexture->textureBytes);
-	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, m_pTexture->realWidth, m_pTexture->realHeight);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	for (u32 i = 0; i < NOISE_TEX_NUM; ++i) {
+		m_pTexture[i] = textureCache().addFrameBufferTexture();
+		m_pTexture[i]->format = G_IM_FMT_RGBA;
+		m_pTexture[i]->clampS = 1;
+		m_pTexture[i]->clampT = 1;
+		m_pTexture[i]->frameBufferTexture = CachedTexture::fbOneSample;
+		m_pTexture[i]->maskS = 0;
+		m_pTexture[i]->maskT = 0;
+		m_pTexture[i]->mirrorS = 0;
+		m_pTexture[i]->mirrorT = 0;
+		m_pTexture[i]->realWidth = 640;
+		m_pTexture[i]->realHeight = 580;
+		m_pTexture[i]->textureBytes = m_pTexture[i]->realWidth * m_pTexture[i]->realHeight;
+		textureCache().addFrameBufferTextureSize(m_pTexture[i]->textureBytes);
+		glBindTexture(GL_TEXTURE_2D, m_pTexture[i]->glName);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, m_pTexture[i]->realWidth, m_pTexture[i]->realHeight);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+		const u32 dataSize = m_pTexture[i]->realWidth*m_pTexture[i]->realHeight;
+
+		GLubyte ptr[dataSize];
+		for (u32 y = 0; y < m_pTexture[i]->realHeight; ++y)     {
+			for (u32 x = 0; x < m_pTexture[i]->realWidth; ++x)
+				ptr[x + y*m_pTexture[i]->realWidth] = rand()&0xFF;
+		}
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_pTexture[i]->realWidth, m_pTexture[i]->realHeight, GL_RED, GL_UNSIGNED_BYTE, ptr);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 }
 
 void NoiseTexture::destroy()
 {
-	if (m_pTexture != nullptr) {
-		textureCache().removeFrameBufferTexture(m_pTexture);
-		m_pTexture = nullptr;
+	for (u32 i = 0; i < NOISE_TEX_NUM; ++i) {
+		if (m_pTexture[i] != nullptr) {
+			textureCache().removeFrameBufferTexture(m_pTexture[i]);
+			m_pTexture[i] = nullptr;
+		}
 	}
 }
 
 void NoiseTexture::update()
 {
-	if (m_pTexture == nullptr)
+	int tex_num = rand() % NOISE_TEX_NUM;
+	if (m_pTexture[tex_num] == nullptr)
 		return;
 	if (m_DList == video().getBuffersSwapCount() || config.generalEmulation.enableNoise == 0)
 		return;
-	const u32 dataSize = VI.width*VI.height;
-	if (dataSize == 0)
-		return;
-
-	GLubyte ptr[dataSize];
-	for (u32 y = 0; y < VI.height; ++y)	{
-		for (u32 x = 0; x < VI.width; ++x)
-			ptr[x + y*VI.width] = rand()&0xFF;
-	}
-
 	glActiveTexture(GL_TEXTURE0 + g_noiseTexIndex);
-	glBindTexture(GL_TEXTURE_2D, m_pTexture->glName);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VI.width, VI.height, GL_RED, GL_UNSIGNED_BYTE, ptr);
+	glBindTexture(GL_TEXTURE_2D, m_pTexture[tex_num]->glName);
 	m_DList = video().getBuffersSwapCount();
 }
 
