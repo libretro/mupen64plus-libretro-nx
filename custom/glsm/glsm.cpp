@@ -247,14 +247,6 @@ void bindFBO(GLenum target)
 #ifdef HAVE_OPENGLES2
    if (target == GL_FRAMEBUFFER && (gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location || gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location))
    {
-#ifdef VC
-      if (framebuffers[gl_state.framebuf[0].location] != NULL) {
-         if (framebuffers[gl_state.framebuf[0].location]->depth_attachment != 0) {
-            const GLenum discards[] = {GL_DEPTH_ATTACHMENT};
-            glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discards);
-         }
-      }
-#endif
       glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
       gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
       gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
@@ -2443,8 +2435,15 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
+#ifdef VC
+   glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+   gl_state.framebuf[0].location = default_framebuffer;
+   gl_state.framebuf[1].location = default_framebuffer;
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#else
    gl_state.framebuf[0].location = 0;
    gl_state.framebuf[1].location = 0;
+#endif
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
    {
