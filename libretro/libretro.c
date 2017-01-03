@@ -70,6 +70,7 @@ static unsigned audio_buffer_size   = 2048;
 
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
+static bool     initializing        = true;
 
 uint32_t retro_screen_width;
 uint32_t retro_screen_height;
@@ -259,6 +260,7 @@ static void EmuThreadFunction(void)
 {
     log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
 
+    initializing = false;
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 }
 
@@ -341,6 +343,7 @@ void copy_file(char * ininame, char * fileName)
 
 void retro_init(void)
 {
+    uint64_t serialization_quirks = RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE;
     char* sys_pathname;
     wchar_t w_pathname[PATH_SIZE];
     environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys_pathname);
@@ -370,6 +373,8 @@ void retro_init(void)
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
+    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &serialization_quirks);
+    initializing = true;
 
     retro_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
@@ -818,6 +823,9 @@ size_t retro_serialize_size (void)
 
 bool retro_serialize(void *data, size_t size)
 {
+    if (initializing)
+        return false;
+
     const char* filename = ConfigGetSharedDataFilepath("savestate.temp");
     int success = savestates_save_m64p((char*)filename);
     FILE *read_ptr;
@@ -833,6 +841,9 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void * data, size_t size)
 {
+    if (initializing)
+        return false;
+
     FILE *write_ptr;
     const char* filename = ConfigGetSharedDataFilepath("savestate.temp");
     write_ptr = fopen(filename,"wb");
