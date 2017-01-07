@@ -60,7 +60,7 @@ void OGLVideoMupenPlus::_stop()
 
 void OGLVideoMupenPlus::_swapBuffers()
 {
-	retro_return();
+	libretro_swap_buffer = true;
 }
 
 void OGLVideoMupenPlus::_saveScreenshot()

@@ -70,6 +70,7 @@
 #include "r4300/new_dynarec/new_dynarec.h"
 
 #include <libretro.h>
+#include <libretro_private.h>
 #include <libretro_memory.h>
 extern retro_input_poll_t poll_cb;
 
@@ -227,6 +228,8 @@ void new_vi(void)
     gs_apply_cheats();
 
     main_check_inputs();
+
+    retro_return();
 }
 
 static void open_mpk_file(struct storage_file* storage)
