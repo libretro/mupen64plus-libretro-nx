@@ -900,7 +900,7 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
     char name[256];
     m64p_cheat_code mupenCode[256];
     int matchLength=0,partCount=0;
-    int codeParts[256];
+    unsigned int codeParts[256];
     int cursor;
 
     //Generate a name
@@ -916,7 +916,7 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
                 char codePartS[matchLength];
                 strncpy(codePartS,codeLine+cursor-matchLength,matchLength);
                 codePartS[matchLength]=0;
-                codeParts[partCount++]=strtol(codePartS,NULL,16);
+                codeParts[partCount++]=strtoul(codePartS,NULL,16);
                 matchLength=0;
             }
         }
