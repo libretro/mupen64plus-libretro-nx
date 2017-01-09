@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (null_resampler.c).
+ * The following license statement only applies to this file (dsp_filter.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,37 +20,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <math.h>
- 
-#include <audio/audio_resampler.h>
+#ifndef __LIBRETRO_SDK_AUDIO_DSP_FILTER_H
+#define __LIBRETRO_SDK_AUDIO_DSP_FILTER_H
 
-typedef struct rarch_null_resampler
+#include <retro_common_api.h>
+
+RETRO_BEGIN_DECLS
+
+typedef struct retro_dsp_filter retro_dsp_filter_t;
+
+retro_dsp_filter_t *retro_dsp_filter_new(const char *filter_config,
+      void *string_data, float sample_rate);
+
+void retro_dsp_filter_free(retro_dsp_filter_t *dsp);
+
+struct retro_dsp_data
 {
-   void *empty;
-} rarch_null_resampler_t;
- 
-static void resampler_null_process(
-      void *re_, struct resampler_data *data)
-{
-}
- 
-static void resampler_null_free(void *re_)
-{
-}
- 
-static void *resampler_null_init(const struct resampler_config *config,
-      double bandwidth_mod, resampler_simd_mask_t mask)
-{
-   return (void*)0;
-}
- 
-retro_resampler_t null_resampler = {
-   resampler_null_init,
-   resampler_null_process,
-   resampler_null_free,
-   RESAMPLER_API_VERSION,
-   "null",
-   "null"
+   float *input;
+   unsigned input_frames;
+
+   /* Set by retro_dsp_filter_process(). */
+   float *output;
+   unsigned output_frames;
 };
+
+void retro_dsp_filter_process(retro_dsp_filter_t *dsp,
+      struct retro_dsp_data *data);
+
+RETRO_END_DECLS
+
+#endif
+

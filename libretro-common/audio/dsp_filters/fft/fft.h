@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (null_resampler.c).
+ * The following license statement only applies to this file (fft.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,37 +20,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <math.h>
- 
-#include <audio/audio_resampler.h>
+#ifndef RARCH_FFT_H__
+#define RARCH_FFT_H__
 
-typedef struct rarch_null_resampler
-{
-   void *empty;
-} rarch_null_resampler_t;
- 
-static void resampler_null_process(
-      void *re_, struct resampler_data *data)
-{
-}
- 
-static void resampler_null_free(void *re_)
-{
-}
- 
-static void *resampler_null_init(const struct resampler_config *config,
-      double bandwidth_mod, resampler_simd_mask_t mask)
-{
-   return (void*)0;
-}
- 
-retro_resampler_t null_resampler = {
-   resampler_null_init,
-   resampler_null_process,
-   resampler_null_free,
-   RESAMPLER_API_VERSION,
-   "null",
-   "null"
-};
+#include <retro_inline.h>
+#include <math/complex.h>
+
+typedef struct fft fft_t;
+
+fft_t *fft_new(unsigned block_size_log2);
+
+void fft_free(fft_t *fft);
+
+void fft_process_forward_complex(fft_t *fft,
+      fft_complex_t *out, const fft_complex_t *in, unsigned step);
+
+void fft_process_forward(fft_t *fft,
+      fft_complex_t *out, const float *in, unsigned step);
+
+void fft_process_inverse(fft_t *fft,
+      float *out, const fft_complex_t *in, unsigned step);
+
+
+#endif
+

@@ -28,6 +28,11 @@
 
 #ifdef HAVE_THREADS
 #include <rthreads/rthreads.h>
+#define SLOCK_LOCK(x) slock_lock(x)
+#define SLOCK_UNLOCK(x) slock_unlock(x)
+#else
+#define SLOCK_LOCK(x)
+#define SLOCK_UNLOCK(x)
 #endif
 
 typedef struct
@@ -38,6 +43,7 @@ typedef struct
 
 struct retro_task_impl
 {
+   retro_task_queue_msg_t msg_push;
    void (*push_running)(retro_task_t *);
    void (*cancel)(void *);
    void (*reset)(void);
@@ -49,16 +55,17 @@ struct retro_task_impl
    void (*deinit)(void);
 };
 
+static retro_task_queue_msg_t msg_push_bak;
 static task_queue_t tasks_running  = {NULL, NULL};
 static task_queue_t tasks_finished = {NULL, NULL};
 
-static void task_queue_msg_push(unsigned prio, unsigned duration,
+static struct retro_task_impl *impl_current = NULL;
+static bool task_threaded_enable            = false;
+
+static void task_queue_msg_push(retro_task_t *task,
+      unsigned prio, unsigned duration,
       bool flush, const char *fmt, ...)
 {
-#ifdef RARCH_INTERNAL
-   extern void runloop_msg_queue_push(const char *msg, unsigned prio,
-         unsigned duration, bool flush);
-#endif
    char buf[1024];
    va_list ap;
 
@@ -68,12 +75,8 @@ static void task_queue_msg_push(unsigned prio, unsigned duration,
    vsnprintf(buf, sizeof(buf), fmt, ap);
    va_end(ap);
 
-   /* print something here */
-
-#ifdef RARCH_INTERNAL
-   /* TODO/FIXME - ugly */
-   runloop_msg_queue_push(buf, prio, duration, flush);
-#endif
+   if (impl_current->msg_push)
+      impl_current->msg_push(buf, prio, duration, flush);
 }
 
 static void task_queue_push_progress(retro_task_t *task)
@@ -83,18 +86,18 @@ static void task_queue_push_progress(retro_task_t *task)
       if (task->finished)
       {
          if (task->error)
-            task_queue_msg_push(1, 60, true, "%s: %s",
+            task_queue_msg_push(task, 1, 60, true, "%s: %s",
                "Task failed", task->title);
          else
-            task_queue_msg_push(1, 60, true, "100%%: %s", task->title);
+            task_queue_msg_push(task, 1, 60, false, "100%%: %s", task->title);
       }
       else
       {
          if (task->progress >= 0 && task->progress <= 100)
-            task_queue_msg_push(1, 60, true, "%i%%: %s",
+            task_queue_msg_push(task, 1, 60, true, "%i%%: %s",
                   task->progress, task->title);
          else
-            task_queue_msg_push(1, 60, true, "%s...", task->title);
+            task_queue_msg_push(task, 1, 60, false, "%s...", task->title);
       }
    }
 }
@@ -266,6 +269,7 @@ static void retro_task_regular_retrieve(task_retriever_data_t *data)
 }
 
 static struct retro_task_impl impl_regular = {
+   NULL,
    retro_task_regular_push_running,
    retro_task_regular_cancel,
    retro_task_regular_reset,
@@ -280,24 +284,35 @@ static struct retro_task_impl impl_regular = {
 #ifdef HAVE_THREADS
 static slock_t *running_lock    = NULL;
 static slock_t *finished_lock   = NULL;
+static slock_t *property_lock   = NULL;
+static slock_t *queue_lock      = NULL;
 static scond_t *worker_cond     = NULL;
 static sthread_t *worker_thread = NULL;
 static bool worker_continue     = true; /* use running_lock when touching it */
 
 static void task_queue_remove(task_queue_t *queue, retro_task_t *task)
 {
-   retro_task_t *t = NULL;
+   retro_task_t     *t = NULL;
+   retro_task_t *front = NULL;
+
+   slock_lock(queue_lock);
+   front = queue->front;
+   slock_unlock(queue_lock);
 
    /* Remove first element if needed */
-   if (task == queue->front)
+   if (task == front)
    {
+      slock_lock(queue_lock);
       queue->front = task->next;
+      slock_unlock(queue_lock);
       task->next   = NULL;
+       
       return;
    }
 
    /* Parse queue */
-   t = queue->front;
+   t = front;
+    
    while (t && t->next)
    {
       /* Remove task and update queue */
@@ -316,8 +331,10 @@ static void task_queue_remove(task_queue_t *queue, retro_task_t *task)
 static void retro_task_threaded_push_running(retro_task_t *task)
 {
    slock_lock(running_lock);
+   slock_lock(queue_lock);
    task_queue_put(&tasks_running, task);
    scond_signal(worker_cond);
+   slock_unlock(queue_lock);
    slock_unlock(running_lock);
 }
 
@@ -343,6 +360,7 @@ static void retro_task_threaded_gather(void)
 {
    retro_task_t *task = NULL;
 
+   slock_lock(property_lock);
    slock_lock(running_lock);
    for (task = tasks_running.front; task; task = task->next)
       task_queue_push_progress(task);
@@ -352,6 +370,7 @@ static void retro_task_threaded_gather(void)
    slock_lock(finished_lock);
    retro_task_internal_gather();
    slock_unlock(finished_lock);
+   slock_unlock(property_lock);
 }
 
 static void retro_task_threaded_wait(void)
@@ -418,6 +437,7 @@ static void threaded_worker(void *userdata)
    for (;;)
    {
       retro_task_t *task  = NULL;
+      bool finished = false;
 
       if (!worker_continue)
          break; /* should we keep running until all tasks finished? */
@@ -437,12 +457,16 @@ static void threaded_worker(void *userdata)
 
       task->handler(task);
 
+      slock_lock(property_lock);
+      finished = task->finished;
+      slock_unlock(property_lock);
+
       slock_lock(running_lock);
       task_queue_remove(&tasks_running, task);
       slock_unlock(running_lock);
 
       /* Update queue */
-      if (!task->finished)
+      if (!finished)
       {
          /* Re-add task to running queue */
          retro_task_threaded_push_running(task);
@@ -461,6 +485,8 @@ static void retro_task_threaded_init(void)
 {
    running_lock  = slock_new();
    finished_lock = slock_new();
+   property_lock = slock_new();
+   queue_lock    = slock_new();
    worker_cond   = scond_new();
 
    slock_lock(running_lock);
@@ -482,14 +508,19 @@ static void retro_task_threaded_deinit(void)
    scond_free(worker_cond);
    slock_free(running_lock);
    slock_free(finished_lock);
+   slock_free(property_lock);
+   slock_free(queue_lock);
 
    worker_thread = NULL;
    worker_cond   = NULL;
    running_lock  = NULL;
    finished_lock = NULL;
+   property_lock = NULL;
+   queue_lock = NULL;
 }
 
 static struct retro_task_impl impl_threaded = {
+   NULL,
    retro_task_threaded_push_running,
    retro_task_threaded_cancel,
    retro_task_threaded_reset,
@@ -502,44 +533,54 @@ static struct retro_task_impl impl_threaded = {
 };
 #endif
 
+/* Deinitializes the task system.
+ * This deinitializes the task system.
+ * The tasks that are running at
+ * the moment will stay on hold */
+void task_queue_deinit(void)
+{
+   if (impl_current)
+      impl_current->deinit();
+   impl_current = NULL;
+}
+
+void task_queue_init(bool threaded, retro_task_queue_msg_t msg_push)
+{
+   impl_current = &impl_regular;
+
+#ifdef HAVE_THREADS
+   if (threaded)
+   {
+      task_threaded_enable = true;
+      impl_current         = &impl_threaded;
+   }
+#endif
+
+   msg_push_bak            = msg_push;
+
+   impl_current->msg_push  = msg_push;
+   impl_current->init();
+}
+
+void task_queue_set_threaded(void)
+{
+   task_threaded_enable = true;
+}
+
+void task_queue_unset_threaded(void)
+{
+   task_threaded_enable = false;
+}
+
+bool task_queue_is_threaded(void)
+{
+   return task_threaded_enable;
+}
+
 bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
 {
-   static struct retro_task_impl *impl_current = NULL;
-   static bool task_threaded_enable            = false;
-
    switch (state)
    {
-      case TASK_QUEUE_CTL_DEINIT:
-         if (impl_current)
-            impl_current->deinit();
-         impl_current = NULL;
-         break;
-      case TASK_QUEUE_CTL_SET_THREADED:
-         task_threaded_enable = true;
-         break;
-      case TASK_QUEUE_CTL_UNSET_THREADED:
-         task_threaded_enable = false;
-         break;
-      case TASK_QUEUE_CTL_IS_THREADED:
-         return task_threaded_enable;
-      case TASK_QUEUE_CTL_INIT:
-         {
-#ifdef HAVE_THREADS
-            bool *boolean_val = (bool*)data;
-#endif
-
-            impl_current = &impl_regular;
-#ifdef HAVE_THREADS
-            if (boolean_val && *boolean_val)
-            {
-               task_queue_ctl(TASK_QUEUE_CTL_SET_THREADED, NULL);
-               impl_current = &impl_threaded;
-            }
-#endif
-
-            impl_current->init();
-         }
-         break;
       case TASK_QUEUE_CTL_FIND:
          {
             task_finder_data_t *find_data = (task_finder_data_t*)data;
@@ -554,14 +595,13 @@ bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
          {
 #ifdef HAVE_THREADS
             bool current_threaded = (impl_current == &impl_threaded);
-            bool want_threaded    =
-               task_queue_ctl(TASK_QUEUE_CTL_IS_THREADED, NULL);
+            bool want_threaded    = task_queue_is_threaded();
 
             if (want_threaded != current_threaded)
-               task_queue_ctl(TASK_QUEUE_CTL_DEINIT, NULL);
+               task_queue_deinit();
 
             if (!impl_current)
-               task_queue_ctl(TASK_QUEUE_CTL_INIT, NULL);
+               task_queue_init(want_threaded, msg_push_bak);
 #endif
 
             impl_current->gather();
@@ -574,8 +614,11 @@ bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
             /* Ignore this task if a related one is already running */
             if (task->type == TASK_TYPE_BLOCKING)
             {
-               retro_task_t *running = tasks_running.front;
+               retro_task_t *running = NULL;
                bool found = false;
+
+               SLOCK_LOCK(queue_lock);
+               running = tasks_running.front;
 
                for (; running; running = running->next)
                {
@@ -585,6 +628,8 @@ bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
                      break;
                   }
                }
+
+               SLOCK_UNLOCK(queue_lock);
 
                /* skip this task, user must try again later */
                if (found)
@@ -602,9 +647,6 @@ bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
       case TASK_QUEUE_CTL_WAIT:
          impl_current->wait();
          break;
-      case TASK_QUEUE_CTL_CANCEL:
-         impl_current->cancel(data);
-         break;
       case TASK_QUEUE_CTL_NONE:
       default:
          break;
@@ -613,9 +655,12 @@ bool task_queue_ctl(enum task_queue_ctl_state state, void *data)
    return true;
 }
 
+/**
+ * Signals a task to end without waiting for
+ * it to complete. */
 void task_queue_cancel_task(void *task)
 {
-   task_queue_ctl(TASK_QUEUE_CTL_CANCEL, task);
+   impl_current->cancel(task);
 }
 
 void *task_queue_retriever_info_next(task_retriever_info_t **link)
@@ -646,3 +691,137 @@ void task_queue_retriever_info_free(task_retriever_info_t *list)
    }
 }
 
+void task_set_finished(retro_task_t *task, bool finished)
+{
+   SLOCK_LOCK(property_lock);
+   task->finished = finished;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void task_set_mute(retro_task_t *task, bool mute)
+{
+   SLOCK_LOCK(property_lock);
+   task->mute = mute;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void task_set_error(retro_task_t *task, char *error)
+{
+   SLOCK_LOCK(property_lock);
+   task->error = error;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void task_set_progress(retro_task_t *task, int8_t progress)
+{
+   SLOCK_LOCK(property_lock);
+   task->progress = progress;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void task_set_title(retro_task_t *task, char *title)
+{
+   SLOCK_LOCK(property_lock);
+   task->title = title;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void task_set_data(retro_task_t *task, void *data)
+{
+   SLOCK_LOCK(running_lock);
+   task->task_data = data;
+   SLOCK_UNLOCK(running_lock);
+}
+
+void task_set_cancelled(retro_task_t *task, bool cancelled)
+{
+   SLOCK_LOCK(running_lock);
+   task->cancelled = cancelled;
+   SLOCK_UNLOCK(running_lock);
+}
+
+void task_free_title(retro_task_t *task)
+{
+   SLOCK_LOCK(property_lock);
+   if (task->title)
+      free(task->title);
+   task->title = NULL;
+   SLOCK_UNLOCK(property_lock);
+}
+
+void* task_get_data(retro_task_t *task)
+{
+   void *data = NULL;
+
+   SLOCK_LOCK(running_lock);
+   data = task->task_data;
+   SLOCK_UNLOCK(running_lock);
+
+   return data;
+}
+
+bool task_get_cancelled(retro_task_t *task)
+{
+   bool cancelled = false;
+
+   SLOCK_LOCK(running_lock);
+   cancelled = task->cancelled;
+   SLOCK_UNLOCK(running_lock);
+
+   return cancelled;
+}
+
+bool task_get_finished(retro_task_t *task)
+{
+   bool finished = false;
+
+   SLOCK_LOCK(property_lock);
+   finished = task->finished;
+   SLOCK_UNLOCK(property_lock);
+
+   return finished;
+}
+
+bool task_get_mute(retro_task_t *task)
+{
+   bool mute = false;
+
+   SLOCK_LOCK(property_lock);
+   mute = task->mute;
+   SLOCK_UNLOCK(property_lock);
+
+   return mute;
+}
+
+char* task_get_error(retro_task_t *task)
+{
+   char *error = NULL;
+
+   SLOCK_LOCK(property_lock);
+   error = task->error;
+   SLOCK_UNLOCK(property_lock);
+
+   return error;
+}
+
+int8_t task_get_progress(retro_task_t *task)
+{
+   int8_t progress = 0;
+
+   SLOCK_LOCK(property_lock);
+   progress = task->progress;
+   SLOCK_UNLOCK(property_lock);
+
+   return progress;
+}
+
+char* task_get_title(retro_task_t *task)
+{
+   char *title = NULL;
+
+   SLOCK_LOCK(property_lock);
+   title = task->title;
+   SLOCK_UNLOCK(property_lock);
+
+   return title;
+}
