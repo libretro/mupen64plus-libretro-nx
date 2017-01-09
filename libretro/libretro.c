@@ -137,7 +137,7 @@ static void setup_variables(void)
         { "glupen64-169screensize",
             "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|3840x2160" },
         { "glupen64-aspect",
-            "Aspect Ratio; 4:3|16:9" },
+            "Aspect Ratio; 4:3|16:9|16:9 adjusted" },
         { "glupen64-BilinearMode",
             "Bilinear filtering mode; standard|3point" },
 #ifndef HAVE_OPENGLES2
@@ -681,8 +681,11 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "16:9")) {
+        if (!strcmp(var.value, "16:9 adjusted")) {
              AspectRatio = 3;
+             retro_screen_aspect = 16.0 / 9.0;
+        } else if (!strcmp(var.value, "16:9")) {
+             AspectRatio = 2;
              retro_screen_aspect = 16.0 / 9.0;
         } else {
              AspectRatio = 1;
