@@ -124,5 +124,9 @@ char customini[] =
 "\n"
 "[TONIC%20TROUBLE]\n"
 "Good_Name=Tonic Trouble (E)(U)\n"
-"frameBufferEmulation\\copyToRDRAM=1\n";
+"frameBufferEmulation\\copyToRDRAM=1\n"
+"\n"
+"[WIN%20BACK]\n"
+"Good_Name=Winback (E)(U)\n"
+"frameBufferEmulation\\bufferSwapMode=0\n";
 #endif

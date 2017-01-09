@@ -64,6 +64,8 @@ void LoadCustomSettings()
 						config.frameBufferEmulation.copyAuxToRDRAM = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\N64DepthCompare"))
 						config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
+					else if (!strcmp(l.name, "frameBufferEmulation\\bufferSwapMode"))
+						config.frameBufferEmulation.bufferSwapMode = atoi(l.value);
 				}
 			}
 		}
