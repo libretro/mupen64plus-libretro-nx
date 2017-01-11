@@ -66,5 +66,6 @@ extern u32 MultiSampling;
 extern u32 EnableFragmentDepthWrite;
 extern u32 EnableShadersStorage;
 extern u32 CropMode;
+extern u32 EnableFBEmulation;
 
 #endif

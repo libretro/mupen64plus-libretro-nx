@@ -93,6 +93,7 @@ u32 MultiSampling = 0;
 u32 EnableFragmentDepthWrite = 0;
 u32 EnableShadersStorage = 0;
 u32 CropMode = 0;
+u32 EnableFBEmulation = 0;
 
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -144,6 +145,8 @@ static void setup_variables(void)
         { "glupen64-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
+        { "glupen64-EnableFBEmulation",
+            "Framebuffer Emulation; True|False" },
         { "glupen64-EnableCopyColorToRDRAM",
             "Color buffer to RDRAM; Async|Sync|Off" },
         { "glupen64-EnableCopyDepthToRDRAM",
@@ -483,6 +486,16 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         MultiSampling = atoi(var.value);
+    }
+
+    var.key = "glupen64-EnableFBEmulation";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "False"))
+            EnableFBEmulation = 0;
+        else
+            EnableFBEmulation = 1;
     }
 
     var.key = "glupen64-EnableCopyColorToRDRAM";

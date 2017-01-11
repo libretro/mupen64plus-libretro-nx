@@ -79,6 +79,8 @@ void Config_LoadConfig()
 	config.frameBufferEmulation.aspect = AspectRatio;
 #ifdef VC
 	config.frameBufferEmulation.enable = 0;
+#else
+	config.frameBufferEmulation.enable = EnableFBEmulation;
 #endif
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;

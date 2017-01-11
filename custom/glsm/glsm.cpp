@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
+#include <GLideN64_libretro.h>
 
 #define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
@@ -2435,15 +2436,15 @@ static void glsm_state_bind(void)
          gl_state.clear_color.b,
          gl_state.clear_color.a);
 
-#ifdef VC
-   glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
-   gl_state.framebuf[0].location = default_framebuffer;
-   gl_state.framebuf[1].location = default_framebuffer;
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-#else
-   gl_state.framebuf[0].location = 0;
-   gl_state.framebuf[1].location = 0;
-#endif
+   if (EnableFBEmulation) {
+      gl_state.framebuf[0].location = 0;
+      gl_state.framebuf[1].location = 0;
+   } else {
+      glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+      gl_state.framebuf[0].location = default_framebuffer;
+      gl_state.framebuf[1].location = default_framebuffer;
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   }
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
    {
