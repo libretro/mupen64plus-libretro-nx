@@ -2443,7 +2443,6 @@ static void glsm_state_bind(void)
       glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
       gl_state.framebuf[0].location = default_framebuffer;
       gl_state.framebuf[1].location = default_framebuffer;
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    }
 
    for(i = 0; i < SGL_CAP_MAX; i ++)
