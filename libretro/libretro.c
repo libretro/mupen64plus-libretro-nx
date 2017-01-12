@@ -61,6 +61,10 @@ cothread_t retro_thread;
 
 int astick_deadzone;
 int astick_sensitivity;
+int r_cbutton;
+int l_cbutton;
+int d_cbutton;
+int u_cbutton;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -187,6 +191,14 @@ static void setup_variables(void)
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
         {"glupen64-astick-sensitivity",
            "Analog Sensitivity (percent); 100|95|90|85|80|105|110"},
+        {"glupen64-r-cbutton",
+           "Right C Button; C1|C2|C3|C4"},
+        {"glupen64-l-cbutton",
+           "Left C Button; C2|C3|C4|C1"},
+        {"glupen64-d-cbutton",
+           "Down C Button; C3|C4|C1|C2"},
+        {"glupen64-u-cbutton",
+           "Up C Button; C4|C1|C2|C3"},
         {"glupen64-pak1",
            "Player 1 Pak; memory|rumble|none"},
         {"glupen64-pak2",
@@ -732,6 +744,65 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
 
+    var.key = "glupen64-r-cbutton";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = "glupen64-l-cbutton";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = "glupen64-d-cbutton";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = "glupen64-u-cbutton";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
     update_controllers();
 }
 

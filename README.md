@@ -1,6 +1,6 @@
 # GLupeN64
 
-**Please read the [Wiki](https://github.com/loganmc10/GLupeN64/wiki) for an explanation of the core options**
+**Please read the [Wiki](https://github.com/GLupeN64/GLupeN64/wiki) for an explanation of the core options**
 
 **[Binary Builds](http://loganbuildbot.s3-website-us-east-1.amazonaws.com/)**
 
@@ -16,6 +16,6 @@ By choosing one graphics plugin (GLideN64), we will be able to keep the code in 
 
 #### Acknowledgments
 
-A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64. I haven't really written any code for this project, I'm just putting together the work by other people.
+A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64.
 
 **Minimum RetroArch version: v1.3.4**
