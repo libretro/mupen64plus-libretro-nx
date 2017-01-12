@@ -60,6 +60,7 @@ static cothread_t game_thread;
 cothread_t retro_thread;
 
 int astick_deadzone;
+int astick_sensitivity;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -184,6 +185,8 @@ static void setup_variables(void)
             "Use High-Res Full Alpha Channel; False|True" },
         {"glupen64-astick-deadzone",
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
+        {"glupen64-astick-sensitivity",
+           "Analog Sensitivity (percent); 100|95|90|85|80|105|110"},
         {"glupen64-pak1",
            "Player 1 Pak; memory|rumble|none"},
         {"glupen64-pak2",
@@ -722,6 +725,12 @@ void update_variables()
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
+
+    var.key = "glupen64-astick-sensitivity";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        astick_sensitivity = atoi(var.value);
 
     update_controllers();
 }
