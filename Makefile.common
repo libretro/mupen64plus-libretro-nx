@@ -303,8 +303,7 @@ else ifeq ($(GLES3),1)
 	LDFLAGS += -lEGL
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
 	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
-		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp \
-		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_BufferStorageExt.cpp
+		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
 else
 	ifeq (,$(findstring win,$(platform)))
 		GLFLAGS += -DCORE

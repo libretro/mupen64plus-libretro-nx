@@ -100,6 +100,7 @@ char customini[] =
 "[POKEMON%20STADIUM%20G&S]\n"
 "Good_Name=Pokemon Stadium Kin Gin (J)\n"
 "frameBufferEmulation\\copyToRDRAM=0\n"
+"frameBufferEmulation\\copyDepthToRDRAM=0\n"
 "\n"
 "[RUSH%202049]\n"
 "Good_Name=San Francisco Rush 2049 (E)(U)\n"
