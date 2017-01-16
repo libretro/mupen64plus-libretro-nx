@@ -17,9 +17,8 @@
 
 Config config;
 
-void LoadCustomSettings(bool internal)
+std::string replaceChars(std::string myString)
 {
-	std::string myString = RSP.romname;
 	for (size_t pos = myString.find(' '); pos != std::string::npos; pos = myString.find(' ', pos))
 	{
 		myString.replace(pos, 1, "%20");
@@ -28,6 +27,12 @@ void LoadCustomSettings(bool internal)
 	{
 		myString.replace(pos, 1, "%27");
 	}
+	return myString;
+}
+
+void LoadCustomSettings(bool internal)
+{
+	std::string myString = replaceChars(RSP.romname);
 	bool found = false;
 	char buffer[256];
 	char* line;
@@ -53,7 +58,7 @@ void LoadCustomSettings(bool internal)
 		{
 			case INI_SECTION:
 			{
-				if (myString == l.name)
+				if (myString == replaceChars(l.name))
 					found = true;
 				else
 					found = false;
