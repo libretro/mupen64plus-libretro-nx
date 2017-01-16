@@ -72,7 +72,9 @@
 #include <libretro.h>
 #include <libretro_private.h>
 #include <libretro_memory.h>
+
 extern retro_input_poll_t poll_cb;
+extern uint32_t CountPerOp;
 
 /* version number for Core config section */
 #define CONFIG_PARAM_VERSION 1.01
@@ -285,7 +287,9 @@ m64p_error main_run(void)
 #endif
     g_delay_si = 1;
     disable_extra_mem = 0;
-    count_per_op = ROM_PARAMS.countperop;
+    count_per_op = CountPerOp;
+    if (count_per_op <= 0)
+        count_per_op = ROM_PARAMS.countperop;
     cheat_add_hacks();
 
     /* do byte-swapping if it's not been done yet */

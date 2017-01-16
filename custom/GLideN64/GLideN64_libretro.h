@@ -1,5 +1,3 @@
-#include "Types.h"
-
 #ifndef GLIDEN64_LIBRETRO_H
 #define GLIDEN64_LIBRETRO_H
 
@@ -49,23 +47,23 @@ struct GLState {
 extern GLState glState;
 #endif
 
-extern u32 bilinearMode;
-extern u32 EnableHWLighting;
-extern u32 CorrectTexrectCoords;
-extern u32 enableNativeResTexrects;
-extern u32 enableLegacyBlending;
-extern u32 EnableCopyColorToRDRAM;
-extern u32 EnableCopyDepthToRDRAM;
-extern u32 AspectRatio;
-extern u32 txFilterMode;
-extern u32 txEnhancementMode;
-extern u32 txHiresEnable;
-extern u32 txHiresFullAlphaChannel;
-extern u32 txFilterIgnoreBG;
-extern u32 MultiSampling;
-extern u32 EnableFragmentDepthWrite;
-extern u32 EnableShadersStorage;
-extern u32 CropMode;
-extern u32 EnableFBEmulation;
+extern uint32_t bilinearMode;
+extern uint32_t EnableHWLighting;
+extern uint32_t CorrectTexrectCoords;
+extern uint32_t enableNativeResTexrects;
+extern uint32_t enableLegacyBlending;
+extern uint32_t EnableCopyColorToRDRAM;
+extern uint32_t EnableCopyDepthToRDRAM;
+extern uint32_t AspectRatio;
+extern uint32_t txFilterMode;
+extern uint32_t txEnhancementMode;
+extern uint32_t txHiresEnable;
+extern uint32_t txHiresFullAlphaChannel;
+extern uint32_t txFilterIgnoreBG;
+extern uint32_t MultiSampling;
+extern uint32_t EnableFragmentDepthWrite;
+extern uint32_t EnableShadersStorage;
+extern uint32_t CropMode;
+extern uint32_t EnableFBEmulation;
 
 #endif

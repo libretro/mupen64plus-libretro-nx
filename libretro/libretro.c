@@ -80,24 +80,25 @@ uint32_t retro_screen_width;
 uint32_t retro_screen_height;
 float retro_screen_aspect;
 
-u32 bilinearMode = 0;
-u32 EnableHWLighting = 0;
-u32 CorrectTexrectCoords = 0;
-u32 enableNativeResTexrects = 0;
-u32 enableLegacyBlending = 0;
-u32 EnableCopyColorToRDRAM = 0;
-u32 EnableCopyDepthToRDRAM = 0;
-u32 AspectRatio = 0;
-u32 txFilterMode = 0;
-u32 txEnhancementMode = 0;
-u32 txHiresEnable = 0;
-u32 txHiresFullAlphaChannel = 0;
-u32 txFilterIgnoreBG = 0;
-u32 MultiSampling = 0;
-u32 EnableFragmentDepthWrite = 0;
-u32 EnableShadersStorage = 0;
-u32 CropMode = 0;
-u32 EnableFBEmulation = 0;
+uint32_t bilinearMode = 0;
+uint32_t EnableHWLighting = 0;
+uint32_t CorrectTexrectCoords = 0;
+uint32_t enableNativeResTexrects = 0;
+uint32_t enableLegacyBlending = 0;
+uint32_t EnableCopyColorToRDRAM = 0;
+uint32_t EnableCopyDepthToRDRAM = 0;
+uint32_t AspectRatio = 0;
+uint32_t txFilterMode = 0;
+uint32_t txEnhancementMode = 0;
+uint32_t txHiresEnable = 0;
+uint32_t txHiresFullAlphaChannel = 0;
+uint32_t txFilterIgnoreBG = 0;
+uint32_t MultiSampling = 0;
+uint32_t EnableFragmentDepthWrite = 0;
+uint32_t EnableShadersStorage = 0;
+uint32_t CropMode = 0;
+uint32_t EnableFBEmulation = 0;
+uint32_t CountPerOp = 0;
 
 int rspMode = 0;
 // after the controller's CONTROL* member has been assigned we can update
@@ -206,6 +207,8 @@ static void setup_variables(void)
            "Player 3 Pak; none|memory|rumble"},
         {"glupen64-pak4",
            "Player 4 Pak; none|memory|rumble"},
+        { "glupen64-CountPerOp",
+            "Count Per Op; 0|1|2|3" },
         { NULL, NULL },
     };
 
@@ -741,6 +744,13 @@ void update_variables()
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
+
+    var.key = "glupen64-CountPerOp";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        CountPerOp = atoi(var.value);
+    }
 
     var.key = "glupen64-r-cbutton";
     var.value = NULL;
