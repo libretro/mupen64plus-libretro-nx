@@ -17,7 +17,7 @@
 
 Config config;
 
-void LoadCustomSettings()
+void LoadCustomSettings(bool internal)
 {
 	std::string myString = RSP.romname;
 	for (size_t pos = myString.find(' '); pos != std::string::npos; pos = myString.find(' ', pos))
@@ -30,10 +30,24 @@ void LoadCustomSettings()
 	}
 	bool found = false;
 	char buffer[256];
-	char* line = strtok(customini, "\n");
+	char* line;
+	FILE* fPtr;
 	std::transform(myString.begin(), myString.end(), myString.begin(), ::toupper);
-	while (line != NULL)
+	if (internal) {
+		line = strtok(customini, "\n");
+	} else {
+		const char *pathname = ConfigGetSharedDataFilepath("GLideN64.custom.ini");
+		if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
+			return;
+	}
+	while (true)
 	{
+		if (!internal) {
+			if (fgets(buffer, 255, fPtr) == NULL)
+				break;
+			else
+				line = buffer;
+		}
 		ini_line l = ini_parse_line(&line);
 		switch (l.type)
 		{
@@ -47,7 +61,19 @@ void LoadCustomSettings()
 			case INI_PROPERTY:
 			{
 				if (found) {
-					if (!strcmp(l.name, "frameBufferEmulation\\copyToRDRAM"))
+					if (!strcmp(l.name, "video\\cropMode"))
+						config.video.cropMode = atoi(l.value);
+					else if (!strcmp(l.name, "video\\cropWidth"))
+						config.video.cropWidth = atoi(l.value);
+					else if (!strcmp(l.name, "video\\cropHeight"))
+						config.video.cropHeight = atoi(l.value);
+					else if (!strcmp(l.name, "video\\multisampling"))
+						config.video.multisampling = atoi(l.value);
+					else if (!strcmp(l.name, "frameBufferEmulation\\aspect"))
+						config.frameBufferEmulation.aspect = atoi(l.value);
+					else if (!strcmp(l.name, "frameBufferEmulation\\nativeResFactor"))
+						config.frameBufferEmulation.nativeResFactor = atoi(l.value);
+					else if (!strcmp(l.name, "frameBufferEmulation\\copyToRDRAM"))
 						config.frameBufferEmulation.copyToRDRAM = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\copyFromRDRAM"))
 						config.frameBufferEmulation.copyFromRDRAM = atoi(l.value);
@@ -59,10 +85,18 @@ void LoadCustomSettings()
 						config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\bufferSwapMode"))
 						config.frameBufferEmulation.bufferSwapMode = atoi(l.value);
+					else if (!strcmp(l.name, "texture\\bilinearMode"))
+						config.texture.bilinearMode = atoi(l.value);
+					else if (!strcmp(l.name, "texture\\maxAnisotropy"))
+						config.texture.maxAnisotropy = atoi(l.value);
 				}
 			}
 		}
-		line = strtok(NULL, "\n");
+		if (internal) {
+			line = strtok(NULL, "\n");
+			if (line == NULL)
+				break;
+		}
 	}
 }
 
@@ -102,5 +136,6 @@ void Config_LoadConfig()
 	config.video.multisampling = MultiSampling;
 	config.video.cropMode = CropMode;
 	config.generalEmulation.hacks = hacks;
-	LoadCustomSettings();
+	LoadCustomSettings(true);
+	LoadCustomSettings(false);
 }
