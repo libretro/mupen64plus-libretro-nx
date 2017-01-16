@@ -94,6 +94,14 @@ void LoadCustomSettings(bool internal)
 						config.texture.bilinearMode = atoi(l.value);
 					else if (!strcmp(l.name, "texture\\maxAnisotropy"))
 						config.texture.maxAnisotropy = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableNativeResTexrects"))
+						config.generalEmulation.enableNativeResTexrects = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords"))
+						config.generalEmulation.correctTexrectCoords = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableLegacyBlending"))
+						config.generalEmulation.enableLegacyBlending = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableFragmentDepthWrite"))
+						config.generalEmulation.enableFragmentDepthWrite = atoi(l.value);
 				}
 			}
 		}
