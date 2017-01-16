@@ -20,7 +20,6 @@
 #include "main/version.h"
 #include "main/savestates.h"
 #include "main/mupen64plus.ini.h"
-#include "GLideN64.custom.ini.h"
 #include "api/m64p_config.h"
 #include "osal_files.h"
 #include "main/rom.h"
@@ -374,7 +373,6 @@ void retro_init(void)
     if (!osal_path_existsW(w_pathname) || !osal_is_directory(w_pathname))
         osal_mkdirp(w_pathname);
     copy_file(inifile, "mupen64plus.ini");
-    copy_file(customini, "GLideN64.custom.ini");
 
     struct retro_log_callback log;
     unsigned colorMode = RETRO_PIXEL_FORMAT_XRGB8888;

@@ -13,6 +13,7 @@
 #include "../RSP.h"
 #include "../Log.h"
 #include "main/util.h"
+#include "GLideN64.custom.ini.h"
 
 Config config;
 
@@ -27,20 +28,12 @@ void LoadCustomSettings()
 	{
 		myString.replace(pos, 1, "%27");
 	}
-	FILE *fPtr;
-	int lineno;
 	bool found = false;
 	char buffer[256];
-	const char *pathname = ConfigGetSharedDataFilepath("GLideN64.custom.ini");
-	if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
-	{
-		printf("Unable to open GLideN64 settings file '%s'.", pathname);
-		return;
-	}
+	char* line = strtok(customini, "\n");
 	std::transform(myString.begin(), myString.end(), myString.begin(), ::toupper);
-	for (lineno = 1; fgets(buffer, 255, fPtr) != NULL; lineno++)
+	while (line != NULL)
 	{
-		char *line = buffer;
 		ini_line l = ini_parse_line(&line);
 		switch (l.type)
 		{
@@ -69,6 +62,7 @@ void LoadCustomSettings()
 				}
 			}
 		}
+		line = strtok(NULL, "\n");
 	}
 }
 
