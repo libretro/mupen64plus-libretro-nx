@@ -153,7 +153,11 @@ static void setup_variables(void)
         { "glupen64-EnableFBEmulation",
             "Framebuffer Emulation; True|False" },
         { "glupen64-EnableCopyColorToRDRAM",
+#ifndef HAVE_OPENGLES
             "Color buffer to RDRAM; Async|Sync|Off" },
+#else
+            "Color buffer to RDRAM; Off|Async|Sync" },
+#endif
         { "glupen64-EnableCopyDepthToRDRAM",
             "Depth buffer to RDRAM; Software|FromMem|Off" },
         { "glupen64-EnableHWLighting",
