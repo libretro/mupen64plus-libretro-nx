@@ -1,4 +1,4 @@
-GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags)"
+GIT_VERSION ?= "$(shell git describe --abbrev=7 --dirty --always --tags)"
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
