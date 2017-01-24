@@ -1,4 +1,4 @@
-/* Copyright  (C) 2010-2016 The RetroArch team
+/* Copyright  (C) 2010-2017 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
  * The following license statement only applies to this file (jsonsax.h).
@@ -51,7 +51,7 @@ typedef struct
   int ( *start_array )( void* userdata );
   int ( *end_array )( void* userdata );
   int ( *key )( void* userdata, const char* name, size_t length );
-  int ( *index )( void* userdata, unsigned int index );
+  int ( *array_index )( void* userdata, unsigned int index );
   int ( *string )( void* userdata, const char* string, size_t length );
   int ( *number )( void* userdata, const char* number, size_t length );
   int ( *boolean )( void* userdata, int istrue );

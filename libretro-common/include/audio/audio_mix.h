@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2017 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (net_ifinfo.h).
+ * The following license statement only applies to this file (audio_mix.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,30 +20,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _LIBRETRO_NET_IFINFO_H
-#define _LIBRETRO_NET_IFINFO_H
+#ifndef __LIBRETRO_SDK_AUDIO_MIX_H__
+#define __LIBRETRO_SDK_AUDIO_MIX_H__
+
+#include <retro_common_api.h>
 
 #include <stdint.h>
 #include <stddef.h>
 
-#include <boolean.h>
+RETRO_BEGIN_DECLS
 
-struct net_ifinfo_entry
-{
-   char *name;
-   char *host;
-};
+#if defined(__SSE2__)
+#define audio_mix_volume           audio_mix_volume_SSE2
 
-struct net_ifinfo
-{
-   struct net_ifinfo_entry *entries;
-   size_t size;
-}; 
+void audio_mix_volume_SSE2(float *out,
+      const float *in, float vol, size_t samples);
+#else
+#define audio_mix_volume           audio_mix_volume_C
+#endif
 
-typedef struct net_ifinfo net_ifinfo_t;
+void audio_mix_volume_C(float *dst, const float *src, float vol, size_t samples);
 
-void net_ifinfo_free(net_ifinfo_t *list);
-
-bool net_ifinfo_new(net_ifinfo_t *list);
+RETRO_END_DECLS
 
 #endif
