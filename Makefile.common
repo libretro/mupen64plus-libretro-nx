@@ -19,14 +19,15 @@ INCFLAGS += \
 	-I$(AUDIO_LIBRETRO_DIR) \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
-	-I$(VIDEODIR_GLIDEN64)/src/inc
+	-I$(VIDEODIR_GLIDEN64)/src/inc \
+	-I$(ROOT_DIR)/xxHash
 
 ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
 endif
 
-# libco
-SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c \
+	$(ROOT_DIR)/xxHash/xxhash.c
 
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
@@ -275,7 +276,7 @@ SOURCES_CXX   += \
 ifneq (,$(findstring rpi3,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
 else
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32.cpp
+	SOURCES_CXX += $(ROOT_DIR)/custom/GLideN64/CRC.cpp
 endif
 
 ifeq ($(HAVE_NEON),1)
