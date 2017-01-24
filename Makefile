@@ -1,4 +1,3 @@
-GIT_VERSION ?= "$(shell git describe --abbrev=7 --dirty --always --tags)"
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
@@ -46,6 +45,11 @@ endif
 
 TARGET_NAME := glupen64
 CC_AS ?= $(CC)
+
+GIT_VERSION ?= " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+	COREFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
 
 # Linux
 ifneq (,$(findstring linux,$(real_platform)))
@@ -262,7 +266,7 @@ ifeq ($(HAVE_NEON), 1)
    COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
 endif
 
-COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT -DGIT_VERSION=\"$(GIT_VERSION)\"
+COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT
 
 ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g
@@ -305,10 +309,10 @@ endif
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 
 clean:

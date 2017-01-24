@@ -329,11 +329,10 @@ void retro_get_system_info(struct retro_system_info *info)
 #else
     info->library_name = "GLupeN64 OpenGL";
 #endif
-#ifdef GIT_VERSION
-    info->library_version = GIT_VERSION;
-#else
-    info->library_version = "2.5";
+#ifndef GIT_VERSION
+#define GIT_VERSION " git"
 #endif
+    info->library_version = "2.5" GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1|ndd";
     info->need_fullpath = false;
     info->block_extract = false;
