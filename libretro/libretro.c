@@ -857,9 +857,6 @@ static bool context_framebuffer_lock(void *data)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
-    if (!game)
-        return false;
-
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 
