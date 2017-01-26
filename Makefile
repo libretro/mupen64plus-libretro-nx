@@ -1,6 +1,7 @@
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
+LLE=1
 
 DYNAFLAGS :=
 INCFLAGS  :=
@@ -74,6 +75,7 @@ else ifneq (,$(findstring rpi,$(platform)))
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
    else
+      LLE = 0
       CPUFLAGS += -DVC
       GL_LIB := -L/opt/vc/lib -lGLESv2
       INCFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vcos -I/opt/vc/include/interface/vcos/pthreads
