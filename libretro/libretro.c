@@ -899,12 +899,14 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
+    libretro_buffer_swapped = false;
     static bool updated = false;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
         update_controllers();
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     co_switch(game_thread);
-    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    if (!libretro_buffer_swapped)
+        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
 }
 
 void retro_reset (void)
