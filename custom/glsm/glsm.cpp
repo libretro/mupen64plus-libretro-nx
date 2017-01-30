@@ -950,8 +950,10 @@ void rglDeleteFramebuffers(GLsizei n, const GLuint *_framebuffers)
 {
    int i, p;
    for (i = 0; i < n; ++i) {
-      if (_framebuffers[i] < MAX_FRAMEBUFFERS)
+      if (_framebuffers[i] < MAX_FRAMEBUFFERS) {
          free(framebuffers[_framebuffers[i]]);
+         framebuffers[_framebuffers[i]] = NULL;
+      }
       for (p = 0; p < 2; ++p) {
          if (_framebuffers[i] == gl_state.framebuf[p].location)
             gl_state.framebuf[p].location = 0;
