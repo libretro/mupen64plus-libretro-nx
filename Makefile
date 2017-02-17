@@ -44,7 +44,7 @@ else ifeq ($(ARCH), $(filter $(ARCH), arm))
    WITH_DYNAREC = arm
 endif
 
-TARGET_NAME := glupen64
+TARGET_NAME := mupen64plus
 CC_AS ?= $(CC)
 
 GIT_VERSION ?= " $(shell git rev-parse --short HEAD || echo unknown)"

@@ -2,7 +2,7 @@
 
 clone this repository, for instance:
 
-```git clone --depth=1 https://github.com/loganmc10/GLupeN64.git```
+```git clone --depth=1 https://github.com/libretro/mupen64plus-libretro.git```
 
 ### Building the project
 
@@ -18,7 +18,7 @@ Rpi2:
 Rpi3:
 ```platform=rpi3 make -j4```
 
-That will create a file named **glupen64_libretro.so**
+That will create a file named **mupen64plus_libretro.so**
 
 ### Building for Windows (64-bit only)
 
@@ -28,4 +28,4 @@ On Fedora, make sure you have these packages installed: ```mingw64-gcc-c++ mingw
 
 Then run ```platform=win make -j4```
 
-That will create a file named **glupen64_libretro.dll**
+That will create a file named **mupen64plus_libretro.dll**

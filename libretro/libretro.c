@@ -126,92 +126,92 @@ extern m64p_rom_header ROM_HEADER;
 static void setup_variables(void)
 {
     struct retro_variable variables[] = {
-        { "glupen64-cpucore",
+        { "mupen64plus-cpucore",
 #ifdef DYNAREC
             "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
 #else
             "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
-        { "glupen64-rspmode",
+        { "mupen64plus-rspmode",
 #ifndef VC
             "RSP Mode; HLE|LLE" },
 #else
             "RSP Mode; HLE" },
 #endif
-        { "glupen64-43screensize",
+        { "mupen64plus-43screensize",
             "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440" },
-        { "glupen64-169screensize",
+        { "mupen64plus-169screensize",
             "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|3840x2160" },
-        { "glupen64-aspect",
+        { "mupen64plus-aspect",
             "Aspect Ratio; 4:3|16:9|16:9 adjusted" },
-        { "glupen64-BilinearMode",
+        { "mupen64plus-BilinearMode",
             "Bilinear filtering mode; standard|3point" },
 #ifndef HAVE_OPENGLES2
-        { "glupen64-MultiSampling",
+        { "mupen64plus-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
-        { "glupen64-EnableFBEmulation",
+        { "mupen64plus-EnableFBEmulation",
             "Framebuffer Emulation; True|False" },
-        { "glupen64-EnableCopyColorToRDRAM",
+        { "mupen64plus-EnableCopyColorToRDRAM",
 #ifndef HAVE_OPENGLES
             "Color buffer to RDRAM; Async|Sync|Off" },
 #else
             "Color buffer to RDRAM; Off|Async|Sync" },
 #endif
-        { "glupen64-EnableCopyDepthToRDRAM",
+        { "mupen64plus-EnableCopyDepthToRDRAM",
             "Depth buffer to RDRAM; Software|FromMem|Off" },
-        { "glupen64-EnableHWLighting",
+        { "mupen64plus-EnableHWLighting",
             "Hardware per-pixel lighting; False|True" },
-        { "glupen64-CorrectTexrectCoords",
+        { "mupen64plus-CorrectTexrectCoords",
             "Continuous texrect coords; Off|Auto|Force" },
-        { "glupen64-EnableNativeResTexrects",
+        { "mupen64plus-EnableNativeResTexrects",
             "Native res. 2D texrects; False|True" },
 #if defined(HAVE_OPENGLES)
-        { "glupen64-EnableLegacyBlending",
+        { "mupen64plus-EnableLegacyBlending",
             "Less accurate blending mode; True|False" },
-        { "glupen64-EnableFragmentDepthWrite",
+        { "mupen64plus-EnableFragmentDepthWrite",
             "GPU shader depth write; False|True" },
 #else
-        { "glupen64-EnableLegacyBlending",
+        { "mupen64plus-EnableLegacyBlending",
             "Less accurate blending mode; False|True" },
-        { "glupen64-EnableFragmentDepthWrite",
+        { "mupen64plus-EnableFragmentDepthWrite",
             "GPU shader depth write; True|False" },
 #endif
-        { "glupen64-EnableShadersStorage",
+        { "mupen64plus-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
-        { "glupen64-CropMode",
+        { "mupen64plus-CropMode",
             "Crop Mode; Auto|Off" },
-        { "glupen64-txFilterMode",
+        { "mupen64plus-txFilterMode",
             "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
-        { "glupen64-txEnhancementMode",
+        { "mupen64plus-txEnhancementMode",
             "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
-        { "glupen64-txFilterIgnoreBG",
+        { "mupen64plus-txFilterIgnoreBG",
             "Filter background textures; True|False" },
-        { "glupen64-txHiresEnable",
+        { "mupen64plus-txHiresEnable",
             "Use High-Res textures; False|True" },
-        { "glupen64-txHiresFullAlphaChannel",
+        { "mupen64plus-txHiresFullAlphaChannel",
             "Use High-Res Full Alpha Channel; False|True" },
-        {"glupen64-astick-deadzone",
+        {"mupen64plus-astick-deadzone",
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-        {"glupen64-astick-sensitivity",
+        {"mupen64plus-astick-sensitivity",
            "Analog Sensitivity (percent); 100|95|90|85|80|105|110"},
-        {"glupen64-r-cbutton",
+        {"mupen64plus-r-cbutton",
            "Right C Button; C1|C2|C3|C4"},
-        {"glupen64-l-cbutton",
+        {"mupen64plus-l-cbutton",
            "Left C Button; C2|C3|C4|C1"},
-        {"glupen64-d-cbutton",
+        {"mupen64plus-d-cbutton",
            "Down C Button; C3|C4|C1|C2"},
-        {"glupen64-u-cbutton",
+        {"mupen64plus-u-cbutton",
            "Up C Button; C4|C1|C2|C3"},
-        {"glupen64-pak1",
+        {"mupen64plus-pak1",
            "Player 1 Pak; memory|rumble|none"},
-        {"glupen64-pak2",
+        {"mupen64plus-pak2",
            "Player 2 Pak; none|memory|rumble"},
-        {"glupen64-pak3",
+        {"mupen64plus-pak3",
            "Player 3 Pak; none|memory|rumble"},
-        {"glupen64-pak4",
+        {"mupen64plus-pak4",
            "Player 4 Pak; none|memory|rumble"},
-        { "glupen64-CountPerOp",
+        { "mupen64plus-CountPerOp",
             "Count Per Op; 0|1|2|3" },
         { NULL, NULL },
     };
@@ -323,11 +323,11 @@ void retro_set_environment(retro_environment_t cb)
 void retro_get_system_info(struct retro_system_info *info)
 {
 #if defined(HAVE_OPENGLES2)
-    info->library_name = "GLupeN64 GLES2";
+    info->library_name = "Mupen64Plus GLES2";
 #elif defined(HAVE_OPENGLES3)
-    info->library_name = "GLupeN64 GLES3";
+    info->library_name = "Mupen64Plus GLES3";
 #else
-    info->library_name = "GLupeN64 OpenGL";
+    info->library_name = "Mupen64Plus OpenGL";
 #endif
 #ifndef GIT_VERSION
 #define GIT_VERSION " git"
@@ -373,7 +373,7 @@ void retro_init(void)
     strncpy(pathname, sys_pathname, PATH_SIZE);
     if (pathname[(strlen(pathname)-1)] != '/' && pathname[(strlen(pathname)-1)] != '\\')
         strcat(pathname, "/");
-    strcat(pathname, "GLupeN64/");
+    strcat(pathname, "Mupen64plus/");
     mbstowcs(w_pathname, pathname, PATH_SIZE);
     if (!osal_path_existsW(w_pathname) || !osal_is_directory(w_pathname))
         osal_mkdirp(w_pathname);
@@ -411,7 +411,7 @@ void retro_deinit(void)
 
 void update_controllers()
 {
-    struct retro_variable pk1var = { "glupen64-pak1" };
+    struct retro_variable pk1var = { "mupen64plus-pak1" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
     {
         int p1_pak = PLUGIN_NONE;
@@ -428,7 +428,7 @@ void update_controllers()
             pad_pak_types[0] = p1_pak;
     }
 
-    struct retro_variable pk2var = { "glupen64-pak2" };
+    struct retro_variable pk2var = { "mupen64plus-pak2" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
     {
         int p2_pak = PLUGIN_NONE;
@@ -443,7 +443,7 @@ void update_controllers()
             pad_pak_types[1] = p2_pak;
     }
 
-    struct retro_variable pk3var = { "glupen64-pak3" };
+    struct retro_variable pk3var = { "mupen64plus-pak3" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
     {
         int p3_pak = PLUGIN_NONE;
@@ -458,7 +458,7 @@ void update_controllers()
             pad_pak_types[2] = p3_pak;
     }
 
-    struct retro_variable pk4var = { "glupen64-pak4" };
+    struct retro_variable pk4var = { "mupen64plus-pak4" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
     {
         int p4_pak = PLUGIN_NONE;
@@ -478,7 +478,7 @@ void update_variables()
 {
     struct retro_variable var;
 
-    var.key = "glupen64-rspmode";
+    var.key = "mupen64plus-rspmode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -488,7 +488,7 @@ void update_variables()
             rspMode = 1;
     }
 
-    var.key = "glupen64-BilinearMode";
+    var.key = "mupen64plus-BilinearMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -498,14 +498,14 @@ void update_variables()
             bilinearMode = 1;
     }
 
-    var.key = "glupen64-MultiSampling";
+    var.key = "mupen64plus-MultiSampling";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         MultiSampling = atoi(var.value);
     }
 
-    var.key = "glupen64-EnableFBEmulation";
+    var.key = "mupen64plus-EnableFBEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -515,7 +515,7 @@ void update_variables()
             EnableFBEmulation = 1;
     }
 
-    var.key = "glupen64-EnableCopyColorToRDRAM";
+    var.key = "mupen64plus-EnableCopyColorToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -527,7 +527,7 @@ void update_variables()
             EnableCopyColorToRDRAM = 0;
     }
 
-    var.key = "glupen64-EnableCopyDepthToRDRAM";
+    var.key = "mupen64plus-EnableCopyDepthToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -539,7 +539,7 @@ void update_variables()
             EnableCopyDepthToRDRAM = 0;
     }
 
-    var.key = "glupen64-EnableHWLighting";
+    var.key = "mupen64plus-EnableHWLighting";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -549,7 +549,7 @@ void update_variables()
             EnableHWLighting = 0;
     }
 
-    var.key = "glupen64-CorrectTexrectCoords";
+    var.key = "mupen64plus-CorrectTexrectCoords";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -561,7 +561,7 @@ void update_variables()
             CorrectTexrectCoords = 0;
     }
 
-    var.key = "glupen64-EnableNativeResTexrects";
+    var.key = "mupen64plus-EnableNativeResTexrects";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -571,7 +571,7 @@ void update_variables()
             enableNativeResTexrects = 0;
     }
 
-    var.key = "glupen64-txFilterMode";
+    var.key = "mupen64plus-txFilterMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -591,7 +591,7 @@ void update_variables()
             txFilterMode = 0;
     }
 
-    var.key = "glupen64-txEnhancementMode";
+    var.key = "mupen64plus-txEnhancementMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -625,7 +625,7 @@ void update_variables()
             txEnhancementMode = 0;
     }
 
-    var.key = "glupen64-txFilterIgnoreBG";
+    var.key = "mupen64plus-txFilterIgnoreBG";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -635,7 +635,7 @@ void update_variables()
             txFilterIgnoreBG = 1;
     }
 
-    var.key = "glupen64-txHiresEnable";
+    var.key = "mupen64plus-txHiresEnable";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -645,7 +645,7 @@ void update_variables()
             txHiresEnable = 0;
     }
 
-    var.key = "glupen64-txHiresFullAlphaChannel";
+    var.key = "mupen64plus-txHiresFullAlphaChannel";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -655,7 +655,7 @@ void update_variables()
             txHiresFullAlphaChannel = 0;
     }
 
-    var.key = "glupen64-EnableLegacyBlending";
+    var.key = "mupen64plus-EnableLegacyBlending";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -665,7 +665,7 @@ void update_variables()
             enableLegacyBlending = 0;
     }
 
-    var.key = "glupen64-EnableFragmentDepthWrite";
+    var.key = "mupen64plus-EnableFragmentDepthWrite";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -675,7 +675,7 @@ void update_variables()
             EnableFragmentDepthWrite = 0;
     }
 
-    var.key = "glupen64-EnableShadersStorage";
+    var.key = "mupen64plus-EnableShadersStorage";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -685,7 +685,7 @@ void update_variables()
             EnableShadersStorage = 0;
     }
 
-    var.key = "glupen64-CropMode";
+    var.key = "mupen64plus-CropMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -695,7 +695,7 @@ void update_variables()
             CropMode = 0;
     }
 
-    var.key = "glupen64-cpucore";
+    var.key = "mupen64plus-cpucore";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -707,7 +707,7 @@ void update_variables()
              r4300emu = 2;
     }
 
-    var.key = "glupen64-aspect";
+    var.key = "mupen64plus-aspect";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -724,9 +724,9 @@ void update_variables()
     }
 
     if (AspectRatio == 1)
-        var.key = "glupen64-43screensize";
+        var.key = "mupen64plus-43screensize";
     else
-        var.key = "glupen64-169screensize";
+        var.key = "mupen64plus-169screensize";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -734,26 +734,26 @@ void update_variables()
         sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
     }
 
-    var.key = "glupen64-astick-deadzone";
+    var.key = "mupen64plus-astick-deadzone";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
 
-    var.key = "glupen64-astick-sensitivity";
+    var.key = "mupen64plus-astick-sensitivity";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
 
-    var.key = "glupen64-CountPerOp";
+    var.key = "mupen64plus-CountPerOp";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         CountPerOp = atoi(var.value);
     }
 
-    var.key = "glupen64-r-cbutton";
+    var.key = "mupen64plus-r-cbutton";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -768,7 +768,7 @@ void update_variables()
             r_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "glupen64-l-cbutton";
+    var.key = "mupen64plus-l-cbutton";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -783,7 +783,7 @@ void update_variables()
             l_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "glupen64-d-cbutton";
+    var.key = "mupen64plus-d-cbutton";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -798,7 +798,7 @@ void update_variables()
             d_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "glupen64-u-cbutton";
+    var.key = "mupen64plus-u-cbutton";
     var.value = NULL;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
