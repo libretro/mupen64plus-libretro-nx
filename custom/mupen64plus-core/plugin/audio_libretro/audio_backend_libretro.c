@@ -37,9 +37,9 @@
 #include <audio/conversion/float_to_s16.h>
 #include <audio/conversion/s16_to_float.h>
 
-extern retro_audio_sample_batch_t audio_batch_cb;
+#include <audio/audio_resampler.h>
 
-#include "audio_resampler_driver.h"
+extern retro_audio_sample_batch_t audio_batch_cb;
 
 static unsigned MAX_AUDIO_FRAMES = 2048;
 
@@ -53,7 +53,7 @@ static unsigned CountsPerByte;
 
 bool no_audio;
 
-static const rarch_resampler_t *resampler;
+static const retro_resampler_t *resampler;
 static void *resampler_audio_data;
 static float *audio_in_buffer_float;
 static float *audio_out_buffer_float;
@@ -79,7 +79,7 @@ void deinit_audio_libretro(void)
 
 void init_audio_libretro(unsigned max_audio_frames)
 {
-   rarch_resampler_realloc(&resampler_audio_data, &resampler, "sinc", 1.0);
+   retro_resampler_realloc(&resampler_audio_data, &resampler, "sinc", 1.0);
 
    MAX_AUDIO_FRAMES = max_audio_frames;
 

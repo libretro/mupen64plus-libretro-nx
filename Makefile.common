@@ -185,12 +185,22 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/plugin/emulate_game_controller_via_libretro.c \
 	$(LIBRETRO_COMM_DIR)/memmap/memalign.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_backend_libretro.c \
-	$(AUDIO_LIBRETRO_DIR)/audio_resampler_driver.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \
 	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/nearest_resampler.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/null_resampler.c \
+	$(LIBRETRO_COMM_DIR)/file/config_file.c \
+	$(LIBRETRO_COMM_DIR)/file/config_file_userdata.c \
+	$(LIBRETRO_COMM_DIR)/file/file_path.c \
+	$(LIBRETRO_COMM_DIR)/hash/rhash.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
 	$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
 	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
 	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
+	$(LIBRETRO_COMM_DIR)/file/retro_stat.c \
+	$(LIBRETRO_COMM_DIR)/lists/string_list.c \
+	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c
 
 SOURCES_CXX   += \
@@ -281,11 +291,11 @@ endif
 
 ifeq ($(HAVE_NEON),1)
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMathNeon.cpp \
-		$(VIDEODIR_GLIDEN64)/src/gSPNeon.cpp
+						  $(VIDEODIR_GLIDEN64)/src/gSPNeon.cpp
 
 	SOURCES_ASM += $(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16_neon.S \
-		$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float_neon.S \
-		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler_neon.S
+						$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float_neon.S \
+						$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler_neon.S
 else
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
