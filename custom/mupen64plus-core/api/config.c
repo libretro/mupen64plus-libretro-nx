@@ -1293,7 +1293,7 @@ EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
   strncpy(systemDir, sys_systemDir, 2048);
   if (systemDir[(strlen(systemDir)-1)] != '/' && systemDir[(strlen(systemDir)-1)] != '\\')
      strcat(systemDir, "/");
-  strcat(systemDir, "GLupeN64/");
+  strcat(systemDir, "Mupen64plus/");
   strcat(systemDir, filename);
   return systemDir;
 }
