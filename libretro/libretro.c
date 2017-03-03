@@ -933,7 +933,9 @@ bool retro_serialize(void *data, size_t size)
     if (initializing)
         return false;
 
-    int success = savestates_save_m64p(data);
+    int success = savestates_save_libretro(data, size);
+
+
     if (success)
         return true;
 
@@ -944,8 +946,7 @@ bool retro_unserialize(const void * data, size_t size)
 {
     if (initializing)
         return false;
-
-    int success = savestates_load_m64p(data);
+    int success = savestates_load_libretro(data, size);
     if (success)
         return true;
 
