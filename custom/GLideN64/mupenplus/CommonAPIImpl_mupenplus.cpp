@@ -56,7 +56,7 @@ void getRetroArchDir(wchar_t * _strPath)
 	std::string str(systemDir);
 	if (str.back() != '/' && str.back() != '\\')
 		str += "/";
-	str += "GLupeN64/";
+	str += "Mupen64plus/";
 	_getWSPath(str.c_str(), _strPath);
 }
 void PluginAPI::GetUserDataPath(wchar_t * _strPath)
