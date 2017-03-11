@@ -1287,8 +1287,9 @@ extern retro_environment_t environ_cb;
 
 EXPORT const char * CALL ConfigGetSharedDataFilepath(const char *filename)
 {
-  char* sys_systemDir;
-  environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&sys_systemDir);
+  char* sys_systemDir = NULL;
+  if (!environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&sys_systemDir) || !sys_systemDir || !*sys_systemDir)
+    sys_systemDir = "./";
   static char systemDir[2048];
   strncpy(systemDir, sys_systemDir, 2048);
   if (systemDir[(strlen(systemDir)-1)] != '/' && systemDir[(strlen(systemDir)-1)] != '\\')
