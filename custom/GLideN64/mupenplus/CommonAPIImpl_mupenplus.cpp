@@ -51,8 +51,9 @@ void _getWSPath(const char * _path, wchar_t * _strPath)
 
 void getRetroArchDir(wchar_t * _strPath)
 {
-	char* systemDir;
-	environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir);
+	const char* systemDir = NULL;
+	if (!environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir) || !systemDir || !*systemDir)
+		systemDir = "./";
 	std::string str(systemDir);
 	if (str.back() != '/' && str.back() != '\\')
 		str += "/";

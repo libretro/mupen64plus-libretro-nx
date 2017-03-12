@@ -76,9 +76,9 @@ static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 static bool     initializing        = true;
 
-uint32_t retro_screen_width;
-uint32_t retro_screen_height;
-float retro_screen_aspect;
+uint32_t retro_screen_width = 320;
+uint32_t retro_screen_height = 240;
+float retro_screen_aspect = 4.0 / 3.0;
 
 uint32_t bilinearMode = 0;
 uint32_t EnableHWLighting = 0;
