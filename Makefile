@@ -274,7 +274,7 @@ ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g
    CPUOPTS += -DOPENGL_DEBUG
 else
-   CPUOPTS += -O2 -DNDEBUG -fsigned-char -ffast-math -fno-strict-aliasing -fomit-frame-pointer -frename-registers -fvisibility=hidden
+   CPUOPTS += -O2 -DNDEBUG -fsigned-char -ffast-math -fno-strict-aliasing -fomit-frame-pointer -fvisibility=hidden
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
