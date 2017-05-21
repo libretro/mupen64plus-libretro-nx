@@ -527,10 +527,14 @@ AUXILIARY_SHADER_VERSION
 "uniform mediump vec2 uScreenScale;	\n"
 #endif
 "uniform sampler2D uTexNoise;		\n"
-"lowp float snoise()									\n"
+"\n"
+"float rand(vec2 co) {"
+"return return fract(sin(mod(dot(co.xy,vec2(12.9898,78.233)),3.14) * 43758.5453));"
+"}"
+"highp float snoise()									\n"
 "{														\n"
-"  ivec2 coord = ivec2(gl_FragCoord.xy/uScreenScale);	\n"
-"  return texelFetch(uTexNoise, coord, 0).r;			\n"
+"  float coord = floor(gl_FragCoord.xy/uScreenScale);  	\n"
+"  return 1.0;			\n"
 "}														\n"
 ;
 

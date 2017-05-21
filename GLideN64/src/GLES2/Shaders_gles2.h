@@ -414,12 +414,13 @@ static const char* fragment_shader_readtex_3point =
 ;
 
 static const char* fragment_shader_noise =
-"uniform sampler2D uTexNoise;		\n"
-"lowp float snoise()									\n"
+"highp float rand(vec2 co) {\n"
+"return fract(sin(mod(dot(co.xy,vec2(12.9898,78.233)),3.14) * 43758.5453));\n"
+"}\n"
+"highp float snoise()									\n"
 "{														\n"
-"  mediump vec2 texSize = vec2(640.0, 580.0);						\n"
-"  mediump vec2 coord = gl_FragCoord.xy/uScreenScale/texSize;		\n"
-"  return texture2D(uTexNoise, coord).r;							\n"
+"  mediump vec2 coord = floor(gl_FragCoord.xy/uScreenScale);		\n"
+"  return rand(vec2(rand(coord*12.9898),rand(coord*78.233)));	\n"
 "}														\n"
 ;
 
