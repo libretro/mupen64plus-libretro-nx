@@ -915,12 +915,24 @@ void retro_reset (void)
 
 void *retro_get_memory_data(unsigned type)
 {
-    return (type == RETRO_MEMORY_SAVE_RAM) ? &saved_memory : 0;
+    switch (type)
+    {
+        case RETRO_MEMORY_SYSTEM_RAM: return fast_mem_access(0);
+        case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
+    }
+    
+    return NULL;
 }
 
 size_t retro_get_memory_size(unsigned type)
 {
-    return (type == RETRO_MEMORY_SAVE_RAM) ? sizeof(saved_memory) : 0;
+    switch (type)
+    {
+        case RETRO_MEMORY_SYSTEM_RAM: return 4 * 1024 * 1024;
+        case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
+    }
+    
+    return 0;
 }
 
 size_t retro_serialize_size (void)
