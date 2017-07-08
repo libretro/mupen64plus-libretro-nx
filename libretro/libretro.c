@@ -17,7 +17,6 @@
 #include "memory/memory.h"
 #include "main/main.h"
 #include "main/cheat.h"
-#include "main/device.h"
 #include "main/version.h"
 #include "main/savestates.h"
 #include "main/mupen64plus.ini.h"
@@ -123,7 +122,6 @@ static void n64DebugCallback(void* aContext, int aLevel, const char* aMessage)
 }
 
 extern m64p_rom_header ROM_HEADER;
-extern struct device g_dev;
 
 static void setup_variables(void)
 {
@@ -919,7 +917,7 @@ void *retro_get_memory_data(unsigned type)
 {
     switch (type)
     {
-        case RETRO_MEMORY_SYSTEM_RAM: return g_dev.ri.rdram.dram;
+        case RETRO_MEMORY_SYSTEM_RAM: return g_rdram;
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
     
@@ -930,7 +928,7 @@ size_t retro_get_memory_size(unsigned type)
 {
     switch (type)
     {
-        case RETRO_MEMORY_SYSTEM_RAM: return g_dev.ri.rdram.dram_size;
+        case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
         case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
     }
     
