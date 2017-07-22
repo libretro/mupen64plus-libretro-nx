@@ -134,7 +134,7 @@ void Config_LoadConfig()
 #else
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
 #endif
-#ifdef HAVE_OPENGLE
+#ifdef HAVE_OPENGLES
 	config.frameBufferEmulation.bufferSwapMode = Config::bsOnColorImageChange;
 #endif
 #ifdef HAVE_OPENGLES2
