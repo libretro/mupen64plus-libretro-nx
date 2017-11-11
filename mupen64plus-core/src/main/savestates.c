@@ -1030,10 +1030,10 @@ static void savestates_save_m64p_work(struct work_struct *work)
     }
 
     gzclose(f);
+    main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Saved state to: %s", namefrompath(save->filepath));
 #else
     memcpy(save->mempointer, save->data, save->size);
 #endif
-    main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Saved state to: %s", namefrompath(save->filepath));
     free(save->data);
 #ifndef __LIBRETRO__
     free(save->filepath);
