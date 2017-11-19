@@ -15,3 +15,5 @@ By choosing one graphics plugin (GLideN64), we will be able to keep the code in 
 A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64.
 
 **Minimum RetroArch version: v1.3.4**
+
+For information on the options look at the wiki section.
