@@ -12,6 +12,8 @@
   #include "ppc.c"
 #elif defined(__GNUC__) && defined(VITA)
   #include "scefiber.c"
+#elif defined(__GNUC__) && defined(__aarch64__)
+  #include "aarch64.c"
 #elif defined(__GNUC__) && (defined(__ARM_EABI__) || defined(__arm__))
   #include "armeabi.c"
 #elif defined(__GNUC__)
