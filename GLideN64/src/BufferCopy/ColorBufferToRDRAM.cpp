@@ -15,8 +15,6 @@
 #include "ColorBufferToRDRAM_BufferStorageExt.h"
 #elif defined (GLES3)
 #include "ColorBufferToRDRAM_GL.h"
-#elif defined(ANDROID) && defined (GLES2) && !defined(__aarch64__)
-#include "ColorBufferToRDRAM_GLES.h"
 #else
 #include "ColorBufferToRDRAMStub.h"
 #endif
@@ -290,9 +288,6 @@ ColorBufferToRDRAM & ColorBufferToRDRAM::get()
 	}
 #elif defined (GLES3)
 	static ColorBufferToRDRAM_GL cbCopy;
-	return cbCopy;
-#elif defined(ANDROID) && defined (GLES2) && !defined(__aarch64__)
-	static ColorBufferToRDRAM_GLES cbCopy;
 	return cbCopy;
 #else
 	static ColorBufferToRDRAMStub cbCopy;
