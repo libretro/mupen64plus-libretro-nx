@@ -189,7 +189,7 @@ else ifneq (,$(findstring android,$(platform)))
       GLES3 = 1
       TARGET := $(TARGET_NAME)_gles3_libretro_android.so
    else
-      GL_LIB := -lGLESv2 -lui
+      GL_LIB := -lGLESv2
       GLES = 1
       TARGET := $(TARGET_NAME)_libretro_android.so
    endif

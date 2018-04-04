@@ -20,7 +20,7 @@ LLE          := 1
 ifeq ($(TARGET_ARCH),arm)
   WITH_DYNAREC := arm
   HAVE_NEON := 1
-  STATIC_LIBS := $(ROOT_DIR)/custom/android/arm/libpng.a $(ROOT_DIR)/custom/android/arm/libui.so
+  STATIC_LIBS := $(ROOT_DIR)/custom/android/arm/libpng.a
 endif
 
 ifeq ($(TARGET_ARCH),arm64)
@@ -30,7 +30,7 @@ endif
 
 ifeq ($(TARGET_ARCH),x86)
   WITH_DYNAREC := x86
-  STATIC_LIBS := $(ROOT_DIR)/custom/android/x86/libpng.a $(ROOT_DIR)/custom/android/x86/libui.so
+  STATIC_LIBS := $(ROOT_DIR)/custom/android/x86/libpng.a
 endif
 
 ifeq ($(GLES3),1)
