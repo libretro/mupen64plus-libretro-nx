@@ -24,7 +24,7 @@
 #include "TxUtil.h"
 #include "TxDbg.h"
 #include <zlib.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #if defined (OS_MAC_OS_X)
