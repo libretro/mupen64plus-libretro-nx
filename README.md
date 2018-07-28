@@ -16,4 +16,4 @@ A special thanks to the mupen64plus team, the libretro team, and gonetz and thos
 
 **Minimum RetroArch version: v1.3.4**
 
-For information on the options look at the wiki section.
+For information on the options look at the [wiki section](https://github.com/libretro/mupen64plus-libretro/wiki#options).
