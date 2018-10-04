@@ -18,6 +18,10 @@
 #include "GLideNHQ/Ext_TxFilter.h"
 #include "TextureFilterHandler.h"
 
+#ifdef HAVE_LIBNX
+#include <switch.h>
+#endif
+
 using namespace std;
 
 const GLuint g_noiseTexIndex = 2;
@@ -1408,11 +1412,19 @@ void TextureCache::update(u32 _t)
 			if (m_toggleDumpTex) {
 				displayLoadProgress(L"Texture dump - ON\n");
 				_clear();
+                #ifdef SWITCH
+                svcSleepThread(1000000000);
+                #else
 				std::this_thread::sleep_for(std::chrono::seconds(1));
+                #endif
 			}
 			else {
 				displayLoadProgress(L"Texture dump - OFF\n");
+                #ifdef SWITCH
+                svcSleepThread(1000000000);
+                #else
 				std::this_thread::sleep_for(std::chrono::seconds(1));
+                #endif
 			}
 		}
 	}

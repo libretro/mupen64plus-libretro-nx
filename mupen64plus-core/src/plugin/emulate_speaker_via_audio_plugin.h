@@ -24,7 +24,7 @@
 
 #include <stddef.h>
 
-void set_audio_format_via_audio_plugin(void* user_data, unsigned int frequency, unsigned int bits);
-void push_audio_samples_via_audio_plugin(void* user_data, const void* buffer, size_t size);
+void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size);
+void set_audio_format_via_libretro(void* user_data, unsigned int frequency, unsigned int bits);
 
 #endif

@@ -927,7 +927,7 @@ m64p_error main_run(void)
     open_sra_file(&sra);
 
     /* setup backends */
-    aout = (struct audio_out_backend){ &g_dev.ai, set_audio_format_via_audio_plugin, push_audio_samples_via_audio_plugin };
+    aout = (struct audio_out_backend){ &g_dev.ai, set_audio_format_via_libretro,, push_audio_samples_via_libretro };
     rtc = (struct clock_backend){ NULL, get_time_using_C_localtime };
     fla_storage = (struct storage_backend){ &fla, save_storage_file };
     sra_storage = (struct storage_backend){ &sra, save_storage_file };

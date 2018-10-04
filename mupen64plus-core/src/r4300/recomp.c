@@ -29,7 +29,11 @@
 #if defined(__GNUC__)
 #include <unistd.h>
 #ifndef __MINGW32__
+#ifdef HAVE_LIBNX
+#include "../../../../switch/mman.h"
+#else
 #include <sys/mman.h>
+#endif // SWITCH
 #endif
 #endif
 

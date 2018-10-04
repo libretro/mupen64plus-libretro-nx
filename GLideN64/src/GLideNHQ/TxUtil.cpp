@@ -491,6 +491,10 @@ int
 TxUtil::getNumberofProcessors()
 {
 	int numcore = 1;
+    #ifdef SWITCH
+    return 1;
+    #endif
+    
 #ifndef ANDROID
 	try {
 #if defined (OS_WINDOWS)
