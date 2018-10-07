@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Mupen64plus-rsp-hle - ucodes.h                                        *
- *   Mupen64Plus homepage: http://code.google.com/p/mupen64plus/           *
+ *   Mupen64Plus homepage: https://mupen64plus.org/                        *
  *   Copyright (C) 2014 Bobby Smiles                                       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -126,7 +126,8 @@ void alist_process_nead_oot (struct hle_t* hle);
 void alist_process_nead_mm  (struct hle_t* hle);
 void alist_process_nead_mmb (struct hle_t* hle);
 void alist_process_nead_ac  (struct hle_t* hle);
-
+void alist_process_nead_mats(struct hle_t* hle);
+void alist_process_nead_efz (struct hle_t* hle);
 
 /* mp3 ucode */
 void mp3_task(struct hle_t* hle, unsigned int index, uint32_t address);
@@ -141,6 +142,11 @@ void musyx_v2_task(struct hle_t* hle);
 void jpeg_decode_PS0(struct hle_t* hle);
 void jpeg_decode_PS(struct hle_t* hle);
 void jpeg_decode_OB(struct hle_t* hle);
+
+/* Resident evil 2 ucode */
+void resize_bilinear_task(struct hle_t* hle);
+void decode_video_frame_task(struct hle_t* hle);
+void fill_video_double_buffer_task(struct hle_t* hle);
 
 #endif
 

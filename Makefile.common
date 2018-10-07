@@ -41,7 +41,8 @@ SOURCES_C += \
 	$(RSPDIR)/src/memory.c \
 	$(RSPDIR)/src/mp3.c \
 	$(RSPDIR)/src/musyx.c \
-	$(ROOT_DIR)/custom/mupen64plus-rsp-hle/plugin.c
+	$(RSPDIR)/src/re2.c \
+	$(RSPDIR)/src/plugin.c
 
 ifeq ($(LLE), 1)
 SOURCES_C += \

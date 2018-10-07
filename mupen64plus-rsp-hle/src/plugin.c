@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Mupen64plus-rsp-hle - plugin.c                                        *
- *   Mupen64Plus homepage: http://code.google.com/p/mupen64plus/           *
+ *   Mupen64Plus homepage: https://mupen64plus.org/                        *
  *   Copyright (C) 2014 Bobby Smiles                                       *
  *   Copyright (C) 2009 Richard Goedeken                                   *
  *   Copyright (C) 2002 Hacktarux                                          *
@@ -23,16 +23,24 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "hle.h"
 #include "hle_internal.h"
+#include "hle_external.h"
 
 #define M64P_PLUGIN_PROTOTYPES 1
 #include "m64p_common.h"
+#include "m64p_config.h"
+#include "m64p_frontend.h"
 #include "m64p_plugin.h"
 #include "m64p_types.h"
 
+#define CONFIG_API_VERSION       0x020100
+#define CONFIG_PARAM_VERSION     1.00
+
+#define RSP_API_VERSION   0x20000
 #define RSP_HLE_VERSION        0x020500
 #define RSP_PLUGIN_API_VERSION 0x020000
 
@@ -46,6 +54,33 @@ static void (*l_ShowCFB)(void) = NULL;
 static void (*l_DebugCallback)(void *, int, const char *) = NULL;
 static void *l_DebugCallContext = NULL;
 static int l_PluginInit = 0;
+
+EXPORT unsigned int CALL hleDoRspCycles(unsigned int Cycles)
+{
+    hle_execute(&g_hle);
+    return Cycles;
+}
+
+EXPORT m64p_error CALL hlePluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion, int *APIVersion, const char **PluginNamePtr, int *Capabilities)
+{
+    /* set version info */
+    if (PluginType != NULL)
+        *PluginType = M64PLUGIN_RSP;
+
+    if (PluginVersion != NULL)
+        *PluginVersion = RSP_HLE_VERSION;
+
+    if (APIVersion != NULL)
+        *APIVersion = RSP_PLUGIN_API_VERSION;
+
+    if (PluginNamePtr != NULL)
+        *PluginNamePtr = "Hacktarux/Azimer High-Level Emulation RSP Plugin";
+
+    if (Capabilities != NULL)
+        *Capabilities = 0;
+
+    return M64ERR_SUCCESS;
+}
 
 /* local function */
 static void DebugMessage(int level, const char *message, va_list args)
@@ -125,9 +160,13 @@ void HleShowCFB(void* UNUSED(user_defined))
     (*l_ShowCFB)();
 }
 
+int HleForwardTask(void* user_defined)
+{
+    return 0;
+}
 
 /* DLL-exported functions */
-EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle UNUSED(CoreLibHandle), void *Context,
+EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Context,
                                      void (*DebugCallback)(void *, int, const char *))
 {
     if (l_PluginInit)
@@ -183,7 +222,7 @@ EXPORT unsigned int CALL DoRspCycles(unsigned int Cycles)
     return Cycles;
 }
 
-EXPORT void CALL InitiateRSP(RSP_INFO Rsp_Info, unsigned int* UNUSED(CycleCount))
+EXPORT void CALL hleInitiateRSP(RSP_INFO Rsp_Info, unsigned int* CycleCount)
 {
     hle_init(&g_hle,
              Rsp_Info.RDRAM,
@@ -214,9 +253,16 @@ EXPORT void CALL InitiateRSP(RSP_INFO Rsp_Info, unsigned int* UNUSED(CycleCount)
     l_ProcessAlistList = Rsp_Info.ProcessAlistList;
     l_ProcessRdpList = Rsp_Info.ProcessRdpList;
     l_ShowCFB = Rsp_Info.ShowCFB;
+
+    // Is the DoCommand really needed? It's upstream
+    m64p_rom_header rom_header;
+    CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(rom_header), &rom_header);
+
+    g_hle.hle_gfx = 1;
+    g_hle.hle_aud = 0;
 }
 
-EXPORT void CALL RomClosed(void)
+EXPORT void CALL hleRomClosed(void)
 {
     /* do nothing */
 }

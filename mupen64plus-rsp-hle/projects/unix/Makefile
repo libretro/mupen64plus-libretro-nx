@@ -1,6 +1,6 @@
 #/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 # *   mupen64plus-rsp-hle - Makefile                                        *
-# *   Mupen64Plus homepage: http://code.google.com/p/mupen64plus/           *
+# *   Mupen64Plus homepage: https://mupen64plus.org/                        *
 # *   Copyright (C) 2008-2009 Richard Goedeken                              *
 # *   Copyright (C) 2007-2008 DarkJeztr Tillin9                             *
 # *                                                                         *
@@ -66,7 +66,7 @@ ifeq ("$(patsubst MINGW%,MINGW,$(UNAME))","MINGW")
   PIC = 0
 endif
 ifeq ("$(OS)","NONE")
-  $(error OS type "$(UNAME)" not supported.  Please file bug report at 'http://code.google.com/p/mupen64plus/issues')
+  $(error OS type "$(UNAME)" not supported.  Please file bug report at 'https://github.com/mupen64plus/mupen64plus-core/issues')
 endif
 
 # detect system architecture
@@ -116,8 +116,15 @@ ifneq ("$(filter mips,$(HOST_CPU))","")
   PIC ?= 1
   $(warning Architecture "$(HOST_CPU)" not officially supported.')
 endif
+ifneq ("$(filter aarch64,$(HOST_CPU))","")
+    CPU := AARCH
+    ARCH_DETECTED := 64BITS
+    PIC ?= 1
+    NEW_DYNAREC := 1
+    NO_ASM := 1
+endif
 ifeq ("$(CPU)","NONE")
-  $(error CPU type "$(HOST_CPU)" not supported.  Please file bug report at 'http://code.google.com/p/mupen64plus/issues')
+  $(error CPU type "$(HOST_CPU)" not supported.  Please file bug report at 'https://github.com/mupen64plus/mupen64plus-core/issues')
 endif
 
 # base CFLAGS, LDLIBS, and LDFLAGS
@@ -151,11 +158,10 @@ endif
 ifeq ($(OS), LINUX)
   # only export api symbols
   LDFLAGS += -Wl,-version-script,$(SRCDIR)/rsp_api_export.ver
+  LDLIBS += -ldl
 endif
 ifeq ($(OS), OSX)
-  #xcode-select has been around since XCode 3.0, i.e. OS X 10.5
-  OSX_SDK_ROOT = $(shell xcode-select -print-path)/Platforms/MacOSX.platform/Developer/SDKs
-  OSX_SDK_PATH = $(OSX_SDK_ROOT)/$(shell ls $(OSX_SDK_ROOT) | tail -1)
+  OSX_SDK_PATH = $(shell xcrun --sdk macosx --show-sdk-path)
 
   ifeq ($(CPU), X86)
     ifeq ($(ARCH_DETECTED), 64BITS)
@@ -210,6 +216,7 @@ ifeq ($(DEBUG),1)
   CFLAGS += -g
   INSTALL_STRIP_FLAG ?= 
 else
+  CFLAGS += -DNDEBUG
   ifneq ($(OS),OSX)
     INSTALL_STRIP_FLAG ?= -s
   endif
@@ -248,7 +255,16 @@ SOURCE = \
 	$(SRCDIR)/memory.c \
 	$(SRCDIR)/mp3.c \
 	$(SRCDIR)/musyx.c \
+	$(SRCDIR)/re2.c \
 	$(SRCDIR)/plugin.c
+
+ifeq ($(OS), MINGW)
+SOURCE += \
+	$(SRCDIR)/osal_dynamiclib_win32.c
+else
+SOURCE += \
+	$(SRCDIR)/osal_dynamiclib_unix.c
+endif
 
 # generate a list of object files build, make a temporary directory for them
 OBJECTS := $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(filter %.c, $(SOURCE)))
