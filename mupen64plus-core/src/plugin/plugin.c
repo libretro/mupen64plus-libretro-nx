@@ -44,37 +44,67 @@
 #include "osal/dynamiclib.h"
 #include "plugin.h"
 
-CONTROL Controls[4];
+#include <stdio.h>
 
+CONTROL Controls[4];
 /* global function pointers - initialized on core startup */
+
+void ResizeVideoOutput(int width, int height){
+
+}
+
+/* local data structures and functions */
+#define DEFINE_GFX(X) \
+    EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *, int *, int *, const char **, int *); \
+    EXPORT void CALL ChangeWindow(void); \
+    EXPORT int  CALL InitiateGFX(GFX_INFO Gfx_Info); \
+    EXPORT void CALL MoveScreen(int x, int y); \
+    EXPORT void CALL ProcessDList(void); \
+    EXPORT void CALL ProcessRDPList(void); \
+    EXPORT void CALL RomClosed(void); \
+    EXPORT int  CALL RomOpen(void); \
+    EXPORT void CALL ShowCFB(void); \
+    EXPORT void CALL UpdateScreen(void); \
+    EXPORT void CALL ViStatusChanged(void); \
+    EXPORT void CALL ViWidthChanged(void); \
+    EXPORT void CALL ReadScreen2(void *dest, int *width, int *height, int front); \
+    EXPORT void CALL SetRenderingCallback(void (*callback)(int)); \
+    EXPORT void CALL ResizeVideoOutput(int width, int height); \
+    EXPORT void CALL FBRead(unsigned int addr); \
+    EXPORT void CALL FBWrite(unsigned int addr, unsigned int size); \
+    EXPORT void CALL FBGetFrameBufferInfo(void *p); \
+    \
+    gfx_plugin_functions gfx_##X = { \
+        PluginGetVersion, \
+        ChangeWindow, \
+        InitiateGFX, \
+        MoveScreen, \
+        ProcessDList, \
+        ProcessRDPList, \
+        RomClosed, \
+        RomOpen, \
+        ShowCFB, \
+        UpdateScreen, \
+        ViStatusChanged, \
+        ViWidthChanged, \
+        ReadScreen2, \
+        SetRenderingCallback, \
+        ResizeVideoOutput, \
+        FBRead, \
+        FBWrite, \
+        FBGetFrameBufferInfo \
+    }
+
+DEFINE_GFX(gln64);
+
 gfx_plugin_functions gfx;
+GFX_INFO gfx_info;
 audio_plugin_functions audio;
 input_plugin_functions input;
 rsp_plugin_functions rsp;
+RSP_INFO rsp_info;
 
-/* local data structures and functions */
-static const gfx_plugin_functions dummy_gfx = {
-    dummyvideo_PluginGetVersion,
-    dummyvideo_ChangeWindow,
-    dummyvideo_InitiateGFX,
-    dummyvideo_MoveScreen,
-    dummyvideo_ProcessDList,
-    dummyvideo_ProcessRDPList,
-    dummyvideo_RomClosed,
-    dummyvideo_RomOpen,
-    dummyvideo_ShowCFB,
-    dummyvideo_UpdateScreen,
-    dummyvideo_ViStatusChanged,
-    dummyvideo_ViWidthChanged,
-    dummyvideo_ReadScreen2,
-    dummyvideo_SetRenderingCallback,
-    dummyvideo_ResizeVideoOutput,
-    dummyvideo_FBRead,
-    dummyvideo_FBWrite,
-    dummyvideo_FBGetFrameBufferInfo
-};
-
-static const audio_plugin_functions dummy_audio = {
+const audio_plugin_functions dummy_audio = {
     dummyaudio_PluginGetVersion,
     dummyaudio_AiDacrateChanged,
     dummyaudio_AiLenChanged,
@@ -91,14 +121,26 @@ static const audio_plugin_functions dummy_audio = {
     dummyaudio_VolumeGetString
 };
 
-static const input_plugin_functions dummy_input = {
-    dummyinput_PluginGetVersion,
-    dummyinput_ControllerCommand,
-    dummyinput_GetKeys,
-    dummyinput_InitiateControllers,
-    dummyinput_ReadController,
-    dummyinput_RomClosed,
-    dummyinput_RomOpen,
+
+extern m64p_error inputPluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion,
+                                              int *APIVersion, const char **PluginNamePtr, int *Capabilities);
+extern void inputInitiateControllers (CONTROL_INFO ControlInfo);
+extern void inputGetKeys_default(int Control, BUTTONS * Keys );
+extern void inputControllerCommand(int Control, unsigned char *Command);
+extern void inputInitiateControllers(CONTROL_INFO ControlInfo);
+extern void inputReadController(int Control, unsigned char *Command);
+extern int  inputRomOpen(void);
+extern void inputRomClosed(void);
+
+
+const input_plugin_functions dummy_input = {
+    inputPluginGetVersion,
+    inputControllerCommand,
+    inputGetKeys_default,
+    inputInitiateControllers,
+    inputReadController,
+    inputRomClosed,
+    inputRomOpen,
     dummyinput_SDL_KeyDown,
     dummyinput_SDL_KeyUp,
     dummyinput_RenderCallback
@@ -110,12 +152,8 @@ static const rsp_plugin_functions dummy_rsp = {
     dummyrsp_InitiateRSP,
     dummyrsp_RomClosed
 };
-
-static GFX_INFO gfx_info;
 static AUDIO_INFO audio_info;
 static CONTROL_INFO control_info;
-static RSP_INFO rsp_info;
-
 static int l_RspAttached = 0;
 static int l_InputAttached = 0;
 static int l_AudioAttached = 0;
@@ -127,14 +165,24 @@ static unsigned int dummy;
 static void EmptyFunc(void)
 {
 }
+/* RSP */
+#define DEFINE_RSP(X) \
+    EXPORT m64p_error CALL X##PluginGetVersion(m64p_plugin_type *, int *, int *, const char **, int *); \
+    EXPORT unsigned int CALL X##DoRspCycles(unsigned int Cycles); \
+    EXPORT void CALL X##InitiateRSP(RSP_INFO Rsp_Info, unsigned int *CycleCount); \
+    EXPORT void CALL X##RomClosed(void); \
+    \
+    const rsp_plugin_functions rsp_##X = { \
+        X##PluginGetVersion, \
+        X##DoRspCycles, \
+        X##InitiateRSP, \
+        X##RomClosed \
+    }
 
-// Handy macro to avoid code bloat when loading symbols
-#define GET_FUNC(type, field, name) \
-    ((field = (type)osal_dynlib_getproc(plugin_handle, name)) != NULL)
-
-// code to handle backwards-compatibility to video plugins with API_VERSION < 02.1.0.  This API version introduced a boolean
-// flag in the rendering callback, which told the core whether or not the current screen has been freshly redrawn since the
-// last time the callback was called.
+DEFINE_RSP(hle);
+#ifndef VC
+//DEFINE_RSP(lle);
+#endif
 static void                     (*l_mainRenderCallback)(int) = NULL;
 static ptr_SetRenderingCallback   l_old1SetRenderingCallback = NULL;
 
@@ -149,85 +197,10 @@ static void backcompat_setRenderCallbackIntercept(void (*callback)(int))
     l_mainRenderCallback = callback;
 }
 
-static void plugin_disconnect_gfx(void)
+m64p_error plugin_start_gfx(void)
 {
-    gfx = dummy_gfx;
-    l_GfxAttached = 0;
-    l_mainRenderCallback = NULL;
-}
+    printf("plugin_start_gfx\n");
 
-static m64p_error plugin_connect_gfx(m64p_dynlib_handle plugin_handle)
-{
-    /* attach the Video plugin function pointers */
-    if (plugin_handle != NULL)
-    {
-        m64p_plugin_type PluginType;
-        int PluginVersion, APIVersion;
-
-        if (l_GfxAttached)
-            return M64ERR_INVALID_STATE;
-
-        /* set function pointers for required functions */
-        if (!GET_FUNC(ptr_PluginGetVersion, gfx.getVersion, "PluginGetVersion") ||
-            !GET_FUNC(ptr_ChangeWindow, gfx.changeWindow, "ChangeWindow") ||
-            !GET_FUNC(ptr_InitiateGFX, gfx.initiateGFX, "InitiateGFX") ||
-            !GET_FUNC(ptr_MoveScreen, gfx.moveScreen, "MoveScreen") ||
-            !GET_FUNC(ptr_ProcessDList, gfx.processDList, "ProcessDList") ||
-            !GET_FUNC(ptr_ProcessRDPList, gfx.processRDPList, "ProcessRDPList") ||
-            !GET_FUNC(ptr_RomClosed, gfx.romClosed, "RomClosed") ||
-            !GET_FUNC(ptr_RomOpen, gfx.romOpen, "RomOpen") ||
-            !GET_FUNC(ptr_ShowCFB, gfx.showCFB, "ShowCFB") ||
-            !GET_FUNC(ptr_UpdateScreen, gfx.updateScreen, "UpdateScreen") ||
-            !GET_FUNC(ptr_ViStatusChanged, gfx.viStatusChanged, "ViStatusChanged") ||
-            !GET_FUNC(ptr_ViWidthChanged, gfx.viWidthChanged, "ViWidthChanged") ||
-            !GET_FUNC(ptr_ReadScreen2, gfx.readScreen, "ReadScreen2") ||
-            !GET_FUNC(ptr_SetRenderingCallback, gfx.setRenderingCallback, "SetRenderingCallback") ||
-            !GET_FUNC(ptr_FBRead, gfx.fBRead, "FBRead") ||
-            !GET_FUNC(ptr_FBWrite, gfx.fBWrite, "FBWrite") ||
-            !GET_FUNC(ptr_FBGetFrameBufferInfo, gfx.fBGetFrameBufferInfo, "FBGetFrameBufferInfo"))
-        {
-            DebugMessage(M64MSG_ERROR, "broken Video plugin; function(s) not found.");
-            plugin_disconnect_gfx();
-            return M64ERR_INPUT_INVALID;
-        }
-
-        /* set function pointers for optional functions */
-        gfx.resizeVideoOutput = (ptr_ResizeVideoOutput)osal_dynlib_getproc(plugin_handle, "ResizeVideoOutput");
-
-        /* check the version info */
-        (*gfx.getVersion)(&PluginType, &PluginVersion, &APIVersion, NULL, NULL);
-        if (PluginType != M64PLUGIN_GFX || (APIVersion & 0xffff0000) != (GFX_API_VERSION & 0xffff0000))
-        {
-            DebugMessage(M64MSG_ERROR, "incompatible Video plugin");
-            plugin_disconnect_gfx();
-            return M64ERR_INCOMPATIBLE;
-        }
-
-        /* handle backwards-compatibility */
-        if (APIVersion < 0x020100)
-        {
-            DebugMessage(M64MSG_WARNING, "Fallback for Video plugin API (%02i.%02i.%02i) < 2.1.0. Screenshots may contain On Screen Display text", VERSION_PRINTF_SPLIT(APIVersion));
-            // tell the video plugin to make its rendering callback to me (it's old, and doesn't have the bScreenRedrawn flag)
-            gfx.setRenderingCallback(backcompat_videoRenderCallback);
-            l_old1SetRenderingCallback = gfx.setRenderingCallback; // save this just for future use
-            gfx.setRenderingCallback = (ptr_SetRenderingCallback) backcompat_setRenderCallbackIntercept;
-        }
-        if (APIVersion < 0x20200 || gfx.resizeVideoOutput == NULL)
-        {
-            DebugMessage(M64MSG_WARNING, "Fallback for Video plugin API (%02i.%02i.%02i) < 2.2.0. Resizable video will not work", VERSION_PRINTF_SPLIT(APIVersion));
-            gfx.resizeVideoOutput = dummyvideo_ResizeVideoOutput;
-        }
-
-        l_GfxAttached = 1;
-    }
-    else
-        plugin_disconnect_gfx();
-
-    return M64ERR_SUCCESS;
-}
-
-static m64p_error plugin_start_gfx(void)
-{
     uint8_t media = *((uint8_t*)mem_base_u32(g_mem_base, MM_CART_ROM) + (0x3b ^ S8));
 
     /* Here we feed 64DD IPL ROM header to GFX plugin if 64DD is present.
@@ -275,10 +248,6 @@ static m64p_error plugin_start_gfx(void)
     gfx_info.VI_Y_SCALE_REG = &(g_dev.vi.regs[VI_Y_SCALE_REG]);
     gfx_info.CheckInterrupts = EmptyFunc;
 
-    gfx_info.version = 2; //Version 2 added SP_STATUS_REG and RDRAM_SIZE
-    gfx_info.SP_STATUS_REG = &g_dev.sp.regs[SP_STATUS_REG];
-    gfx_info.RDRAM_SIZE = (unsigned int*) &g_dev.rdram.dram_size;
-
     /* call the audio plugin */
     if (!gfx.initiateGFX(gfx_info))
         return M64ERR_PLUGIN_FAIL;
@@ -290,54 +259,6 @@ static void plugin_disconnect_audio(void)
 {
     audio = dummy_audio;
     l_AudioAttached = 0;
-}
-
-static m64p_error plugin_connect_audio(m64p_dynlib_handle plugin_handle)
-{
-    /* attach the Audio plugin function pointers */
-    if (plugin_handle != NULL)
-    {
-        m64p_plugin_type PluginType;
-        int PluginVersion, APIVersion;
-
-        if (l_AudioAttached)
-            return M64ERR_INVALID_STATE;
-
-        if (!GET_FUNC(ptr_PluginGetVersion, audio.getVersion, "PluginGetVersion") ||
-            !GET_FUNC(ptr_AiDacrateChanged, audio.aiDacrateChanged, "AiDacrateChanged") ||
-            !GET_FUNC(ptr_AiLenChanged, audio.aiLenChanged, "AiLenChanged") ||
-            !GET_FUNC(ptr_InitiateAudio, audio.initiateAudio, "InitiateAudio") ||
-            !GET_FUNC(ptr_ProcessAList, audio.processAList, "ProcessAList") ||
-            !GET_FUNC(ptr_RomOpen, audio.romOpen, "RomOpen") ||
-            !GET_FUNC(ptr_RomClosed, audio.romClosed, "RomClosed") ||
-            !GET_FUNC(ptr_SetSpeedFactor, audio.setSpeedFactor, "SetSpeedFactor") ||
-            !GET_FUNC(ptr_VolumeUp, audio.volumeUp, "VolumeUp") ||
-            !GET_FUNC(ptr_VolumeDown, audio.volumeDown, "VolumeDown") ||
-            !GET_FUNC(ptr_VolumeGetLevel, audio.volumeGetLevel, "VolumeGetLevel") ||
-            !GET_FUNC(ptr_VolumeSetLevel, audio.volumeSetLevel, "VolumeSetLevel") ||
-            !GET_FUNC(ptr_VolumeMute, audio.volumeMute, "VolumeMute") ||
-            !GET_FUNC(ptr_VolumeGetString, audio.volumeGetString, "VolumeGetString"))
-        {
-            DebugMessage(M64MSG_ERROR, "broken Audio plugin; function(s) not found.");
-            plugin_disconnect_audio();
-            return M64ERR_INPUT_INVALID;
-        }
-
-        /* check the version info */
-        (*audio.getVersion)(&PluginType, &PluginVersion, &APIVersion, NULL, NULL);
-        if (PluginType != M64PLUGIN_AUDIO || (APIVersion & 0xffff0000) != (AUDIO_API_VERSION & 0xffff0000))
-        {
-            DebugMessage(M64MSG_ERROR, "incompatible Audio plugin");
-            plugin_disconnect_audio();
-            return M64ERR_INCOMPATIBLE;
-        }
-
-        l_AudioAttached = 1;
-    }
-    else
-        plugin_disconnect_audio();
-
-    return M64ERR_SUCCESS;
 }
 
 static m64p_error plugin_start_audio(void)
@@ -368,61 +289,6 @@ static void plugin_disconnect_input(void)
     l_InputAttached = 0;
 }
 
-static m64p_error plugin_connect_input(m64p_dynlib_handle plugin_handle)
-{
-    /* attach the Input plugin function pointers */
-    if (plugin_handle != NULL)
-    {
-        m64p_plugin_type PluginType;
-        int PluginVersion, APIVersion;
-
-        if (l_InputAttached)
-            return M64ERR_INVALID_STATE;
-
-        if (!GET_FUNC(ptr_PluginGetVersion, input.getVersion, "PluginGetVersion") ||
-            !GET_FUNC(ptr_ControllerCommand, input.controllerCommand, "ControllerCommand") ||
-            !GET_FUNC(ptr_GetKeys, input.getKeys, "GetKeys") ||
-            !GET_FUNC(ptr_InitiateControllers, input.initiateControllers, "InitiateControllers") ||
-            !GET_FUNC(ptr_ReadController, input.readController, "ReadController") ||
-            !GET_FUNC(ptr_RomOpen, input.romOpen, "RomOpen") ||
-            !GET_FUNC(ptr_RomClosed, input.romClosed, "RomClosed") ||
-            !GET_FUNC(ptr_SDL_KeyDown, input.keyDown, "SDL_KeyDown") ||
-            !GET_FUNC(ptr_SDL_KeyUp, input.keyUp, "SDL_KeyUp"))
-        {
-            DebugMessage(M64MSG_ERROR, "broken Input plugin; function(s) not found.");
-            plugin_disconnect_input();
-            return M64ERR_INPUT_INVALID;
-        }
-
-        /* check the version info */
-        (*input.getVersion)(&PluginType, &PluginVersion, &APIVersion, NULL, NULL);
-        if (PluginType != M64PLUGIN_INPUT || (APIVersion & 0xffff0000) != (INPUT_API_VERSION & 0xffff0000))
-        {
-            DebugMessage(M64MSG_ERROR, "incompatible Input plugin");
-            plugin_disconnect_input();
-            return M64ERR_INCOMPATIBLE;
-        }
-
-        if (APIVersion < 0x020001)
-        {
-            input.renderCallback = NULL; // not supported in earlier input plugins
-        }
-        else
-        {
-            if (!GET_FUNC(ptr_RenderCallback, input.renderCallback, "RenderCallback"))
-            {
-                DebugMessage(M64MSG_INFO, "input plugin did not specify a render callback; there will be no on screen display by the input plugin.");
-            }
-        }
-
-        l_InputAttached = 1;
-    }
-    else
-        plugin_disconnect_input();
-
-    return M64ERR_SUCCESS;
-}
-
 static m64p_error plugin_start_input(void)
 {
     int i;
@@ -446,44 +312,6 @@ static void plugin_disconnect_rsp(void)
 {
     rsp = dummy_rsp;
     l_RspAttached = 0;
-}
-
-static m64p_error plugin_connect_rsp(m64p_dynlib_handle plugin_handle)
-{
-    /* attach the RSP plugin function pointers */
-    if (plugin_handle != NULL)
-    {
-        m64p_plugin_type PluginType;
-        int PluginVersion, APIVersion;
-
-        if (l_RspAttached)
-            return M64ERR_INVALID_STATE;
-
-        if (!GET_FUNC(ptr_PluginGetVersion, rsp.getVersion, "PluginGetVersion") ||
-            !GET_FUNC(ptr_DoRspCycles, rsp.doRspCycles, "DoRspCycles") ||
-            !GET_FUNC(ptr_InitiateRSP, rsp.initiateRSP, "InitiateRSP") ||
-            !GET_FUNC(ptr_RomClosed, rsp.romClosed, "RomClosed"))
-        {
-            DebugMessage(M64MSG_ERROR, "broken RSP plugin; function(s) not found.");
-            plugin_disconnect_rsp();
-            return M64ERR_INPUT_INVALID;
-        }
-
-        /* check the version info */
-        (*rsp.getVersion)(&PluginType, &PluginVersion, &APIVersion, NULL, NULL);
-        if (PluginType != M64PLUGIN_RSP || (APIVersion & 0xffff0000) != (RSP_API_VERSION & 0xffff0000))
-        {
-            DebugMessage(M64MSG_ERROR, "incompatible RSP plugin");
-            plugin_disconnect_rsp();
-            return M64ERR_INCOMPATIBLE;
-        }
-
-        l_RspAttached = 1;
-    }
-    else
-        plugin_disconnect_rsp();
-
-    return M64ERR_SUCCESS;
 }
 
 static m64p_error plugin_start_rsp(void)
@@ -522,32 +350,6 @@ static m64p_error plugin_start_rsp(void)
     return M64ERR_SUCCESS;
 }
 
-/* global functions */
-m64p_error plugin_connect(m64p_plugin_type type, m64p_dynlib_handle plugin_handle)
-{
-    switch(type)
-    {
-        case M64PLUGIN_GFX:
-            if (plugin_handle != NULL && (l_AudioAttached || l_InputAttached || l_RspAttached))
-                DebugMessage(M64MSG_WARNING, "Front-end bug: plugins are attached in wrong order.");
-            return plugin_connect_gfx(plugin_handle);
-        case M64PLUGIN_AUDIO:
-            if (plugin_handle != NULL && (l_InputAttached || l_RspAttached))
-                DebugMessage(M64MSG_WARNING, "Front-end bug: plugins are attached in wrong order.");
-            return plugin_connect_audio(plugin_handle);
-        case M64PLUGIN_INPUT:
-            if (plugin_handle != NULL && (l_RspAttached))
-                DebugMessage(M64MSG_WARNING, "Front-end bug: plugins are attached in wrong order.");
-            return plugin_connect_input(plugin_handle);
-        case M64PLUGIN_RSP:
-            return plugin_connect_rsp(plugin_handle);
-        default:
-            return M64ERR_INPUT_INVALID;
-    }
-
-    return M64ERR_INTERNAL;
-}
-
 m64p_error plugin_start(m64p_plugin_type type)
 {
     switch(type)
@@ -581,3 +383,22 @@ m64p_error plugin_check(void)
     return M64ERR_SUCCESS;
 }
 
+/* global functions */
+void plugin_connect_all()
+{
+    gfx = gfx_gln64;
+    l_GfxAttached = 1;
+    plugin_start_gfx();
+
+    rsp = rsp_hle;
+    l_RspAttached = 1;
+    plugin_start_rsp();
+
+    audio = dummy_audio;
+    l_AudioAttached = 1;
+    //plugin_start_audio();
+    
+    input = dummy_input;
+    l_InputAttached = 1;
+    plugin_start_input();
+}

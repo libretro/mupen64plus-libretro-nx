@@ -23,7 +23,6 @@
  * outside of the core library.
  */
 
-#include <SDL.h>
 #include <stdlib.h>
 #include <string.h>
 

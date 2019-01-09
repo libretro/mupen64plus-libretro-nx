@@ -28,7 +28,6 @@
  * if you want to implement an interface, you should look here
  */
 
-#include <SDL.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -65,9 +64,6 @@
 #include "eventloop.h"
 #include "main.h"
 #include "cheat.h"
-#include "osal/files.h"
-#include "osal/preproc.h"
-#include "osd/osd.h"
 #include "plugin/plugin.h"
 #if defined(PROFILE)
 #include "profile.h"
@@ -76,6 +72,12 @@
 #include "savestates.h"
 #include "screenshot.h"
 #include "util.h"
+
+#include <libretro_private.h>
+
+#ifdef HAVE_LIBNX
+#include <sys/stat.h>
+#endif
 
 #ifdef DBG
 #include "debugger/dbg_debugger.h"
@@ -120,10 +122,6 @@ static int   l_SpeedFactor = 100;        // percentage of nominal game speed at 
 static int   l_FrameAdvance = 0;         // variable to check if we pause on next frame
 static int   l_MainSpeedLimit = 1;       // insert delay during vi_interrupt to keep speed at real-time
 
-static osd_message_t *l_msgVol = NULL;
-static osd_message_t *l_msgFF = NULL;
-static osd_message_t *l_msgPause = NULL;
-
 /* compatible paks */
 enum { PAK_MAX_SIZE = 5 };
 static size_t l_paks_idx[GAME_CONTROLLERS_COUNT];
@@ -140,15 +138,15 @@ static const char *get_savepathdefault(const char *configpath)
     static char path[1024];
 
     if (!configpath || (strlen(configpath) == 0)) {
-        snprintf(path, 1024, "%ssave%c", ConfigGetUserDataPath(), OSAL_DIR_SEPARATORS[0]);
+        snprintf(path, 1024, "%ssave%c", ConfigGetUserDataPath(), "/");
         path[1023] = 0;
     } else {
-        snprintf(path, 1024, "%s%c", configpath, OSAL_DIR_SEPARATORS[0]);
+        snprintf(path, 1024, "%s%c", configpath, "/");
         path[1023] = 0;
     }
 
     /* create directory if it doesn't exist */
-    osal_mkdirp(path, 0700);
+    mkdir(path, 0700);
 
     return path;
 }
@@ -178,51 +176,6 @@ static char *get_gb_ram_path(const char* gbrom, unsigned int control_id)
     return formatstr("%s%s.%u.sav", get_savesrampath(), gbrom, control_id);
 }
 
-static m64p_error init_video_capture_backend(const struct video_capture_backend_interface** ivcap, void** vcap, m64p_handle config, const char* key)
-{
-    m64p_error err;
-
-    const char* name = ConfigGetParamString(config, key);
-    if (name == NULL) {
-        DebugMessage(M64MSG_WARNING, "Couldn't get %s value. Using NULL value instead.", key);
-    }
-
-    /* try to find desired backend (by name) */
-    *ivcap = get_video_capture_backend(name);
-
-    /* handle not found case */
-    if (*ivcap == NULL) {
-        /* default to dummy backend */
-        *ivcap = get_video_capture_backend(NULL);
-
-        DebugMessage(M64MSG_WARNING, "Could not find %s video_capture_backend_interface. Using %s instead.",
-            name, (*ivcap)->name);
-    }
-
-    /* build section name */
-    char* section = formatstr("%s:%s", key, (*ivcap)->name);
-
-    /* init backend */
-    err = (*ivcap)->init(vcap, section);
-
-    if (err == M64ERR_SUCCESS) {
-        DebugMessage(M64MSG_INFO, "Using video capture backend: %s", (*ivcap)->name);
-    }
-    else {
-        DebugMessage(M64MSG_ERROR, "Failed to initialize video capture backend %s: %s", (*ivcap)->name, CoreErrorMessage(err));
-        *ivcap = NULL;
-    }
-
-    free(section);
-
-    return err;
-}
-
-/*********************************************************************************************************
-* helper functions
-*/
-
-
 const char *get_savestatepath(void)
 {
     /* try to get the SaveStatePath string variable in the Core configuration section */
@@ -244,9 +197,6 @@ void main_message(m64p_msg_level level, unsigned int corner, const char *format,
     buffer[2048]='\0';
     va_end(ap);
 
-    /* send message to on-screen-display if enabled */
-    if (ConfigGetParamBool(g_CoreConfig, "OnScreenDisplay"))
-        osd_new_message((enum osd_corner) corner, "%s", buffer);
     /* send message to front-end */
     DebugMessage(level, "%s", buffer);
 }
@@ -256,74 +206,16 @@ static void main_check_inputs(void)
 #ifdef WITH_LIRC
     lircCheckInput();
 #endif
-    SDL_PumpEvents();
 }
 
 /*********************************************************************************************************
 * global functions, for adjusting the core emulator behavior
 */
-
+extern void Config_LoadConfig();
 int main_set_core_defaults(void)
 {
-    float fConfigParamsVersion;
-    int bUpgrade = 0;
-
-    if (ConfigGetParameter(g_CoreConfig, "Version", M64TYPE_FLOAT, &fConfigParamsVersion, sizeof(float)) != M64ERR_SUCCESS)
-    {
-        DebugMessage(M64MSG_WARNING, "No version number in 'Core' config section. Setting defaults.");
-        ConfigDeleteSection("Core");
-        ConfigOpenSection("Core", &g_CoreConfig);
-    }
-    else if (((int) fConfigParamsVersion) != ((int) CONFIG_PARAM_VERSION))
-    {
-        DebugMessage(M64MSG_WARNING, "Incompatible version %.2f in 'Core' config section: current is %.2f. Setting defaults.", fConfigParamsVersion, (float) CONFIG_PARAM_VERSION);
-        ConfigDeleteSection("Core");
-        ConfigOpenSection("Core", &g_CoreConfig);
-    }
-    else if ((CONFIG_PARAM_VERSION - fConfigParamsVersion) >= 0.0001f)
-    {
-        float fVersion = (float) CONFIG_PARAM_VERSION;
-        ConfigSetParameter(g_CoreConfig, "Version", M64TYPE_FLOAT, &fVersion);
-        DebugMessage(M64MSG_INFO, "Updating parameter set version in 'Core' config section to %.2f", fVersion);
-        bUpgrade = 1;
-    }
-
-    /* parameters controlling the operation of the core */
-    ConfigSetDefaultFloat(g_CoreConfig, "Version", (float) CONFIG_PARAM_VERSION,  "Mupen64Plus Core config parameter set version number.  Please don't change this version number.");
-    ConfigSetDefaultBool(g_CoreConfig, "OnScreenDisplay", 1, "Draw on-screen display if True, otherwise don't draw OSD");
-#if defined(DYNAREC)
-    ConfigSetDefaultInt(g_CoreConfig, "R4300Emulator", 2, "Use Pure Interpreter if 0, Cached Interpreter if 1, or Dynamic Recompiler if 2 or more");
-#else
-    ConfigSetDefaultInt(g_CoreConfig, "R4300Emulator", 1, "Use Pure Interpreter if 0, Cached Interpreter if 1, or Dynamic Recompiler if 2 or more");
-#endif
-    ConfigSetDefaultBool(g_CoreConfig, "NoCompiledJump", 0, "Disable compiled jump commands in dynamic recompiler (should be set to False) ");
-    ConfigSetDefaultBool(g_CoreConfig, "DisableExtraMem", 0, "Disable 4MB expansion RAM pack. May be necessary for some games");
-    ConfigSetDefaultBool(g_CoreConfig, "AutoStateSlotIncrement", 0, "Increment the save state slot after each save operation");
-    ConfigSetDefaultBool(g_CoreConfig, "EnableDebugger", 0, "Activate the R4300 debugger when ROM execution begins, if core was built with Debugger support");
-    ConfigSetDefaultInt(g_CoreConfig, "CurrentStateSlot", 0, "Save state slot (0-9) to use when saving/loading the emulator state");
-    ConfigSetDefaultString(g_CoreConfig, "ScreenshotPath", "", "Path to directory where screenshots are saved. If this is blank, the default value of ${UserDataPath}/screenshot will be used");
-    ConfigSetDefaultString(g_CoreConfig, "SaveStatePath", "", "Path to directory where emulator save states (snapshots) are saved. If this is blank, the default value of ${UserDataPath}/save will be used");
-    ConfigSetDefaultString(g_CoreConfig, "SaveSRAMPath", "", "Path to directory where SRAM/EEPROM data (in-game saves) are stored. If this is blank, the default value of ${UserDataPath}/save will be used");
-    ConfigSetDefaultString(g_CoreConfig, "SharedDataPath", "", "Path to a directory to search when looking for shared data files");
-    ConfigSetDefaultInt(g_CoreConfig, "CountPerOp", 0, "Force number of cycles per emulated instruction");
-    ConfigSetDefaultBool(g_CoreConfig, "DisableSpecRecomp", 1, "Disable speculative precompilation in new dynarec");
-    ConfigSetDefaultBool(g_CoreConfig, "RandomizeInterrupt", 1, "Randomize PI/SI Interrupt Timing");
-    ConfigSetDefaultInt(g_CoreConfig, "SiDmaDuration", -1, "Duration of SI DMA (-1: use per game settings)");
-    ConfigSetDefaultString(g_CoreConfig, "GbCameraVideoCaptureBackend1", DEFAULT_VIDEO_CAPTURE_BACKEND, "Gameboy Camera Video Capture backend");
-
-    /* handle upgrades */
-    if (bUpgrade)
-    {
-        if (fConfigParamsVersion < 1.01f)
-        {  // added separate SaveSRAMPath parameter in v1.01
-            const char *pccSaveStatePath = ConfigGetParamString(g_CoreConfig, "SaveStatePath");
-            if (pccSaveStatePath != NULL)
-                ConfigSetParameter(g_CoreConfig, "SaveSRAMPath", M64TYPE_STRING, pccSaveStatePath);
-        }
-    }
-
-    /* set config parameters for keyboard and joystick commands */
-    return event_set_core_defaults();
+    Config_LoadConfig();
+    return 1;
 }
 
 void main_speeddown(int percent)
@@ -331,7 +223,6 @@ void main_speeddown(int percent)
     if (l_SpeedFactor - percent > 10)  /* 10% minimum speed */
     {
         l_SpeedFactor -= percent;
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "%s %d%%", "Playback speed:", l_SpeedFactor);
         audio.setSpeedFactor(l_SpeedFactor);
         StateChanged(M64CORE_SPEED_FACTOR, l_SpeedFactor);
     }
@@ -342,7 +233,6 @@ void main_speedup(int percent)
     if (l_SpeedFactor + percent < 300) /* 300% maximum speed */
     {
         l_SpeedFactor += percent;
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "%s %d%%", "Playback speed:", l_SpeedFactor);
         audio.setSpeedFactor(l_SpeedFactor);
         StateChanged(M64CORE_SPEED_FACTOR, l_SpeedFactor);
     }
@@ -359,7 +249,6 @@ static void main_speedset(int percent)
     main_set_fastforward(0);
     // set speed
     l_SpeedFactor = percent;
-    main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "%s %d%%", "Playback speed:", l_SpeedFactor);
     audio.setSpeedFactor(l_SpeedFactor);
     StateChanged(M64CORE_SPEED_FACTOR, l_SpeedFactor);
 }
@@ -376,10 +265,6 @@ void main_set_fastforward(int enable)
         l_SpeedFactor = 250;
         audio.setSpeedFactor(l_SpeedFactor);
         StateChanged(M64CORE_SPEED_FACTOR, l_SpeedFactor);
-        // set fast-forward indicator
-        l_msgFF = osd_new_message(OSD_TOP_RIGHT, "Fast Forward");
-        osd_message_set_static(l_msgFF);
-        osd_message_set_user_managed(l_msgFF);
     }
     else if (!enable && ff_state)
     {
@@ -387,9 +272,6 @@ void main_set_fastforward(int enable)
         l_SpeedFactor = SavedSpeedFactor;
         audio.setSpeedFactor(l_SpeedFactor);
         StateChanged(M64CORE_SPEED_FACTOR, l_SpeedFactor);
-        // remove message
-        osd_delete_message(l_msgFF);
-        l_msgFF = NULL;
     }
 
 }
@@ -412,22 +294,11 @@ void main_toggle_pause(void)
     if (g_rom_pause)
     {
         DebugMessage(M64MSG_STATUS, "Emulation continued.");
-        if(l_msgPause)
-        {
-            osd_delete_message(l_msgPause);
-            l_msgPause = NULL;
-        }
         StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
     }
     else
     {
-        if(l_msgPause)
-            osd_delete_message(l_msgPause);
-
         DebugMessage(M64MSG_STATUS, "Emulation paused.");
-        l_msgPause = osd_new_message(OSD_MIDDLE_CENTER, "Paused");
-        osd_message_set_static(l_msgPause);
-        osd_message_set_user_managed(l_msgPause);
         StateChanged(M64CORE_EMU_STATE, M64EMU_PAUSED);
     }
 
@@ -444,27 +315,7 @@ void main_advance_one(void)
 
 static void main_draw_volume_osd(void)
 {
-    char msgString[64];
-    const char *volString;
-
-    // this calls into the audio plugin
-    volString = audio.volumeGetString();
-    if (volString == NULL)
-    {
-        strcpy(msgString, "Volume Not Supported.");
-    }
-    else
-    {
-        sprintf(msgString, "%s: %s", "Volume", volString);
-    }
-
-    // create a new message or update an existing one
-    if (l_msgVol != NULL)
-        osd_update_message(l_msgVol, "%s", msgString);
-    else {
-        l_msgVol = osd_new_message(OSD_MIDDLE_CENTER, "%s", msgString);
-        osd_message_set_user_managed(l_msgVol);
-    }
+    return;
 }
 
 /* this function could be called as a result of a keypress, joystick/button movement,
@@ -482,29 +333,29 @@ void main_state_set_slot(int slot)
         slot = 0;
     }
 
-    savestates_select_slot(slot);
+    //savestates_select_slot(slot);
     StateChanged(M64CORE_SAVESTATE_SLOT, slot);
 }
 
 void main_state_inc_slot(void)
 {
-    savestates_inc_slot();
+    //savestates_inc_slot();
 }
 
 void main_state_load(const char *filename)
 {
-    if (filename == NULL) // Save to slot
-        savestates_set_job(savestates_job_load, savestates_type_m64p, NULL);
-    else
-        savestates_set_job(savestates_job_load, savestates_type_unknown, filename);
+    //if (filename == NULL) // Save to slot
+        //savestates_set_job(//savestates_job_load, //savestates_type_m64p, NULL);
+    //else
+        //savestates_set_job(//savestates_job_load, //savestates_type_unknown, filename);
 }
 
 void main_state_save(int format, const char *filename)
 {
-    if (filename == NULL) // Save to slot
-        savestates_set_job(savestates_job_save, savestates_type_m64p, NULL);
-    else // Save to file
-        savestates_set_job(savestates_job_save, (savestates_type)format, filename);
+    //if (filename == NULL) // Save to slot
+        //savestates_set_job(//savestates_job_save, //savestates_type_m64p, NULL);
+    //else // Save to file
+        //savestates_set_job(//savestates_job_save, (//savestates_type)format, filename);
 }
 
 m64p_error main_core_state_query(m64p_core_param param, int *rval)
@@ -520,15 +371,10 @@ m64p_error main_core_state_query(m64p_core_param param, int *rval)
                 *rval = M64EMU_RUNNING;
             break;
         case M64CORE_VIDEO_MODE:
-            if (!VidExt_VideoRunning())
-                *rval = M64VIDEO_NONE;
-            else if (VidExt_InFullscreenMode())
                 *rval = M64VIDEO_FULLSCREEN;
-            else
-                *rval = M64VIDEO_WINDOWED;
             break;
         case M64CORE_SAVESTATE_SLOT:
-            *rval = savestates_get_slot();
+            *rval = 0; //savestates_get_slot();
             break;
         case M64CORE_SPEED_FACTOR:
             *rval = l_SpeedFactor;
@@ -597,23 +443,12 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
         case M64CORE_VIDEO_MODE:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
-            if (val == M64VIDEO_WINDOWED)
-            {
-                if (VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            else if (val == M64VIDEO_FULLSCREEN)
-            {
-                if (!VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            return M64ERR_INPUT_INVALID;
+            gfx.changeWindow();
+            return M64ERR_SUCCESS;
         case M64CORE_SAVESTATE_SLOT:
             if (val < 0 || val > 9)
                 return M64ERR_INPUT_INVALID;
-            savestates_select_slot(val);
+            //savestates_select_slot(val);
             return M64ERR_SUCCESS;
         case M64CORE_SPEED_FACTOR:
             if (!g_EmulatorRunning)
@@ -678,7 +513,6 @@ m64p_error main_volume_up(void)
 {
     int level = 0;
     audio.volumeUp();
-    main_draw_volume_osd();
     main_volume_get_level(&level);
     StateChanged(M64CORE_AUDIO_VOLUME, level);
     return M64ERR_SUCCESS;
@@ -688,7 +522,6 @@ m64p_error main_volume_down(void)
 {
     int level = 0;
     audio.volumeDown();
-    main_draw_volume_osd();
     main_volume_get_level(&level);
     StateChanged(M64CORE_AUDIO_VOLUME, level);
     return M64ERR_SUCCESS;
@@ -703,7 +536,6 @@ m64p_error main_volume_get_level(int *level)
 m64p_error main_volume_set_level(int level)
 {
     audio.volumeSetLevel(level);
-    main_draw_volume_osd();
     level = audio.volumeGetLevel();
     StateChanged(M64CORE_AUDIO_VOLUME, level);
     return M64ERR_SUCCESS;
@@ -712,7 +544,6 @@ m64p_error main_volume_set_level(int level)
 m64p_error main_volume_mute(void)
 {
     audio.volumeMute();
-    main_draw_volume_osd();
     StateChanged(M64CORE_AUDIO_MUTE, main_volume_get_muted());
     return M64ERR_SUCCESS;
 }
@@ -740,26 +571,6 @@ m64p_error main_reset(int do_hard_reset)
 
 static void video_plugin_render_callback(int bScreenRedrawn)
 {
-    int bOSD = ConfigGetParamBool(g_CoreConfig, "OnScreenDisplay");
-
-    // if the flag is set to take a screenshot, then grab it now
-    if (l_TakeScreenshot != 0)
-    {
-        // if the OSD is enabled, and the screen has not been recently redrawn, then we cannot take a screenshot now because
-        // it contains the OSD text.  Wait until the next redraw
-        if (!bOSD || bScreenRedrawn)
-        {
-            TakeScreenshot(l_TakeScreenshot - 1);  // current frame number +1 is in l_TakeScreenshot
-            l_TakeScreenshot = 0; // reset flag
-        }
-    }
-
-    // if the OSD is enabled, then draw it now
-    if (bOSD)
-    {
-        osd_render();
-    }
-
     // if the input plugin specified a render callback, call it now
     if(input.renderCallback)
     {
@@ -785,82 +596,7 @@ void new_frame(void)
 #define SAMPLE_COUNT 3
 static void apply_speed_limiter(void)
 {
-    static unsigned long totalVIs = 0;
-    static int resetOnce = 0;
-    static int lastSpeedFactor = 100;
-    static unsigned int StartFPSTime = 0;
-    static const double defaultSpeedFactor = 100.0;
-    unsigned int CurrentFPSTime = SDL_GetTicks();
-    static double sleepTimes[SAMPLE_COUNT];
-    static unsigned int sleepTimesIndex = 0;
-
-    // calculate frame duration based upon ROM setting (50/60hz) and mupen64plus speed adjustment
-    const double VILimitMilliseconds = 1000.0 / g_dev.vi.expected_refresh_rate;
-    const double SpeedFactorMultiple = defaultSpeedFactor/l_SpeedFactor;
-    const double AdjustedLimit = VILimitMilliseconds * SpeedFactorMultiple;
-
-    //if this is the first time or we are resuming from pause
-    if(StartFPSTime == 0 || !resetOnce || lastSpeedFactor != l_SpeedFactor)
-    {
-       StartFPSTime = CurrentFPSTime;
-       totalVIs = 0;
-       resetOnce = 1;
-    }
-    else
-    {
-        ++totalVIs;
-    }
-
-    lastSpeedFactor = l_SpeedFactor;
-
-#if defined(PROFILE)
-    timed_section_start(TIMED_SECTION_IDLE);
-#endif
-
-#ifdef DBG
-    if(g_DebuggerActive) DebuggerCallback(DEBUG_UI_VI, 0);
-#endif
-
-    double totalElapsedGameTime = AdjustedLimit*totalVIs;
-    double elapsedRealTime = CurrentFPSTime - StartFPSTime;
-    double sleepTime = totalElapsedGameTime - elapsedRealTime;
-
-    //Reset if the sleep needed is an unreasonable value
-    static const double minSleepNeeded = -50;
-    static const double maxSleepNeeded = 50;
-    if(sleepTime < minSleepNeeded || sleepTime > (maxSleepNeeded*SpeedFactorMultiple))
-    {
-       resetOnce = 0;
-    }
-
-    sleepTimes[sleepTimesIndex%SAMPLE_COUNT] = sleepTime;
-    sleepTimesIndex++;
-
-    unsigned int elementsForAverage = sleepTimesIndex > SAMPLE_COUNT ? SAMPLE_COUNT : sleepTimesIndex;
-
-    // compute the average sleepTime
-    double sum = 0;
-    unsigned int index;
-    for(index = 0; index < elementsForAverage; index++)
-    {
-        sum += sleepTimes[index];
-    }
-
-    double averageSleep = sum/elementsForAverage;
-
-    int sleepMs = (int)averageSleep;
-
-    if(sleepMs > 0 && sleepMs < maxSleepNeeded*SpeedFactorMultiple && l_MainSpeedLimit)
-    {
-       DebugMessage(M64MSG_VERBOSE, "    apply_speed_limiter(): Waiting %ims", sleepMs);
-
-       SDL_Delay(sleepMs);
-    }
-
-
-#if defined(PROFILE)
-    timed_section_end(TIMED_SECTION_IDLE);
-#endif
+    return;
 }
 
 /* TODO: make a GameShark module and move that there */
@@ -884,11 +620,8 @@ static void pause_loop(void)
 {
     if(g_rom_pause)
     {
-        osd_render();  // draw Paused message in case gfx.updateScreen didn't do it
-        VidExt_GL_SwapBuffers();
         while(g_rom_pause)
         {
-            SDL_Delay(10);
             main_check_inputs();
         }
     }
@@ -904,10 +637,9 @@ void new_vi(void)
 
     gs_apply_cheats(&g_cheat_ctx);
 
-    apply_speed_limiter();
     main_check_inputs();
 
-    pause_loop();
+    retro_return();
 }
 
 static void main_switch_pak(int control_id)
@@ -1268,7 +1000,10 @@ void main_change_gb_cart(int control_id)
 /*********************************************************************************************************
 * emulation thread - runs the core
 */
-
+extern gfx_plugin_functions gfx_gln64;
+extern rsp_plugin_functions rsp_hle;
+extern input_plugin_functions dummy_input;
+extern audio_plugin_functions dummy_audio;
 
 m64p_error main_run(void)
 {
@@ -1285,6 +1020,7 @@ m64p_error main_run(void)
     struct file_storage sra;
     size_t dd_rom_size;
     struct file_storage dd_disk;
+    struct audio_out_backend_interface audio_out_backend_libretro;
 
     int control_ids[GAME_CONTROLLERS_COUNT];
     struct controller_input_compat cin_compats[GAME_CONTROLLERS_COUNT];
@@ -1300,35 +1036,23 @@ m64p_error main_run(void)
 
 
     /* take the r4300 emulator mode from the config file at this point and cache it in a global variable */
-    emumode = ConfigGetParamInt(g_CoreConfig, "R4300Emulator");
+    emumode = 1;
 
-    /* set some other core parameters based on the config file values */
-    savestates_set_autoinc_slot(ConfigGetParamBool(g_CoreConfig, "AutoStateSlotIncrement"));
-    savestates_select_slot(ConfigGetParamInt(g_CoreConfig, "CurrentStateSlot"));
-    no_compiled_jump = ConfigGetParamBool(g_CoreConfig, "NoCompiledJump");
-    randomize_interrupt = ConfigGetParamBool(g_CoreConfig, "RandomizeInterrupt");
 #ifdef NEW_DYNAREC
     stop_after_jal = ConfigGetParamBool(g_CoreConfig, "DisableSpecRecomp");
 #endif
 
-    count_per_op = ConfigGetParamInt(g_CoreConfig, "CountPerOp");
-
-    if (ROM_PARAMS.disableextramem)
-        disable_extra_mem = ROM_PARAMS.disableextramem;
-    else
-        disable_extra_mem = ConfigGetParamInt(g_CoreConfig, "DisableExtraMem");
-
+    count_per_op = 0;//ConfigGetParamInt(g_CoreConfig, "CountPerOp");
+    disable_extra_mem = ROM_PARAMS.disableextramem;
 
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;
 
     if (count_per_op <= 0)
         count_per_op = ROM_PARAMS.countperop;
 
-    si_dma_duration = ConfigGetParamInt(g_CoreConfig, "SiDmaDuration");
-    if (si_dma_duration < 0)
         si_dma_duration = ROM_PARAMS.sidmaduration;
 
-    cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
+    //cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
 
     /* do byte-swapping if it hasn't been done yet */
 #if !defined(M64P_BIG_ENDIAN)
@@ -1339,6 +1063,11 @@ m64p_error main_run(void)
     }
 #endif
 
+    /* setup backends */
+    extern void set_audio_format_via_libretro(void* user_data, unsigned int frequency, unsigned int bits);
+    extern void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size);
+    audio_out_backend_libretro = (struct audio_out_backend_interface){ set_audio_format_via_libretro, push_audio_samples_via_libretro };
+    
     /* Fill-in l_pak_type_idx and l_ipaks according to game compatibility */
     k = 0;
     if (ROM_SETTINGS.biopak) {
@@ -1373,13 +1102,6 @@ m64p_error main_run(void)
     if (!ROM_SETTINGS.transferpak) {
         l_pak_type_idx[PLUGIN_TRANSFER_PAK] = k;
     }
-
-    /* init GbCamera backend specified in the configuration file */
-    init_video_capture_backend(&igbcam_backend, &gbcam_backend,
-        g_CoreConfig, "GbCameraVideoCaptureBackend1");
-
-    /* open GB cam video device */
-    igbcam_backend->open(gbcam_backend, M64282FP_SENSOR_W, M64282FP_SENSOR_H);
 
     /* open storage files, provide default content if not present */
     open_mpk_file(&mpk);
@@ -1527,11 +1249,11 @@ m64p_error main_run(void)
             }
         }
     }
+
     for (i = GAME_CONTROLLERS_COUNT; i < PIF_CHANNELS_COUNT; ++i) {
         joybus_devices[i] = &g_dev.cart;
         ijoybus_devices[i] = &g_ijoybus_device_cart;
     }
-
 
     init_device(&g_dev,
                 g_mem_base,
@@ -1539,7 +1261,7 @@ m64p_error main_run(void)
                 count_per_op,
                 no_compiled_jump,
                 randomize_interrupt,
-                &g_dev.ai, &g_iaudio_out_backend_plugin_compat,
+                &g_dev.ai, &audio_out_backend_libretro,
                 si_dma_duration,
                 rdram_size,
                 joybus_devices, ijoybus_devices,
@@ -1569,32 +1291,8 @@ m64p_error main_run(void)
         goto on_input_open_failure;
     }
 
-    /* set up the SDL key repeat and event filter to catch keyboard/joystick commands for the core */
-    event_initialize();
-
-    /* initialize the on-screen display */
-    if (ConfigGetParamBool(g_CoreConfig, "OnScreenDisplay"))
-    {
-        // init on-screen display
-        int width = 640, height = 480;
-        gfx.readScreen(NULL, &width, &height, 0); // read screen to get width and height
-        osd_init(width, height);
-    }
-
     // setup rendering callback from video plugin to the core, for screenshots and On-Screen-Display
     gfx.setRenderingCallback(video_plugin_render_callback);
-
-#ifdef WITH_LIRC
-    lircStart();
-#endif // WITH_LIRC
-
-#ifdef DBG
-    if (ConfigGetParamBool(g_CoreConfig, "EnableDebugger"))
-        init_debugger();
-#endif
-
-    /* Startup message on the OSD */
-    osd_new_message(OSD_MIDDLE_CENTER, "Mupen64Plus Started...");
 
     g_EmulatorRunning = 1;
     StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
@@ -1603,15 +1301,6 @@ m64p_error main_run(void)
     pif_bootrom_hle_execute(&g_dev.r4300);
     run_device(&g_dev);
 
-    /* now begin to shut down */
-#ifdef WITH_LIRC
-    lircStop();
-#endif // WITH_LIRC
-
-#ifdef DBG
-    if (g_DebuggerActive)
-        destroy_debugger();
-#endif
     /* release gb_carts */
     for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
         if (!Controls[i].RawData && g_dev.gb_carts[i].read_gb_cart != NULL) {
@@ -1628,11 +1317,6 @@ m64p_error main_run(void)
     close_file_storage(&eep);
     close_file_storage(&mpk);
     close_file_storage(&dd_disk);
-
-    if (ConfigGetParamBool(g_CoreConfig, "OnScreenDisplay"))
-    {
-        osd_exit();
-    }
 
     rsp.romClosed();
     input.romClosed();
@@ -1679,21 +1363,7 @@ void main_stop(void)
         return;
 
     DebugMessage(M64MSG_STATUS, "Stopping emulation.");
-    if(l_msgPause)
-    {
-        osd_delete_message(l_msgPause);
-        l_msgPause = NULL;
-    }
-    if(l_msgFF)
-    {
-        osd_delete_message(l_msgFF);
-        l_msgFF = NULL;
-    }
-    if(l_msgVol)
-    {
-        osd_delete_message(l_msgVol);
-        l_msgVol = NULL;
-    }
+
     if (g_rom_pause)
     {
         g_rom_pause = 0;
@@ -1701,11 +1371,4 @@ void main_stop(void)
     }
 
     stop_device(&g_dev);
-
-#ifdef DBG
-    if(g_DebuggerActive)
-    {
-        debugger_step();
-    }
-#endif
 }

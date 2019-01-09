@@ -20,47 +20,9 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <SDL.h>
-#include <SDL_syswm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if ! SDL_VERSION_ATLEAST(1,3,0)
-
-#define SDL_SCANCODE_ESCAPE SDLK_ESCAPE
-#define SDL_NUM_SCANCODES SDLK_LAST
-#define SDL_SCANCODE_F5 SDLK_F5
-#define SDL_SCANCODE_F7 SDLK_F7
-#define SDL_SCANCODE_F9 SDLK_F9
-#define SDL_SCANCODE_F10 SDLK_F10
-#define SDL_SCANCODE_F11 SDLK_F11
-#define SDL_SCANCODE_F12 SDLK_F12
-#define SDL_SCANCODE_P SDLK_p
-#define SDL_SCANCODE_M SDLK_m
-#define SDL_SCANCODE_RIGHTBRACKET SDLK_RIGHTBRACKET
-#define SDL_SCANCODE_LEFTBRACKET SDLK_LEFTBRACKET
-#define SDL_SCANCODE_F SDLK_f
-#define SDL_SCANCODE_SLASH SDLK_SLASH
-#define SDL_SCANCODE_G SDLK_g
-#define SDL_SCANCODE_RETURN SDLK_RETURN
-#define SDL_SCANCODE_0 SDLK_0
-#define SDL_SCANCODE_1 SDLK_1
-#define SDL_SCANCODE_2 SDLK_2
-#define SDL_SCANCODE_3 SDLK_3
-#define SDL_SCANCODE_4 SDLK_4
-#define SDL_SCANCODE_5 SDLK_5
-#define SDL_SCANCODE_6 SDLK_6
-#define SDL_SCANCODE_7 SDLK_7
-#define SDL_SCANCODE_8 SDLK_8
-#define SDL_SCANCODE_9 SDLK_9
-#define SDL_SCANCODE_UNKNOWN SDLK_UNKNOWN
-
-#define SDL_SetEventFilter(func, data) SDL_SetEventFilter(func)
-#define event_sdl_filter(userdata, event) event_sdl_filter(const event)
-
-#else
-	 SDL_JoystickID l_iJoyInstanceID[10];
-#endif
 
 #define M64P_CORE_PROTOTYPES 1
 #include "api/callbacks.h"

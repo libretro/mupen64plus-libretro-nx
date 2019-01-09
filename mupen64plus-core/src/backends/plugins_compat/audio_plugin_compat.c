@@ -20,6 +20,17 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdint.h>
+#include "plugins_compat.h"
+
+#include "api/m64p_plugin.h"
+#include "plugin/plugin.h"
+
+#include "main/main.h"
+
+#include <stdint.h>
+#include <string.h>
+#include <api/m64p_plugin.h>
+#include <api/callbacks.h>
 
 #include "backends/api/audio_out_backend.h"
 #include "device/rcp/ai/ai_controller.h"
@@ -27,7 +38,7 @@
 #include "device/rcp/vi/vi_controller.h"
 #include "device/rdram/rdram.h"
 #include "main/rom.h"
-#include "plugin/plugin.h"
+
 
 static void audio_plugin_set_format(void* aout, unsigned int frequency, unsigned int bits)
 {

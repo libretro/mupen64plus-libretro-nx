@@ -27,6 +27,21 @@
 #include "api/m64p_plugin.h"
 #include "api/m64p_types.h"
 
+extern void plugin_connect_all();
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+uint32_t get_retro_screen_width();
+uint32_t get_retro_screen_height();
+#ifdef __cplusplus
+}
+#endif
+
+extern GFX_INFO gfx_info;
+
+extern CONTROL Controls[4];
+
 extern m64p_error plugin_connect(m64p_plugin_type, m64p_dynlib_handle plugin_handle);
 extern m64p_error plugin_start(m64p_plugin_type);
 extern m64p_error plugin_check(void);

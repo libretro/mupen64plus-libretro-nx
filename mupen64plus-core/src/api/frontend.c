@@ -2,7 +2,7 @@
  *   Mupen64plus-core - api/frontend.c                                     *
  *   Mupen64Plus homepage: https://mupen64plus.org/                        *
  *   Copyright (C) 2012 CasualJames                                        *
- *   Copyright (C) 2009 Richard Goedeken                                   *
+ *   Copyright (C) 2009 Richard Goedeken                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,20 +19,18 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+                       
 /* This file contains the Core front-end functions which will be exported
  * outside of the core library.
  */
 
-#include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <md5.h>
 
 #define M64P_CORE_PROTOTYPES 1
 #include "callbacks.h"
-#include "config.h"
+#include "api/config.h"
 #include "m64p_config.h"
 #include "m64p_frontend.h"
 #include "m64p_types.h"
@@ -43,8 +41,8 @@
 #include "main/savestates.h"
 #include "main/util.h"
 #include "main/version.h"
+#include "main/cheat.h"
 #include "main/workqueue.h"
-#include "main/screenshot.h"
 #include "plugin/plugin.h"
 #include "vidext.h"
 
@@ -71,32 +69,12 @@ EXPORT m64p_error CALL CoreStartup(int APIVersion, const char *ConfigPath, const
                      VERSION_PRINTF_SPLIT(APIVersion), VERSION_PRINTF_SPLIT(FRONTEND_API_VERSION));
         return M64ERR_INCOMPATIBLE;
     }
-
-    /* set up the default (dummy) plugins */
-    plugin_connect(M64PLUGIN_GFX, NULL);
-    plugin_connect(M64PLUGIN_AUDIO, NULL);
-    plugin_connect(M64PLUGIN_INPUT, NULL);
-    plugin_connect(M64PLUGIN_CORE, NULL);
-
-    savestates_init();
-
-    /* next, start up the configuration handling code by loading and parsing the config file */
-    if (ConfigInit(ConfigPath, DataPath) != M64ERR_SUCCESS)
-        return M64ERR_INTERNAL;
-
-    /* set default configuration parameter values for Core */
-    if (ConfigOpenSection("Core", &g_CoreConfig) != M64ERR_SUCCESS || g_CoreConfig == NULL)
-        return M64ERR_INTERNAL;
-
-    if (!main_set_core_defaults())
-        return M64ERR_INTERNAL;
-
+   
     /* allocate base memory */
     g_mem_base = init_mem_base();
     if (g_mem_base == NULL) {
         return M64ERR_NO_MEMORY;
-    }
-
+    } 
     /* The ROM database contains MD5 hashes, goodnames, and some game-specific parameters */
     romdatabase_open();
 
@@ -115,10 +93,7 @@ EXPORT m64p_error CALL CoreShutdown(void)
     romdatabase_close();
     ConfigShutdown();
     workqueue_shutdown();
-    savestates_deinit();
-
-    /* tell SDL to shut down */
-    SDL_Quit();
+    //savestates_deinit();
 
     /* deallocate base memory */
     release_mem_base(g_mem_base);
@@ -130,32 +105,12 @@ EXPORT m64p_error CALL CoreShutdown(void)
 
 EXPORT m64p_error CALL CoreAttachPlugin(m64p_plugin_type PluginType, m64p_dynlib_handle PluginLibHandle)
 {
-    m64p_error rval;
-
-    if (!l_CoreInit)
-        return M64ERR_NOT_INIT;
-    if (g_EmulatorRunning || !l_ROMOpen)
-        return M64ERR_INVALID_STATE;
-
-    rval = plugin_connect(PluginType, PluginLibHandle);
-    if (rval != M64ERR_SUCCESS)
-        return rval;
-
-    rval = plugin_start(PluginType);
-    if (rval != M64ERR_SUCCESS)
-        return rval;
-
     return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL CoreDetachPlugin(m64p_plugin_type PluginType)
 {
-    if (!l_CoreInit)
-        return M64ERR_NOT_INIT;
-    if (g_EmulatorRunning)
-        return M64ERR_INVALID_STATE;
-
-    return plugin_connect(PluginType, NULL);
+    return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *ParamPtr)
@@ -179,7 +134,6 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
             if (rval == M64ERR_SUCCESS)
             {
                 l_ROMOpen = 1;
-                ScreenshotRomOpen();
                 cheat_init(&g_cheat_ctx);
             }
             return rval;
@@ -195,7 +149,7 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
                 return M64ERR_INVALID_STATE;
             if (ParamPtr == NULL)
                 return M64ERR_INPUT_ASSERT;
-            if ((int)sizeof(m64p_rom_header) < ParamInt)
+            if (sizeof(m64p_rom_header) < ParamInt)
                 ParamInt = sizeof(m64p_rom_header);
             memcpy(ParamPtr, &ROM_HEADER, ParamInt);
             // Mupen64Plus used to keep a m64p_rom_header with a clean ROM name
@@ -211,15 +165,13 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
                 return M64ERR_INVALID_STATE;
             if (ParamPtr == NULL)
                 return M64ERR_INPUT_ASSERT;
-            if ((int)sizeof(m64p_rom_settings) < ParamInt)
+            if (sizeof(m64p_rom_settings) < ParamInt)
                 ParamInt = sizeof(m64p_rom_settings);
             memcpy(ParamPtr, &ROM_SETTINGS, ParamInt);
             return M64ERR_SUCCESS;
         case M64CMD_EXECUTE:
             if (g_EmulatorRunning || !l_ROMOpen)
                 return M64ERR_INVALID_STATE;
-            /* print out plugin-related warning messages */
-            plugin_check();
             /* the main_run() function will not return until the player has quit the game */
             rval = main_run();
             return rval;
@@ -245,14 +197,12 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
                 return M64ERR_INPUT_ASSERT;
             return main_core_state_set((m64p_core_param) ParamInt, *((int *)ParamPtr));
         case M64CMD_STATE_LOAD:
-            main_state_load((char *) ParamPtr);
             return M64ERR_SUCCESS;
         case M64CMD_STATE_SAVE:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             if (ParamPtr != NULL && (ParamInt < 1 || ParamInt > 3))
                 return M64ERR_INPUT_INVALID;
-            main_state_save(ParamInt, (char *) ParamPtr);
             return M64ERR_SUCCESS;
         case M64CMD_STATE_SET_SLOT:
             if (ParamInt < 0 || ParamInt > 9)
@@ -263,31 +213,20 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
                 return M64ERR_INVALID_STATE;
             keysym = ParamInt & 0xffff;
             keymod = (ParamInt >> 16) & 0xffff;
-            event_sdl_keydown(keysym, keymod);
             return M64ERR_SUCCESS;
         case M64CMD_SEND_SDL_KEYUP:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             keysym = ParamInt & 0xffff;
             keymod = (ParamInt >> 16) & 0xffff;
-            event_sdl_keyup(keysym, keymod);
             return M64ERR_SUCCESS;
         case M64CMD_SET_FRAME_CALLBACK:
-            *(void**)&g_FrameCallback = ParamPtr;
+            g_FrameCallback = (m64p_frame_callback) ParamPtr;
             return M64ERR_SUCCESS;
         case M64CMD_TAKE_NEXT_SCREENSHOT:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
-            main_take_next_screenshot();
             return M64ERR_SUCCESS;
-        case M64CMD_READ_SCREEN:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (ParamPtr == NULL)
-                return M64ERR_INPUT_ASSERT;
-            if (ParamInt < 0 || ParamInt > 1)
-                return M64ERR_INPUT_INVALID;
-            return main_read_screen(ParamPtr, ParamInt);
         case M64CMD_RESET:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
@@ -297,12 +236,6 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
         case M64CMD_ADVANCE_FRAME:
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
-            main_advance_one();
-            return M64ERR_SUCCESS;
-        case M64CMD_SET_MEDIA_LOADER:
-            if (ParamInt != sizeof(m64p_media_loader) || ParamPtr == NULL)
-                return M64ERR_INPUT_INVALID;
-            g_media_loader = *(m64p_media_loader*)ParamPtr;
             return M64ERR_SUCCESS;
         default:
             return M64ERR_INPUT_INVALID;
@@ -328,10 +261,7 @@ EXPORT m64p_error CALL CoreAddCheat(const char *CheatName, m64p_cheat_code *Code
     if (strlen(CheatName) < 1 || NumCodes < 1)
         return M64ERR_INPUT_INVALID;
 
-    if (cheat_add_new(&g_cheat_ctx, CheatName, CodeList, NumCodes))
-        return M64ERR_SUCCESS;
-
-    return M64ERR_INPUT_INVALID;
+    return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL CoreCheatEnabled(const char *CheatName, int Enabled)
@@ -340,11 +270,8 @@ EXPORT m64p_error CALL CoreCheatEnabled(const char *CheatName, int Enabled)
         return M64ERR_NOT_INIT;
     if (CheatName == NULL)
         return M64ERR_INPUT_ASSERT;
-
-    if (cheat_set_enabled(&g_cheat_ctx, CheatName, Enabled))
-        return M64ERR_SUCCESS;
-
-    return M64ERR_INPUT_INVALID;
+        
+    return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int RomSettingsLength, int Crc1, int Crc2)
@@ -356,7 +283,7 @@ EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int Ro
         return M64ERR_NOT_INIT;
     if (RomSettings == NULL)
         return M64ERR_INPUT_ASSERT;
-    if (RomSettingsLength < (int)sizeof(m64p_rom_settings))
+    if (RomSettingsLength < sizeof(m64p_rom_settings))
         return M64ERR_INPUT_INVALID;
 
     /* Look up this ROM in the .ini file and fill in goodname, etc */
