@@ -1,0 +1,9 @@
+*.o
+*.dll
+*.dylib
+*libretro*.lib
+*libretro*.so
+*libretro*.a
+*.d
+*.js
+*.bc
