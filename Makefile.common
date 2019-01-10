@@ -1,0 +1,280 @@
+RSPDIR             = $(ROOT_DIR)/mupen64plus-rsp-hle
+CXD4DIR            = $(ROOT_DIR)/mupen64plus-rsp-cxd4
+CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
+LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
+AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
+VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
+
+DYNAREC_USED := 0
+
+INCFLAGS += \
+	-I$(ROOT_DIR)/custom \
+	-I$(ROOT_DIR)/custom/mupen64plus-core \
+	-I$(ROOT_DIR)/custom/android/include \
+	-I$(ROOT_DIR)/custom/GLideN64 \
+	-I$(VIDEODIR_GLIDEN64)/src \
+	-I$(VIDEODIR_GLIDEN64)/src/osal \
+	-I$(CORE_DIR)/src \
+	-I$(CORE_DIR)/src/api \
+	-I$(AUDIO_LIBRETRO_DIR) \
+	-I$(LIBRETRO_COMM_DIR)/include \
+	-I$(LIBRETRO_DIR) \
+	-I$(VIDEODIR_GLIDEN64)/src/inc \
+	-I$(ROOT_DIR)/xxHash
+
+ifneq (,$(findstring win,$(platform)))
+	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
+endif
+
+ifeq ($(LLE), 1)
+SOURCES_C += \
+	$(ROOT_DIR)/custom/mupen64plus-rsp-cxd4/module.c \
+	$(CXD4DIR)/su.c \
+	$(CXD4DIR)/vu/add.c \
+	$(CXD4DIR)/vu/divide.c \
+	$(CXD4DIR)/vu/logical.c \
+	$(CXD4DIR)/vu/multiply.c \
+	$(CXD4DIR)/vu/select.c \
+	$(CXD4DIR)/vu/vu.c
+endif
+
+# Core $(ROOT_DIR)/custom/mupen64plus-core/main/main.c
+SOURCES_C = \
+    $(CORE_DIR)/src/api/callbacks.c \
+    $(CORE_DIR)/src/api/common.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
+    $(CORE_DIR)/src/api/debugger.c \
+    $(CORE_DIR)/src/api/frontend.c \
+    $(CORE_DIR)/src/backends/plugins_compat/audio_plugin_compat.c \
+    $(CORE_DIR)/src/backends/api/video_capture_backend.c \
+    $(CORE_DIR)/src/backends/plugins_compat/input_plugin_compat.c \
+    $(CORE_DIR)/src/backends/clock_ctime_plus_delta.c \
+    $(CORE_DIR)/src/backends/dummy_video_capture.c \
+    $(CORE_DIR)/src/backends/file_storage.c \
+    $(CORE_DIR)/src/device/cart/cart.c \
+    $(CORE_DIR)/src/device/cart/af_rtc.c \
+    $(CORE_DIR)/src/device/cart/cart_rom.c \
+    $(CORE_DIR)/src/device/cart/eeprom.c \
+    $(CORE_DIR)/src/device/cart/flashram.c \
+    $(CORE_DIR)/src/device/cart/sram.c \
+    $(CORE_DIR)/src/device/controllers/game_controller.c \
+    $(CORE_DIR)/src/device/controllers/paks/biopak.c \
+    $(CORE_DIR)/src/device/controllers/paks/mempak.c \
+    $(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
+    $(CORE_DIR)/src/device/controllers/paks/transferpak.c \
+    $(CORE_DIR)/src/device/dd/dd_controller.c \
+    $(CORE_DIR)/src/device/device.c \
+    $(CORE_DIR)/src/device/gb/gb_cart.c \
+    $(CORE_DIR)/src/device/gb/mbc3_rtc.c \
+    $(CORE_DIR)/src/device/gb/m64282fp.c \
+    $(CORE_DIR)/src/device/memory/memory.c \
+    $(CORE_DIR)/src/device/pif/bootrom_hle.c \
+    $(CORE_DIR)/src/device/pif/cic.c \
+    $(CORE_DIR)/src/device/pif/n64_cic_nus_6105.c \
+    $(CORE_DIR)/src/device/pif/pif.c \
+    $(CORE_DIR)/src/device/r4300/cached_interp.c \
+    $(CORE_DIR)/src/device/r4300/cp0.c \
+    $(CORE_DIR)/src/device/r4300/cp1.c \
+    $(CORE_DIR)/src/device/r4300/idec.c \
+    $(CORE_DIR)/src/device/r4300/interrupt.c \
+    $(CORE_DIR)/src/device/r4300/pure_interp.c \
+    $(CORE_DIR)/src/device/r4300/r4300_core.c \
+    $(CORE_DIR)/src/device/r4300/tlb.c \
+    $(CORE_DIR)/src/device/rcp/ai/ai_controller.c \
+    $(CORE_DIR)/src/device/rcp/mi/mi_controller.c \
+    $(CORE_DIR)/src/device/rcp/pi/pi_controller.c \
+    $(CORE_DIR)/src/device/rcp/rdp/fb.c \
+    $(CORE_DIR)/src/device/rcp/rdp/rdp_core.c \
+    $(CORE_DIR)/src/device/rcp/ri/ri_controller.c \
+    $(CORE_DIR)/src/device/rcp/rsp/rsp_core.c \
+    $(CORE_DIR)/src/device/rcp/si/si_controller.c \
+    $(CORE_DIR)/src/device/rcp/vi/vi_controller.c \
+    $(CORE_DIR)/src/device/rdram/rdram.c \
+    $(CORE_DIR)/src/main/main.c \
+    $(CORE_DIR)/src/main/util.c \
+    $(CORE_DIR)/src/main/cheat.c \
+    $(CORE_DIR)/src/main/rom.c \
+    $(CORE_DIR)/src/plugin/plugin.c \
+    $(CORE_DIR)/src/plugin/dummy_audio.c \
+    $(CORE_DIR)/src/plugin/dummy_input.c
+
+# MD5 lib
+SOURCES_C += \
+    $(CORE_DIR)/subprojects/md5/md5.c
+CFLAGS += -I$(CORE_DIR)/subprojects/md5
+
+# xxhash
+SOURCES_C += \
+    $(CORE_DIR)/subprojects/xxhash/xxhash.c
+CFLAGS += -I$(CORE_DIR)/subprojects/xxhash
+
+ifneq (,$(findstring win,$(platform)))
+	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_win32.c \
+		$(ROOT_DIR)/custom/mman-win32/mman.c
+else
+	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
+endif
+
+# Libretro
+SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
+	$(LIBRETRO_COMM_DIR)/memmap/memalign.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/plugin/emulate_game_controller_via_libretro.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/nearest_resampler.c \
+	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/null_resampler.c \
+	$(AUDIO_LIBRETRO_DIR)/audio_backend_libretro.c \
+	$(LIBRETRO_COMM_DIR)/file/config_file.c \
+	$(LIBRETRO_COMM_DIR)/file/config_file_userdata.c \
+	$(LIBRETRO_COMM_DIR)/file/file_path.c \
+	$(LIBRETRO_COMM_DIR)/hash/rhash.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
+	$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
+	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
+	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
+	$(LIBRETRO_COMM_DIR)/file/retro_stat.c \
+	$(LIBRETRO_COMM_DIR)/lists/string_list.c \
+	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
+	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c
+	
+SOURCES_CXX   += \
+	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
+	$(VIDEODIR_GLIDEN64)/src/CommonPluginAPI.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Config.cpp \
+	$(VIDEODIR_GLIDEN64)/src/convert.cpp \
+	$(VIDEODIR_GLIDEN64)/src/DepthBuffer.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3D.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DDKR.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DEX.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DPD.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DGOLDEN.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DBETA.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DSETA.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DEX2.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DEX2MM.cpp \
+	$(VIDEODIR_GLIDEN64)/src/F3DEX2CBFD.cpp \
+	$(VIDEODIR_GLIDEN64)/src/FBOTextureFormats.cpp \
+	$(VIDEODIR_GLIDEN64)/src/FrameBuffer.cpp \
+	$(VIDEODIR_GLIDEN64)/src/FrameBufferInfo.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GBI.cpp \
+	$(VIDEODIR_GLIDEN64)/src/gDP.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideN64.cpp \
+	$(VIDEODIR_GLIDEN64)/src/gSP.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Keys.cpp \
+	$(VIDEODIR_GLIDEN64)/src/L3D.cpp \
+	$(VIDEODIR_GLIDEN64)/src/L3DEX2.cpp \
+	$(VIDEODIR_GLIDEN64)/src/L3DEX.cpp \
+	$(VIDEODIR_GLIDEN64)/src/N64.cpp \
+	$(VIDEODIR_GLIDEN64)/src/OpenGL.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Performance.cpp \
+	$(VIDEODIR_GLIDEN64)/src/RDP.cpp \
+	$(VIDEODIR_GLIDEN64)/src/RSP.cpp \
+	$(VIDEODIR_GLIDEN64)/src/S2DEX2.cpp \
+	$(VIDEODIR_GLIDEN64)/src/S2DEX.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Turbo3D.cpp \
+	$(VIDEODIR_GLIDEN64)/src/ZSort.cpp \
+	$(VIDEODIR_GLIDEN64)/src/ShaderUtils.cpp \
+	$(VIDEODIR_GLIDEN64)/src/SoftwareRender.cpp \
+	$(VIDEODIR_GLIDEN64)/src/Textures.cpp \
+	$(VIDEODIR_GLIDEN64)/src/TextDrawerStub.cpp \
+	$(VIDEODIR_GLIDEN64)/src/TextureFilterHandler.cpp \
+	$(VIDEODIR_GLIDEN64)/src/PostProcessor.cpp \
+	$(VIDEODIR_GLIDEN64)/src/VI.cpp \
+	$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM.cpp \
+	$(VIDEODIR_GLIDEN64)/src/BufferCopy/DepthBufferToRDRAM.cpp \
+	$(VIDEODIR_GLIDEN64)/src/BufferCopy/RDRAMtoColorBuffer.cpp \
+	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/ClipPolygon.cpp \
+	$(VIDEODIR_GLIDEN64)/src/DepthBufferRender/DepthBufferRender.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLUniforms/UniformSet.cpp \
+	$(VIDEODIR_GLIDEN64)/src/mupenplus/MupenPlusAPIImpl.cpp \
+	$(VIDEODIR_GLIDEN64)/src/common/CommonAPIImpl_common.cpp \
+	$(VIDEODIR_GLIDEN64)/src/MupenPlusPluginAPI.cpp \
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/OpenGL_mupenplus.cpp \
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp \
+	$(ROOT_DIR)/custom/glsm/glsm.cpp
+
+ifneq (,$(findstring android,$(platform)))
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp \
+		$(VIDEODIR_GLIDEN64)/src/Log_android.cpp
+else
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Log.cpp
+endif
+
+SOURCES_CXX   += \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_2xsai.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_hq2x.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_hq4x.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters_xbrz.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxDbg.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilter.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilterExport.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxHiResCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxImage.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxQuantize.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxReSample.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxTexCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxUtil.cpp
+
+SOURCES_C += \
+	$(RSPDIR)/src/alist.c \
+	$(RSPDIR)/src/alist_audio.c \
+	$(RSPDIR)/src/alist_naudio.c \
+	$(RSPDIR)/src/alist_nead.c \
+	$(RSPDIR)/src/audio.c \
+	$(RSPDIR)/src/cicx105.c \
+	$(RSPDIR)/src/hle.c \
+	$(RSPDIR)/src/jpeg.c \
+	$(RSPDIR)/src/memory.c \
+	$(RSPDIR)/src/mp3.c \
+	$(RSPDIR)/src/musyx.c \
+	$(RSPDIR)/src/re2.c \
+	$(RSPDIR)/src/plugin.c
+
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c $(LIBRETRO_COMM_DIR)/libco/aarch64.c
+
+ifneq (,$(findstring rpi3,$(platform)))
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
+else
+	SOURCES_CXX += $(ROOT_DIR)/custom/GLideN64/CRC.cpp
+endif
+
+ifeq ($(HAVE_NEON),1)
+	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMathNeon.cpp \
+						  $(VIDEODIR_GLIDEN64)/src/gSPNeon.cpp
+
+	SOURCES_ASM += $(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16_neon.S \
+						$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float_neon.S \
+						$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler_neon.S
+else
+	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
+endif
+
+ifeq ($(GLES),1)
+	GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2 -DUSE_DEPTH_RENDERBUFFER
+	LDFLAGS += -lEGL
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLES2/GLSLCombiner_gles2.cpp
+
+else ifeq ($(GLES3),1)
+	GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
+	LDFLAGS += -lEGL
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
+	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
+		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp
+else
+	ifeq (,$(findstring win,$(platform)))
+		GLFLAGS += -DCORE
+	endif
+	GLFLAGS += -DHAVE_OPENGL
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
+	SOURCES_CXX +=  $(VIDEODIR_GLIDEN64)/src/OGL3X/GLSLCombiner_ogl3x.cpp \
+		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_GL.cpp \
+		$(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM_BufferStorageExt.cpp
+endif
+SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
