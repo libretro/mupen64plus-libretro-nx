@@ -1005,12 +1005,13 @@ extern rsp_plugin_functions rsp_hle;
 extern input_plugin_functions dummy_input;
 extern audio_plugin_functions dummy_audio;
 
+unsigned int emumode;
+
 m64p_error main_run(void)
 {
     size_t i, k;
     size_t rdram_size;
     unsigned int count_per_op;
-    unsigned int emumode;
     unsigned int disable_extra_mem;
     int si_dma_duration;
     int no_compiled_jump;
@@ -1033,10 +1034,6 @@ m64p_error main_run(void)
 
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
-
-
-    /* take the r4300 emulator mode from the config file at this point and cache it in a global variable */
-    emumode = 1;
 
 #ifdef NEW_DYNAREC
     stop_after_jal = ConfigGetParamBool(g_CoreConfig, "DisableSpecRecomp");

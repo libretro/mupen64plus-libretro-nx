@@ -1,19 +1,23 @@
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
-LLE=1
+LLE=0
 
 DYNAFLAGS :=
 INCFLAGS  :=
 COREFLAGS :=
 CPUFLAGS  :=
 GLFLAGS   :=
+AWK       ?= awk
+STRINGS   ?= aarch64-none-elf-strings
+TR        ?= tr
 
 UNAME=$(shell uname -a)
 
 # Dirs
 ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
+DEPSDIR	:=	$(CURDIR)/
 
 ifeq ($(platform),)
    platform = unix
@@ -128,12 +132,11 @@ else ifeq ($(platform), libnx)
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
    PLATCFLAGS = -O3 -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec -specs=$(LIBNX)/switch.specs
-   PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops -DNO_ASM
+   PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops
    CXXFLAGS += -fno-rtti -std=gnu++11
    COREFLAGS += -DOS_LINUX
    GLES = 0
-   WITH_DYNAREC =
-   DYNAREC_USED = 0
+   WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
 
 # ODROIDs
@@ -360,10 +363,10 @@ else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
 endif
 
-%.o: %.asm
+%.o: %.asm $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
 	nasm $(ASFLAGS) $< -o $@
 
-%.o: %.S
+%.o: %.S $(CORE_DIR)/src/asm_defines/asm_defines_gas.h
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
@@ -371,7 +374,6 @@ endif
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
-
 
 clean:
 	find -name "*.o" -type f -delete

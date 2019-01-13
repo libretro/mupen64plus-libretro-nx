@@ -45,7 +45,11 @@
 #include "device/rcp/rsp/rsp_core.h"
 
 #if !defined(WIN32)
+#ifndef HAVE_LIBNX
 #include <sys/mman.h>
+#else
+#include "../../../../../switch/mman.h"
+#endif // HAVE_LIBNX
 #endif
 
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
@@ -1772,6 +1776,9 @@ static void* get_clean_addr(void* addr)
 
 static int verify_dirty(void *addr)
 {
+#ifdef HAVE_LIBNX
+  return 0;
+#endif
   uintptr_t source=0;
   uintptr_t copy=0;
   u_int len=0;
@@ -1972,11 +1979,13 @@ static void *dynamic_linker(void * src, u_int vaddr)
   while(head!=NULL) {
     if(head->vaddr==vaddr&&head->reg32==0) {
 #if NEW_DYNAREC == NEW_DYNAREC_ARM64
+#ifndef HAVE_LIBNX
       //TODO: Avoid disabling link between blocks for conditional branches
       int *ptr=(int*)src;
       if((*ptr&0xfc000000)==0x14000000) { //b
         add_link(vaddr, add_pointer(src,head->addr));
       }
+#endif // HAVE_LIBNX
 #else
       add_link(vaddr, add_pointer(src,head->addr));
 #endif
@@ -1990,6 +1999,7 @@ static void *dynamic_linker(void * src, u_int vaddr)
   if(ht_bin[2]==vaddr) return (void *)ht_bin[3];
 
   head=jump_dirty[vpage];
+#ifndef HAVE_LIBNX
   while(head!=NULL) {
     if(head->vaddr==vaddr&&head->reg32==0) {
       //DebugMessage(M64MSG_VERBOSE, "TRACE: count=%d next=%d (get_addr match dirty %x: %x)",r4300_cp0_regs(&g_dev.r4300.cp0)[CP0_COUNT_REG],*r4300_cp0_next_interrupt(&g_dev.r4300.cp0),vaddr,(int)head->addr);
@@ -2024,6 +2034,7 @@ static void *dynamic_linker(void * src, u_int vaddr)
     }
     head=head->next;
   }
+#endif
   return NULL;
 }
 
@@ -2101,6 +2112,7 @@ void *get_addr(u_int vaddr)
     head=head->next;
   }
   head=jump_dirty[vpage];
+#ifndef HAVE_LIBNX
   while(head!=NULL) {
     if(head->vaddr==vaddr&&head->reg32==0) {
       //DebugMessage(M64MSG_VERBOSE, "TRACE: count=%d next=%d (get_addr match dirty %x: %x)",r4300_cp0_regs(&g_dev.r4300.cp0)[CP0_COUNT_REG],g_dev.r4300.cp0.next_interrupt,vaddr,(int)head->addr);
@@ -2135,6 +2147,7 @@ void *get_addr(u_int vaddr)
     }
     head=head->next;
   }
+#endif
   //DebugMessage(M64MSG_VERBOSE, "TRACE: count=%d next=%d (get_addr no-match %x)",r4300_cp0_regs(&g_dev.r4300.cp0)[CP0_COUNT_REG],g_dev.r4300.cp0.next_interrupt,vaddr);
   int r=new_recompile_block(vaddr);
   if(r==0) return get_addr(vaddr);
@@ -2192,6 +2205,7 @@ void *get_addr_32(u_int vaddr,u_int flags)
     head=head->next;
   }
   head=jump_dirty[vpage];
+#ifndef HAVE_LIBNX
   while(head!=NULL) {
     if(head->vaddr==vaddr&&(head->reg32&flags)==0) {
       //DebugMessage(M64MSG_VERBOSE, "TRACE: count=%d next=%d (get_addr_32 match dirty %x: %x)",r4300_cp0_regs(&g_dev.r4300.cp0)[CP0_COUNT_REG],g_dev.r4300.cp0.next_interrupt,vaddr,(intptr_t)head->addr);
@@ -2229,6 +2243,7 @@ void *get_addr_32(u_int vaddr,u_int flags)
     }
     head=head->next;
   }
+#endif
   //DebugMessage(M64MSG_VERBOSE, "TRACE: count=%d next=%d (get_addr_32 no-match %x,flags %x)",r4300_cp0_regs(&g_dev.r4300.cp0)[CP0_COUNT_REG],g_dev.r4300.cp0.next_interrupt,vaddr,flags);
   int r=new_recompile_block(vaddr);
   if(r==0) return get_addr(vaddr);
@@ -2304,6 +2319,7 @@ static void invalidate_page(u_int page)
   }
   head=jump_out[page];
   jump_out[page]=0;
+#ifndef HAVE_LIBNX
   while(head!=NULL) {
     inv_debug("INVALIDATE: kill pointer to %x (%x)\n",head->vaddr,(intptr_t)head->addr);
       uintptr_t host_addr=(intptr_t)kill_pointer(head->addr);
@@ -2317,6 +2333,7 @@ static void invalidate_page(u_int page)
     free(head);
     head=next;
   }
+#endif // HAVE_LIBNX
 }
 void invalidate_block(u_int block)
 {
@@ -2395,7 +2412,9 @@ static void invalidate_all_pages(void)
     }
   }
   #if NEW_DYNAREC >= NEW_DYNAREC_ARM
+  #ifndef HAVE_LIBNX
   __clear_cache((char *)base_addr,(char *)base_addr+(1<<TARGET_SIZE_2));
+  #endif // HAVE_LIBNX
   //cacheflush((void *)base_addr,(void *)base_addr+(1<<TARGET_SIZE_2),0);
   #endif
   #ifdef USE_MINI_HT
@@ -2443,6 +2462,9 @@ void invalidate_cached_code_new_dynarec(struct r4300_core* r4300, uint32_t addre
 // the dirty list to the clean list.
 void clean_blocks(u_int page)
 {
+#ifdef HAVE_LIBNX
+  return;
+#endif
   struct ll_entry *head;
   inv_debug("INV: clean_blocks page=%d\n",page);
   head=jump_dirty[page];
@@ -7675,6 +7697,12 @@ void new_dynarec_cleanup(void)
 
 int new_recompile_block(int addr)
 {
+#ifdef HAVE_LIBNX
+  bool jit_was_executable = jit_is_executable;
+  if(jit_is_executable)
+    jit_force_writeable();
+#endif
+
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
   recomp_dbg_block(addr);
 #endif
@@ -10896,7 +10924,9 @@ int new_recompile_block(int addr)
   ptr[slen]=dirty_entry_count;
 
   #if NEW_DYNAREC >= NEW_DYNAREC_ARM
+  #ifndef HAVE_LIBNX
   __clear_cache((char *)beginning,out);
+  #endif
   //cacheflush((void *)beginning,out,0);
   #endif
 
@@ -10971,6 +11001,13 @@ int new_recompile_block(int addr)
     }
     expirep=(expirep+1)&65535;
   }
+
+  //recompile_end
+#ifdef HAVE_LIBNX
+  if(jit_was_executable)
+    jit_force_executable();
+#endif
+
   return 0;
 }
 

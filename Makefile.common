@@ -96,7 +96,11 @@ SOURCES_C = \
     $(CORE_DIR)/src/main/rom.c \
     $(CORE_DIR)/src/plugin/plugin.c \
     $(CORE_DIR)/src/plugin/dummy_audio.c \
-    $(CORE_DIR)/src/plugin/dummy_input.c
+    $(CORE_DIR)/src/plugin/dummy_input.c \
+	$(CORE_DIR)/src/asm_defines/asm_defines.c
+
+AWK_DEST_DIR    := $(CORE_DIR)/src/asm_defines
+ASM_DEFINES_OBJ := $(AWK_DEST_DIR)/asm_defines.o
 
 # MD5 lib
 SOURCES_C += \
@@ -113,6 +117,63 @@ ifneq (,$(findstring win,$(platform)))
 		$(ROOT_DIR)/custom/mman-win32/mman.c
 else
 	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_unix.c
+endif
+
+### DYNAREC ###
+ifdef WITH_DYNAREC
+ifeq ($(WITH_DYNAREC), arm)
+	DYNAREC_USED = 1
+	DYNAFLAGS += -DNEW_DYNAREC=3
+	SOURCES_C += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/arm/arm_cpu_features.c
+
+	SOURCES_ASM += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/arm/linkage_arm.S
+endif
+ifeq ($(WITH_DYNAREC), aarch64)
+	DYNAREC_USED = 1
+	DYNAFLAGS += -DNEW_DYNAREC=4
+    SOURCES_C += $(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+    SOURCES_ASM += \
+        $(CORE_DIR)/src/device/r4300/new_dynarec/arm64/linkage_arm64.S
+endif
+ifeq ($(WITH_DYNAREC), x86)
+	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
+	DYNAREC_USED = 1
+	DYNAFLAGS += -DNEW_DYNAREC=1
+	SOURCES_C += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+
+	SOURCES_NASM += \
+		$(CORE_DIR)/src/r4300/new_dynarec/x86/linkage_x86.asm
+endif
+ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
+	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
+	DYNAREC_USED = 1
+	SOURCES_C += $(CORE_DIR)/src/r4300/x86_64/assemble.c \
+		$(CORE_DIR)/src/r4300/x86_64/gbc.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop0.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop1.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop1_d.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop1_l.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop1_s.c \
+		$(CORE_DIR)/src/r4300/x86_64/gcop1_w.c \
+		$(CORE_DIR)/src/r4300/x86_64/gr4300.c \
+		$(CORE_DIR)/src/r4300/x86_64/gregimm.c \
+		$(CORE_DIR)/src/r4300/x86_64/gspecial.c \
+		$(CORE_DIR)/src/r4300/x86_64/gtlb.c \
+		$(CORE_DIR)/src/r4300/x86_64/regcache.c \
+		$(CORE_DIR)/src/r4300/x86_64/rjump.c
+endif
+ifeq ($(DYNAREC_USED),0)
+else
+	DYNAFLAGS += -DDYNAREC
+# Script hackery fll or generating ASM include files for the new dynarec assembly code
+#$(CORE_DIR)/src/asm_defines/asm_defines_gas.h: $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
+#$(CORE_DIR)/src/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+#	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
+endif
 endif
 
 # Libretro

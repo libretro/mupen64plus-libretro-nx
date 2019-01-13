@@ -8,6 +8,10 @@
 
 #include <libco.h>
 
+#ifdef HAVE_LIBNX
+#include <switch.h>
+#endif
+
 #include <glsm/glsmsym.h>
 
 #include "api/m64p_frontend.h"
@@ -101,6 +105,8 @@ uint32_t EnableFBEmulation = 0;
 uint32_t CountPerOp = 0;
 
 int rspMode = 0;
+extern unsigned int emumode;
+
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -698,15 +704,15 @@ void update_variables()
 
     var.key = "mupen64plus-cpucore";
     var.value = NULL;
-   /* if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "pure_interpreter"))
-             r4300emu = 0;
+             emumode = EMUMODE_PURE_INTERPRETER;
         else if (!strcmp(var.value, "cached_interpreter"))
-             r4300emu = 1;
+             emumode = EMUMODE_INTERPRETER;
         else if (!strcmp(var.value, "dynamic_recompiler"))
-             r4300emu = 2;
-    }*/
+             emumode = EMUMODE_DYNAREC;
+    }
 
     var.key = "mupen64plus-aspect";
     var.value = NULL;
@@ -890,8 +896,25 @@ bool retro_load_game(const struct retro_game_info *game)
     return true;
 }
 
+#ifdef HAVE_LIBNX
+extern Jit dynarec_jit;
+extern void *jit_rw_buffer;
+extern void *jit_old_addr;
+#endif
 void retro_unload_game(void)
 {
+#if defined(HAVE_LIBNX) && defined(DYNAREC)
+    jitTransitionToWritable(&dynarec_jit);
+    if(jit_old_addr != 0)
+        dynarec_jit.rx_addr = jit_old_addr;
+    jit_old_addr = 0;
+    jitClose(&dynarec_jit);
+
+    if(jit_rw_buffer != 0)
+        free(jit_rw_buffer);
+
+    jit_rw_buffer = 0;
+#endif
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
     emu_initialized = false;
 }
