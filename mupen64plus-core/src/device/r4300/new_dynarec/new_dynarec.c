@@ -1875,8 +1875,13 @@ static void ll_add_32(struct ll_entry **head,int vaddr,u_int reg32,void *addr)
 
 static void ll_remove_matching_addrs(struct ll_entry **head,intptr_t addr,int shift)
 {
+#ifdef HAVE_LIBNX
+  return;
+#endif
+
   struct ll_entry **cur=head;
   struct ll_entry *next;
+
   while(*cur) {
     if((((uintptr_t)((*cur)->addr)-(uintptr_t)base_addr)>>shift)==((addr-(uintptr_t)base_addr)>>shift) ||
        (((uintptr_t)((*cur)->addr)-(uintptr_t)base_addr-MAX_OUTPUT_BLOCK_SIZE)>>shift)==((addr-(uintptr_t)base_addr)>>shift))
@@ -2306,6 +2311,7 @@ static void *check_addr(u_int vaddr)
 // This is called when we write to a compiled block (see do_invstub)
 static void invalidate_page(u_int page)
 {
+#ifndef HAVE_LIBNX
   struct ll_entry *head;
   struct ll_entry *next;
   head=jump_in[page];
@@ -2319,7 +2325,6 @@ static void invalidate_page(u_int page)
   }
   head=jump_out[page];
   jump_out[page]=0;
-#ifndef HAVE_LIBNX
   while(head!=NULL) {
     inv_debug("INVALIDATE: kill pointer to %x (%x)\n",head->vaddr,(intptr_t)head->addr);
       uintptr_t host_addr=(intptr_t)kill_pointer(head->addr);
@@ -2337,6 +2342,10 @@ static void invalidate_page(u_int page)
 }
 void invalidate_block(u_int block)
 {
+#ifndef HAVE_LIBNX
+  return;
+#endif
+
   u_int page,vpage;
   page=vpage=block^0x80000;
   if(page>262143&&g_dev.r4300.cp0.tlb.LUT_r[block]) page=(g_dev.r4300.cp0.tlb.LUT_r[block]^0x80000000)>>12;
@@ -2401,6 +2410,10 @@ void invalidate_block(u_int block)
 // Anything could have changed, so invalidate everything.
 static void invalidate_all_pages(void)
 {
+#ifndef HAVE_LIBNX
+  return;
+#endif
+
   u_int page;
   for(page=0;page<4096;page++)
     invalidate_page(page);
@@ -2435,6 +2448,10 @@ static void invalidate_all_pages(void)
 
 void invalidate_cached_code_new_dynarec(struct r4300_core* r4300, uint32_t address, size_t size)
 {
+#ifndef HAVE_LIBNX
+  return;
+#endif
+
     size_t i;
     size_t begin;
     size_t end;
