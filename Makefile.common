@@ -38,7 +38,6 @@ SOURCES_C += \
 	$(CXD4DIR)/vu/vu.c
 endif
 
-# Core $(ROOT_DIR)/custom/mupen64plus-core/main/main.c
 SOURCES_C = \
     $(CORE_DIR)/src/api/callbacks.c \
     $(CORE_DIR)/src/api/common.c \
@@ -105,12 +104,12 @@ ASM_DEFINES_OBJ := $(AWK_DEST_DIR)/asm_defines.o
 # MD5 lib
 SOURCES_C += \
     $(CORE_DIR)/subprojects/md5/md5.c
-CFLAGS += -I$(CORE_DIR)/subprojects/md5
+COREFLAGS += -I$(CORE_DIR)/subprojects/md5
 
 # xxhash
 SOURCES_C += \
     $(CORE_DIR)/subprojects/xxhash/xxhash.c
-CFLAGS += -I$(CORE_DIR)/subprojects/xxhash
+COREFLAGS += -I$(CORE_DIR)/subprojects/xxhash
 
 ifneq (,$(findstring win,$(platform)))
 	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_win32.c \
