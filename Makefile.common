@@ -40,7 +40,6 @@ endif
 
 SOURCES_C = \
     $(CORE_DIR)/src/api/callbacks.c \
-    $(CORE_DIR)/src/api/common.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
     $(CORE_DIR)/src/api/debugger.c \
     $(CORE_DIR)/src/api/frontend.c \
@@ -195,7 +194,9 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
 	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
 	$(LIBRETRO_COMM_DIR)/lists/string_list.c \
+	$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
 	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
+	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c
 	
@@ -295,7 +296,7 @@ SOURCES_C += \
 	$(RSPDIR)/src/re2.c \
 	$(RSPDIR)/src/plugin.c
 
-SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c $(LIBRETRO_COMM_DIR)/libco/aarch64.c
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
 
 ifneq (,$(findstring rpi3,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
