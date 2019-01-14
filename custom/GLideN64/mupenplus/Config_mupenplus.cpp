@@ -121,7 +121,7 @@ extern "C" void Config_LoadConfig()
 #ifdef VC
 	config.frameBufferEmulation.enable = 0;
 #else
-	config.frameBufferEmulation.enable = EnableFBEmulation;
+	config.frameBufferEmulation.enable = 0;
 #endif
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;

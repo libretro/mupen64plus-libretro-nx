@@ -82,6 +82,9 @@ static size_t file_storage_size(const void* storage)
 
 static void file_storage_save(void* storage)
 {
+    //TODO: Fix storage
+    return;
+
     struct file_storage* fstorage = (struct file_storage*)storage;
 
     switch(write_to_file(fstorage->filename, fstorage->data, fstorage->size))
@@ -105,6 +108,9 @@ static void file_storage_parent_save(void* storage)
 
 static void file_storage_dd_sdk_dump_save(void* storage)
 {
+    //TODO: Fix storage
+    return;
+    
     static uint8_t sdk_buffer[SDK_FORMAT_DUMP_SIZE];
     struct file_storage* fstorage = (struct file_storage*)storage;
 

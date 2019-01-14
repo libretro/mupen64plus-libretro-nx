@@ -528,6 +528,8 @@ void TextureCache::_checkCacheSize()
 {
 #ifdef VC
 	const size_t maxCacheSize = 15000;
+#elif defined(HAVE_LIBNX)
+	const size_t maxCacheSize = 4000;
 #else
 	const size_t maxCacheSize = 16384;
 #endif

@@ -16,7 +16,7 @@ void Config::resetToDefaults()
 	video.fullscreen = 1;
 	video.fullscreenWidth = video.windowedWidth = 800;
 #else
-	video.fullscreen = 0;
+	video.fullscreen = 1;
 	video.fullscreenWidth = video.windowedWidth = 640;
 #endif
 	video.fullscreenHeight = video.windowedHeight = 480;
@@ -28,11 +28,11 @@ void Config::resetToDefaults()
 
 	texture.maxAnisotropy = 0;
 	texture.bilinearMode = BILINEAR_STANDARD;
-	texture.maxBytes = 500 * gc_uMegabyte;
+	texture.maxBytes = 1500 * gc_uMegabyte;
 	texture.screenShotFormat = 0;
 
 	generalEmulation.enableLOD = 1;
-	generalEmulation.enableNoise = 1;
+	generalEmulation.enableNoise = 0;
 	generalEmulation.enableHWLighting = 0;
 	generalEmulation.enableCustomSettings = 1;
 	generalEmulation.enableShadersStorage = 1;
@@ -52,7 +52,7 @@ void Config::resetToDefaults()
 	generalEmulation.polygonOffsetUnits = 0.0f;
 #endif
 
-	frameBufferEmulation.enable = 1;
+	frameBufferEmulation.enable = 0;
 	frameBufferEmulation.copyDepthToRDRAM = cdSoftwareRender;
 	frameBufferEmulation.copyFromRDRAM = 0;
 	frameBufferEmulation.copyAuxToRDRAM = 0;

@@ -7,3 +7,5 @@
 *.d
 *.js
 *.bc
+asm_defines_nasm.h
+asm_defines_gas.h

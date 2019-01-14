@@ -1,19 +1,23 @@
 DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
-LLE=1
+LLE=0
 
 DYNAFLAGS :=
 INCFLAGS  :=
 COREFLAGS :=
 CPUFLAGS  :=
 GLFLAGS   :=
+AWK       ?= awk
+STRINGS   ?= strings
+TR        ?= tr
 
 UNAME=$(shell uname -a)
 
 # Dirs
 ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
+DEPSDIR	:=	$(CURDIR)/
 
 ifeq ($(platform),)
    platform = unix
@@ -47,12 +51,6 @@ ifeq ($(shell uname -p),powerpc)
 endif
 else ifneq ($(findstring MINGW,$(shell uname -a)),)
    system_platform = win
-endif
-
-# Cross compile ?
-
-ifeq (,$(ARCH))
-   ARCH = $(shell uname -m)
 endif
 
 # Cross compile ?
@@ -123,17 +121,20 @@ else ifneq (,$(findstring rpi,$(platform)))
 
 # Nintendo Switch
 else ifeq ($(platform), libnx)
-   include $(DEVKITPRO)/libnx/switch_rules
+   include $(DEVKITPRO)/devkitA64/base_tools
+   PORTLIBS := $(PORTLIBS_PATH)/switch
+   PATH := $(PORTLIBS)/bin:$(PATH)
+   LIBNX ?= $(DEVKITPRO)/libnx
+   STRINGS := $(PREFIX)$(STRINGS)
    PIC = 1
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
    PLATCFLAGS = -O3 -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec -specs=$(LIBNX)/switch.specs
-   PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops -DNO_ASM
+   PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops
    CXXFLAGS += -fno-rtti -std=gnu++11
    COREFLAGS += -DOS_LINUX
    GLES = 0
-   WITH_DYNAREC =
-   DYNAREC_USED = 0
+   WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
 
 # ODROIDs
@@ -354,16 +355,22 @@ LDFLAGS    += $(fpic) -O2 -lz -lpng
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
+
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
 endif
 
-%.o: %.asm
+# Script hackery fll or generating ASM include files for the new dynarec assembly code
+$(AWK_DEST_DIR)/asm_defines_gas.h: $(AWK_DEST_DIR)/asm_defines_nasm.h
+$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
+
+%.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
 	nasm $(ASFLAGS) $< -o $@
 
-%.o: %.S
+%.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
@@ -371,7 +378,6 @@ endif
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
-
 
 clean:
 	find -name "*.o" -type f -delete
