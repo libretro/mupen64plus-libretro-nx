@@ -121,8 +121,11 @@ else ifneq (,$(findstring rpi,$(platform)))
 
 # Nintendo Switch
 else ifeq ($(platform), libnx)
-   include $(DEVKITPRO)/libnx/switch_rules
-   STRINGS := aarch64-none-elf-$(STRINGS)
+   include $(DEVKITPRO)/devkitA64/base_tools
+   PORTLIBS := $(PORTLIBS_PATH)/switch
+   PATH := $(PORTLIBS)/bin:$(PATH)
+   LIBNX ?= $(DEVKITPRO)/libnx
+   STRINGS := $(PREFIX)$(STRINGS)
    PIC = 1
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
@@ -351,11 +354,7 @@ endif
 LDFLAGS    += $(fpic) -O2 -lz -lpng
 
 all: $(TARGET)
-ifeq ($(DYNAREC_USED),0)
 $(TARGET): $(OBJECTS)
-else
-$(TARGET): $(OBJECTS) $(CORE_DIR)/src/asm_defines/asm_defines_gas.h
-endif
 
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
@@ -364,14 +363,14 @@ else
 endif
 
 # Script hackery fll or generating ASM include files for the new dynarec assembly code
-$(CORE_DIR)/src/asm_defines/asm_defines_gas.h: $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
-$(CORE_DIR)/src/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+$(AWK_DEST_DIR)/asm_defines_gas.h: $(AWK_DEST_DIR)/asm_defines_nasm.h
+$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
 
-%.o: %.asm
+%.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
 	nasm $(ASFLAGS) $< -o $@
 
-%.o: %.S
+%.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c

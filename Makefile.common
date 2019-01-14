@@ -39,6 +39,7 @@ SOURCES_C += \
 endif
 
 SOURCES_C = \
+	$(CORE_DIR)/src/asm_defines/asm_defines.c \
     $(CORE_DIR)/src/api/callbacks.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
     $(CORE_DIR)/src/api/debugger.c \
@@ -94,8 +95,7 @@ SOURCES_C = \
     $(CORE_DIR)/src/main/rom.c \
     $(CORE_DIR)/src/plugin/plugin.c \
     $(CORE_DIR)/src/plugin/dummy_audio.c \
-    $(CORE_DIR)/src/plugin/dummy_input.c \
-	$(CORE_DIR)/src/asm_defines/asm_defines.c
+    $(CORE_DIR)/src/plugin/dummy_input.c
 
 AWK_DEST_DIR    := $(CORE_DIR)/src/asm_defines
 ASM_DEFINES_OBJ := $(AWK_DEST_DIR)/asm_defines.o
@@ -155,7 +155,7 @@ ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
 endif
 ifeq ($(DYNAREC_USED),0)
 else
-	DYNAFLAGS += -DDYNAREC -I$(CORE_DIR)/src/asm_defines
+	DYNAFLAGS += -DDYNAREC -I$(AWK_DEST_DIR)/
 endif
 endif
 
