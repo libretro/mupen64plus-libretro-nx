@@ -32,6 +32,7 @@
 #include <switch.h>
 #endif
 
+#include <time.h>
 #include <string.h>
 
 void init_biopak(struct biopak* bpk,
@@ -53,7 +54,7 @@ static void read_biopak(void* pak, uint16_t address, uint8_t* data, size_t size)
     struct biopak* bpk = (struct biopak*)pak;
 
     if (address == 0xc000) {
-        uint32_t now = armGetSystemTick();
+        time_t now = time(NULL) * 1000;
         uint32_t period = UINT32_C(60*1000) / bpk->bpm;
         uint32_t k = now % period;
 
