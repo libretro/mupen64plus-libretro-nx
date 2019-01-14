@@ -26,7 +26,7 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
   HAVE_NEON := 1
   PNG_PATH := $(ROOT_DIR)/custom/android/arm/libpng.a
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-  WITH_DYNAREC := arm64
+  WITH_DYNAREC := aarch64
   PNG_PATH := $(ROOT_DIR)/custom/android/arm64/libpng.a
 else ifeq ($(TARGET_ARCH_ABI),x86)
   # X86 dynarec isn't position independent, so it fails to build on newer ndks.
