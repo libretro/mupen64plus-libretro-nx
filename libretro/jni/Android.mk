@@ -18,7 +18,8 @@ SOURCES_C    :=
 SOURCES_CXX  :=
 SOURCES_ASM  :=
 SOURCES_NASM :=
-LLE          := 1
+LLE          := 0
+LOCAL_SHORT_COMMANDS := true
 WITH_DYNAREC :=
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
