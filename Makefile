@@ -9,7 +9,7 @@ COREFLAGS :=
 CPUFLAGS  :=
 GLFLAGS   :=
 AWK       ?= awk
-STRINGS   ?= aarch64-none-elf-strings
+STRINGS   ?= strings
 TR        ?= tr
 
 UNAME=$(shell uname -a)
@@ -51,12 +51,6 @@ ifeq ($(shell uname -p),powerpc)
 endif
 else ifneq ($(findstring MINGW,$(shell uname -a)),)
    system_platform = win
-endif
-
-# Cross compile ?
-
-ifeq (,$(ARCH))
-   ARCH = $(shell uname -m)
 endif
 
 # Cross compile ?
@@ -128,6 +122,7 @@ else ifneq (,$(findstring rpi,$(platform)))
 # Nintendo Switch
 else ifeq ($(platform), libnx)
    include $(DEVKITPRO)/libnx/switch_rules
+   STRINGS := aarch64-none-elf-$(STRINGS)
    PIC = 1
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
@@ -356,17 +351,27 @@ endif
 LDFLAGS    += $(fpic) -O2 -lz -lpng
 
 all: $(TARGET)
+ifeq ($(DYNAREC_USED),0)
 $(TARGET): $(OBJECTS)
+else
+$(TARGET): $(OBJECTS) $(CORE_DIR)/src/asm_defines/asm_defines_gas.h
+endif
+
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
 endif
 
-%.o: %.asm $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
+# Script hackery fll or generating ASM include files for the new dynarec assembly code
+$(CORE_DIR)/src/asm_defines/asm_defines_gas.h: $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
+$(CORE_DIR)/src/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
+
+%.o: %.asm
 	nasm $(ASFLAGS) $< -o $@
 
-%.o: %.S $(CORE_DIR)/src/asm_defines/asm_defines_gas.h
+%.o: %.S
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c

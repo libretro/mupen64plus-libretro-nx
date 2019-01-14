@@ -166,11 +166,7 @@ ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
 endif
 ifeq ($(DYNAREC_USED),0)
 else
-	DYNAFLAGS += -DDYNAREC
-# Script hackery fll or generating ASM include files for the new dynarec assembly code
-#$(CORE_DIR)/src/asm_defines/asm_defines_gas.h: $(CORE_DIR)/src/asm_defines/asm_defines_nasm.h
-#$(CORE_DIR)/src/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
-#	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
+	DYNAFLAGS += -DDYNAREC -I$(CORE_DIR)/src/asm_defines
 endif
 endif
 
