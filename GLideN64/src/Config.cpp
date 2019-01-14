@@ -16,7 +16,11 @@ void Config::resetToDefaults()
 	video.fullscreen = 1;
 	video.fullscreenWidth = video.windowedWidth = 800;
 #else
+#ifdef HAVE_LIBNX
+	video.fullscreen = 0;
+#else
 	video.fullscreen = 1;
+#endif // HAVE_LIBNX
 	video.fullscreenWidth = video.windowedWidth = 640;
 #endif
 	video.fullscreenHeight = video.windowedHeight = 480;
@@ -28,11 +32,19 @@ void Config::resetToDefaults()
 
 	texture.maxAnisotropy = 0;
 	texture.bilinearMode = BILINEAR_STANDARD;
+#ifdef HAVE_LIBNX
 	texture.maxBytes = 1500 * gc_uMegabyte;
+#else
+	texture.maxBytes = 500 * gc_uMegabyte;
+#endif
 	texture.screenShotFormat = 0;
 
 	generalEmulation.enableLOD = 1;
+#ifdef HAVE_LIBNX
 	generalEmulation.enableNoise = 0;
+#else
+	generalEmulation.enableNoise = 1;
+#endif
 	generalEmulation.enableHWLighting = 0;
 	generalEmulation.enableCustomSettings = 1;
 	generalEmulation.enableShadersStorage = 1;
@@ -52,7 +64,11 @@ void Config::resetToDefaults()
 	generalEmulation.polygonOffsetUnits = 0.0f;
 #endif
 
+#ifdef HAVE_LIBNX
 	frameBufferEmulation.enable = 0;
+#else
+	frameBufferEmulation.enable = 1;
+#endif
 	frameBufferEmulation.copyDepthToRDRAM = cdSoftwareRender;
 	frameBufferEmulation.copyFromRDRAM = 0;
 	frameBufferEmulation.copyAuxToRDRAM = 0;
