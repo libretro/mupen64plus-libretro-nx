@@ -5016,7 +5016,8 @@ static void multdiv_assemble_arm64(int i,struct regstat *i_regs)
         assert(r1l>=0);
         assert(r2l>=0);
 
-        for(int hr=0;hr<HOST_REGS;hr++) {
+        int hr;
+        for(hr=0;hr<HOST_REGS;hr++) {
           if(i_regs->regmap[hr]>=0) reglist|=1<<hr;
         }
 
