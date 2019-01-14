@@ -36,7 +36,6 @@
 #include "device/rcp/vi/vi_controller.h"
 #include "dummy_audio.h"
 #include "dummy_input.h"
-#include "dummy_rsp.h"
 #include "dummy_video.h"
 #include "main/main.h"
 #include "main/rom.h"
@@ -146,12 +145,6 @@ const input_plugin_functions dummy_input = {
     dummyinput_RenderCallback
 };
 
-static const rsp_plugin_functions dummy_rsp = {
-    dummyrsp_PluginGetVersion,
-    dummyrsp_DoRspCycles,
-    dummyrsp_InitiateRSP,
-    dummyrsp_RomClosed
-};
 static AUDIO_INFO audio_info;
 static CONTROL_INFO control_info;
 static int l_RspAttached = 0;
@@ -306,12 +299,6 @@ static m64p_error plugin_start_input(void)
     input.initiateControllers(control_info);
 
     return M64ERR_SUCCESS;
-}
-
-static void plugin_disconnect_rsp(void)
-{
-    rsp = dummy_rsp;
-    l_RspAttached = 0;
 }
 
 static m64p_error plugin_start_rsp(void)
