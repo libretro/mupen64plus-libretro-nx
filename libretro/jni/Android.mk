@@ -18,6 +18,9 @@ SOURCES_C    :=
 SOURCES_CXX  :=
 SOURCES_ASM  :=
 SOURCES_NASM :=
+AWK          ?= awk
+STRINGS      ?= strings
+TR           ?= tr
 LLE          := 0
 LOCAL_SHORT_COMMANDS := true
 WITH_DYNAREC :=
@@ -26,18 +29,22 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
   WITH_DYNAREC := arm
   HAVE_NEON := 1
   PNG_PATH := $(ROOT_DIR)/custom/android/arm/libpng.a
+  STRINGS := arm-linux-androideabi-$(STRINGS)
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
   WITH_DYNAREC := aarch64
   PNG_PATH := $(ROOT_DIR)/custom/android/arm64/libpng.a
+  STRINGS := aarch64-linux-android-$(STRINGS)
 else ifeq ($(TARGET_ARCH_ABI),x86)
   # X86 dynarec isn't position independent, so it fails to build on newer ndks.
   # No warn shared textrel allows it to build, but still won't allow it to run on api 23+.
   WITH_DYNAREC := x86
   PNG_PATH := $(ROOT_DIR)/custom/android/x86/libpng.a
+  STRINGS := i686-linux-android-$(STRINGS)
   COREASMFLAGS := -f elf -d ELF_TYPE
   CORELDLIBS := -Wl,-no-warn-shared-textrel
 else ifeq ($(TARGET_ARCH_ABI),x86_64)
   WITH_DYNAREC := x86_64
+  STRINGS := x86_64-linux-android-$(STRINGS)
   PNG_PATH := $(ROOT_DIR)/custom/android/x86_64/libpng.a
 endif
 
@@ -73,4 +80,16 @@ LOCAL_LDLIBS           := -lz -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := png
 LOCAL_CPP_FEATURES     := exceptions
 LOCAL_ARM_NEON         := true
+
+# Script hackery fll or generating ASM include files for the new dynarec assembly code
+$(AWK_DEST_DIR)/asm_defines_gas.h: $(AWK_DEST_DIR)/asm_defines_nasm.h
+$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
+
+%.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
+	nasm $(ASFLAGS) $< -o $@
+
+%.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
+	$(CC_AS) $(CFLAGS) -c $< -o $@
+
 include $(BUILD_SHARED_LIBRARY)
