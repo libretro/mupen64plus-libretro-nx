@@ -85,6 +85,7 @@ static void *dyna_linker(void * src, u_int vaddr);
 static void *dyna_linker_ds(void * src, u_int vaddr);
 static void invalidate_addr(u_int addr);
 
+static uintptr_t literals[1024][2];
 static unsigned int needs_clear_cache[1<<(TARGET_SIZE_2-17)];
 
 static const uintptr_t jump_vaddr_reg[32] = {
@@ -285,6 +286,14 @@ static void set_jump_target(intptr_t addr,uintptr_t target)
     assert(0); /*Should not happen*/
 }
 
+/* Literal pool */
+static void add_literal(uintptr_t addr,uintptr_t val)
+{
+  literals[literalcount][0]=addr;
+  literals[literalcount][1]=val;
+  literalcount++; 
+}
+
 static void *add_pointer(void *src, void* addr)
 {
   int *ptr=(int*)src;
@@ -345,6 +354,12 @@ static u_int isclean(void* addr)
     int offset=(((signed int)(ptr[0]<<8)>>13)<<2)|((ptr[0]>>29)&0x3);
     head=(struct ll_entry *)((((intptr_t)ptr_rx&~0xfffLL)+((intptr_t)offset<<12))|((ptr[1]>>10)&0xfff));
     ptr+=2;
+  }
+  else if((ptr[0]&0xFF000000)==0x58000000) //ldr pc relative
+  {
+    int offset=(((signed int)(ptr[0]<<8)>>13)<<2);
+    head=(struct ll_entry *)(*((uintptr_t*)((intptr_t)ptr+offset)));
+    ptr++;
   }
   else
     return 1;
@@ -934,6 +949,12 @@ static void output_w32(u_int word)
   out+=4;
 }
 
+static void output_w64(uint64_t dword)
+{
+  *((uint64_t *)out)=dword;
+  out+=8;
+}
+
 static u_int genjmp(uintptr_t addr)
 {
   if(addr<4) return 0;
@@ -1084,6 +1105,12 @@ static uint32_t genimm(uint64_t imm, uint32_t regsize, uint32_t * encoded) {
 
   *encoded = (N << 12) | (immr << 6) | (Nimms & 0x3f);
   return 1;
+}
+
+static void emit_loadlp(uintptr_t addr,u_int rt)
+{
+  add_literal((uintptr_t)out,addr);
+  output_w32(0x58000000|rt);
 }
 
 static void emit_mov(int rs,int rt)
@@ -3086,17 +3113,26 @@ static void wb_consts(signed char i_regmap[],uint64_t i_is32,u_int i_dirty,u_int
 }
 
 /* Stubs/epilogue */
-
 static void literal_pool(int n)
 {
-  if(!literalcount) return;
-  assert(0); /* Should not happen */
+  if((!literalcount)||(n!=0)) return;
+  u_int *ptr;
+  int i;
+  for(i=0;i<literalcount;i++)
+  {
+    ptr=(u_int *)literals[i][0];
+    intptr_t offset=(intptr_t)out-(intptr_t)ptr;
+    assert(offset>=-1048576LL&&offset<1048576LL);
+    assert((offset&3)==0);
+    *ptr|=((offset>>2)<<5);
+    output_w64(literals[i][1]);
+  }
+  literalcount=0;
 }
 
 static void literal_pool_jumpover(int n)
 {
-  if(!literalcount) return;
-  assert(0); /* Should not happen */
+  (void)n;
 }
 
 static void emit_extjump2(intptr_t addr, int target, intptr_t linker)
@@ -3440,13 +3476,19 @@ static void do_invstub(int n)
 static intptr_t do_dirty_stub(int i, struct ll_entry * head)
 {
   // Careful about the code output here, verify_dirty and get_bounds needs to parse it.
+  intptr_t out_rx=((intptr_t)out-(intptr_t)base_addr)+(intptr_t)base_addr_rx;
+  intptr_t offset=(((intptr_t)head&~0xfffLL)-((intptr_t)out_rx&~0xfffLL));
+
   if((uintptr_t)head<4294967296LL){
     emit_movz_lsl16(((uintptr_t)head>>16)&0xffff,ARG1_REG);
     emit_movk(((uintptr_t)head)&0xffff,ARG1_REG);
-  }else{
+  }else if(offset>=-4294967296LL&&offset<4294967296LL){
     emit_adrp((intptr_t)head,ARG1_REG);
     emit_addimm64(ARG1_REG,((intptr_t)head&0xfffLL),ARG1_REG);
   }
+  else
+    emit_loadlp((intptr_t)head,ARG1_REG);
+
   emit_call((intptr_t)verify_code);
   intptr_t entry=(intptr_t)out;
   load_regs_entry(i);
@@ -3457,13 +3499,19 @@ static intptr_t do_dirty_stub(int i, struct ll_entry * head)
 
 static void do_dirty_stub_ds(struct ll_entry *head)
 {
+  intptr_t out_rx=((intptr_t)out-(intptr_t)base_addr)+(intptr_t)base_addr_rx;
+  intptr_t offset=(((intptr_t)head&~0xfffLL)-((intptr_t)out_rx&~0xfffLL));
+
   if((uintptr_t)head<4294967296LL){
     emit_movz_lsl16(((uintptr_t)head>>16)&0xffff,ARG1_REG);
     emit_movk(((uintptr_t)head)&0xffff,ARG1_REG);
-  }else{
+  }else if(offset>=-4294967296LL&&offset<4294967296LL){
     emit_adrp((intptr_t)head,ARG1_REG);
     emit_addimm64(ARG1_REG,((intptr_t)head&0xfffLL),ARG1_REG);
   }
+  else
+    emit_loadlp((intptr_t)head,ARG1_REG);
+
   emit_call((intptr_t)verify_code);
 }
 
