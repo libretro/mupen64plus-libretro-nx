@@ -2906,7 +2906,7 @@ static void emit_adr(intptr_t addr, int rt)
 
   intptr_t offset=addr-(intptr_t)out_rx;
   assert(offset>=-1048576LL&&offset<1048576LL);
-  assem_debug("adr %d,#%d",regname64[rt],offset);
+  assem_debug("adr %s,#%d",regname64[rt],offset);
   output_w32(0x10000000|(offset&0x3)<<29|((offset>>2)&0x7ffff)<<5|rt);
 }
 static void emit_adrp(intptr_t addr, int rt)
@@ -2919,7 +2919,7 @@ static void emit_adrp(intptr_t addr, int rt)
   assert(offset>=-4294967296LL&&offset<4294967296LL);
   offset>>=12;
   assert((((intptr_t)out_rx&~0xfffLL)+(offset<<12))==(addr&~0xfffLL));
-  assem_debug("adrp %d,#%d",regname64[rt],offset);
+  assem_debug("adrp %s,#%d",regname64[rt],offset);
   output_w32(0x90000000|(offset&0x3)<<29|((offset>>2)&0x7ffff)<<5|rt);
 }
 static void emit_pc_relative_addr(intptr_t addr, int rt)
