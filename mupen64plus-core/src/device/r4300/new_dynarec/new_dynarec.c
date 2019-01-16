@@ -7703,12 +7703,6 @@ void new_dynarec_cleanup(void)
 
 int new_recompile_block(int addr)
 {
-#ifdef HAVE_LIBNX
-  bool jit_was_executable = jit_is_executable;
-  if(jit_is_executable)
-    jit_force_writeable();
-#endif
-
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
   recomp_dbg_block(addr);
 #endif
@@ -7747,10 +7741,6 @@ int new_recompile_block(int addr)
     else {
       assem_debug("Compile at unmapped memory address: %x ", (int)addr);
       //assem_debug("start: %x next: %x",g_dev.r4300.new_dynarec_hot_state.memory_map[start>>12],g_dev.r4300.new_dynarec_hot_state.memory_map[(start+4096)>>12]);
-#ifdef HAVE_LIBNX
-      if(jit_was_executable)
-        jit_force_executable();
-#endif
       return 1; // Caller will invoke exception handler
     }
     //DebugMessage(M64MSG_VERBOSE, "source= %x",(intptr_t)source);
@@ -7760,6 +7750,12 @@ int new_recompile_block(int addr)
     DebugMessage(M64MSG_ERROR, "Compile at bogus memory address: %x", (int)addr);
     exit(1);
   }
+
+#ifdef HAVE_LIBNX
+  bool jit_was_executable = jit_is_executable;
+  if(jit_is_executable)
+    jit_force_writeable();
+#endif
 
   /* Pass 1: disassemble */
   /* Pass 2: register dependencies, branch targets */
