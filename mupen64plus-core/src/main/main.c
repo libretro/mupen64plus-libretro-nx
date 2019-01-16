@@ -63,7 +63,7 @@
 #include "device/pif/bootrom_hle.h"
 #include "eventloop.h"
 #include "main.h"
-#include "cheat.h"
+#include "callbacks.h"
 #include "plugin/plugin.h"
 #if defined(PROFILE)
 #include "profile.h"
@@ -339,23 +339,23 @@ void main_state_set_slot(int slot)
 
 void main_state_inc_slot(void)
 {
-    //savestates_inc_slot();
+    savestates_inc_slot();
 }
 
 void main_state_load(const char *filename)
 {
-    //if (filename == NULL) // Save to slot
-        //savestates_set_job(//savestates_job_load, //savestates_type_m64p, NULL);
-    //else
-        //savestates_set_job(//savestates_job_load, //savestates_type_unknown, filename);
+    if (filename == NULL) // Save to slot
+        savestates_set_job(savestates_job_load, savestates_type_m64p, NULL);
+    else
+        savestates_set_job(savestates_job_load, savestates_type_unknown, filename);
 }
 
 void main_state_save(int format, const char *filename)
 {
-    //if (filename == NULL) // Save to slot
-        //savestates_set_job(//savestates_job_save, //savestates_type_m64p, NULL);
-    //else // Save to file
-        //savestates_set_job(//savestates_job_save, (//savestates_type)format, filename);
+    if (filename == NULL) // Save to slot
+        savestates_set_job(savestates_job_save, savestates_type_m64p, NULL);
+    else // Save to file
+        savestates_set_job(savestates_job_save, (savestates_type)format, filename);
 }
 
 m64p_error main_core_state_query(m64p_core_param param, int *rval)
@@ -374,7 +374,7 @@ m64p_error main_core_state_query(m64p_core_param param, int *rval)
                 *rval = M64VIDEO_FULLSCREEN;
             break;
         case M64CORE_SAVESTATE_SLOT:
-            *rval = 0; //savestates_get_slot();
+            *rval = savestates_get_slot();
             break;
         case M64CORE_SPEED_FACTOR:
             *rval = l_SpeedFactor;
@@ -448,7 +448,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
         case M64CORE_SAVESTATE_SLOT:
             if (val < 0 || val > 9)
                 return M64ERR_INPUT_INVALID;
-            //savestates_select_slot(val);
+            savestates_select_slot(val);
             return M64ERR_SUCCESS;
         case M64CORE_SPEED_FACTOR:
             if (!g_EmulatorRunning)
@@ -1036,10 +1036,10 @@ m64p_error main_run(void)
     uint32_t flashram_type = MX29L1100_ID;
 
 #ifdef NEW_DYNAREC
-    stop_after_jal = ConfigGetParamBool(g_CoreConfig, "DisableSpecRecomp");
+    stop_after_jal = 0;
 #endif
 
-    count_per_op = 0;//ConfigGetParamInt(g_CoreConfig, "CountPerOp");
+    count_per_op = ROM_PARAMS.countperop;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;
@@ -1047,9 +1047,9 @@ m64p_error main_run(void)
     if (count_per_op <= 0)
         count_per_op = ROM_PARAMS.countperop;
 
-        si_dma_duration = ROM_PARAMS.sidmaduration;
+    si_dma_duration = ROM_PARAMS.sidmaduration;
 
-    //cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
+    cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
 
     /* do byte-swapping if it hasn't been done yet */
 #if !defined(M64P_BIG_ENDIAN)

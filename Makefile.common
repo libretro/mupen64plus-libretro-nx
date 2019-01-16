@@ -93,6 +93,7 @@ SOURCES_C = \
     $(CORE_DIR)/src/main/util.c \
     $(CORE_DIR)/src/main/cheat.c \
     $(CORE_DIR)/src/main/rom.c \
+    $(CORE_DIR)/src/main/savestates.c \
     $(CORE_DIR)/src/plugin/plugin.c \
     $(CORE_DIR)/src/plugin/dummy_audio.c \
     $(CORE_DIR)/src/plugin/dummy_input.c
@@ -105,7 +106,12 @@ SOURCES_C += \
     $(CORE_DIR)/subprojects/md5/md5.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/md5
 
-# xxhash
+# Minizip
+SOURCES_C += \
+    $(CORE_DIR)/subprojects/minizip/zip.c
+COREFLAGS += -I$(CORE_DIR)/subprojects/minizip
+
+# xxHash
 SOURCES_C += \
     $(CORE_DIR)/subprojects/xxhash/xxhash.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/xxhash

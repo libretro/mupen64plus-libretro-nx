@@ -93,7 +93,7 @@ EXPORT m64p_error CALL CoreShutdown(void)
     romdatabase_close();
     ConfigShutdown();
     workqueue_shutdown();
-    //savestates_deinit();
+    savestates_deinit();
 
     /* deallocate base memory */
     release_mem_base(g_mem_base);
@@ -261,7 +261,10 @@ EXPORT m64p_error CALL CoreAddCheat(const char *CheatName, m64p_cheat_code *Code
     if (strlen(CheatName) < 1 || NumCodes < 1)
         return M64ERR_INPUT_INVALID;
 
-    return M64ERR_SUCCESS;
+    if (cheat_add_new(&g_cheat_ctx, CheatName, CodeList, NumCodes))
+        return M64ERR_SUCCESS;
+
+    return M64ERR_INPUT_INVALID;
 }
 
 EXPORT m64p_error CALL CoreCheatEnabled(const char *CheatName, int Enabled)
@@ -270,8 +273,11 @@ EXPORT m64p_error CALL CoreCheatEnabled(const char *CheatName, int Enabled)
         return M64ERR_NOT_INIT;
     if (CheatName == NULL)
         return M64ERR_INPUT_ASSERT;
-        
-    return M64ERR_SUCCESS;
+
+    if (cheat_set_enabled(&g_cheat_ctx, CheatName, Enabled))
+        return M64ERR_SUCCESS;
+
+    return M64ERR_INPUT_INVALID;
 }
 
 EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int RomSettingsLength, int Crc1, int Crc2)

@@ -20,6 +20,7 @@
 #include "device/r4300/r4300_core.h"
 #include "device/memory/memory.h"
 #include "main/main.h"
+#include "api/callbacks.h"
 #include "main/cheat.h"
 #include "main/version.h"
 #include "main/savestates.h"
@@ -105,7 +106,10 @@ uint32_t EnableFBEmulation = 0;
 uint32_t CountPerOp = 0;
 
 int rspMode = 0;
+
+extern struct device g_dev;
 extern unsigned int emumode;
+extern struct cheat_ctx g_cheat_ctx;
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -961,7 +965,7 @@ size_t retro_get_memory_size(unsigned type)
 
 size_t retro_serialize_size (void)
 {
-    return 16788288 + 1024 + 4; // < 16MB and some change... ouch
+    return 16788288 + 1024 + 4 + 4096;
 }
 
 bool retro_serialize(void *data, size_t size)
@@ -969,7 +973,7 @@ bool retro_serialize(void *data, size_t size)
     if (initializing)
         return false;
 
-    int success = 1; //savestates_save_m64p(data);
+    int success = savestates_save_m64p(&g_dev, data);
     if (success)
         return true;
 
@@ -981,7 +985,7 @@ bool retro_unserialize(const void * data, size_t size)
     if (initializing)
         return false;
 
-    int success = 1; //savestates_load_m64p(data);
+    int success = savestates_load_m64p(&g_dev, data);
     if (success)
         return true;
 
@@ -1021,7 +1025,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
 
 void retro_cheat_reset(void)
 {
-    //cheat_delete_all();
+    cheat_delete_all(&g_cheat_ctx);
 }
 
 void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
@@ -1064,8 +1068,8 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
 
     //Assign to mupenCode
     // TODO: fix cheats
-    //cheat_add_new(name,mupenCode,partCount/2);
-    //cheat_set_enabled(name,enabled);
+    cheat_add_new(&g_cheat_ctx, name, mupenCode, partCount / 2);
+    cheat_set_enabled(&g_cheat_ctx, name, enabled);
 }
 
 void retro_return(void)
@@ -1101,5 +1105,5 @@ void event_set_gameshark(int active)
 
     // notify front-end application that gameshark button state has changed
     // TODO: fix gameshark
-    //StateChanged(M64CORE_INPUT_GAMESHARK, GamesharkActive);
+    StateChanged(M64CORE_INPUT_GAMESHARK, GamesharkActive);
 }
