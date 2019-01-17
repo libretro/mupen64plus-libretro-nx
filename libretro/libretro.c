@@ -334,16 +334,16 @@ void retro_set_environment(retro_environment_t cb)
 void retro_get_system_info(struct retro_system_info *info)
 {
 #if defined(HAVE_OPENGLES2)
-    info->library_name = "Mupen64Plus GLES2";
+    info->library_name = "Mupen64Plus-Next GLES2";
 #elif defined(HAVE_OPENGLES3)
-    info->library_name = "Mupen64Plus GLES3";
+    info->library_name = "Mupen64Plus-Next GLES3";
 #else
-    info->library_name = "Mupen64Plus OpenGL";
+    info->library_name = "Mupen64Plus-Next OpenGL";
 #endif
 #ifndef GIT_VERSION
 #define GIT_VERSION " git"
 #endif
-    info->library_version = "2.5" GIT_VERSION;
+    info->library_version = "1.0" GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1|ndd";
     info->need_fullpath = false;
     info->block_extract = false;
