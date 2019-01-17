@@ -208,7 +208,6 @@ void cheat_apply_cheats(struct cheat_ctx* ctx, struct r4300_core* r4300, int ent
     cheat_t *cheat;
     cheat_code_t *code;
     int cond_failed;
-    return;
     
     if (list_empty(&ctx->active_cheats))
         return;
@@ -316,12 +315,6 @@ void cheat_delete_all(struct cheat_ctx* ctx)
     if (list_empty(&ctx->active_cheats))
         return;
 
-    if (ctx->mutex == NULL)
-    {
-        DebugMessage(M64MSG_ERROR, "Internal error: failed to lock mutex in cheat_delete_all()");
-        return;
-    }
-
     list_for_each_entry_safe_t(cheat, safe_cheat, &ctx->active_cheats, cheat_t, list) {
         free(cheat->name);
 
@@ -341,12 +334,6 @@ int cheat_set_enabled(struct cheat_ctx* ctx, const char* name, int enabled)
     if (list_empty(&ctx->active_cheats))
         return 0;
 
-    if (ctx->mutex == NULL)
-    {
-        DebugMessage(M64MSG_ERROR, "Internal error: failed to lock mutex in cheat_set_enabled()");
-        return 0;
-    }
-
     list_for_each_entry_t(cheat, &ctx->active_cheats, cheat_t, list) {
         if (strcmp(name, cheat->name) == 0)
         {
@@ -362,12 +349,6 @@ int cheat_add_new(struct cheat_ctx* ctx, const char* name, m64p_cheat_code* code
 {
     cheat_t *cheat;
     int i, j;
-
-    if (ctx->mutex == NULL)
-    {
-        DebugMessage(M64MSG_ERROR, "Internal error: failed to lock mutex in cheat_add_new()");
-        return 0;
-    }
 
     /* create a new cheat function or erase the codes in an existing cheat function */
     cheat = find_or_create_cheat(ctx, name);

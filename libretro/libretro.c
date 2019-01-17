@@ -945,7 +945,7 @@ void *retro_get_memory_data(unsigned type)
 {
     switch (type)
     {
-       // case RETRO_MEMORY_SYSTEM_RAM: return g_rdram;
+        case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
     
@@ -1030,8 +1030,6 @@ void retro_cheat_reset(void)
 
 void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
 {
-    return;
-    
     char name[256];
     m64p_cheat_code mupenCode[256];
     int matchLength=0,partCount=0;
@@ -1067,7 +1065,6 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
     }
 
     //Assign to mupenCode
-    // TODO: fix cheats
     cheat_add_new(&g_cheat_ctx, name, mupenCode, partCount / 2);
     cheat_set_enabled(&g_cheat_ctx, name, enabled);
 }
@@ -1104,6 +1101,5 @@ void event_set_gameshark(int active)
     GamesharkActive = (active ? 1 : 0);
 
     // notify front-end application that gameshark button state has changed
-    // TODO: fix gameshark
     StateChanged(M64CORE_INPUT_GAMESHARK, GamesharkActive);
 }

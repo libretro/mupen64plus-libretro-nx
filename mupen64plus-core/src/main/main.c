@@ -333,7 +333,7 @@ void main_state_set_slot(int slot)
         slot = 0;
     }
 
-    //savestates_select_slot(slot);
+    savestates_select_slot(slot);
     StateChanged(M64CORE_SAVESTATE_SLOT, slot);
 }
 
@@ -1296,6 +1296,7 @@ m64p_error main_run(void)
 
     poweron_device(&g_dev);
     pif_bootrom_hle_execute(&g_dev.r4300);
+
     run_device(&g_dev);
 
     /* release gb_carts */
