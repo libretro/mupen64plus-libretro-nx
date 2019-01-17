@@ -79,6 +79,8 @@
 #include <sys/stat.h>
 #endif
 
+#include "../../../libretro/libretro_memory.h"
+
 #ifdef DBG
 #include "debugger/dbg_debugger.h"
 #endif
@@ -135,57 +137,42 @@ static size_t l_pak_type_idx[6];
 
 static const char *get_savepathdefault(const char *configpath)
 {
-    static char path[1024];
-
-    if (!configpath || (strlen(configpath) == 0)) {
-        snprintf(path, 1024, "%ssave%c", ConfigGetUserDataPath(), "/");
-        path[1023] = 0;
-    } else {
-        snprintf(path, 1024, "%s%c", configpath, "/");
-        path[1023] = 0;
-    }
-
-    /* create directory if it doesn't exist */
-    mkdir(path, 0700);
-
-    return path;
+    return "";
 }
 
 static char *get_mempaks_path(void)
 {
-    return formatstr("%s%s.mpk", get_savesrampath(), ROM_SETTINGS.goodname);
+    return "";
 }
 
 static char *get_eeprom_path(void)
 {
-    return formatstr("%s%s.eep", get_savesrampath(), ROM_SETTINGS.goodname);
+    return "";
 }
 
 static char *get_sram_path(void)
 {
-    return formatstr("%s%s.sra", get_savesrampath(), ROM_SETTINGS.goodname);
+    return "";
 }
 
 static char *get_flashram_path(void)
 {
-    return formatstr("%s%s.fla", get_savesrampath(), ROM_SETTINGS.goodname);
+    return "";
 }
 
 static char *get_gb_ram_path(const char* gbrom, unsigned int control_id)
 {
-    return formatstr("%s%s.%u.sav", get_savesrampath(), gbrom, control_id);
+    return "";
 }
 
 const char *get_savestatepath(void)
 {
-    /* try to get the SaveStatePath string variable in the Core configuration section */
-    return get_savepathdefault(ConfigGetParamString(g_CoreConfig, "SaveStatePath"));
+    return "";
 }
 
 const char *get_savesrampath(void)
 {
-    /* try to get the SaveSRAMPath string variable in the Core configuration section */
-    return get_savepathdefault(ConfigGetParamString(g_CoreConfig, "SaveSRAMPath"));
+    return "";
 }
 
 void main_message(m64p_msg_level level, unsigned int corner, const char *format, ...)
@@ -678,57 +665,32 @@ void main_switch_plugin_pak(int control_id)
     main_switch_pak(control_id);
 }
 
-static void open_mpk_file(struct file_storage* fstorage)
+void save_storage_file_libretro(void* storage)
 {
-    unsigned int i;
-    int ret = open_file_storage(fstorage, GAME_CONTROLLERS_COUNT*MEMPAK_SIZE, get_mempaks_path());
-
-    if (ret == (int)file_open_error) {
-        /* if file doesn't exists provide default content */
-        for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
-            format_mempak(fstorage->data + i * MEMPAK_SIZE);
-        }
-    }
 }
 
-static void open_fla_file(struct file_storage* fstorage)
+static void open_mpk_file(struct file_storage* storage)
 {
-    int ret = open_file_storage(fstorage, FLASHRAM_SIZE, get_flashram_path());
-
-    if (ret == (int)file_open_error) {
-        /* if file doesn't exists provide default content */
-        format_flashram(fstorage->data);
-    }
+    storage->data = saved_memory.mempack;
+    storage->size = MEMPAK_SIZE * 4;
 }
 
-static void open_sra_file(struct file_storage* fstorage)
+static void open_fla_file(struct file_storage* storage)
 {
-    int ret = open_file_storage(fstorage, SRAM_SIZE, get_sram_path());
-
-    if (ret == (int)file_open_error) {
-        /* if file doesn't exists provide default content */
-        format_sram(fstorage->data);
-    }
+    storage->data = saved_memory.flashram;
+    storage->size = FLASHRAM_SIZE;
 }
 
-static void open_eep_file(struct file_storage* fstorage)
+static void open_sra_file(struct file_storage* storage)
 {
-    /* Note: EEP files are all EEPROM_MAX_SIZE bytes long,
-     * whatever the real EEPROM size is.
-     */
-    enum { EEPROM_MAX_SIZE = 0x800 };
+    storage->data = saved_memory.sram;
+    storage->size = SRAM_SIZE;
+}
 
-    int ret = open_file_storage(fstorage, EEPROM_MAX_SIZE, get_eeprom_path());
-
-    if (ret == (int)file_open_error) {
-        /* if file doesn't exists provide default content */
-        format_eeprom(fstorage->data, EEPROM_MAX_SIZE);
-    }
-
-    /* Truncate to 4k bit if necessary */
-    if (ROM_SETTINGS.savetype != EEPROM_16KB) {
-        fstorage->size = 0x200;
-    }
+static void open_eep_file(struct file_storage* storage)
+{
+    storage->data = saved_memory.eeprom;
+    storage->size = EEPROM_MAX_SIZE;
 }
 
 static void load_dd_rom(uint8_t* rom, size_t* rom_size)
