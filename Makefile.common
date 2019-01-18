@@ -108,7 +108,9 @@ COREFLAGS += -I$(CORE_DIR)/subprojects/md5
 
 # Minizip
 SOURCES_C += \
-    $(CORE_DIR)/subprojects/minizip/zip.c
+    $(CORE_DIR)/subprojects/minizip/zip.c \
+	$(CORE_DIR)/subprojects/minizip/unzip.c \
+	$(CORE_DIR)/subprojects/minizip/ioapi.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/minizip
 
 # xxHash
