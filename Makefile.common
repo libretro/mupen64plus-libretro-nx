@@ -191,6 +191,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
 	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
+	$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c
 	
 SOURCES_CXX   += \
