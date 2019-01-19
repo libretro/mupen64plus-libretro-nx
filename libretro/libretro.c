@@ -103,6 +103,7 @@ uint32_t EnableFragmentDepthWrite = 0;
 uint32_t EnableShadersStorage = 0;
 uint32_t CropMode = 0;
 uint32_t EnableFBEmulation = 0;
+uint32_t EnableFrameDuping = 0;
 uint32_t CountPerOp = 0;
 
 int rspMode = 0;
@@ -159,6 +160,12 @@ static void setup_variables(void)
 #ifndef HAVE_OPENGLES2
         { "mupen64plus-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
+#endif
+        { "mupen64plus-FrameDuping",
+#ifdef HAVE_LIBNX
+            "Frame Duping; True|False" },
+#else
+            "Frame Duping; False|True" },
 #endif
         { "mupen64plus-EnableFBEmulation",
             "Framebuffer Emulation; True|False" },
@@ -356,13 +363,13 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.max_width    = retro_screen_width;
     info->geometry.max_height   = retro_screen_height;
     info->geometry.aspect_ratio = retro_screen_aspect;
-    info->timing.fps = vi_expected_refresh_rate_from_tv_standard(SYSTEM_PAL);
+    info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
 }
 
 unsigned retro_get_region (void)
 {
-    return RETRO_REGION_PAL;
+    return ((ROM_PARAMS.systemtype == SYSTEM_PAL) ? RETRO_REGION_PAL : RETRO_REGION_NTSC);
 }
 
 void copy_file(char * ininame, char * fileName)
@@ -514,6 +521,16 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         MultiSampling = atoi(var.value);
+    }
+
+    var.key = "mupen64plus-FrameDuping";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "False"))
+            EnableFrameDuping = 0;
+        else
+            EnableFrameDuping = 1;
     }
 
     var.key = "mupen64plus-EnableFBEmulation";
@@ -934,6 +951,8 @@ void retro_run (void)
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     if (libretro_swap_buffer)
         video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+    else if(EnableFrameDuping)
+        video_cb(NULL, retro_screen_width, retro_screen_height, 0);
 }
 
 void retro_reset (void)
