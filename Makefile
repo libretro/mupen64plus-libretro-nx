@@ -301,7 +301,11 @@ else
       WITH_DYNAREC = x86_64
    endif
 	COREFLAGS += -DOS_WINDOWS -DMINGW
-	ASFLAGS = -f win32
+   ifneq (,$(findstring win32,$(platform)))
+        ASFLAGS = -f win64
+	else
+        ASFLAGS = -f win32
+	endif
 endif
 
 ifeq ($(STATIC_LINKING), 1)
@@ -368,7 +372,7 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
 
 %.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
-	nasm $(ASFLAGS) $< -o $@
+	nasm -i$(AWK_DEST_DIR)/ $(ASFLAGS) $< -o $@
 
 %.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
 	$(CC_AS) $(CFLAGS) -c $< -o $@
