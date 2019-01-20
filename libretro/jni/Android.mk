@@ -81,15 +81,4 @@ LOCAL_STATIC_LIBRARIES := png
 LOCAL_CPP_FEATURES     := exceptions
 LOCAL_ARM_NEON         := true
 
-# Script hackery fll or generating ASM include files for the new dynarec assembly code
-$(AWK_DEST_DIR)/asm_defines_gas.h: $(AWK_DEST_DIR)/asm_defines_nasm.h
-$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
-	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
-
-%.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
-	nasm $(ASFLAGS) $< -o $@
-
-%.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
-	$(CC_AS) $(CFLAGS) -c $< -o $@
-
 include $(BUILD_SHARED_LIBRARY)
