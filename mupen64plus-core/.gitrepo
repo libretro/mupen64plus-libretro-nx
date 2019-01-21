@@ -4,8 +4,8 @@
 ; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
 ;
 [subrepo]
-	remote = https://github.com/m4xw/mupen64plus-core.git
-	branch = mupen_next
+	remote = https://github.com/libretro/mupen64plus-core.git
+	branch = master
 	commit = 14d71fcbd1a6c4548072e15f351929521531665d
 	parent = 7e70951c9c6b6a755a699b1dfc516d2b8da93921
 	method = rebase
