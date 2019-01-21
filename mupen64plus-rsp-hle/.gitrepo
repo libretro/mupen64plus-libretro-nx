@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/libretro/mupen64plus-rsp-hle.git
 	branch = master
-	commit = 12339811299155b66bc0a944457e83ea49f30b6f
-	parent = 3b28898db4e1474324e748213309bcbac28a4dd7
+	commit = 22d5d75e8ea0598ea7510cc193342d3300ec54d4
+	parent = 8de141288d18408352ff0729d4771d939b904783
 	method = rebase
 	cmdver = 0.4.0
