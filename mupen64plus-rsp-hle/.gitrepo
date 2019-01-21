@@ -4,7 +4,7 @@
 ; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
 ;
 [subrepo]
-	remote = https://github.com/mupen64plus/mupen64plus-rsp-hle.git
+	remote = https://github.com/libretro/mupen64plus-rsp-hle.git
 	branch = master
 	commit = 12339811299155b66bc0a944457e83ea49f30b6f
 	parent = 3b28898db4e1474324e748213309bcbac28a4dd7
