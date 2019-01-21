@@ -1777,9 +1777,6 @@ static void* get_clean_addr(void* addr)
 
 static int verify_dirty(void *addr)
 {
-#ifdef HAVE_LIBNX
-  return 0;
-#endif
   uintptr_t source=0;
   uintptr_t copy=0;
   u_int len=0;
@@ -2316,10 +2313,6 @@ static void invalidate_page(u_int page)
 }
 void invalidate_block(u_int block)
 {
-#ifndef HAVE_LIBNX
-  return;
-#endif
-
   u_int page,vpage;
   page=vpage=block^0x80000;
   if(page>262143&&g_dev.r4300.cp0.tlb.LUT_r[block]) page=(g_dev.r4300.cp0.tlb.LUT_r[block]^0x80000000)>>12;
