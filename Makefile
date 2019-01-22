@@ -302,9 +302,9 @@ else
    endif
 	COREFLAGS += -DOS_WINDOWS -DMINGW
    ifneq (,$(findstring win32,$(platform)))
-        ASFLAGS = -f win64
-	else
         ASFLAGS = -f win32
+	else
+        ASFLAGS = -f win64 -d WIN64
 	endif
 endif
 
