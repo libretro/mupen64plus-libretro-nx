@@ -104,6 +104,8 @@ uint32_t EnableShadersStorage = 0;
 uint32_t CropMode = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
+uint32_t EnableNoiseEmulation = 0;
+uint32_t EnableLODEmulation = 0;
 uint32_t CountPerOp = 0;
 
 int rspMode = 0;
@@ -167,8 +169,12 @@ static void setup_variables(void)
 #else
             "Frame Duping; False|True" },
 #endif
+        { "mupen64plus-NoiseEmulation",
+            "Noise Emulation; True|False" },
         { "mupen64plus-EnableFBEmulation",
             "Framebuffer Emulation; True|False" },
+        { "mupen64plus-EnableLODEmulation",
+            "LOD Emulation; True|False" },
         { "mupen64plus-EnableCopyColorToRDRAM",
 #ifndef HAVE_OPENGLES
             "Color buffer to RDRAM; Async|Sync|Off" },
@@ -531,6 +537,26 @@ void update_variables()
             EnableFrameDuping = 0;
         else
             EnableFrameDuping = 1;
+    }
+
+    var.key = "mupen64plus-NoiseEmulation";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "False"))
+            EnableNoiseEmulation = 0;
+        else
+            EnableNoiseEmulation = 1;
+    }
+
+    var.key = "mupen64plus-EnableLODEmulation";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "False"))
+            EnableLODEmulation = 0;
+        else
+            EnableLODEmulation = 1;
     }
 
     var.key = "mupen64plus-EnableFBEmulation";

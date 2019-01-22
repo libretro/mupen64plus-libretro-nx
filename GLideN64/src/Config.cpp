@@ -40,11 +40,7 @@ void Config::resetToDefaults()
 	texture.screenShotFormat = 0;
 
 	generalEmulation.enableLOD = 1;
-#ifdef HAVE_LIBNX
-	generalEmulation.enableNoise = 0;
-#else
 	generalEmulation.enableNoise = 1;
-#endif
 	generalEmulation.enableHWLighting = 0;
 	generalEmulation.enableCustomSettings = 1;
 	generalEmulation.enableShadersStorage = 1;

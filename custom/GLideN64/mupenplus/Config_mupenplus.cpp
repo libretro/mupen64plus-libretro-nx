@@ -128,6 +128,9 @@ extern "C" void Config_LoadConfig()
 	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
 	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
+	config.generalEmulation.enableNoise = EnableNoiseEmulation;
+	config.generalEmulation.enableLOD = EnableLODEmulation;
+	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 #if defined(GLES2) && !defined(ANDROID)
 	config.frameBufferEmulation.copyToRDRAM = Config::ctDisable;
