@@ -80,6 +80,7 @@
 #endif
 
 #include "../../../libretro/libretro_memory.h"
+#include "../../../custom/GLideN64/GLideN64_libretro.h"
 
 #ifdef DBG
 #include "debugger/dbg_debugger.h"
@@ -1001,7 +1002,7 @@ m64p_error main_run(void)
     stop_after_jal = 0;
 #endif
 
-    count_per_op = ROM_PARAMS.countperop;
+    count_per_op = CountPerOp;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;

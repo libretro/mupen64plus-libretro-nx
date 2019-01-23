@@ -106,6 +106,7 @@ uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableNoiseEmulation = 0;
 uint32_t EnableLODEmulation = 0;
+uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
 
 int rspMode = 0;
@@ -165,10 +166,12 @@ static void setup_variables(void)
 #endif
         { "mupen64plus-FrameDuping",
 #ifdef HAVE_LIBNX
-            "Frame Duping; True|False" },
+            "Frame Duplication; True|False" },
 #else
-            "Frame Duping; False|True" },
+            "Frame Duplication; False|True" },
 #endif
+        { "mupen64plus-Framerate",
+            "Framerate; Original|Fullspeed" },
         { "mupen64plus-NoiseEmulation",
             "Noise Emulation; True|False" },
         { "mupen64plus-EnableFBEmulation",
@@ -539,6 +542,16 @@ void update_variables()
             EnableFrameDuping = 1;
     }
 
+    var.key = "mupen64plus-Framerate";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "Original"))
+            EnableFullspeed = 0;
+        else
+            EnableFullspeed = 1;
+    }
+
     var.key = "mupen64plus-NoiseEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -805,6 +818,15 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         CountPerOp = atoi(var.value);
+    }
+
+    if(EnableFullspeed)
+    {
+        CountPerOp = 1; // Force CountPerOp == 1
+        if(!EnableFBEmulation)
+        {
+            EnableFrameDuping = 1;
+        }
     }
 
     var.key = "mupen64plus-r-cbutton";
