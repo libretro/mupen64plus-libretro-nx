@@ -108,6 +108,7 @@ uint32_t EnableNoiseEmulation = 0;
 uint32_t EnableLODEmulation = 0;
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
+uint32_t CountPerScanlineOverride = 0;
 
 int rspMode = 0;
 
@@ -172,6 +173,8 @@ static void setup_variables(void)
 #endif
         { "mupen64plus-Framerate",
             "Framerate; Original|Fullspeed" },
+        { "mupen64plus-virefresh",
+            "VI Refresh (Overclock); Auto|1500|2200" },
         { "mupen64plus-NoiseEmulation",
             "Noise Emulation; True|False" },
         { "mupen64plus-EnableFBEmulation",
@@ -550,6 +553,16 @@ void update_variables()
             EnableFullspeed = 0;
         else
             EnableFullspeed = 1;
+    }
+
+    var.key = "mupen64plus-virefresh";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "Auto"))
+            CountPerScanlineOverride = 0;
+        else
+            CountPerScanlineOverride = atoi(var.value);
     }
 
     var.key = "mupen64plus-NoiseEmulation";

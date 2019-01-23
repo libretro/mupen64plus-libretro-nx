@@ -70,5 +70,6 @@ extern uint32_t EnableNoiseEmulation;
 extern uint32_t EnableLODEmulation;
 extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;
+extern uint32_t CountPerScanlineOverride;
 
 #endif
