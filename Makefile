@@ -92,7 +92,12 @@ ifneq (,$(findstring unix,$(platform)))
    endif
 
    COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
+   ifeq ($(ARCH), x86_64)
+      ASFLAGS = -f elf64 -d ELF_TYPE
+   else
+      ASFLAGS = -f elf -d ELF_TYPE
+   endif
+
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
