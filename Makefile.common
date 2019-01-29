@@ -40,82 +40,82 @@ endif
 
 SOURCES_C = \
 	$(CORE_DIR)/src/asm_defines/asm_defines.c \
-    $(CORE_DIR)/src/api/callbacks.c \
+	$(CORE_DIR)/src/api/callbacks.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
-    $(CORE_DIR)/src/api/debugger.c \
-    $(CORE_DIR)/src/api/frontend.c \
-    $(CORE_DIR)/src/backends/plugins_compat/audio_plugin_compat.c \
-    $(CORE_DIR)/src/backends/api/video_capture_backend.c \
-    $(CORE_DIR)/src/backends/plugins_compat/input_plugin_compat.c \
-    $(CORE_DIR)/src/backends/clock_ctime_plus_delta.c \
-    $(CORE_DIR)/src/backends/dummy_video_capture.c \
-    $(CORE_DIR)/src/backends/file_storage.c \
-    $(CORE_DIR)/src/device/cart/cart.c \
-    $(CORE_DIR)/src/device/cart/af_rtc.c \
-    $(CORE_DIR)/src/device/cart/cart_rom.c \
-    $(CORE_DIR)/src/device/cart/eeprom.c \
-    $(CORE_DIR)/src/device/cart/flashram.c \
-    $(CORE_DIR)/src/device/cart/sram.c \
-    $(CORE_DIR)/src/device/controllers/game_controller.c \
-    $(CORE_DIR)/src/device/controllers/paks/biopak.c \
-    $(CORE_DIR)/src/device/controllers/paks/mempak.c \
-    $(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
-    $(CORE_DIR)/src/device/controllers/paks/transferpak.c \
-    $(CORE_DIR)/src/device/dd/dd_controller.c \
-    $(CORE_DIR)/src/device/device.c \
-    $(CORE_DIR)/src/device/gb/gb_cart.c \
-    $(CORE_DIR)/src/device/gb/mbc3_rtc.c \
-    $(CORE_DIR)/src/device/gb/m64282fp.c \
-    $(CORE_DIR)/src/device/memory/memory.c \
-    $(CORE_DIR)/src/device/pif/bootrom_hle.c \
-    $(CORE_DIR)/src/device/pif/cic.c \
-    $(CORE_DIR)/src/device/pif/n64_cic_nus_6105.c \
-    $(CORE_DIR)/src/device/pif/pif.c \
-    $(CORE_DIR)/src/device/r4300/cached_interp.c \
-    $(CORE_DIR)/src/device/r4300/cp0.c \
-    $(CORE_DIR)/src/device/r4300/cp1.c \
-    $(CORE_DIR)/src/device/r4300/idec.c \
-    $(CORE_DIR)/src/device/r4300/interrupt.c \
-    $(CORE_DIR)/src/device/r4300/pure_interp.c \
-    $(CORE_DIR)/src/device/r4300/r4300_core.c \
-    $(CORE_DIR)/src/device/r4300/tlb.c \
-    $(CORE_DIR)/src/device/rcp/ai/ai_controller.c \
-    $(CORE_DIR)/src/device/rcp/mi/mi_controller.c \
-    $(CORE_DIR)/src/device/rcp/pi/pi_controller.c \
-    $(CORE_DIR)/src/device/rcp/rdp/fb.c \
-    $(CORE_DIR)/src/device/rcp/rdp/rdp_core.c \
-    $(CORE_DIR)/src/device/rcp/ri/ri_controller.c \
-    $(CORE_DIR)/src/device/rcp/rsp/rsp_core.c \
-    $(CORE_DIR)/src/device/rcp/si/si_controller.c \
-    $(CORE_DIR)/src/device/rcp/vi/vi_controller.c \
-    $(CORE_DIR)/src/device/rdram/rdram.c \
-    $(CORE_DIR)/src/main/main.c \
-    $(CORE_DIR)/src/main/util.c \
-    $(CORE_DIR)/src/main/cheat.c \
-    $(CORE_DIR)/src/main/rom.c \
-    $(CORE_DIR)/src/main/savestates.c \
-    $(CORE_DIR)/src/plugin/plugin.c \
-    $(CORE_DIR)/src/plugin/dummy_audio.c \
-    $(CORE_DIR)/src/plugin/dummy_input.c
+	$(CORE_DIR)/src/api/debugger.c \
+	$(CORE_DIR)/src/api/frontend.c \
+	$(CORE_DIR)/src/backends/plugins_compat/audio_plugin_compat.c \
+	$(CORE_DIR)/src/backends/api/video_capture_backend.c \
+	$(CORE_DIR)/src/backends/plugins_compat/input_plugin_compat.c \
+	$(CORE_DIR)/src/backends/clock_ctime_plus_delta.c \
+	$(CORE_DIR)/src/backends/dummy_video_capture.c \
+	$(CORE_DIR)/src/backends/file_storage.c \
+	$(CORE_DIR)/src/device/cart/cart.c \
+	$(CORE_DIR)/src/device/cart/af_rtc.c \
+	$(CORE_DIR)/src/device/cart/cart_rom.c \
+	$(CORE_DIR)/src/device/cart/eeprom.c \
+	$(CORE_DIR)/src/device/cart/flashram.c \
+	$(CORE_DIR)/src/device/cart/sram.c \
+	$(CORE_DIR)/src/device/controllers/game_controller.c \
+	$(CORE_DIR)/src/device/controllers/paks/biopak.c \
+	$(CORE_DIR)/src/device/controllers/paks/mempak.c \
+	$(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
+	$(CORE_DIR)/src/device/controllers/paks/transferpak.c \
+	$(CORE_DIR)/src/device/dd/dd_controller.c \
+	$(CORE_DIR)/src/device/device.c \
+	$(CORE_DIR)/src/device/gb/gb_cart.c \
+	$(CORE_DIR)/src/device/gb/mbc3_rtc.c \
+	$(CORE_DIR)/src/device/gb/m64282fp.c \
+	$(CORE_DIR)/src/device/memory/memory.c \
+	$(CORE_DIR)/src/device/pif/bootrom_hle.c \
+	$(CORE_DIR)/src/device/pif/cic.c \
+	$(CORE_DIR)/src/device/pif/n64_cic_nus_6105.c \
+	$(CORE_DIR)/src/device/pif/pif.c \
+	$(CORE_DIR)/src/device/r4300/cached_interp.c \
+	$(CORE_DIR)/src/device/r4300/cp0.c \
+	$(CORE_DIR)/src/device/r4300/cp1.c \
+	$(CORE_DIR)/src/device/r4300/idec.c \
+	$(CORE_DIR)/src/device/r4300/interrupt.c \
+	$(CORE_DIR)/src/device/r4300/pure_interp.c \
+	$(CORE_DIR)/src/device/r4300/r4300_core.c \
+	$(CORE_DIR)/src/device/r4300/tlb.c \
+	$(CORE_DIR)/src/device/rcp/ai/ai_controller.c \
+	$(CORE_DIR)/src/device/rcp/mi/mi_controller.c \
+	$(CORE_DIR)/src/device/rcp/pi/pi_controller.c \
+	$(CORE_DIR)/src/device/rcp/rdp/fb.c \
+	$(CORE_DIR)/src/device/rcp/rdp/rdp_core.c \
+	$(CORE_DIR)/src/device/rcp/ri/ri_controller.c \
+	$(CORE_DIR)/src/device/rcp/rsp/rsp_core.c \
+	$(CORE_DIR)/src/device/rcp/si/si_controller.c \
+	$(CORE_DIR)/src/device/rcp/vi/vi_controller.c \
+	$(CORE_DIR)/src/device/rdram/rdram.c \
+	$(CORE_DIR)/src/main/main.c \
+	$(CORE_DIR)/src/main/util.c \
+	$(CORE_DIR)/src/main/cheat.c \
+	$(CORE_DIR)/src/main/rom.c \
+	$(CORE_DIR)/src/main/savestates.c \
+	$(CORE_DIR)/src/plugin/plugin.c \
+	$(CORE_DIR)/src/plugin/dummy_audio.c \
+	$(CORE_DIR)/src/plugin/dummy_input.c
 
 AWK_DEST_DIR    := $(CORE_DIR)/src/asm_defines
 ASM_DEFINES_OBJ := $(AWK_DEST_DIR)/asm_defines.o
 
 # MD5 lib
 SOURCES_C += \
-    $(CORE_DIR)/subprojects/md5/md5.c
+	$(CORE_DIR)/subprojects/md5/md5.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/md5
 
 # Minizip
 SOURCES_C += \
-    $(CORE_DIR)/subprojects/minizip/zip.c \
+	$(CORE_DIR)/subprojects/minizip/zip.c \
 	$(CORE_DIR)/subprojects/minizip/unzip.c \
 	$(CORE_DIR)/subprojects/minizip/ioapi.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/minizip
 
 # xxHash
 SOURCES_C += \
-    $(CORE_DIR)/subprojects/xxhash/xxhash.c
+	$(CORE_DIR)/subprojects/xxhash/xxhash.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/xxhash
 
 ifneq (,$(findstring win,$(platform)))
@@ -133,16 +133,16 @@ ifeq ($(WITH_DYNAREC), arm)
 	SOURCES_C += \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/arm/arm_cpu_features.c
-
 	SOURCES_ASM += \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/arm/linkage_arm.S
 endif
 ifeq ($(WITH_DYNAREC), aarch64)
 	DYNAREC_USED = 1
 	DYNAFLAGS += -DNEW_DYNAREC=4
-    SOURCES_C += $(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
-    SOURCES_ASM += \
-        $(CORE_DIR)/src/device/r4300/new_dynarec/arm64/linkage_arm64.S
+	SOURCES_C += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+	SOURCES_ASM += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/arm64/linkage_arm64.S
 endif
 ifeq ($(WITH_DYNAREC), x86)
 	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
@@ -150,16 +150,17 @@ ifeq ($(WITH_DYNAREC), x86)
 	DYNAFLAGS += -DNEW_DYNAREC=1
 	SOURCES_C += \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
-
 	SOURCES_NASM += \
-		$(CORE_DIR)/src/r4300/new_dynarec/x86/linkage_x86.asm
+		$(CORE_DIR)/src/device/r4300/new_dynarec/x86/linkage_x86.asm
 endif
 ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
 	COREFLAGS += -DARCH_MIN_SSE2 -msse -msse2
 	DYNAREC_USED = 1
-    DYNAFLAGS += -DNEW_DYNAREC=2
-	SOURCES_C += $(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
-    SOURCES_NASM += $(CORE_DIR)/src/device/r4300/new_dynarec/x64/linkage_x64.asm
+	DYNAFLAGS += -DNEW_DYNAREC=2
+	SOURCES_C += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+	SOURCES_NASM += \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/x64/linkage_x64.asm
 endif
 ifeq ($(DYNAREC_USED),0)
 else
@@ -193,7 +194,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
 	$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c
-	
+
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp \
 	$(VIDEODIR_GLIDEN64)/src/CommonPluginAPI.cpp \
