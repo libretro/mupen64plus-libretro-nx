@@ -98,6 +98,26 @@ ifneq (,$(findstring unix,$(platform)))
       ASFLAGS = -f elf -d ELF_TYPE
    endif
 
+   ifneq (,$(findstring armv,$(platform)))
+      CPUFLAGS += -DARM -marm
+      ifneq (,$(findstring cortexa8,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a8
+      else ifneq (,$(findstring cortexa9,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a9
+      else
+         CPUFLAGS += -mcpu=cortex-a7
+      endif
+      ifneq (,$(findstring neon,$(platform)))
+          CPUFLAGS += -mfpu=neon
+          HAVE_NEON = 1
+      endif
+      ifneq (,$(findstring softfloat,$(platform)))
+          CPUFLAGS += -mfloat-abi=softfp
+      else ifneq (,$(findstring hardfloat,$(platform)))
+          CPUFLAGS += -mfloat-abi=hard
+      endif
+   endif
+
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
