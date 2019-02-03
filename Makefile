@@ -155,7 +155,7 @@ else ifeq ($(platform), libnx)
    CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
    PLATCFLAGS = -O3 -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec -specs=$(LIBNX)/switch.specs
    PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops
-   CXXFLAGS += -fno-rtti -std=gnu++11
+   CXXFLAGS += -fno-rtti
    COREFLAGS += -DOS_LINUX
    GLES = 0
    WITH_DYNAREC = aarch64
@@ -361,9 +361,9 @@ endif
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
-ifneq ($(platform), libnx)
-CXXFLAGS += -std=c++11
-endif
+# set C/C++ standard to use
+CFLAGS += -std=gnu11
+CXXFLAGS += -std=gnu++11
 
 ifeq ($(PIC), 1)
    fpic = -fPIC
