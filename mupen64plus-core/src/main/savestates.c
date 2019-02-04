@@ -60,7 +60,7 @@ enum { GB_CART_FINGERPRINT_OFFSET = 0x134 };
 enum { DD_DISK_ID_OFFSET = 0x43670 };
 
 static const char* savestate_magic = "M64+SAVE";
-static const int savestate_latest_version = 0x00010400;  /* 1.4 */
+static const int savestate_latest_version = 0x00010500;  /* 1.5 */
 static const unsigned char pj64_magic[4] = { 0xC8, 0xA6, 0xD8, 0x23 };
 
 static savestates_job job = savestates_job_nothing;
@@ -204,7 +204,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
     size_t savestateSize;
     unsigned char *savestateData, *curr;
     char queue[1024];
-    unsigned char additionalData[4];
+    unsigned char using_tlb_data[4];
     unsigned char data_0001_0200[4096]; // 4k for extra state from v1.2
     uint64_t flashram_status;
 
@@ -326,7 +326,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifndef __LIBRETRO__
         if (gzread(f, savestateData, savestateSize) != savestateSize ||
             gzread(f, queue, sizeof(queue)) != sizeof(queue) ||
-            gzread(f, additionalData, sizeof(additionalData)) != sizeof(additionalData))
+            gzread(f, using_tlb_data, sizeof(using_tlb_data)) != sizeof(using_tlb_data))
         {
             main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.1 data from %s", filepath);
             free(savestateData);
@@ -339,7 +339,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #else
         memcpy(savestateData, data + 44, savestateSize);
         memcpy(queue, data + 44 + savestateSize, sizeof(queue));
-        memcpy(additionalData, data + 44 + savestateSize + sizeof(queue), sizeof(additionalData));
+        memcpy(using_tlb_data, data + 44 + savestateSize + sizeof(queue), sizeof(using_tlb_data));
 #endif
     }
     else // version >= 0x00010200  saves entire eventqueue, 4-byte using_tlb flags and extra state
@@ -347,10 +347,10 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifndef __LIBRETRO__
         if (gzread(f, savestateData, savestateSize) != (int)savestateSize ||
             gzread(f, queue, sizeof(queue)) != sizeof(queue) ||
-            gzread(f, additionalData, sizeof(additionalData)) != sizeof(additionalData) ||
+            gzread(f, using_tlb_data, sizeof(using_tlb_data)) != sizeof(using_tlb_data) ||
             gzread(f, data_0001_0200, sizeof(data_0001_0200)) != sizeof(data_0001_0200))
         {
-            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.2 data from %s", filepath);
+            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.2+ data from %s", filepath);
             free(savestateData);
             gzclose(f);
 #ifdef USE_SDL
@@ -361,8 +361,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #else
         memcpy(savestateData, data + 44, savestateSize);
         memcpy(queue, data + 44 + savestateSize, sizeof(queue));
-        memcpy(additionalData, data + 44 + savestateSize + sizeof(queue), sizeof(additionalData));
-        memcpy(data_0001_0200, data + 44 + savestateSize + sizeof(queue) + sizeof(additionalData), sizeof(data_0001_0200));
+        memcpy(using_tlb_data, data + 44 + savestateSize + sizeof(queue), sizeof(using_tlb_data));
+        memcpy(data_0001_0200, data + 44 + savestateSize + sizeof(queue) + sizeof(using_tlb_data), sizeof(data_0001_0200));
 #endif
     }
 
@@ -441,7 +441,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->vi.regs[VI_V_BURST_REG] = GETDATA(curr, uint32_t);
     dev->vi.regs[VI_X_SCALE_REG] = GETDATA(curr, uint32_t);
     dev->vi.regs[VI_Y_SCALE_REG] = GETDATA(curr, uint32_t);
-    dev->vi.delay = GETDATA(curr, unsigned int);
+    dev->vi.delay = GETDATA(curr, uint32_t);
     gfx.viStatusChanged();
     gfx.viWidthChanged();
 
@@ -460,9 +460,9 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->ai.regs[AI_STATUS_REG]    = GETDATA(curr, uint32_t);
     dev->ai.regs[AI_DACRATE_REG]   = GETDATA(curr, uint32_t);
     dev->ai.regs[AI_BITRATE_REG]   = GETDATA(curr, uint32_t);
-    dev->ai.fifo[1].duration  = GETDATA(curr, unsigned int);
+    dev->ai.fifo[1].duration  = GETDATA(curr, uint32_t);
     dev->ai.fifo[1].length = GETDATA(curr, uint32_t);
-    dev->ai.fifo[0].duration  = GETDATA(curr, unsigned int);
+    dev->ai.fifo[0].duration  = GETDATA(curr, uint32_t);
     dev->ai.fifo[0].length = GETDATA(curr, uint32_t);
     /* best effort initialization of fifo addresses...
      * You might get a small sound "pop" because address might be wrong.
@@ -492,18 +492,18 @@ int savestates_load_m64p(struct device* dev, const void *data)
     COPYARRAY(dev->sp.mem, curr, uint32_t, SP_MEM_SIZE/4);
     COPYARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);
 
-    dev->cart.use_flashram = GETDATA(curr, int);
-    dev->cart.flashram.mode = GETDATA(curr, int);
-    flashram_status = GETDATA(curr, unsigned long long);
+    dev->cart.use_flashram = GETDATA(curr, int32_t);
+    dev->cart.flashram.mode = GETDATA(curr, int32_t);
+    flashram_status = GETDATA(curr, uint64_t);
     dev->cart.flashram.status[0] = (uint32_t)(flashram_status >> 32);
     dev->cart.flashram.status[1] = (uint32_t)(flashram_status);
-    dev->cart.flashram.erase_offset = GETDATA(curr, unsigned int);
-    dev->cart.flashram.write_pointer = GETDATA(curr, unsigned int);
+    dev->cart.flashram.erase_offset = GETDATA(curr, uint32_t);
+    dev->cart.flashram.write_pointer = GETDATA(curr, uint32_t);
 
     COPYARRAY(dev->r4300.cp0.tlb.LUT_r, curr, uint32_t, 0x100000);
     COPYARRAY(dev->r4300.cp0.tlb.LUT_w, curr, uint32_t, 0x100000);
 
-    *r4300_llbit(&dev->r4300) = GETDATA(curr, unsigned int);
+    *r4300_llbit(&dev->r4300) = GETDATA(curr, uint32_t);
     COPYARRAY(r4300_regs(&dev->r4300), curr, int64_t, 32);
     COPYARRAY(cp0_regs, curr, uint32_t, CP0_REGS_COUNT);
     *r4300_mult_lo(&dev->r4300) = GETDATA(curr, int64_t);
@@ -518,36 +518,36 @@ int savestates_load_m64p(struct device* dev, const void *data)
 
     for (i = 0; i < 32; i++)
     {
-        dev->r4300.cp0.tlb.entries[i].mask = GETDATA(curr, short);
+        dev->r4300.cp0.tlb.entries[i].mask = GETDATA(curr, int16_t);
         curr += 2;
-        dev->r4300.cp0.tlb.entries[i].vpn2 = GETDATA(curr, unsigned int);
+        dev->r4300.cp0.tlb.entries[i].vpn2 = GETDATA(curr, uint32_t);
         dev->r4300.cp0.tlb.entries[i].g = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].asid = GETDATA(curr, unsigned char);
         curr += 2;
-        dev->r4300.cp0.tlb.entries[i].pfn_even = GETDATA(curr, unsigned int);
+        dev->r4300.cp0.tlb.entries[i].pfn_even = GETDATA(curr, uint32_t);
         dev->r4300.cp0.tlb.entries[i].c_even = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].d_even = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].v_even = GETDATA(curr, char);
         curr++;
-        dev->r4300.cp0.tlb.entries[i].pfn_odd = GETDATA(curr, unsigned int);
+        dev->r4300.cp0.tlb.entries[i].pfn_odd = GETDATA(curr, uint32_t);
         dev->r4300.cp0.tlb.entries[i].c_odd = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].d_odd = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].v_odd = GETDATA(curr, char);
         dev->r4300.cp0.tlb.entries[i].r = GETDATA(curr, char);
 
-        dev->r4300.cp0.tlb.entries[i].start_even = GETDATA(curr, unsigned int);
-        dev->r4300.cp0.tlb.entries[i].end_even = GETDATA(curr, unsigned int);
-        dev->r4300.cp0.tlb.entries[i].phys_even = GETDATA(curr, unsigned int);
-        dev->r4300.cp0.tlb.entries[i].start_odd = GETDATA(curr, unsigned int);
-        dev->r4300.cp0.tlb.entries[i].end_odd = GETDATA(curr, unsigned int);
-        dev->r4300.cp0.tlb.entries[i].phys_odd = GETDATA(curr, unsigned int);
+        dev->r4300.cp0.tlb.entries[i].start_even = GETDATA(curr, uint32_t);
+        dev->r4300.cp0.tlb.entries[i].end_even = GETDATA(curr, uint32_t);
+        dev->r4300.cp0.tlb.entries[i].phys_even = GETDATA(curr, uint32_t);
+        dev->r4300.cp0.tlb.entries[i].start_odd = GETDATA(curr, uint32_t);
+        dev->r4300.cp0.tlb.entries[i].end_odd = GETDATA(curr, uint32_t);
+        dev->r4300.cp0.tlb.entries[i].phys_odd = GETDATA(curr, uint32_t);
     }
 
     savestates_load_set_pc(&dev->r4300, GETDATA(curr, uint32_t));
 
-    *r4300_cp0_next_interrupt(&dev->r4300.cp0) = GETDATA(curr, unsigned int);
-    dev->vi.next_vi = GETDATA(curr, unsigned int);
-    dev->vi.field = GETDATA(curr, unsigned int);
+    *r4300_cp0_next_interrupt(&dev->r4300.cp0) = GETDATA(curr, uint32_t);
+    dev->vi.next_vi = GETDATA(curr, uint32_t);
+    dev->vi.field = GETDATA(curr, uint32_t);
 
     // assert(savestateData+savestateSize == curr)
 
@@ -555,10 +555,13 @@ int savestates_load_m64p(struct device* dev, const void *data)
     load_eventqueue_infos(&dev->r4300.cp0, queue);
 
 #ifdef NEW_DYNAREC
+    // Default this to 1, it will be updated by the correct save state version later
+    stop_after_jal = 1;
+
     if (version >= 0x00010100)
     {
-        curr = additionalData;
-        using_tlb = GETDATA(curr, unsigned int);
+        curr = using_tlb_data;
+        using_tlb = GETDATA(curr, uint32_t);
     }
 #endif
 
@@ -615,18 +618,18 @@ int savestates_load_m64p(struct device* dev, const void *data)
             unsigned int rom_bank, ram_bank, ram_enable, mbc1_mode, rtc_latch;
             time_t rtc_last_time;
 
-            unsigned int enabled = ALIGNED_GETDATA(curr, unsigned int);
-            unsigned int bank = ALIGNED_GETDATA(curr, unsigned int);
-            unsigned int access_mode = ALIGNED_GETDATA(curr, unsigned int);
-            unsigned int access_mode_changed = ALIGNED_GETDATA(curr, unsigned int);
+            unsigned int enabled = ALIGNED_GETDATA(curr, uint32_t);
+            unsigned int bank = ALIGNED_GETDATA(curr, uint32_t);
+            unsigned int access_mode = ALIGNED_GETDATA(curr, uint32_t);
+            unsigned int access_mode_changed = ALIGNED_GETDATA(curr, uint32_t);
             COPYARRAY(gb_fingerprint, curr, uint8_t, GB_CART_FINGERPRINT_SIZE);
             if (gb_fingerprint[0] != 0) {
-                rom_bank = ALIGNED_GETDATA(curr, unsigned int);
-                ram_bank = ALIGNED_GETDATA(curr, unsigned int);
-                ram_enable = ALIGNED_GETDATA(curr, unsigned int);
-                mbc1_mode = ALIGNED_GETDATA(curr, unsigned int);
+                rom_bank = ALIGNED_GETDATA(curr, uint32_t);
+                ram_bank = ALIGNED_GETDATA(curr, uint32_t);
+                ram_enable = ALIGNED_GETDATA(curr, uint32_t);
+                mbc1_mode = ALIGNED_GETDATA(curr, uint32_t);
                 COPYARRAY(rtc_regs, curr, uint8_t, MBC3_RTC_REGS_COUNT);
-                rtc_latch = ALIGNED_GETDATA(curr, unsigned int);
+                rtc_latch = ALIGNED_GETDATA(curr, uint32_t);
                 COPYARRAY(rtc_latched_regs, curr, uint8_t, MBC3_RTC_REGS_COUNT);
                 rtc_last_time = (time_t)ALIGNED_GETDATA(curr, int64_t);
                 COPYARRAY(cam_regs, curr, uint8_t, POCKET_CAM_REGS_COUNT);
@@ -689,7 +692,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
         }
 
         /* extra vi state */
-        dev->vi.count_per_scanline = ALIGNED_GETDATA(curr, unsigned int);
+        dev->vi.count_per_scanline = ALIGNED_GETDATA(curr, uint32_t);
 
         /* extra si state */
         dev->si.dma_dir = GETDATA(curr, uint8_t);
@@ -756,17 +759,17 @@ int savestates_load_m64p(struct device* dev, const void *data)
             unsigned int rom_bank, ram_bank, ram_enable, mbc1_mode, rtc_latch;
             time_t rtc_last_time;
 
-            unsigned int enabled = GETDATA(curr, unsigned int);
-            unsigned int bank = GETDATA(curr, unsigned int);
-            unsigned int access_mode = GETDATA(curr, unsigned int);
-            unsigned int access_mode_changed = GETDATA(curr, unsigned int);
+            unsigned int enabled = GETDATA(curr, uint32_t);
+            unsigned int bank = GETDATA(curr, uint32_t);
+            unsigned int access_mode = GETDATA(curr, uint32_t);
+            unsigned int access_mode_changed = GETDATA(curr, uint32_t);
             COPYARRAY(gb_fingerprint, curr, uint8_t, GB_CART_FINGERPRINT_SIZE);
             if (gb_fingerprint[0] != 0) {
-                rom_bank = GETDATA(curr, unsigned int);
-                ram_bank = GETDATA(curr, unsigned int);
-                ram_enable = GETDATA(curr, unsigned int);
-                mbc1_mode = GETDATA(curr, unsigned int);
-                rtc_latch = GETDATA(curr, unsigned int);
+                rom_bank = GETDATA(curr, uint32_t);
+                ram_bank = GETDATA(curr, uint32_t);
+                ram_enable = GETDATA(curr, uint32_t);
+                mbc1_mode = GETDATA(curr, uint32_t);
+                rtc_latch = GETDATA(curr, uint32_t);
                 rtc_last_time = (time_t)GETDATA(curr, int64_t);
                 COPYARRAY(rtc_regs, curr, uint8_t, MBC3_RTC_REGS_COUNT);
                 COPYARRAY(rtc_latched_regs, curr, uint8_t, MBC3_RTC_REGS_COUNT);
@@ -836,7 +839,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
         dev->dp.do_on_unfreeze = GETDATA(curr, uint8_t);
 
         /* extra vi state */
-        dev->vi.count_per_scanline = GETDATA(curr, unsigned int);
+        dev->vi.count_per_scanline = GETDATA(curr, uint32_t);
 
         /* extra RDRAM register state */
         for (i = 1; i < RDRAM_MAX_MODULES_COUNT; ++i) {
@@ -891,15 +894,25 @@ int savestates_load_m64p(struct device* dev, const void *data)
                 dev->dd.bm_write = (unsigned char)GETDATA(curr, uint32_t);
                 dev->dd.bm_reset_held = (unsigned char)GETDATA(curr, uint32_t);
                 dev->dd.bm_block = (unsigned char)GETDATA(curr, uint32_t);
-                dev->dd.bm_zone = GETDATA(curr, unsigned int);
-                dev->dd.bm_track_offset = GETDATA(curr, unsigned int);
+                dev->dd.bm_zone = GETDATA(curr, uint32_t);
+                dev->dd.bm_track_offset = GETDATA(curr, uint32_t);
             }
             else {
                 curr += (3+DD_ASIC_REGS_COUNT)*sizeof(uint32_t) + 0x100 + 0x40 + 2*sizeof(int64_t) + 2*sizeof(unsigned int);
             }
         }
+
+        if (version >= 0x00010500)
+        {
+#ifdef NEW_DYNAREC
+            stop_after_jal = GETDATA(curr, uint32_t);
+#else
+            curr += sizeof(uint32_t);
+#endif
+        }
     }
-    else {
+    else
+    {
         /* extra ai state */
         dev->ai.last_read = 0;
         dev->ai.delayed_carry = 0;
@@ -1014,7 +1027,7 @@ static int savestates_load_pj64(struct device* dev,
     }
     curr += 4;
 
-    SaveRDRAMSize = GETDATA(curr, unsigned int);
+    SaveRDRAMSize = GETDATA(curr, uint32_t);
 
     /* Read the rest of the savestate into memory. */
     savestateSize = SaveRDRAMSize + 0x2754;
@@ -1041,7 +1054,7 @@ static int savestates_load_pj64(struct device* dev,
     }
 
     // vi_timer
-    vi_timer = GETDATA(curr, unsigned int);
+    vi_timer = GETDATA(curr, uint32_t);
 
     // Program Counter
     *r4300_cp0_last_addr(&dev->r4300.cp0) = GETDATA(curr, uint32_t);
@@ -1117,8 +1130,8 @@ static int savestates_load_pj64(struct device* dev,
     dev->dp.dpc_regs[DPC_BUFBUSY_REG]  = GETDATA(curr, uint32_t);
     dev->dp.dpc_regs[DPC_PIPEBUSY_REG] = GETDATA(curr, uint32_t);
     dev->dp.dpc_regs[DPC_TMEM_REG]     = GETDATA(curr, uint32_t);
-    (void)GETDATA(curr, unsigned int); // Dummy read
-    (void)GETDATA(curr, unsigned int); // Dummy read
+    (void)GETDATA(curr, uint32_t); // Dummy read
+    (void)GETDATA(curr, uint32_t); // Dummy read
 
     // mi_register
     dev->mi.regs[MI_INIT_MODE_REG] = GETDATA(curr, uint32_t);
@@ -1211,11 +1224,11 @@ static int savestates_load_pj64(struct device* dev,
     {
         unsigned int MyPageMask, MyEntryHi, MyEntryLo0, MyEntryLo1;
 
-        (void)GETDATA(curr, unsigned int); // Dummy read - EntryDefined
-        MyPageMask = GETDATA(curr, unsigned int);
-        MyEntryHi = GETDATA(curr, unsigned int);
-        MyEntryLo0 = GETDATA(curr, unsigned int);
-        MyEntryLo1 = GETDATA(curr, unsigned int);
+        (void)GETDATA(curr, uint32_t); // Dummy read - EntryDefined
+        MyPageMask = GETDATA(curr, uint32_t);
+        MyEntryHi = GETDATA(curr, uint32_t);
+        MyEntryLo0 = GETDATA(curr, uint32_t);
+        MyEntryLo1 = GETDATA(curr, uint32_t);
 
         // This is copied from TLBWI instruction
         dev->r4300.cp0.tlb.entries[i].g = (MyEntryLo0 & MyEntryLo1 & 1);
@@ -1698,7 +1711,7 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, dev->vi.regs[VI_V_BURST_REG]);
     PUTDATA(curr, uint32_t, dev->vi.regs[VI_X_SCALE_REG]);
     PUTDATA(curr, uint32_t, dev->vi.regs[VI_Y_SCALE_REG]);
-    PUTDATA(curr, unsigned int, dev->vi.delay);
+    PUTDATA(curr, uint32_t, dev->vi.delay);
 
     PUTDATA(curr, uint32_t, dev->ri.regs[RI_MODE_REG]);
     PUTDATA(curr, uint32_t, dev->ri.regs[RI_CONFIG_REG]);
@@ -1715,9 +1728,9 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, dev->ai.regs[AI_STATUS_REG]);
     PUTDATA(curr, uint32_t, dev->ai.regs[AI_DACRATE_REG]);
     PUTDATA(curr, uint32_t, dev->ai.regs[AI_BITRATE_REG]);
-    PUTDATA(curr, unsigned int, dev->ai.fifo[1].duration);
+    PUTDATA(curr, uint32_t, dev->ai.fifo[1].duration);
     PUTDATA(curr, uint32_t    , dev->ai.fifo[1].length);
-    PUTDATA(curr, unsigned int, dev->ai.fifo[0].duration);
+    PUTDATA(curr, uint32_t, dev->ai.fifo[0].duration);
     PUTDATA(curr, uint32_t    , dev->ai.fifo[0].length);
 
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_START_REG]);
@@ -1751,18 +1764,18 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTARRAY(dev->sp.mem, curr, uint32_t, SP_MEM_SIZE/4);
     PUTARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);
 
-    PUTDATA(curr, int, dev->cart.use_flashram);
-    PUTDATA(curr, int, dev->cart.flashram.mode);
+    PUTDATA(curr, int32_t, dev->cart.use_flashram);
+    PUTDATA(curr, int32_t, dev->cart.flashram.mode);
     flashram_status = ((uint64_t)dev->cart.flashram.status[0] << 32) | dev->cart.flashram.status[1];
-    PUTDATA(curr, unsigned long long, flashram_status);
-    PUTDATA(curr, unsigned int, dev->cart.flashram.erase_offset);
-    PUTDATA(curr, unsigned int, dev->cart.flashram.write_pointer);
+    PUTDATA(curr, uint64_t, flashram_status);
+    PUTDATA(curr, uint32_t, dev->cart.flashram.erase_offset);
+    PUTDATA(curr, uint32_t, dev->cart.flashram.write_pointer);
 
-    PUTARRAY(dev->r4300.cp0.tlb.LUT_r, curr, unsigned int, 0x100000);
-    PUTARRAY(dev->r4300.cp0.tlb.LUT_w, curr, unsigned int, 0x100000);
+    PUTARRAY(dev->r4300.cp0.tlb.LUT_r, curr, uint32_t, 0x100000);
+    PUTARRAY(dev->r4300.cp0.tlb.LUT_w, curr, uint32_t, 0x100000);
 
     /* OK to cast away const qualifier */
-    PUTDATA(curr, unsigned int, *r4300_llbit((struct r4300_core*)&dev->r4300));
+    PUTDATA(curr, uint32_t, *r4300_llbit((struct r4300_core*)&dev->r4300));
     PUTARRAY(r4300_regs((struct r4300_core*)&dev->r4300), curr, int64_t, 32);
     PUTARRAY(cp0_regs, curr, uint32_t, CP0_REGS_COUNT);
     PUTDATA(curr, int64_t, *r4300_mult_lo((struct r4300_core*)&dev->r4300));
@@ -1775,43 +1788,43 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, *r4300_cp1_fcr31((struct cp1*)&dev->r4300.cp1));
     for (i = 0; i < 32; i++)
     {
-        PUTDATA(curr, short, dev->r4300.cp0.tlb.entries[i].mask);
-        PUTDATA(curr, short, 0);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].vpn2);
+        PUTDATA(curr, int16_t, dev->r4300.cp0.tlb.entries[i].mask);
+        PUTDATA(curr, int16_t, 0);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].vpn2);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].g);
         PUTDATA(curr, unsigned char, dev->r4300.cp0.tlb.entries[i].asid);
-        PUTDATA(curr, short, 0);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].pfn_even);
+        PUTDATA(curr, int16_t, 0);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].pfn_even);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].c_even);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].d_even);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].v_even);
         PUTDATA(curr, char, 0);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].pfn_odd);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].pfn_odd);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].c_odd);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].d_odd);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].v_odd);
         PUTDATA(curr, char, dev->r4300.cp0.tlb.entries[i].r);
 
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].start_even);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].end_even);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].phys_even);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].start_odd);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].end_odd);
-        PUTDATA(curr, unsigned int, dev->r4300.cp0.tlb.entries[i].phys_odd);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].start_even);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].end_even);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].phys_even);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].start_odd);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].end_odd);
+        PUTDATA(curr, uint32_t, dev->r4300.cp0.tlb.entries[i].phys_odd);
     }
     PUTDATA(curr, uint32_t, *r4300_pc((struct r4300_core*)&dev->r4300));
 
-    PUTDATA(curr, unsigned int, *r4300_cp0_next_interrupt((struct cp0*)&dev->r4300.cp0));
-    PUTDATA(curr, unsigned int, dev->vi.next_vi);
-    PUTDATA(curr, unsigned int, dev->vi.field);
+    PUTDATA(curr, uint32_t, *r4300_cp0_next_interrupt((struct cp0*)&dev->r4300.cp0));
+    PUTDATA(curr, uint32_t, dev->vi.next_vi);
+    PUTDATA(curr, uint32_t, dev->vi.field);
 
     to_little_endian_buffer(queue, 4, sizeof(queue)/4);
     PUTARRAY(queue, curr, char, sizeof(queue));
 
 #ifdef NEW_DYNAREC
-    PUTDATA(curr, unsigned int, using_tlb);
+    PUTDATA(curr, uint32_t, using_tlb);
 #else
-    PUTDATA(curr, unsigned int, 0);
+    PUTDATA(curr, uint32_t, 0);
 #endif
 
     PUTDATA(curr, uint32_t, dev->ai.last_read);
@@ -1836,10 +1849,10 @@ int savestates_save_m64p(const struct device* dev, void *data)
     }
 
     for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
-        PUTDATA(curr, unsigned int, dev->transferpaks[i].enabled);
-        PUTDATA(curr, unsigned int, dev->transferpaks[i].bank);
-        PUTDATA(curr, unsigned int, dev->transferpaks[i].access_mode);
-        PUTDATA(curr, unsigned int, dev->transferpaks[i].access_mode_changed);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].enabled);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].bank);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].access_mode);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].access_mode_changed);
 
         if (dev->transferpaks[i].gb_cart == NULL) {
             uint8_t gb_fingerprint[GB_CART_FINGERPRINT_SIZE];
@@ -1850,11 +1863,11 @@ int savestates_save_m64p(const struct device* dev, void *data)
             uint8_t* rom = dev->transferpaks[i].gb_cart->irom_storage->data(dev->transferpaks[i].gb_cart->rom_storage);
             PUTARRAY(rom + GB_CART_FINGERPRINT_OFFSET, curr, uint8_t, GB_CART_FINGERPRINT_SIZE);
 
-            PUTDATA(curr, unsigned int, dev->transferpaks[i].gb_cart->rom_bank);
-            PUTDATA(curr, unsigned int, dev->transferpaks[i].gb_cart->ram_bank);
-            PUTDATA(curr, unsigned int, dev->transferpaks[i].gb_cart->ram_enable);
-            PUTDATA(curr, unsigned int, dev->transferpaks[i].gb_cart->mbc1_mode);
-            PUTDATA(curr, unsigned int, dev->transferpaks[i].gb_cart->rtc.latch);
+            PUTDATA(curr, uint32_t, dev->transferpaks[i].gb_cart->rom_bank);
+            PUTDATA(curr, uint32_t, dev->transferpaks[i].gb_cart->ram_bank);
+            PUTDATA(curr, uint32_t, dev->transferpaks[i].gb_cart->ram_enable);
+            PUTDATA(curr, uint32_t, dev->transferpaks[i].gb_cart->mbc1_mode);
+            PUTDATA(curr, uint32_t, dev->transferpaks[i].gb_cart->rtc.latch);
             PUTDATA(curr, int64_t, dev->transferpaks[i].gb_cart->rtc.last_time);
 
             PUTARRAY(dev->transferpaks[i].gb_cart->rtc.regs, curr, uint8_t, MBC3_RTC_REGS_COUNT);
@@ -1874,7 +1887,7 @@ int savestates_save_m64p(const struct device* dev, void *data)
 
     PUTDATA(curr, uint8_t, dev->dp.do_on_unfreeze);
 
-    PUTDATA(curr, unsigned int, dev->vi.count_per_scanline);
+    PUTDATA(curr, uint32_t, dev->vi.count_per_scanline);
 
     for (i = 1; i < RDRAM_MAX_MODULES_COUNT; ++i) {
         PUTDATA(curr, uint32_t, dev->rdram.regs[i][RDRAM_CONFIG_REG]);
@@ -1895,7 +1908,7 @@ int savestates_save_m64p(const struct device* dev, void *data)
 
     if (disk_id == NULL) {
         PUTDATA(curr, uint32_t, 0);
-        curr += (3+DD_ASIC_REGS_COUNT)*sizeof(uint32_t) + 0x100 + 0x40 + 2*sizeof(int64_t) + 2*sizeof(unsigned int);
+        curr += (3+DD_ASIC_REGS_COUNT)*sizeof(uint32_t) + 0x100 + 0x40 + 2*sizeof(int64_t) + 2*sizeof(uint32_t);
     }
     else {
         PUTDATA(curr, uint32_t, *disk_id);
@@ -1928,9 +1941,15 @@ int savestates_save_m64p(const struct device* dev, void *data)
         PUTDATA(curr, uint32_t, dev->dd.bm_write);
         PUTDATA(curr, uint32_t, dev->dd.bm_reset_held);
         PUTDATA(curr, uint32_t, dev->dd.bm_block);
-        PUTDATA(curr, unsigned int, dev->dd.bm_zone);
-        PUTDATA(curr, unsigned int, dev->dd.bm_track_offset);
+        PUTDATA(curr, uint32_t, dev->dd.bm_zone);
+        PUTDATA(curr, uint32_t, dev->dd.bm_track_offset);
     }
+
+#ifdef NEW_DYNAREC
+    PUTDATA(curr, uint32_t, stop_after_jal);
+#else
+    PUTDATA(curr, uint32_t, 0);
+#endif
 
     init_work(&save->work, savestates_save_m64p_work);
     queue_work(&save->work);
@@ -2007,8 +2026,8 @@ static int savestates_save_pj64(const struct device* dev,
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_BUFBUSY_REG]);
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_PIPEBUSY_REG]);
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_TMEM_REG]);
-    PUTDATA(curr, unsigned int, 0); // ?
-    PUTDATA(curr, unsigned int, 0); // ?
+    PUTDATA(curr, uint32_t, 0); // ?
+    PUTDATA(curr, uint32_t, 0); // ?
 
     PUTDATA(curr, uint32_t, dev->mi.regs[MI_INIT_MODE_REG]); //TODO Secial handling in pj64
     PUTDATA(curr, uint32_t, dev->mi.regs[MI_VERSION_REG]);
@@ -2079,11 +2098,11 @@ static int savestates_save_pj64(const struct device* dev,
          | (dev->r4300.cp0.tlb.entries[i].d_odd << 2) | (dev->r4300.cp0.tlb.entries[i].v_odd << 1)
            | dev->r4300.cp0.tlb.entries[i].g;
 
-        PUTDATA(curr, unsigned int, EntryDefined);
-        PUTDATA(curr, unsigned int, MyPageMask);
-        PUTDATA(curr, unsigned int, MyEntryHi);
-        PUTDATA(curr, unsigned int, MyEntryLo0);
-        PUTDATA(curr, unsigned int, MyEntryLo1);
+        PUTDATA(curr, uint32_t, EntryDefined);
+        PUTDATA(curr, uint32_t, MyPageMask);
+        PUTDATA(curr, uint32_t, MyEntryHi);
+        PUTDATA(curr, uint32_t, MyEntryLo0);
+        PUTDATA(curr, uint32_t, MyEntryLo1);
     }
 
     PUTARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);

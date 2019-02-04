@@ -2,7 +2,7 @@
  *   Mupen64plus-core - api/frontend.c                                     *
  *   Mupen64Plus homepage: https://mupen64plus.org/                        *
  *   Copyright (C) 2012 CasualJames                                        *
- *   Copyright (C) 2009 Richard Goedeken                                             *
+ *   Copyright (C) 2009 Richard Goedeken                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *

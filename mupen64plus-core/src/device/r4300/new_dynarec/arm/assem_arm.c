@@ -230,6 +230,11 @@ static u_int jump_table_symbols[] = {
   (int)breakpoint
 };
 
+static void cache_flush(char* start, char* end)
+{
+    __clear_cache(start, end);
+}
+
 /* Linker */
 static void set_jump_target(int addr,u_int target)
 {
@@ -325,7 +330,7 @@ static void *add_pointer(void *src, void* addr)
   //assert((*(int*)((u_int)ptr2+20)&0x0ff00000)==0x01a00000); //mov
 #endif
   *ptr=(*ptr&0xFF000000)|((((u_int)addr-(u_int)ptr-8)<<6)>>8);
-  __clear_cache((void*)ptr, (void*)((u_int)ptr+4));
+  cache_flush((void*)ptr, (void*)((u_int)ptr+4));
   return ptr2;
 }
 
@@ -1939,10 +1944,6 @@ static void emit_writeword_dualindexedx4(int rt, int rs1, int rs2)
 static void emit_writeword_indexed_tlb(int rt, int addr, int rs, int map)
 {
   if(map<0) emit_writeword_indexed(rt, addr, rs);
-  else if(rs<0) {
-    assert(map>=0);
-    emit_writeword_indexed(rt, addr, map);
-  }
   else {
     if(addr==0) {
       emit_writeword_dualindexedx4(rt, rs, map);
@@ -1974,10 +1975,6 @@ static void emit_writehword_indexed(int rt, int offset, int rs)
 static void emit_writehword_indexed_tlb(int rt, int addr, int rs, int map)
 {
   if(map<0) emit_writehword_indexed(rt, addr, rs);
-  else if(rs<0) {
-    assert(map>=0);
-    emit_writehword_indexed(rt, addr, map);
-  }
   else {
     assem_debug("add %s,%s,%s,lsl #2",regname[HOST_TEMPREG],regname[rs],regname[map]);
     output_w32(0xe0800000|rd_rn_rm(HOST_TEMPREG,rs,map)|(2<<7));
@@ -2002,10 +1999,6 @@ static void emit_writebyte_dualindexedx4(int rt, int rs1, int rs2)
 static void emit_writebyte_indexed_tlb(int rt, int addr, int rs, int map)
 {
   if(map<0) emit_writebyte_indexed(rt, addr, rs);
-  else if(rs<0) {
-    assert(map>=0);
-    emit_writebyte_indexed(rt, addr, map);
-  }
   else {
     if(addr==0) {
       emit_writebyte_dualindexedx4(rt, rs, map);
@@ -4519,8 +4512,7 @@ static void do_clear_cache(void)
               end+=4096;
               j++;
             }else{
-              __clear_cache((void *)start,(void *)end);
-              //cacheflush((void *)start,(void *)end,0);
+              cache_flush((void *)start,(void *)end);
               break;
             }
           }
