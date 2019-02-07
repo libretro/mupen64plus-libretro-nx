@@ -516,20 +516,14 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "HLE"))
-            rspMode = 0;
-        else
-            rspMode = 1;
+        rspMode = !strcmp(var.value, "HLE") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-BilinearMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "3point"))
-            bilinearMode = 0;
-        else
-            bilinearMode = 1;
+        bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-MultiSampling";
@@ -543,60 +537,42 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableFrameDuping = 0;
-        else
-            EnableFrameDuping = 1;
+        EnableFrameDuping = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-Framerate";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Original"))
-            EnableFullspeed = 0;
-        else
-            EnableFullspeed = 1;
+        EnableFullspeed = !strcmp(var.value, "Original") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-virefresh";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Auto"))
-            CountPerScanlineOverride = 0;
-        else
-            CountPerScanlineOverride = atoi(var.value);
+        CountPerScanlineOverride = !strcmp(var.value, "Auto") ? 0 : atoi(var.value);
     }
 
     var.key = CORE_NAME "-NoiseEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableNoiseEmulation = 0;
-        else
-            EnableNoiseEmulation = 1;
+        EnableNoiseEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableLODEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableLODEmulation = 0;
-        else
-            EnableLODEmulation = 1;
+        EnableLODEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableFBEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableFBEmulation = 0;
-        else
-            EnableFBEmulation = 1;
+        EnableFBEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableCopyColorToRDRAM";
@@ -627,10 +603,7 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableHWLighting = 1;
-        else
-            EnableHWLighting = 0;
+        EnableHWLighting = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-CorrectTexrectCoords";
@@ -649,10 +622,7 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            enableNativeResTexrects = 1;
-        else
-            enableNativeResTexrects = 0;
+        enableNativeResTexrects = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-txFilterMode";
@@ -713,70 +683,50 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txFilterIgnoreBG = 0;
-        else
-            txFilterIgnoreBG = 1;
+        // "Filter background textures; True|False" (true=filter, false=ignore)
+        txFilterIgnoreBG = !strcmp(var.value, "False") ? 1 : 0;
     }
 
     var.key = CORE_NAME "-txHiresEnable";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txHiresEnable = 1;
-        else
-            txHiresEnable = 0;
+        txHiresEnable = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-txHiresFullAlphaChannel";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txHiresFullAlphaChannel = 1;
-        else
-            txHiresFullAlphaChannel = 0;
+        txHiresFullAlphaChannel = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableLegacyBlending";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            enableLegacyBlending = 1;
-        else
-            enableLegacyBlending = 0;
+        enableLegacyBlending = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableFragmentDepthWrite";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableFragmentDepthWrite = 1;
-        else
-            EnableFragmentDepthWrite = 0;
+        EnableFragmentDepthWrite = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableShadersStorage";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableShadersStorage = 1;
-        else
-            EnableShadersStorage = 0;
+        EnableShadersStorage = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-CropMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Auto"))
-            CropMode = 1;
-        else
-            CropMode = 0;
+        CropMode = !strcmp(var.value, "Auto") ? 1 : 0;
     }
 
     var.key = CORE_NAME "-cpucore";
@@ -807,10 +757,7 @@ void update_variables()
         }
     }
 
-    if (AspectRatio == 1)
-        var.key = CORE_NAME "-43screensize";
-    else
-        var.key = CORE_NAME "-169screensize";
+    var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -837,9 +784,7 @@ void update_variables()
     {
         CountPerOp = 1; // Force CountPerOp == 1
         if(!EnableFBEmulation)
-        {
             EnableFrameDuping = 1;
-        }
     }
 
     var.key = CORE_NAME "-r-cbutton";
