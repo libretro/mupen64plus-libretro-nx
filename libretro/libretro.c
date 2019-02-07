@@ -271,26 +271,26 @@ static bool emu_step_load_data()
 {
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", "Core", n64DebugCallback, 0, 0);
     if(ret && log_cb)
-        log_cb(RETRO_LOG_ERROR, CORE_NAME ": Failed to initialize core %i\n", ret);
+        log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
 
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_ROM_OPEN\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_OPEN\n");
 
     if(CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": Failed to load ROM\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load ROM\n");
         goto load_fail;
     }
 
     free(game_data);
     game_data = NULL;
 
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_ROM_GET_HEADER\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_GET_HEADER\n");
 
     if(CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(ROM_HEADER), &ROM_HEADER))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME "; Failed to query ROM header information\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to query ROM header information\n");
         goto load_fail;
     }
 
@@ -316,7 +316,7 @@ static void emu_step_initialize(void)
 
 static void EmuThreadFunction(void)
 {
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
@@ -812,7 +812,6 @@ void update_variables()
     else
         var.key = CORE_NAME "-169screensize";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
@@ -820,13 +819,11 @@ void update_variables()
 
     var.key = CORE_NAME "-astick-deadzone";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
 
     var.key = CORE_NAME "-astick-sensitivity";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
 
@@ -836,7 +833,6 @@ void update_variables()
     {
         CountPerOp = atoi(var.value);
     }
-
     if(EnableFullspeed)
     {
         CountPerOp = 1; // Force CountPerOp == 1
@@ -848,7 +844,6 @@ void update_variables()
 
     var.key = CORE_NAME "-r-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -863,7 +858,6 @@ void update_variables()
 
     var.key = CORE_NAME "-l-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -878,7 +872,6 @@ void update_variables()
 
     var.key = CORE_NAME "-d-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -893,7 +886,6 @@ void update_variables()
 
     var.key = CORE_NAME "-u-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -905,6 +897,7 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
+
     update_controllers();
 }
 
@@ -922,7 +915,7 @@ static void format_saved_memory(void)
 static void context_reset(void)
 {
     static bool first_init = true;
-    printf("context_reset.\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": context_reset()\n");
     glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
 
     if (first_init)
@@ -966,7 +959,7 @@ bool retro_load_game(const struct retro_game_info *game)
     if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support.");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
         return false;
     }
 
@@ -1032,7 +1025,6 @@ void *retro_get_memory_data(unsigned type)
         case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
-    
     return NULL;
 }
 
@@ -1043,7 +1035,6 @@ size_t retro_get_memory_size(unsigned type)
         case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
         case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
     }
-    
     return 0;
 }
 
