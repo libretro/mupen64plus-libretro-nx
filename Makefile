@@ -74,6 +74,10 @@ ifneq ($(GIT_VERSION)," unknown")
 	COREFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
 endif
 
+ifneq ($(CORE_NAME),)
+	COREFLAGS += -DCORE_NAME=\""$(CORE_NAME)"\"
+endif
+
 # Linux
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so

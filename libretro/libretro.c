@@ -34,6 +34,10 @@
 
 #include "audio_plugin.h"
 
+#ifndef CORE_NAME
+#define CORE_NAME "mupen64plus"
+#endif
+
 #ifndef PRESCALE_WIDTH
 #define PRESCALE_WIDTH  640
 #endif
@@ -131,7 +135,7 @@ int pad_present[4] = {1, 1, 1, 1};
 static void n64DebugCallback(void* aContext, int aLevel, const char* aMessage)
 {
     char buffer[1024];
-    snprintf(buffer, 1024, "mupen64plus: %s\n", aMessage);
+    snprintf(buffer, 1024, CORE_NAME ": %s\n", aMessage);
     if (log_cb)
         log_cb(RETRO_LOG_INFO, buffer);
 }
@@ -141,106 +145,106 @@ extern m64p_rom_header ROM_HEADER;
 static void setup_variables(void)
 {
     struct retro_variable variables[] = {
-        { "mupen64plus-cpucore",
+        { CORE_NAME "-cpucore",
 #ifdef DYNAREC
             "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
 #else
             "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
-        { "mupen64plus-rspmode",
+        { CORE_NAME "-rspmode",
 #ifndef VC
             "RSP Mode; HLE|LLE" },
 #else
             "RSP Mode; HLE" },
 #endif
-        { "mupen64plus-43screensize",
+        { CORE_NAME "-43screensize",
             "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
-        { "mupen64plus-169screensize",
+        { CORE_NAME "-169screensize",
             "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|2560x1440|3840x2160|7680x4320" },
-        { "mupen64plus-aspect",
+        { CORE_NAME "-aspect",
             "Aspect Ratio; 4:3|16:9|16:9 adjusted" },
-        { "mupen64plus-BilinearMode",
+        { CORE_NAME "-BilinearMode",
             "Bilinear filtering mode; standard|3point" },
 #ifndef HAVE_OPENGLES2
-        { "mupen64plus-MultiSampling",
+        { CORE_NAME "-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
-        { "mupen64plus-FrameDuping",
+        { CORE_NAME "-FrameDuping",
 #ifdef HAVE_LIBNX
             "Frame Duplication; True|False" },
 #else
             "Frame Duplication; False|True" },
 #endif
-        { "mupen64plus-Framerate",
+        { CORE_NAME "-Framerate",
             "Framerate; Original|Fullspeed" },
-        { "mupen64plus-virefresh",
+        { CORE_NAME "-virefresh",
             "VI Refresh (Overclock); Auto|1500|2200" },
-        { "mupen64plus-NoiseEmulation",
+        { CORE_NAME "-NoiseEmulation",
             "Noise Emulation; True|False" },
-        { "mupen64plus-EnableFBEmulation",
+        { CORE_NAME "-EnableFBEmulation",
             "Framebuffer Emulation; True|False" },
-        { "mupen64plus-EnableLODEmulation",
+        { CORE_NAME "-EnableLODEmulation",
             "LOD Emulation; True|False" },
-        { "mupen64plus-EnableCopyColorToRDRAM",
+        { CORE_NAME "-EnableCopyColorToRDRAM",
 #ifndef HAVE_OPENGLES
             "Color buffer to RDRAM; Async|Sync|Off" },
 #else
             "Color buffer to RDRAM; Off|Async|Sync" },
 #endif
-        { "mupen64plus-EnableCopyDepthToRDRAM",
+        { CORE_NAME "-EnableCopyDepthToRDRAM",
             "Depth buffer to RDRAM; Software|FromMem|Off" },
-        { "mupen64plus-EnableHWLighting",
+        { CORE_NAME "-EnableHWLighting",
             "Hardware per-pixel lighting; False|True" },
-        { "mupen64plus-CorrectTexrectCoords",
+        { CORE_NAME "-CorrectTexrectCoords",
             "Continuous texrect coords; Off|Auto|Force" },
-        { "mupen64plus-EnableNativeResTexrects",
+        { CORE_NAME "-EnableNativeResTexrects",
             "Native res. 2D texrects; False|True" },
 #if defined(HAVE_OPENGLES)
-        { "mupen64plus-EnableLegacyBlending",
+        { CORE_NAME "-EnableLegacyBlending",
             "Less accurate blending mode; True|False" },
-        { "mupen64plus-EnableFragmentDepthWrite",
+        { CORE_NAME "-EnableFragmentDepthWrite",
             "GPU shader depth write; False|True" },
 #else
-        { "mupen64plus-EnableLegacyBlending",
+        { CORE_NAME "-EnableLegacyBlending",
             "Less accurate blending mode; False|True" },
-        { "mupen64plus-EnableFragmentDepthWrite",
+        { CORE_NAME "-EnableFragmentDepthWrite",
             "GPU shader depth write; True|False" },
 #endif
-        { "mupen64plus-EnableShadersStorage",
+        { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
-        { "mupen64plus-CropMode",
+        { CORE_NAME "-CropMode",
             "Crop Mode; Auto|Off" },
-        { "mupen64plus-txFilterMode",
+        { CORE_NAME "-txFilterMode",
             "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
-        { "mupen64plus-txEnhancementMode",
+        { CORE_NAME "-txEnhancementMode",
             "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
-        { "mupen64plus-txFilterIgnoreBG",
+        { CORE_NAME "-txFilterIgnoreBG",
             "Filter background textures; True|False" },
-        { "mupen64plus-txHiresEnable",
+        { CORE_NAME "-txHiresEnable",
             "Use High-Res textures; False|True" },
-        { "mupen64plus-txHiresFullAlphaChannel",
+        { CORE_NAME "-txHiresFullAlphaChannel",
             "Use High-Res Full Alpha Channel; False|True" },
-        {"mupen64plus-astick-deadzone",
+        {CORE_NAME "-astick-deadzone",
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-        {"mupen64plus-astick-sensitivity",
+        {CORE_NAME "-astick-sensitivity",
            "Analog Sensitivity (percent); 100|105|110|115|120|125|130|135|140|145|150|50|55|60|65|70|75|80|85|90|95"},
-        {"mupen64plus-r-cbutton",
+        {CORE_NAME "-r-cbutton",
            "Right C Button; C1|C2|C3|C4"},
-        {"mupen64plus-l-cbutton",
+        {CORE_NAME "-l-cbutton",
            "Left C Button; C2|C3|C4|C1"},
-        {"mupen64plus-d-cbutton",
+        {CORE_NAME "-d-cbutton",
            "Down C Button; C3|C4|C1|C2"},
-        {"mupen64plus-u-cbutton",
+        {CORE_NAME "-u-cbutton",
            "Up C Button; C4|C1|C2|C3"},
-        {"mupen64plus-pak1",
+        {CORE_NAME "-pak1",
            "Player 1 Pak; memory|rumble|none"},
-        {"mupen64plus-pak2",
+        {CORE_NAME "-pak2",
            "Player 2 Pak; none|memory|rumble"},
-        {"mupen64plus-pak3",
+        {CORE_NAME "-pak3",
            "Player 3 Pak; none|memory|rumble"},
-        {"mupen64plus-pak4",
+        {CORE_NAME "-pak4",
            "Player 4 Pak; none|memory|rumble"},
-        { "mupen64plus-CountPerOp",
+        { CORE_NAME "-CountPerOp",
             "Count Per Op; 0|1|2|3" },
         { NULL, NULL },
     };
@@ -267,26 +271,26 @@ static bool emu_step_load_data()
 {
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", "Core", n64DebugCallback, 0, 0);
     if(ret && log_cb)
-        log_cb(RETRO_LOG_ERROR, "mupen64plus: Failed to initialize core %i\n", ret);
+        log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
 
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_ROM_OPEN\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_OPEN\n");
 
     if(CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, "mupen64plus: Failed to load ROM\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load ROM\n");
         goto load_fail;
     }
 
     free(game_data);
     game_data = NULL;
 
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_ROM_GET_HEADER\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_GET_HEADER\n");
 
     if(CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(ROM_HEADER), &ROM_HEADER))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, "mupen64plus; Failed to query ROM header information\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to query ROM header information\n");
         goto load_fail;
     }
 
@@ -312,7 +316,7 @@ static void emu_step_initialize(void)
 
 static void EmuThreadFunction(void)
 {
-    log_cb(RETRO_LOG_INFO, "EmuThread: M64CMD_EXECUTE. \n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
@@ -441,7 +445,7 @@ void retro_deinit(void)
 
 void update_controllers()
 {
-    struct retro_variable pk1var = { "mupen64plus-pak1" };
+    struct retro_variable pk1var = { CORE_NAME "-pak1" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
     {
         int p1_pak = PLUGIN_NONE;
@@ -458,7 +462,7 @@ void update_controllers()
             pad_pak_types[0] = p1_pak;
     }
 
-    struct retro_variable pk2var = { "mupen64plus-pak2" };
+    struct retro_variable pk2var = { CORE_NAME "-pak2" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
     {
         int p2_pak = PLUGIN_NONE;
@@ -473,7 +477,7 @@ void update_controllers()
             pad_pak_types[1] = p2_pak;
     }
 
-    struct retro_variable pk3var = { "mupen64plus-pak3" };
+    struct retro_variable pk3var = { CORE_NAME "-pak3" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
     {
         int p3_pak = PLUGIN_NONE;
@@ -488,7 +492,7 @@ void update_controllers()
             pad_pak_types[2] = p3_pak;
     }
 
-    struct retro_variable pk4var = { "mupen64plus-pak4" };
+    struct retro_variable pk4var = { CORE_NAME "-pak4" };
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
     {
         int p4_pak = PLUGIN_NONE;
@@ -508,94 +512,70 @@ void update_variables()
 {
     struct retro_variable var;
 
-    var.key = "mupen64plus-rspmode";
+    var.key = CORE_NAME "-rspmode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "HLE"))
-            rspMode = 0;
-        else
-            rspMode = 1;
+        rspMode = !strcmp(var.value, "HLE") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-BilinearMode";
+    var.key = CORE_NAME "-BilinearMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "3point"))
-            bilinearMode = 0;
-        else
-            bilinearMode = 1;
+        bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-MultiSampling";
+    var.key = CORE_NAME "-MultiSampling";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         MultiSampling = atoi(var.value);
     }
 
-    var.key = "mupen64plus-FrameDuping";
+    var.key = CORE_NAME "-FrameDuping";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableFrameDuping = 0;
-        else
-            EnableFrameDuping = 1;
+        EnableFrameDuping = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-Framerate";
+    var.key = CORE_NAME "-Framerate";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Original"))
-            EnableFullspeed = 0;
-        else
-            EnableFullspeed = 1;
+        EnableFullspeed = !strcmp(var.value, "Original") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-virefresh";
+    var.key = CORE_NAME "-virefresh";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Auto"))
-            CountPerScanlineOverride = 0;
-        else
-            CountPerScanlineOverride = atoi(var.value);
+        CountPerScanlineOverride = !strcmp(var.value, "Auto") ? 0 : atoi(var.value);
     }
 
-    var.key = "mupen64plus-NoiseEmulation";
+    var.key = CORE_NAME "-NoiseEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableNoiseEmulation = 0;
-        else
-            EnableNoiseEmulation = 1;
+        EnableNoiseEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableLODEmulation";
+    var.key = CORE_NAME "-EnableLODEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableLODEmulation = 0;
-        else
-            EnableLODEmulation = 1;
+        EnableLODEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableFBEmulation";
+    var.key = CORE_NAME "-EnableFBEmulation";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "False"))
-            EnableFBEmulation = 0;
-        else
-            EnableFBEmulation = 1;
+        EnableFBEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableCopyColorToRDRAM";
+    var.key = CORE_NAME "-EnableCopyColorToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -607,7 +587,7 @@ void update_variables()
             EnableCopyColorToRDRAM = 0;
     }
 
-    var.key = "mupen64plus-EnableCopyDepthToRDRAM";
+    var.key = CORE_NAME "-EnableCopyDepthToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -619,17 +599,14 @@ void update_variables()
             EnableCopyDepthToRDRAM = 0;
     }
 
-    var.key = "mupen64plus-EnableHWLighting";
+    var.key = CORE_NAME "-EnableHWLighting";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableHWLighting = 1;
-        else
-            EnableHWLighting = 0;
+        EnableHWLighting = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-CorrectTexrectCoords";
+    var.key = CORE_NAME "-CorrectTexrectCoords";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -641,17 +618,14 @@ void update_variables()
             CorrectTexrectCoords = 0;
     }
 
-    var.key = "mupen64plus-EnableNativeResTexrects";
+    var.key = CORE_NAME "-EnableNativeResTexrects";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            enableNativeResTexrects = 1;
-        else
-            enableNativeResTexrects = 0;
+        enableNativeResTexrects = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-txFilterMode";
+    var.key = CORE_NAME "-txFilterMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -671,7 +645,7 @@ void update_variables()
             txFilterMode = 0;
     }
 
-    var.key = "mupen64plus-txEnhancementMode";
+    var.key = CORE_NAME "-txEnhancementMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -705,77 +679,57 @@ void update_variables()
             txEnhancementMode = 0;
     }
 
-    var.key = "mupen64plus-txFilterIgnoreBG";
+    var.key = CORE_NAME "-txFilterIgnoreBG";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txFilterIgnoreBG = 0;
-        else
-            txFilterIgnoreBG = 1;
+        // "Filter background textures; True|False" (true=filter, false=ignore)
+        txFilterIgnoreBG = !strcmp(var.value, "False") ? 1 : 0;
     }
 
-    var.key = "mupen64plus-txHiresEnable";
+    var.key = CORE_NAME "-txHiresEnable";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txHiresEnable = 1;
-        else
-            txHiresEnable = 0;
+        txHiresEnable = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-txHiresFullAlphaChannel";
+    var.key = CORE_NAME "-txHiresFullAlphaChannel";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            txHiresFullAlphaChannel = 1;
-        else
-            txHiresFullAlphaChannel = 0;
+        txHiresFullAlphaChannel = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableLegacyBlending";
+    var.key = CORE_NAME "-EnableLegacyBlending";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            enableLegacyBlending = 1;
-        else
-            enableLegacyBlending = 0;
+        enableLegacyBlending = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableFragmentDepthWrite";
+    var.key = CORE_NAME "-EnableFragmentDepthWrite";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableFragmentDepthWrite = 1;
-        else
-            EnableFragmentDepthWrite = 0;
+        EnableFragmentDepthWrite = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-EnableShadersStorage";
+    var.key = CORE_NAME "-EnableShadersStorage";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "True"))
-            EnableShadersStorage = 1;
-        else
-            EnableShadersStorage = 0;
+        EnableShadersStorage = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = "mupen64plus-CropMode";
+    var.key = CORE_NAME "-CropMode";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "Auto"))
-            CropMode = 1;
-        else
-            CropMode = 0;
+        CropMode = !strcmp(var.value, "Auto") ? 1 : 0;
     }
 
-    var.key = "mupen64plus-cpucore";
+    var.key = CORE_NAME "-cpucore";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -787,7 +741,7 @@ void update_variables()
              emumode = EMUMODE_DYNAREC;
     }
 
-    var.key = "mupen64plus-aspect";
+    var.key = CORE_NAME "-aspect";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
@@ -803,48 +757,38 @@ void update_variables()
         }
     }
 
-    if (AspectRatio == 1)
-        var.key = "mupen64plus-43screensize";
-    else
-        var.key = "mupen64plus-169screensize";
+    var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
     }
 
-    var.key = "mupen64plus-astick-deadzone";
+    var.key = CORE_NAME "-astick-deadzone";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
 
-    var.key = "mupen64plus-astick-sensitivity";
+    var.key = CORE_NAME "-astick-sensitivity";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
 
-    var.key = "mupen64plus-CountPerOp";
+    var.key = CORE_NAME "-CountPerOp";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         CountPerOp = atoi(var.value);
     }
-
     if(EnableFullspeed)
     {
         CountPerOp = 1; // Force CountPerOp == 1
         if(!EnableFBEmulation)
-        {
             EnableFrameDuping = 1;
-        }
     }
 
-    var.key = "mupen64plus-r-cbutton";
+    var.key = CORE_NAME "-r-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -857,9 +801,8 @@ void update_variables()
             r_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "mupen64plus-l-cbutton";
+    var.key = CORE_NAME "-l-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -872,9 +815,8 @@ void update_variables()
             l_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "mupen64plus-d-cbutton";
+    var.key = CORE_NAME "-d-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -887,9 +829,8 @@ void update_variables()
             d_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
 
-    var.key = "mupen64plus-u-cbutton";
+    var.key = CORE_NAME "-u-cbutton";
     var.value = NULL;
-
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "C1"))
@@ -901,6 +842,7 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
+
     update_controllers();
 }
 
@@ -918,7 +860,7 @@ static void format_saved_memory(void)
 static void context_reset(void)
 {
     static bool first_init = true;
-    printf("context_reset.\n");
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": context_reset()\n");
     glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
 
     if (first_init)
@@ -962,7 +904,7 @@ bool retro_load_game(const struct retro_game_info *game)
     if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, "mupen64plus: libretro frontend doesn't have OpenGL support.");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
         return false;
     }
 
@@ -1028,7 +970,6 @@ void *retro_get_memory_data(unsigned type)
         case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
-    
     return NULL;
 }
 
@@ -1039,7 +980,6 @@ size_t retro_get_memory_size(unsigned type)
         case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
         case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
     }
-    
     return 0;
 }
 
