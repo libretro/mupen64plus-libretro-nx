@@ -44,6 +44,11 @@ FrameBuffer::FrameBuffer() :
 
 FrameBuffer::~FrameBuffer()
 {
+    for (u32 i = 0; i < 8; ++i) {
+		if (gDP.tiles[i].frameBuffer == this)
+			gDP.tiles[i].frameBuffer = nullptr;
+	}
+    
 	if (m_FBO != 0)
 		glDeleteFramebuffers(1, &m_FBO);
 	if (m_pTexture != nullptr)
