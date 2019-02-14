@@ -80,5 +80,6 @@ LOCAL_LDLIBS           := -lz -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := png
 LOCAL_CPP_FEATURES     := exceptions
 LOCAL_ARM_NEON         := true
+LOCAL_CONLYFLAGS       := -std=gnu11
 
 include $(BUILD_SHARED_LIBRARY)
