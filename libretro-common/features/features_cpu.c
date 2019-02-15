@@ -68,7 +68,6 @@
 #if defined(PS2)
 #include <kernel.h>
 #include <timer.h>
-#include <SDL/SDL.h>
 #endif
 
 #if defined(__PSL1GHT__)
@@ -128,7 +127,6 @@ static int ra_clock_gettime(int clk_ik, struct timespec *t)
 #define ra_clock_gettime clock_gettime
 #endif
 
-
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
 #endif
@@ -174,9 +172,9 @@ retro_perf_tick_t cpu_features_get_perf_counter(void)
       time_ticks = (retro_perf_tick_t)tv.tv_sec * 1000000000 +
          (retro_perf_tick_t)tv.tv_nsec;
 
-#elif defined(__GNUC__) && defined(__i386__) || defined(__i486__) || defined(__i686__)
+#elif defined(__GNUC__) && defined(__i386__) || defined(__i486__) || defined(__i686__) || defined(_M_X64) || defined(_M_AMD64)
    __asm__ volatile ("rdtsc" : "=A" (time_ticks));
-#elif defined(__GNUC__) && defined(__x86_64__)
+#elif defined(__GNUC__) && defined(__x86_64__) || defined(_M_IX86)
    unsigned a, d;
    __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
    time_ticks = (retro_perf_tick_t)a | ((retro_perf_tick_t)d << 32);
@@ -191,7 +189,7 @@ retro_perf_tick_t cpu_features_get_perf_counter(void)
 #elif defined(VITA)
    sceRtcGetCurrentTick((SceRtcTick*)&time_ticks);
 #elif defined(PS2)
-   time_ticks = SDL_GetTicks()*294912; // 294,912MHZ / 1000 msecs
+   time_ticks = clock()*294912; // 294,912MHZ / 1000 msecs
 #elif defined(_3DS)
    time_ticks = svcGetSystemTick();
 #elif defined(WIIU)
@@ -200,6 +198,8 @@ retro_perf_tick_t cpu_features_get_perf_counter(void)
    struct timeval tv;
    gettimeofday(&tv,NULL);
    time_ticks = (1000000 * tv.tv_sec + tv.tv_usec);
+#elif defined(HAVE_LIBNX)
+   time_ticks = armGetSystemTick();
 #endif
 
    return time_ticks;
@@ -241,7 +241,7 @@ retro_time_t cpu_features_get_time_usec(void)
 #elif defined(EMSCRIPTEN)
    return emscripten_get_now() * 1000;
 #elif defined(PS2)
-      return SDL_GetTicks()*1000;
+      return clock()*1000;
 #elif defined(__mips__) || defined(DJGPP)
    struct timeval tv;
    gettimeofday(&tv,NULL);
@@ -485,7 +485,7 @@ unsigned cpu_features_get_core_amount(void)
 #if defined(_WIN32) && !defined(_XBOX)
    /* Win32 */
    SYSTEM_INFO sysinfo;
-#ifdef __WINRT__
+#if defined(__WINRT__) || defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
    GetNativeSystemInfo(&sysinfo);
 #else
    GetSystemInfo(&sysinfo);
@@ -509,13 +509,13 @@ unsigned cpu_features_get_core_amount(void)
 		case 3:
 			/*Old 3/2DS*/
 			return 2;
-	   
+
 		case 2:
 		case 4:
 		case 5:
 			/*New 3/2DS*/
 			return 4;
-	   
+
 		default:
 			/*Unknown Device Or Check Failed*/
 			break;
@@ -708,7 +708,6 @@ uint64_t cpu_features_get(void)
       cpu |= RETRO_SIMD_MMXEXT;
    }
 
-
    if (flags[3] & (1 << 26))
       cpu |= RETRO_SIMD_SSE2;
 
@@ -732,7 +731,6 @@ uint64_t cpu_features_get(void)
 
    if (flags[2] & (1 << 25))
       cpu |= RETRO_SIMD_AES;
-
 
    /* Must only perform xgetbv check if we have
     * AVX CPU support (guaranteed to have at least i686). */
