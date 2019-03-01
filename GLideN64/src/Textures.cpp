@@ -18,6 +18,8 @@
 #include "GLideNHQ/Ext_TxFilter.h"
 #include "TextureFilterHandler.h"
 
+#include "../../../custom/GLideN64/GLideN64_libretro.h"
+
 #ifdef HAVE_LIBNX
 #include <switch.h>
 #endif
@@ -526,14 +528,7 @@ void TextureCache::destroy()
 
 void TextureCache::_checkCacheSize()
 {
-#ifdef VC
-	const size_t maxCacheSize = 15000;
-#elif defined(HAVE_LIBNX)
-	const size_t maxCacheSize = 4000;
-#else
-	const size_t maxCacheSize = 16384;
-#endif
-	if (m_textures.size() >= maxCacheSize) {
+	if (m_textures.size() >= MaxTxCacheSize) {
 		CachedTexture& clsTex = m_textures.back();
 		m_cachedBytes -= clsTex.textureBytes;
 		glDeleteTextures(1, &clsTex.glName);
