@@ -97,6 +97,7 @@ uint32_t enableLegacyBlending = 0;
 uint32_t EnableCopyColorToRDRAM = 0;
 uint32_t EnableCopyDepthToRDRAM = 0;
 uint32_t AspectRatio = 0;
+uint32_t MaxTxCacheSize = 0;
 uint32_t txFilterMode = 0;
 uint32_t txEnhancementMode = 0;
 uint32_t txHiresEnable = 0;
@@ -214,6 +215,14 @@ static void setup_variables(void)
             "Cache GPU Shaders; True|False" },
         { CORE_NAME "-CropMode",
             "Crop Mode; Auto|Off" },
+        { CORE_NAME "-MaxTxCacheSize",
+#if defined(VC)
+            "Max texture cache size; 1500|8000|4000" },
+#elif defined(HAVE_LIBNX)
+            "Max texture cache size; 4000|1500|8000" },
+#else
+            "Max texture cache size; 8000|4000|1500" },
+#endif
         { CORE_NAME "-txFilterMode",
             "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
         { CORE_NAME "-txEnhancementMode",
@@ -699,6 +708,13 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         txHiresFullAlphaChannel = !strcmp(var.value, "False") ? 0 : 1;
+    }
+
+    var.key = CORE_NAME "-MaxTxCacheSize";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        MaxTxCacheSize = atoi(var.value);
     }
 
     var.key = CORE_NAME "-EnableLegacyBlending";
