@@ -153,11 +153,7 @@ static void setup_variables(void)
             "CPU Core; cached_interpreter|pure_interpreter" },
 #endif
         { CORE_NAME "-rspmode",
-#ifndef VC
-            "RSP Mode; HLE|LLE" },
-#else
             "RSP Mode; HLE" },
-#endif
         { CORE_NAME "-43screensize",
             "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
         { CORE_NAME "-169screensize",
