@@ -976,7 +976,7 @@ void retro_run (void)
 
 void retro_reset (void)
 {
-    CoreDoCommand(M64CMD_RESET, 1, (void*)0);
+    CoreDoCommand(M64CMD_RESET, 0, (void*)0);
 }
 
 void *retro_get_memory_data(unsigned type)
