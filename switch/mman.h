@@ -47,8 +47,8 @@ static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, of
         dynarec_jit.rx_addr = jit_rx_addr;
         jit_rw_addr = jitGetRwAddr(&dynarec_jit);
         jit_dynrec = (u_char*)jit_rw_addr;
-        printf("Jit Initialized: RX %p, RW %p\n", jit_rx_addr, jit_rw_addr);
-        printf("Transition to executable\n");
+        printf("[NXJIT]: Jit Initialized: RX %p, RW %p\n", jit_rx_addr, jit_rw_addr);
+        printf("[NXJIT]: Transition to executable\n");
         jitTransitionToExecutable(&dynarec_jit);
         jit_is_executable = true;
 
@@ -56,7 +56,7 @@ static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, of
     }
     else
     {
-        printf("Jit failed!\n");
+        printf("[NXJIT]: Jit failed!\n");
         return (void*)-1;
     }
 }
@@ -64,7 +64,7 @@ static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, of
 static inline void jit_force_writeable()
 {
   if(jit_is_executable){
-    //printf("Setting the CodeMemory writable\n");
+    //printf("[NXJIT]: Setting the CodeMemory writable\n");
     svcSetProcessMemoryPermission(envGetOwnProcessHandle(), (u64) jit_rx_addr, jit_len, Perm_Rw);
     jit_is_executable = false;
   }
@@ -73,7 +73,7 @@ static inline void jit_force_writeable()
 static inline void jit_force_executable()
 {
   if(!jit_is_executable){
-    //printf("Transition to executable\n");
+    //printf("[NXJIT]: Transition to executable\n");
     jitTransitionToWritable(&dynarec_jit);
     jitTransitionToExecutable(&dynarec_jit);
     jit_is_executable = true;

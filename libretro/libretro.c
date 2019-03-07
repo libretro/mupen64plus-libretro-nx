@@ -446,6 +446,7 @@ void retro_init(void)
 void retro_deinit(void)
 {
     CoreDoCommand(M64CMD_STOP, 0, NULL);
+    co_switch(game_thread); /* Let the core thread finish */
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -936,25 +937,8 @@ bool retro_load_game(const struct retro_game_info *game)
     return true;
 }
 
-#ifdef HAVE_LIBNX
-extern Jit dynarec_jit;
-extern void *jit_rw_buffer;
-extern void *jit_old_addr;
-#endif
 void retro_unload_game(void)
 {
-#if defined(HAVE_LIBNX) && defined(DYNAREC)
-    jitTransitionToWritable(&dynarec_jit);
-    if(jit_old_addr != 0)
-        dynarec_jit.rx_addr = jit_old_addr;
-    jit_old_addr = 0;
-    jitClose(&dynarec_jit);
-
-    if(jit_rw_buffer != 0)
-        free(jit_rw_buffer);
-
-    jit_rw_buffer = 0;
-#endif
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
     emu_initialized = false;
 }
