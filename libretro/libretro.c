@@ -74,6 +74,12 @@ int l_cbutton;
 int d_cbutton;
 int u_cbutton;
 
+uint32_t *blitter_buf = NULL;
+uint32_t *blitter_buf_lock = NULL;
+uint32_t screen_width = 640;
+uint32_t screen_height = 480;
+uint32_t screen_pitch = 0;
+
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
 
@@ -379,11 +385,11 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-    info->geometry.base_width   = retro_screen_width;
-    info->geometry.base_height  = retro_screen_height;
-    info->geometry.max_width    = retro_screen_width;
-    info->geometry.max_height   = retro_screen_height;
-    info->geometry.aspect_ratio = retro_screen_aspect;
+    info->geometry.base_width   = screen_width;
+    info->geometry.base_height  = screen_height;
+    info->geometry.max_width    = screen_width;
+    info->geometry.max_height   = screen_height;
+    info->geometry.aspect_ratio =  4.0 / 3.0;
     info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
 }
@@ -435,6 +441,9 @@ void retro_init(void)
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
     initializing = true;
 
+    blitter_buf = (uint32_t*)calloc(PRESCALE_WIDTH * PRESCALE_HEIGHT, sizeof(uint32_t));
+    blitter_buf_lock = blitter_buf;
+
     retro_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
 }
@@ -444,6 +453,9 @@ void retro_deinit(void)
     CoreDoCommand(M64CMD_STOP, 0, NULL);
     co_switch(game_thread); /* Let the core thread finish */
     deinit_audio_libretro();
+
+	if (blitter_buf)
+        free(blitter_buf);
 
     if (perf_cb.perf_log)
         perf_cb.perf_log();
@@ -774,7 +786,9 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
+        sscanf(var.value, "%dx%d", &screen_width, &screen_height);
+        screen_width = 640;
+        screen_height = 480;
     }
 
     var.key = CORE_NAME "-astick-deadzone";
@@ -874,11 +888,11 @@ static void context_reset(void)
 {
     static bool first_init = true;
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": context_reset()\n");
-    glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
+    //glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
 
     if (first_init)
     {
-        glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
+        //glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
         first_init = false;
     }
 
@@ -887,7 +901,7 @@ static void context_reset(void)
 
 static void context_destroy(void)
 {
-    glsm_ctl(GLSM_CTL_STATE_CONTEXT_DESTROY, NULL);
+   // glsm_ctl(GLSM_CTL_STATE_CONTEXT_DESTROY, NULL);
 }
 
 static bool context_framebuffer_lock(void *data)
@@ -899,7 +913,6 @@ static bool context_framebuffer_lock(void *data)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
-    glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables();
@@ -907,19 +920,6 @@ bool retro_load_game(const struct retro_game_info *game)
 
     init_audio_libretro(audio_buffer_size);
 
-    params.context_reset         = context_reset;
-    params.context_destroy       = context_destroy;
-    params.environ_cb            = environ_cb;
-    params.stencil               = false;
-
-    params.framebuffer_lock      = context_framebuffer_lock;
-
-    if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
-    {
-        if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
-        return false;
-    }
 
     game_data = malloc(game->size);
     memcpy(game_data, game->data, game->size);
@@ -928,7 +928,7 @@ bool retro_load_game(const struct retro_game_info *game)
     if (!emu_step_load_data())
         return false;
 
-    first_context_reset = true;
+    emu_step_initialize();
 
     return true;
 }
@@ -945,13 +945,11 @@ void retro_run (void)
     static bool updated = false;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
         update_controllers();
-    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+        
+    //glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     co_switch(game_thread);
-    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-    if (libretro_swap_buffer)
-        video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-    else if(EnableFrameDuping)
-        video_cb(NULL, retro_screen_width, retro_screen_height, 0);
+    //glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    video_cb(blitter_buf_lock, screen_width, screen_height, screen_pitch);
 }
 
 void retro_reset (void)
@@ -1092,12 +1090,12 @@ void retro_return(void)
 
 uint32_t get_retro_screen_width()
 {
-    return retro_screen_width;
+    return screen_width;
 }
 
 uint32_t get_retro_screen_height()
 {
-    return retro_screen_height;
+    return screen_height;
 }
 
 static int GamesharkActive = 0;

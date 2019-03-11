@@ -162,6 +162,8 @@ else ifeq ($(platform), libnx)
    GLES = 0
    WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
+   LLE = 1
+   HAVE_ANGRYLION_THR = 1
 
 # 64 bit ODROIDs
 else ifneq (,$(findstring odroid64,$(platform)))
@@ -339,6 +341,8 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
+   LLE = 1
+   HAVE_ANGRYLION_THR = 1
    ifneq (,$(findstring win32,$(platform)))
       CC = i686-w64-mingw32-gcc
       CXX = i686-w64-mingw32-g++
@@ -368,11 +372,19 @@ endif
 
 include Makefile.common
 
+ifeq ($(LLE), 1)
+   COREFLAGS += -DHAVE_LLE
+endif
+
+ifeq ($(HAVE_ANGRYLION_THR), 1)
+   COREFLAGS += -DHAVE_THR_AL
+endif
+
 ifeq ($(HAVE_NEON), 1)
    COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
 endif
 
-COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
+COREFLAGS += -D__LIBRETRO__ -DLIBRETRO -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
 
 ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g

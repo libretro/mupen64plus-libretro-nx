@@ -4,6 +4,7 @@ CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
 LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
+VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion-thr
 
 DYNAREC_USED := 0
 
@@ -26,19 +27,8 @@ ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
 endif
 
-ifeq ($(LLE), 1)
-SOURCES_C += \
-	$(ROOT_DIR)/custom/mupen64plus-rsp-cxd4/module.c \
-	$(CXD4DIR)/su.c \
-	$(CXD4DIR)/vu/add.c \
-	$(CXD4DIR)/vu/divide.c \
-	$(CXD4DIR)/vu/logical.c \
-	$(CXD4DIR)/vu/multiply.c \
-	$(CXD4DIR)/vu/select.c \
-	$(CXD4DIR)/vu/vu.c
-endif
 
-SOURCES_C = \
+SOURCES_C += \
 	$(CORE_DIR)/src/asm_defines/asm_defines.c \
 	$(CORE_DIR)/src/api/callbacks.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/config.c \
@@ -290,6 +280,17 @@ SOURCES_C += \
 	$(RSPDIR)/src/musyx.c \
 	$(RSPDIR)/src/re2.c \
 	$(RSPDIR)/src/plugin.c
+
+ifeq ($(LLE), 1)
+	SOURCES_C += $(CXD4DIR)/rsp.c
+endif
+
+ifeq ($(HAVE_ANGRYLION_THR), 1)
+	SOURCES_CXX += $(VIDEODIR_ANGRYLION)/interface.cpp \
+				$(VIDEODIR_ANGRYLION)/parallel_al.cpp
+	SOURCES_C += $(VIDEODIR_ANGRYLION)/n64video.c \
+				$(VIDEODIR_ANGRYLION)/screen.c 
+endif
 
 SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
 
