@@ -163,6 +163,28 @@ else ifeq ($(platform), libnx)
    WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
 
+# 64 bit ODROIDs
+else ifneq (,$(findstring odroid64,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   BOARD := $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
+   GLES = 1
+   GL_LIB := -lGLESv2
+   WITH_DYNAREC := aarch64
+   ifneq (,$(findstring C2,$(BOARD)))
+      # ODROID-C2
+      CPUFLAGS += -mcpu=cortex-a53
+   else ifneq (,$(findstring N1,$(BOARD)))
+      # ODROID-N1
+      CPUFLAGS += -mcpu=cortex-a72.cortex-a53
+   else ifneq (,$(findstring N2,$(BOARD)))
+      # ODROID-N2
+      CPUFLAGS += -mcpu=cortex-a73.cortex-a53
+   endif
+
+   COREFLAGS += -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
+
 # ODROIDs
 else ifneq (,$(findstring odroid,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
