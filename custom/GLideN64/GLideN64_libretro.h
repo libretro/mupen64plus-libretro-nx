@@ -38,15 +38,6 @@ typedef char GLchar;
 #endif // OS_MAC_OS_X
 #endif // GLES2
 
-#ifdef __cplusplus
-struct GLState {
-	GLState() { reset(); }
-	void reset();
-};
-
-extern GLState glState;
-#endif
-
 extern uint32_t bilinearMode;
 extern uint32_t EnableHWLighting;
 extern uint32_t CorrectTexrectCoords;

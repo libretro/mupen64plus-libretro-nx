@@ -24,12 +24,16 @@
 #include <stdlib.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
+#include <GLideN64_libretro.h>
 
 #ifndef GL_DEPTH_CLAMP
 #define GL_DEPTH_CLAMP                    0x864F
 #define GL_RASTERIZER_DISCARD             0x8C89
 #define GL_SAMPLE_MASK                    0x8E51
 #endif
+
+#define MAX_FRAMEBUFFERS 128000
+#define MAX_UNIFORMS 1024
 
 #if 0
 extern retro_log_printf_t log_cb;
@@ -40,8 +44,10 @@ struct gl_cached_state
 {
    struct
    {
-      GLuint *ids;
+      GLuint ids[32];
+      GLenum target[32];
    } bind_textures;
+
 
    struct
    {
@@ -62,6 +68,11 @@ struct gl_cached_state
    {
       bool enabled[MAX_ATTRIB];
    } vertex_attrib_pointer;
+   
+   struct
+   {
+      GLuint array;
+    } bindvertex;
 
    struct
    {
@@ -190,8 +201,13 @@ struct gl_cached_state
       GLenum mode;
    } readbuffer;
 
+   struct
+   {
+      GLuint location;
+      GLuint desired_location;
+   } framebuf[2];
+
    GLuint vao;
-   GLuint framebuf;
    GLuint array_buffer;
    GLuint program;
    GLenum active_texture;
@@ -199,10 +215,61 @@ struct gl_cached_state
    int cap_translate[SGL_CAP_MAX];
 };
 
+struct gl_program_uniforms
+{
+   GLfloat uniform1f;
+   GLfloat uniform2f[2];
+   GLfloat uniform3f[3];
+   GLfloat uniform4f[4];
+   GLint uniform1i;
+   GLint uniform2i[2];
+   GLint uniform3i[3];
+   GLint uniform4i[4];
+};
+
+struct gl_framebuffers
+{
+   int draw_buf_set;
+   GLuint color_attachment;
+   GLuint depth_attachment;
+   GLenum target;
+};
+
 static GLuint default_framebuffer;
 static GLint glsm_max_textures;
 struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
+
+static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
+static struct gl_framebuffers* framebuffers[MAX_FRAMEBUFFERS];
+
+static GLenum active_texture;
+static int window_first = 0;
+static int resetting_context = 0;
+extern void retroChangeWindow();
+
+void bindFBO(GLenum target)
+{
+#ifdef HAVE_OPENGLES2
+   if (target == GL_FRAMEBUFFER && (gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location || gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location))
+   {
+      glBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
+      gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
+      gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
+   }
+#else
+   if ((target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER) && gl_state.framebuf[0].desired_location != gl_state.framebuf[0].location)
+   {
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gl_state.framebuf[0].desired_location);
+      gl_state.framebuf[0].location = gl_state.framebuf[0].desired_location;
+   }
+   else if (target == GL_READ_FRAMEBUFFER && gl_state.framebuf[1].desired_location != gl_state.framebuf[1].location)
+   {
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, gl_state.framebuf[1].desired_location);
+      gl_state.framebuf[1].location = gl_state.framebuf[1].desired_location;
+   }
+#endif
+}
 
 /* GL wrapper-side */
 
@@ -281,6 +348,7 @@ void rglBindSampler(	GLuint unit,
  */
 void rglClear(GLbitfield mask)
 {
+   bindFBO(GL_FRAMEBUFFER);
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glClear.\n");
 #endif
@@ -377,11 +445,27 @@ void rglBlitFramebuffer(
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBlitFramebuffer.\n");
 #endif
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
-         dstX0, dstY0, dstX1, dstY1,
-         mask, filter);
+#ifndef HAVE_OPENGLES2
+   bindFBO(GL_DRAW_FRAMEBUFFER);
+   bindFBO(GL_READ_FRAMEBUFFER);
+   glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
 #endif
+}
+
+void rglReadPixels(	GLint x,
+ 	GLint y,
+ 	GLsizei width,
+ 	GLsizei height,
+ 	GLenum format,
+ 	GLenum type,
+ 	GLvoid * data)
+{
+#ifdef HAVE_OPENGLES2
+   bindFBO(GL_FRAMEBUFFER);
+#else
+   bindFBO(GL_READ_FRAMEBUFFER);
+#endif
+   glReadPixels(x, y, width, height, format, type, data);
 }
 
 /*
@@ -518,9 +602,10 @@ void rglCullFace(GLenum mode)
    log_cb(RETRO_LOG_INFO, "glCullFace.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glCullFace(mode);
-   gl_state.cullface.used = true;
-   gl_state.cullface.mode = mode;
+   if (gl_state.cullface.mode != mode) {
+      glCullFace(mode);
+      gl_state.cullface.mode = mode;
+   }
 }
 
 /*
@@ -533,11 +618,14 @@ void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glStencilOp.\n");
 #endif
-   glStencilOp(sfail, dpfail, dppass);
+
    gl_state.stencilop.used   = true;
-   gl_state.stencilop.sfail  = sfail;
-   gl_state.stencilop.dpfail = dpfail;
-   gl_state.stencilop.dppass = dppass;
+   if (gl_state.stencilop.sfail != sfail || gl_state.stencilop.dpfail != dpfail || gl_state.stencilop.dppass != dppass) {
+      glStencilOp(sfail, dpfail, dppass);
+      gl_state.stencilop.sfail  = sfail;
+      gl_state.stencilop.dpfail = dpfail;
+      gl_state.stencilop.dppass = dppass;
+   }
 }
 
 /*
@@ -550,11 +638,13 @@ void rglStencilFunc(GLenum func, GLint ref, GLuint mask)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glStencilFunc.\n");
 #endif
-   glStencilFunc(func, ref, mask);
    gl_state.stencilfunc.used = true;
-   gl_state.stencilfunc.func = func;
-   gl_state.stencilfunc.ref  = ref;
-   gl_state.stencilfunc.mask = mask;
+   if (gl_state.stencilfunc.func != func || gl_state.stencilfunc.ref != ref || gl_state.stencilfunc.mask != mask) {
+      glStencilFunc(func, ref, mask);
+      gl_state.stencilfunc.func = func;
+      gl_state.stencilfunc.ref  = ref;
+      gl_state.stencilfunc.mask = mask;
+   }
 }
 
 /*
@@ -582,11 +672,13 @@ void rglClearColor(GLclampf red, GLclampf green,
    log_cb(RETRO_LOG_INFO, "glClearColor.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glClearColor(red, green, blue, alpha);
-   gl_state.clear_color.r = red;
-   gl_state.clear_color.g = green;
-   gl_state.clear_color.b = blue;
-   gl_state.clear_color.a = alpha;
+   if (gl_state.clear_color.r != red || gl_state.clear_color.g != green || gl_state.clear_color.b != blue || gl_state.clear_color.a != alpha) {
+      glClearColor(red, green, blue, alpha);
+      gl_state.clear_color.r = red;
+      gl_state.clear_color.g = green;
+      gl_state.clear_color.b = blue;
+      gl_state.clear_color.a = alpha;
+   }
 }
 
 /*
@@ -600,12 +692,14 @@ void rglScissor(GLint x, GLint y, GLsizei width, GLsizei height)
    log_cb(RETRO_LOG_INFO, "glScissor.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glScissor(x, y, width, height);
    gl_state.scissor.used = true;
-   gl_state.scissor.x    = x;
-   gl_state.scissor.y    = y;
-   gl_state.scissor.w    = width;
-   gl_state.scissor.h    = height;
+   if (gl_state.scissor.x != x || gl_state.scissor.y != y || gl_state.scissor.w != width || gl_state.scissor.h != height) {
+      glScissor(x, y, width, height);
+      gl_state.scissor.x = x;
+      gl_state.scissor.y = y;
+      gl_state.scissor.w = width;
+      gl_state.scissor.h = height;
+   }
 }
 
 /*
@@ -619,11 +713,14 @@ void rglViewport(GLint x, GLint y, GLsizei width, GLsizei height)
    log_cb(RETRO_LOG_INFO, "glViewport.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glViewport(x, y, width, height);
-   gl_state.viewport.x = x;
-   gl_state.viewport.y = y;
-   gl_state.viewport.w = width;
-   gl_state.viewport.h = height;
+
+   if (gl_state.viewport.x != x || gl_state.viewport.y != y || gl_state.viewport.w != width || gl_state.viewport.h != height) {
+      glViewport(x, y, width, height);
+      gl_state.viewport.x = x;
+      gl_state.viewport.y = y;
+      gl_state.viewport.w = width;
+      gl_state.viewport.h = height;
+   }
 }
 
 void rglBlendFunc(GLenum sfactor, GLenum dfactor)
@@ -631,11 +728,12 @@ void rglBlendFunc(GLenum sfactor, GLenum dfactor)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBlendFunc.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.blendfunc.used    = true;
-   gl_state.blendfunc.sfactor = sfactor;
-   gl_state.blendfunc.dfactor = dfactor;
-   glBlendFunc(sfactor, dfactor);
+   gl_state.blendfunc.used = true;
+   if (gl_state.blendfunc.sfactor != sfactor || gl_state.blendfunc.dfactor != dfactor) {
+      glBlendFunc(sfactor, dfactor);
+      gl_state.blendfunc.sfactor = sfactor;
+      gl_state.blendfunc.dfactor = dfactor;
+   }
 }
 
 /*
@@ -670,8 +768,10 @@ void rglActiveTexture(GLenum texture)
    log_cb(RETRO_LOG_INFO, "glActiveTexture.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glActiveTexture(texture);
-   gl_state.active_texture = texture - GL_TEXTURE0;
+   if (active_texture != texture - GL_TEXTURE0) {
+      glActiveTexture(texture);
+      active_texture = texture - GL_TEXTURE0;
+   }
 }
 
 /*
@@ -685,8 +785,12 @@ void rglBindTexture(GLenum target, GLuint texture)
    log_cb(RETRO_LOG_INFO, "glBindTexture.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindTexture(target, texture);
-   gl_state.bind_textures.ids[gl_state.active_texture] = texture;
+   if (gl_state.bind_textures.ids[active_texture] != texture || gl_state.bind_textures.target[active_texture] != target) {
+      bindFBO(GL_FRAMEBUFFER);
+      glBindTexture(target, texture);
+      gl_state.bind_textures.ids[active_texture] = texture;
+      gl_state.bind_textures.target[active_texture] = target;
+   }
 }
 
 /*
@@ -697,7 +801,7 @@ void rglBindTexture(GLenum target, GLuint texture)
 void rglDisable(GLenum cap)
 {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDisable.\n");
+   log_cb(RETRO_LOG_INFO, "glDisable. %x\n", cap);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
    glDisable(gl_state.cap_translate[cap]);
@@ -712,7 +816,7 @@ void rglDisable(GLenum cap)
 void rglEnable(GLenum cap)
 {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glEnable.\n");
+   log_cb(RETRO_LOG_INFO, "glEnable. %x\n", cap);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
    glEnable(gl_state.cap_translate[cap]);
@@ -731,8 +835,12 @@ void rglUseProgram(GLuint program)
    log_cb(RETRO_LOG_INFO, "glUseProgram.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.program = program;
-   glUseProgram(program);
+
+   if(gl_state.program != program)
+   {
+      gl_state.program = program;
+      glUseProgram(program);
+   }
 }
 
 /*
@@ -837,7 +945,35 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glFramebufferTexture2D.\n");
 #endif
-   glFramebufferTexture2D(target, attachment, textarget, texture, level);
+   int type;
+   if (target == GL_FRAMEBUFFER)
+      type = 0;
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER)
+      type = 0;
+   else if (target == GL_READ_FRAMEBUFFER)
+      type = 1;
+#endif
+   if (gl_state.framebuf[type].desired_location < MAX_FRAMEBUFFERS) {
+      framebuffers[gl_state.framebuf[type].desired_location]->target = textarget;
+      if (attachment == GL_COLOR_ATTACHMENT0) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != texture) {
+            bindFBO(target);
+            glFramebufferTexture2D(target, attachment, textarget, texture, level);
+            framebuffers[gl_state.framebuf[type].location]->color_attachment = texture;
+         }
+      }
+      else if (attachment == GL_DEPTH_ATTACHMENT) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != texture) {
+            bindFBO(target);
+            glFramebufferTexture2D(target, attachment, textarget, texture, level);
+            framebuffers[gl_state.framebuf[type].location]->depth_attachment = texture;
+         }
+      }
+   } else {
+      bindFBO(target);
+      glFramebufferTexture2D(target, attachment, textarget, texture, level);
+   }
 }
 
 /*
@@ -853,6 +989,7 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glFramebufferTexture.\n");
 #endif
+   bindFBO(target);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
    glFramebufferTexture(target, attachment, texture, level);
 #endif
@@ -863,6 +1000,7 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
  * Core in:
  * OpenGL    : 1.1
  */
+static bool firstarray = false;
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
 #ifdef GLSM_DEBUG
@@ -882,6 +1020,7 @@ void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDrawElements.\n");
 #endif
+   bindFBO(GL_FRAMEBUFFER);
    glDrawElements(mode, count, type, indices);
 }
 
@@ -896,12 +1035,23 @@ void rglCompressedTexImage2D(GLenum target, GLint level,
          width, height, border, imageSize, data);
 }
 
-void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
+void rglDeleteFramebuffers(GLsizei n, const GLuint *_framebuffers)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDeleteFramebuffers.\n");
 #endif
-   glDeleteFramebuffers(n, framebuffers);
+   int i, p;
+   for (i = 0; i < n; ++i) {
+      if (_framebuffers[i] < MAX_FRAMEBUFFERS) {
+         free(framebuffers[_framebuffers[i]]);
+         framebuffers[_framebuffers[i]] = NULL;
+      }
+      for (p = 0; p < 2; ++p) {
+         if (_framebuffers[i] == gl_state.framebuf[p].location)
+            gl_state.framebuf[p].location = 0;
+      }
+   }
+   glDeleteFramebuffers(n, _framebuffers);
 }
 
 void rglDeleteTextures(GLsizei n, const GLuint *textures)
@@ -909,6 +1059,21 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDeleteTextures.\n");
 #endif
+   int i, p;
+   for (i = 0; i < n; ++i) {
+      if (textures[i] == gl_state.bind_textures.ids[active_texture]) {
+         gl_state.bind_textures.ids[active_texture] = 0;
+         gl_state.bind_textures.target[active_texture] = GL_TEXTURE_2D;
+      }
+      for (p = 0; p < MAX_FRAMEBUFFERS; ++p) {
+         if (framebuffers[p] != NULL) {
+            if (framebuffers[p]->color_attachment == textures[i])
+               framebuffers[p]->color_attachment = 0;
+            if (framebuffers[p]->depth_attachment == textures[i])
+               framebuffers[p]->depth_attachment = 0;
+         }
+      }
+   }
    glDeleteTextures(n, textures);
 }
 
@@ -996,6 +1161,7 @@ GLenum rglCheckFramebufferStatus(GLenum target)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glCheckFramebufferStatus.\n");
 #endif
+   bindFBO(target);
    return glCheckFramebufferStatus(target);
 }
 
@@ -1012,7 +1178,35 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glFramebufferRenderbuffer.\n");
 #endif
-   glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+   int type;
+   if (target == GL_FRAMEBUFFER)
+      type = 0;
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER)
+      type = 0;
+   else if (target == GL_READ_FRAMEBUFFER)
+      type = 1;
+#endif
+   if (gl_state.framebuf[type].desired_location < MAX_FRAMEBUFFERS) {
+      framebuffers[gl_state.framebuf[type].desired_location]->target = renderbuffertarget;
+      if (attachment == GL_COLOR_ATTACHMENT0) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->color_attachment != renderbuffer) {
+            bindFBO(target);
+            glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+            framebuffers[gl_state.framebuf[type].location]->color_attachment = renderbuffer;
+         }
+      }
+      else if (attachment == GL_DEPTH_ATTACHMENT) {
+         if (framebuffers[gl_state.framebuf[type].desired_location]->depth_attachment != renderbuffer) {
+            bindFBO(target);
+            glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+            framebuffers[gl_state.framebuf[type].location]->depth_attachment = renderbuffer;
+         }
+      }
+   } else {
+      bindFBO(target);
+      glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+   }
 }
 
 /*
@@ -1765,6 +1959,8 @@ void rglUniform1iv(GLint location,  GLsizei count,  const GLint *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform1iv.\n");
 #endif
+
+   bindFBO(GL_READ_FRAMEBUFFER);
    glUniform1iv(location, count, value);
 }
 
@@ -1775,6 +1971,7 @@ void rglClearBufferfv( 	GLenum buffer,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glClearBufferfv.\n");
 #endif
+   bindFBO(GL_DRAW_FRAMEBUFFER);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
    glClearBufferfv(buffer, drawBuffer, value);
 #endif
@@ -1996,6 +2193,11 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
    log_cb(RETRO_LOG_INFO, "glGenFramebuffers.\n");
 #endif
    glGenFramebuffers(n, ids);
+   int i;
+   for (i = 0; i < n; ++i) {
+      if (ids[i] < MAX_FRAMEBUFFERS)
+         framebuffers[ids[i]] = (struct gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
+   }
 }
 
 /*
@@ -2006,12 +2208,21 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  */
 void rglBindFramebuffer(GLenum target, GLuint framebuffer)
 {
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindFramebuffer.\n");
+   if (framebuffer == 0)
+      framebuffer = default_framebuffer;
+
+   if (target == GL_FRAMEBUFFER) {
+         gl_state.framebuf[0].desired_location = framebuffer;
+         gl_state.framebuf[1].desired_location = framebuffer;
+   }
+#ifndef HAVE_OPENGLES2
+   else if (target == GL_DRAW_FRAMEBUFFER) {
+         gl_state.framebuf[0].desired_location = framebuffer;
+   }
+   else if (target == GL_READ_FRAMEBUFFER) {
+         gl_state.framebuf[1].desired_location = framebuffer;
+   }
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindFramebuffer(target, framebuffer);
-   gl_state.framebuf = framebuffer;
 }
 
 /*
@@ -2026,8 +2237,18 @@ void rglDrawBuffers(GLsizei n, const GLenum *bufs)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDrawBuffers.\n");
 #endif
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glDrawBuffers(n, bufs);
+#ifndef HAVE_OPENGLES2
+   if (gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS) {
+      if (framebuffers[gl_state.framebuf[0].desired_location]->draw_buf_set == 0)
+      {
+         bindFBO(GL_DRAW_FRAMEBUFFER);
+         glDrawBuffers(n, bufs);
+         framebuffers[gl_state.framebuf[0].location]->draw_buf_set = 1;
+      }
+   } else {
+      bindFBO(GL_DRAW_FRAMEBUFFER);
+      glDrawBuffers(n, bufs);
+   }
 #endif
 }
 
@@ -2096,6 +2317,7 @@ void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
  */
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
+   bindFBO(GL_FRAMEBUFFER);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #endif
@@ -2340,7 +2562,9 @@ void rglBindVertexArray(GLuint array)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBindVertexArray.\n");
 #endif
+   bindFBO(GL_FRAMEBUFFER);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+   gl_state.bindvertex.array = array;
    glBindVertexArray(array);
 #endif
 }
@@ -2586,12 +2810,34 @@ static void glsm_state_setup(void)
       gl_state.attrib_pointer.used[i] = 0;
    }
 
+   gl_state.bindvertex.array = 0;
    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
+   if(glsm_max_textures > 32)
+      glsm_max_textures = 32;
 
-   gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
+   for (i = 0; i < glsm_max_textures; ++i) {
+      gl_state.bind_textures.target[i] = GL_TEXTURE_2D;
+      gl_state.bind_textures.ids[i] = 0;
+   }
 
    default_framebuffer                  = glsm_get_current_framebuffer();
-   gl_state.framebuf                    = default_framebuffer;
+
+   gl_state.framebuf[0].location        = default_framebuffer;
+   gl_state.framebuf[1].location        = default_framebuffer;
+   gl_state.framebuf[0].desired_location        = default_framebuffer;
+   gl_state.framebuf[1].desired_location        = default_framebuffer;
+
+   glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+   GLint params;
+   if (!resetting_context)
+      framebuffers[default_framebuffer] = (struct gl_framebuffers*)calloc(1, sizeof(struct gl_framebuffers));
+
+   glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &params);
+   framebuffers[default_framebuffer]->color_attachment = params;
+   glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &params);
+   framebuffers[default_framebuffer]->depth_attachment = params;
+   framebuffers[default_framebuffer]->target = GL_TEXTURE_2D;
+
    gl_state.cullface.mode               = GL_BACK;
    gl_state.frontface.mode              = GL_CCW;
 
@@ -2625,31 +2871,38 @@ static void glsm_state_setup(void)
 static void glsm_state_bind(void)
 {
    unsigned i;
-#ifdef CORE
-   glBindVertexArray(gl_state.vao);
+#ifndef HAVE_OPENGLES2
+   if (gl_state.bindvertex.array != 0) {
+      glBindVertexArray(gl_state.bindvertex.array);
+      gl_state.array_buffer = 0;
+   } else
 #endif
-   glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
-
-   for (i = 0; i < MAX_ATTRIB; i++)
    {
-      if (gl_state.vertex_attrib_pointer.enabled[i])
-         glEnableVertexAttribArray(i);
-      else
-         glDisableVertexAttribArray(i);
-
-      if (gl_state.attrib_pointer.used[i] && gl_state.attrib_pointer.buffer[i] == gl_state.array_buffer)
+      for (i = 0; i < MAX_ATTRIB; i++)
       {
-         glVertexAttribPointer(
+         if (gl_state.vertex_attrib_pointer.enabled[i])
+            glEnableVertexAttribArray(i);
+
+         if (gl_state.attrib_pointer.used[i]) {
+            glVertexAttribPointer(
                i,
                gl_state.attrib_pointer.size[i],
                gl_state.attrib_pointer.type[i],
                gl_state.attrib_pointer.normalized[i],
                gl_state.attrib_pointer.stride[i],
                gl_state.attrib_pointer.pointer[i]);
+         }
       }
-   }
+    }
 
-   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, default_framebuffer);
+   if (EnableFBEmulation) {
+      gl_state.framebuf[0].location = 0;
+      gl_state.framebuf[1].location = 0;
+   } else {
+      glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+      gl_state.framebuf[0].location = default_framebuffer;
+      gl_state.framebuf[1].location = default_framebuffer;
+   }
 
    if (gl_state.blendfunc.used)
       glBlendFunc(
@@ -2729,21 +2982,13 @@ static void glsm_state_bind(void)
             gl_state.stencilfunc.ref,
             gl_state.stencilfunc.mask);
 
-   for (i = 0; i < glsm_max_textures; i ++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[i]);
-   }
-
-   glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
+   glActiveTexture(GL_TEXTURE0 + active_texture);
+   glBindTexture(gl_state.bind_textures.target[active_texture], gl_state.bind_textures.ids[active_texture]);
 }
 
 static void glsm_state_unbind(void)
 {
    unsigned i;
-#ifdef CORE
-   glBindVertexArray(0);
-#endif
    for (i = 0; i < SGL_CAP_MAX; i ++)
    {
       if (gl_state.cap_state[i])
@@ -2791,18 +3036,25 @@ static void glsm_state_unbind(void)
    }
    glActiveTexture(GL_TEXTURE0);
 
-   for (i = 0; i < MAX_ATTRIB; i ++)
-      glDisableVertexAttribArray(i);
+
+#ifndef HAVE_OPENGLES2
+   if (gl_state.bindvertex.array != 0)
+      glBindVertexArray(0);
+   else
+#endif
+   {
+      for (i = 0; i < MAX_ATTRIB; i++)
+      {
+         if (gl_state.vertex_attrib_pointer.enabled[i])
+            glDisableVertexAttribArray(i);
+      }
+    }
 
    glBindFramebuffer(RARCH_GL_FRAMEBUFFER, 0);
 }
 
 static bool glsm_state_ctx_destroy(void *data)
 {
-   if (gl_state.bind_textures.ids)
-      free(gl_state.bind_textures.ids);
-   gl_state.bind_textures.ids = NULL;
-
    return true;
 }
 
@@ -2836,7 +3088,7 @@ static bool glsm_state_ctx_init(glsm_ctx_params_t *params)
    hw_render.stencil            = params->stencil;
    hw_render.depth              = true;
    hw_render.bottom_left_origin = true;
-   hw_render.cache_context      = false;
+   hw_render.cache_context      = true;
 
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
@@ -2873,6 +3125,15 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          break;
       case GLSM_CTL_STATE_CONTEXT_RESET:
          rglgen_resolve_symbols(hw_render.get_proc_address);
+         if (window_first > 0) {
+            resetting_context = 1;
+            glsm_state_setup();
+            retroChangeWindow();
+            glsm_state_unbind();
+            resetting_context = 0;
+	      }
+         else
+            window_first = 1; 
          break;
       case GLSM_CTL_STATE_CONTEXT_DESTROY:
          glsm_state_ctx_destroy(data);

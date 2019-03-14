@@ -86,6 +86,8 @@ static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 static bool     initializing        = true;
 
+bool libretro_swap_buffer;
+
 uint32_t retro_screen_width = 320;
 uint32_t retro_screen_height = 240;
 float retro_screen_aspect = 4.0 / 3.0;
@@ -923,7 +925,6 @@ bool retro_load_game(const struct retro_game_info *game)
     params.stencil               = false;
 
     params.framebuffer_lock      = context_framebuffer_lock;
-
     if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
     {
         if (log_cb)

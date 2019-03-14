@@ -182,7 +182,9 @@ RETRO_BEGIN_DECLS
 #define glFlushMappedBufferRange    rglFlushMappedBufferRange
 #define glClientWaitSync            rglClientWaitSync
 #define glDrawElementsBaseVertex    rglDrawElementsBaseVertex
+#define glReadPixels                rglReadPixels
 
+void rglReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid * data);
 const GLubyte* rglGetStringi(GLenum name, GLuint index);
 void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer);
 void rglClearBufferfv( 	GLenum buffer,

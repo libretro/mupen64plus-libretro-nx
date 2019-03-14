@@ -81,8 +81,3 @@ bool OGLVideoMupenPlus::_resizeWindow()
 void OGLVideoMupenPlus::_changeWindow()
 {
 }
-
-void GLState::reset()
-{
-}
-GLState glState;

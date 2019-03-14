@@ -48,9 +48,6 @@
 CONTROL Controls[4];
 /* global function pointers - initialized on core startup */
 
-void ResizeVideoOutput(int width, int height){
-
-}
 
 /* local data structures and functions */
 #define DEFINE_GFX(X) \
@@ -240,6 +237,10 @@ m64p_error plugin_start_gfx(void)
     gfx_info.VI_X_SCALE_REG = &(g_dev.vi.regs[VI_X_SCALE_REG]);
     gfx_info.VI_Y_SCALE_REG = &(g_dev.vi.regs[VI_Y_SCALE_REG]);
     gfx_info.CheckInterrupts = EmptyFunc;
+    
+    gfx_info.version = 2; //Version 2 added SP_STATUS_REG and RDRAM_SIZE
+    gfx_info.SP_STATUS_REG = &g_dev.sp.regs[SP_STATUS_REG];
+    gfx_info.RDRAM_SIZE = (unsigned int*) &g_dev.rdram.dram_size;
 
     /* call the audio plugin */
     if (!gfx.initiateGFX(gfx_info))
