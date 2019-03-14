@@ -64,6 +64,7 @@ void GLInfo::init() {
 	//Tegra has a buggy implementation of fragment_shader_interlock that causes graphics lockups on drivers below 390.00
 	bool hasBuggyFragmentShaderInterlock = false;
 
+#ifndef OS_ANDROID
 	if (renderer == Renderer::Tegra) {
 		std::string strDriverVersionString((const char*)strDriverVersion);
 		std::string nvidiaText = "NVIDIA";
@@ -77,6 +78,7 @@ void GLInfo::init() {
 			hasBuggyFragmentShaderInterlock = versionNumber < 390.0;
 		}
 	}
+#endif
 
 	fragment_interlock = Utils::isExtensionSupported(*this, "GL_ARB_fragment_shader_interlock") && !hasBuggyFragmentShaderInterlock;
 	fragment_interlockNV = Utils::isExtensionSupported(*this, "GL_NV_fragment_shader_interlock") && !fragment_interlock && !hasBuggyFragmentShaderInterlock;

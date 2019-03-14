@@ -32,8 +32,8 @@
 RETRO_BEGIN_DECLS
 
 #ifdef HAVE_OPENGLES2
-typedef GLfloat GLdouble;
-typedef GLclampf GLclampd;
+typedef double GLclampd;
+typedef double GLdouble;
 #endif
 
 #if defined(HAVE_OPENGLES2)
@@ -96,10 +96,8 @@ enum
    SGL_ALPHA_TEST,
    SGL_SCISSOR_TEST,
    SGL_STENCIL_TEST,
-#if !defined(HAVE_OPENGLES)
    SGL_DEPTH_CLAMP,
    SGL_CLIP_DISTANCE0,
-#endif
    SGL_DITHER,
    SGL_SAMPLE_ALPHA_TO_COVERAGE,
    SGL_SAMPLE_COVERAGE,

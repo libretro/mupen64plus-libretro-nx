@@ -30,6 +30,10 @@
 #ifndef WINLNXDEFS_H
 #define WINLNXDEFS_H
 
+#ifndef __LIBRETRO__
+#include <dlfcn.h>
+#endif
+
 #include <errno.h>
 #include <limits.h> // PATH_MAX
 #include <stdlib.h> // malloc(), srand()
@@ -93,8 +97,10 @@ typedef const char 	*LPCSTR;
 
 static inline const char *GetPluginDir()
 {
-	static char path[PATH_MAX];
-
+#ifdef __LIBRETRO__
+    return "/";
+#else
+   static char path[PATH_MAX];
 #ifdef __USE_GNU
 	Dl_info info;
 	void *addr = (void *)GetPluginDir;
@@ -121,6 +127,7 @@ static inline const char *GetPluginDir()
 #endif
 
 	return path;
+#endif /* __LIBRETRO__ */
 }
 
 #endif

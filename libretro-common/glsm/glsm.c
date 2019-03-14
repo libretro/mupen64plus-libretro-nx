@@ -2798,10 +2798,11 @@ static void glsm_state_setup(void)
    gl_state.cap_translate[SGL_SCISSOR_TEST]         = GL_SCISSOR_TEST;
    gl_state.cap_translate[SGL_STENCIL_TEST]         = GL_STENCIL_TEST;
 
-#ifndef HAVE_OPENGLES
-   gl_state.cap_translate[SGL_COLOR_LOGIC_OP]       = GL_COLOR_LOGIC_OP;
    gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
    gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
+   
+#ifndef HAVE_OPENGLES
+   gl_state.cap_translate[SGL_COLOR_LOGIC_OP]       = GL_COLOR_LOGIC_OP;
 #endif
 
    for (i = 0; i < MAX_ATTRIB; i++)
@@ -2982,8 +2983,8 @@ static void glsm_state_bind(void)
             gl_state.stencilfunc.ref,
             gl_state.stencilfunc.mask);
 
-   glActiveTexture(GL_TEXTURE0 + active_texture);
-   glBindTexture(gl_state.bind_textures.target[active_texture], gl_state.bind_textures.ids[active_texture]);
+   glActiveTexture(GL_TEXTURE0 + 0);
+   glBindTexture(gl_state.bind_textures.target[0], gl_state.bind_textures.ids[0]);
 }
 
 static void glsm_state_unbind(void)
