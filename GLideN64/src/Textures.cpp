@@ -21,6 +21,7 @@
 #include "Graphics/Context.h"
 #include "Graphics/Parameters.h"
 #include "DisplayWindow.h"
+#include <GLideN64/GLideN64_libretro.h>
 
 using namespace std;
 using namespace graphics;
@@ -537,6 +538,7 @@ void TextureCache::destroy()
 
 void TextureCache::_checkCacheSize()
 {
+	size_t m_maxCacheSize = MaxTxCacheSize;
 	if (m_textures.size() >= m_maxCacheSize) {
 		CachedTexture& clsTex = m_textures.back();
 		gfxContext.deleteTexture(clsTex.name);
