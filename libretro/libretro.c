@@ -109,7 +109,6 @@ uint32_t txFilterIgnoreBG = 0;
 uint32_t MultiSampling = 0;
 uint32_t EnableFragmentDepthWrite = 0;
 uint32_t EnableShadersStorage = 0;
-uint32_t CropMode = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableNoiseEmulation = 0;
@@ -117,6 +116,13 @@ uint32_t EnableLODEmulation = 0;
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
 uint32_t CountPerScanlineOverride = 0;
+
+// Overscan options
+uint32_t EnableOverscan = 0;
+uint32_t OverscanTop = 0;
+uint32_t OverscanLeft = 0;
+uint32_t OverscanRight = 0;
+uint32_t OverscanBottom = 0;
 
 int rspMode = 0;
 
@@ -212,8 +218,18 @@ static void setup_variables(void)
 #endif
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
-        { CORE_NAME "-CropMode",
-            "Overscan; Auto|Off" },
+
+        { CORE_NAME "-EnableOverscan",
+            "Overscan; Enabled|Disabled" },
+        { CORE_NAME "-OverscanTop",
+            "Overscan Offset (Top); 0|5|10|15|20|25|30|35|30|45|50" },
+        { CORE_NAME "-OverscanLeft",
+            "Overscan Offset (Left); 0|5|10|15|20|25|30|35|30|45|50" },
+        { CORE_NAME "-OverscanRight",
+            "Overscan Offset (Right); 0|5|10|15|20|25|30|35|30|45|50" },
+        { CORE_NAME "-OverscanBottom",
+            "Overscan Offset (Bottom); 0|5|10|15|20|25|30|35|30|45|50" },
+
         { CORE_NAME "-MaxTxCacheSize",
 #if defined(VC)
             "Max texture cache size; 1500|8000|4000" },
@@ -740,13 +756,6 @@ void update_variables()
         EnableShadersStorage = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = CORE_NAME "-CropMode";
-    var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        CropMode = !strcmp(var.value, "Auto") ? 1 : 0;
-    }
-
     var.key = CORE_NAME "-cpucore";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -860,6 +869,41 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
+    
+    var.key = CORE_NAME "-EnableOverscan";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableOverscan = !strcmp(var.value, "Enabled") ? 1 : 0;
+    }
+
+    var.key = CORE_NAME "-OverscanTop";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanTop = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanLeft";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanLeft = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanRight";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanRight = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanBottom";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanBottom = atoi(var.value);
+    }
 
     var.key = CORE_NAME "-alt-map";
     var.value = NULL;
@@ -954,8 +998,11 @@ void retro_run (void)
 {
     libretro_swap_buffer = false;
     static bool updated = false;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+    
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
         update_controllers();
+    }
+
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     co_switch(game_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);

@@ -67,9 +67,7 @@ void LoadCustomSettings(bool internal)
 			case INI_PROPERTY:
 			{
 				if (found) {
-					if (!strcmp(l.name, "video\\enableOverscan"))
-						config.frameBufferEmulation.enableOverscan = atoi(l.value);
-					else if (!strcmp(l.name, "video\\multisampling"))
+					if (!strcmp(l.name, "video\\multisampling"))
 						config.video.multisampling = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\aspect"))
 						config.frameBufferEmulation.aspect = atoi(l.value);
@@ -125,7 +123,6 @@ extern "C" void Config_LoadConfig()
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.generalEmulation.enableNoise = EnableNoiseEmulation;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
-	config.frameBufferEmulation.enableOverscan = CropMode;
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 #if defined(GLES2) && !defined(ANDROID)
@@ -149,6 +146,19 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.multisampling = MultiSampling;
 	
+    // Overscan
+    config.frameBufferEmulation.enableOverscan = EnableOverscan;
+    // NTSC
+    config.frameBufferEmulation.overscanNTSC.left = OverscanLeft;
+    config.frameBufferEmulation.overscanNTSC.right = OverscanRight;
+    config.frameBufferEmulation.overscanNTSC.top = OverscanTop;
+    config.frameBufferEmulation.overscanNTSC.bottom = OverscanBottom;
+    // PAL
+    config.frameBufferEmulation.overscanPAL.left = OverscanLeft;
+    config.frameBufferEmulation.overscanPAL.right = OverscanRight;
+    config.frameBufferEmulation.overscanPAL.top = OverscanTop;
+    config.frameBufferEmulation.overscanPAL.bottom = OverscanBottom;
+
 	config.graphics2D.correctTexrectCoords = CorrectTexrectCoords;
 	config.graphics2D.enableNativeResTexrects = enableNativeResTexrects;
 
