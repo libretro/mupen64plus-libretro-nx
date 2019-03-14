@@ -67,7 +67,9 @@ void LoadCustomSettings(bool internal)
 			case INI_PROPERTY:
 			{
 				if (found) {
-					if (!strcmp(l.name, "video\\multisampling"))
+					if (!strcmp(l.name, "video\\enableOverscan"))
+						config.frameBufferEmulation.enableOverscan = atoi(l.value);
+					else if (!strcmp(l.name, "video\\multisampling"))
 						config.video.multisampling = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\aspect"))
 						config.frameBufferEmulation.aspect = atoi(l.value);
@@ -123,6 +125,7 @@ extern "C" void Config_LoadConfig()
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.generalEmulation.enableNoise = EnableNoiseEmulation;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
+	config.frameBufferEmulation.enableOverscan = CropMode;
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 #if defined(GLES2) && !defined(ANDROID)

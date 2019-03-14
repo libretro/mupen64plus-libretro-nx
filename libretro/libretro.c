@@ -213,7 +213,7 @@ static void setup_variables(void)
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
         { CORE_NAME "-CropMode",
-            "Crop Mode; Auto|Off" },
+            "Overscan; Auto|Off" },
         { CORE_NAME "-MaxTxCacheSize",
 #if defined(VC)
             "Max texture cache size; 1500|8000|4000" },
