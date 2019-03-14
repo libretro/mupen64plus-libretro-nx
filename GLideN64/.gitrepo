@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:libretro/GLideN64.git
+	branch = develop
+	commit = e185ed5ddfb5b9c70711b0f5270a3b5c7872e087
+	parent = be7cb911b502d772a14eb6031d92d2a46a6ab90e
+	method = rebase
+	cmdver = 0.4.0
