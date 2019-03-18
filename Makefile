@@ -272,6 +272,7 @@ else ifneq (,$(findstring ios,$(platform)))
    ASFLAGS = -f elf -d ELF_TYPE
 # Android
 else ifneq (,$(findstring android,$(platform)))
+   ANDROID = 1
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -llog
    INCFLAGS += -I$(ROOT_DIR)/GLideN64/src/GLideNHQ/inc
    ifneq (,$(findstring x86,$(platform)))
@@ -297,7 +298,6 @@ else ifneq (,$(findstring android,$(platform)))
       TARGET := $(TARGET_NAME)_libretro_android.so
    endif
    CPUFLAGS += -DANDROID -DEGL_EGLEXT_PROTOTYPES
-
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 # emscripten
