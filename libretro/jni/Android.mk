@@ -18,6 +18,7 @@ SOURCES_C    :=
 SOURCES_CXX  :=
 SOURCES_ASM  :=
 SOURCES_NASM :=
+ANDROID      := 1
 AWK          ?= awk
 STRINGS      ?= strings
 TR           ?= tr
