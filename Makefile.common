@@ -356,7 +356,7 @@ endif
 EGL_LIB ?= -lEGL
 
 ifeq ($(GLES),1)
-	GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
+	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp
@@ -366,7 +366,7 @@ ifeq ($(GLES),1)
 	endif
 				   
 else ifeq ($(GLES3),1)
-	GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
+	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
 	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp
