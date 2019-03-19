@@ -338,6 +338,8 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
 
 ifneq (,$(findstring rpi3,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
+else ifeq ($(platform), libnx)
+	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/CRC32_ARMV8.cpp
 else
 	SOURCES_CXX += $(ROOT_DIR)/custom/GLideN64/CRC.cpp
 endif
