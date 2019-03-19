@@ -26,6 +26,22 @@
 #include <glsm/glsm.h>
 #include <GLideN64_libretro.h>
 
+#ifdef HAVE_OPENGLES
+#include <EGL/egl.h>
+typedef void (GL_APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices, GLint basevertex);
+typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
+typedef void (GL_APIENTRYP PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
+typedef void (GL_APIENTRYP PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+typedef void (GL_APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC m_glDrawRangeElementsBaseVertex;
+PFNGLBUFFERSTORAGEEXTPROC m_glBufferStorage;
+PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
+PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
+PFNGLTEXSTORAGE2DMULTISAMPLEPROC m_glTexStorage2DMultisample;
+PFNGLCOPYIMAGESUBDATAPROC m_glCopyImageSubData;
+#endif
+
 #ifndef GL_DEPTH_CLAMP
 #define GL_DEPTH_CLAMP                    0x864F
 #define GL_RASTERIZER_DISCARD             0x8C89
@@ -79,6 +95,12 @@ struct gl_cached_state
       GLenum pname;
       GLint param;
    } pixelstore_i;
+   
+   struct
+   {
+     GLint pack;
+     GLint unpack;
+   } pixelstore;
 
    struct
    {
@@ -209,6 +231,7 @@ struct gl_cached_state
 
    GLuint vao;
    GLuint array_buffer;
+   GLuint index_buffer;
    GLuint program;
    GLenum active_texture;
    int cap_state[SGL_CAP_MAX];
@@ -240,6 +263,7 @@ static GLint glsm_max_textures;
 struct retro_hw_render_callback hw_render;
 static struct gl_cached_state gl_state;
 
+static bool copy_image_support = 0;
 static struct gl_program_uniforms program_uniforms[MAX_UNIFORMS][MAX_UNIFORMS];
 static struct gl_framebuffers* framebuffers[MAX_FRAMEBUFFERS];
 
@@ -428,30 +452,6 @@ void rglLineWidth(GLfloat width)
    glLineWidth(width);
 }
 
-/*
- * Category: FBO
- *
- * Core in:
- * OpenGL    : 3.0
- * OpenGLES  : 3.0
- */
-void rglBlitFramebuffer(
-      GLint srcX0, GLint srcY0,
-      GLint srcX1, GLint srcY1,
-      GLint dstX0, GLint dstY0,
-      GLint dstX1, GLint dstY1,
-      GLbitfield mask, GLenum filter)
-{
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlitFramebuffer.\n");
-#endif
-#ifndef HAVE_OPENGLES2
-   bindFBO(GL_DRAW_FRAMEBUFFER);
-   bindFBO(GL_READ_FRAMEBUFFER);
-   glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
-#endif
-}
-
 void rglReadPixels(	GLint x,
  	GLint y,
  	GLsizei width,
@@ -514,9 +514,18 @@ void rglPixelStorei(GLenum pname, GLint param)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glPixelStorei.\n");
 #endif
-   glPixelStorei(pname, param);
-   gl_state.pixelstore_i.pname = pname;
-   gl_state.pixelstore_i.param = param;
+   if (pname == GL_UNPACK_ALIGNMENT) {
+      if (param != gl_state.pixelstore.unpack) {
+         glPixelStorei(pname, param);
+         gl_state.pixelstore.unpack = param;
+      }
+   } else if (pname == GL_PACK_ALIGNMENT) {
+      if (param != gl_state.pixelstore.pack) {
+         glPixelStorei(pname, param);
+         gl_state.pixelstore.pack = param;
+      }
+   } else
+      glPixelStorei(pname, param);
 }
 
 /*
@@ -550,9 +559,11 @@ void rglFrontFace(GLenum mode)
    log_cb(RETRO_LOG_INFO, "glFrontFace.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glFrontFace(mode);
    gl_state.frontface.used = true;
-   gl_state.frontface.mode = mode;
+   if (gl_state.frontface.mode != mode) {
+      glFrontFace(mode);
+      gl_state.frontface.mode = mode;
+   }
 }
 
 /*
@@ -567,8 +578,10 @@ void rglDepthFunc(GLenum func)
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
    gl_state.depthfunc.used = true;
-   gl_state.depthfunc.func = func;
-   glDepthFunc(func);
+   if (gl_state.depthfunc.func != func) {
+      glDepthFunc(func);
+      gl_state.depthfunc.func = func;
+   }
 }
 
 /*
@@ -583,12 +596,14 @@ void rglColorMask(GLboolean red, GLboolean green,
    log_cb(RETRO_LOG_INFO, "glColorMask.\n");
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glColorMask(red, green, blue, alpha);
-   gl_state.colormask.red   = red;
-   gl_state.colormask.green = green;
-   gl_state.colormask.blue  = blue;
-   gl_state.colormask.alpha = alpha;
    gl_state.colormask.used  = true;
+   if (gl_state.colormask.red != red || gl_state.colormask.green != green || gl_state.colormask.blue != blue || gl_state.colormask.alpha != alpha) {
+       glColorMask(red, green, blue, alpha);
+       gl_state.colormask.red   = red;
+       gl_state.colormask.green = green;
+       gl_state.colormask.blue  = blue;
+       gl_state.colormask.alpha = alpha;
+   }
 }
 
 /*
@@ -618,7 +633,6 @@ void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glStencilOp.\n");
 #endif
-
    gl_state.stencilop.used   = true;
    if (gl_state.stencilop.sfail != sfail || gl_state.stencilop.dpfail != dpfail || gl_state.stencilop.dppass != dppass) {
       glStencilOp(sfail, dpfail, dppass);
@@ -765,10 +779,11 @@ void rglBlendFuncSeparate(GLenum sfactor, GLenum dfactor)
 void rglActiveTexture(GLenum texture)
 {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glActiveTexture.\n");
+   log_cb(RETRO_LOG_INFO, "glActiveTexture. %x\n", texture);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
    if (active_texture != texture - GL_TEXTURE0) {
+      bindFBO(GL_FRAMEBUFFER);
       glActiveTexture(texture);
       active_texture = texture - GL_TEXTURE0;
    }
@@ -782,7 +797,7 @@ void rglActiveTexture(GLenum texture)
 void rglBindTexture(GLenum target, GLuint texture)
 {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindTexture.\n");
+   log_cb(RETRO_LOG_INFO, "glBindTexture. %x, %x\n", target, texture);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
    if (gl_state.bind_textures.ids[active_texture] != texture || gl_state.bind_textures.target[active_texture] != target) {
@@ -804,8 +819,10 @@ void rglDisable(GLenum cap)
    log_cb(RETRO_LOG_INFO, "glDisable. %x\n", cap);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glDisable(gl_state.cap_translate[cap]);
-   gl_state.cap_state[cap] = 0;
+   if (gl_state.cap_state[cap] != 0) {
+      glDisable(gl_state.cap_translate[cap]);
+      gl_state.cap_state[cap] = 0;
+   }
 }
 
 /*
@@ -819,8 +836,10 @@ void rglEnable(GLenum cap)
    log_cb(RETRO_LOG_INFO, "glEnable. %x\n", cap);
 #endif
    glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glEnable(gl_state.cap_translate[cap]);
-   gl_state.cap_state[cap] = 1;
+   if (gl_state.cap_state[cap] != 1) {
+      glEnable(gl_state.cap_translate[cap]);
+      gl_state.cap_state[cap] = 1;
+   }
 }
 
 /*
@@ -912,10 +931,20 @@ void rglBindBuffer(GLenum target, GLuint buffer)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBindBuffer.\n");
 #endif
-   if (target == GL_ARRAY_BUFFER)
-      gl_state.array_buffer = buffer;
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindBuffer(target, buffer);
+   if (target == GL_ARRAY_BUFFER) {
+      if (gl_state.array_buffer != buffer) {
+         gl_state.array_buffer = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
+   else if (target == GL_ELEMENT_ARRAY_BUFFER) {
+      if (gl_state.index_buffer != buffer) {
+         gl_state.index_buffer = buffer;
+         glBindBuffer(target, buffer);
+      }
+   }
+   else
+      glBindBuffer(target, buffer);
 }
 
 /*
@@ -1000,12 +1029,12 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
  * Core in:
  * OpenGL    : 1.1
  */
-static bool firstarray = false;
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDrawArrays.\n");
 #endif
+   bindFBO(GL_FRAMEBUFFER);
    glDrawArrays(mode, first, count);
 }
 
@@ -1637,7 +1666,11 @@ GLuint rglCreateProgram(void)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glCreateProgram.\n");
 #endif
-   return glCreateProgram();
+   GLuint temp = glCreateProgram();
+   int i;
+   for (i = 0; i < MAX_UNIFORMS; ++i)
+      memset(&program_uniforms[temp][i], 0, sizeof(struct gl_program_uniforms));
+   return temp;
 }
 
 /*
@@ -1861,7 +1894,8 @@ void rglDeleteProgram(GLuint program)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDeleteProgram.\n");
 #endif
-   glDeleteProgram(program);
+   if (!resetting_context)
+      glDeleteProgram(program);
 }
 
 /*
@@ -1875,7 +1909,8 @@ void rglDeleteShader(GLuint shader)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDeleteShader.\n");
 #endif
-   glDeleteShader(shader);
+   if (!resetting_context)
+      glDeleteShader(shader);
 }
 
 /*
@@ -1931,7 +1966,10 @@ void rglUniform1f(GLint location, GLfloat v0)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform1f.\n");
 #endif
-   glUniform1f(location, v0);
+   if (program_uniforms[gl_state.program][location].uniform1f != v0) {
+      glUniform1f(location, v0);
+      program_uniforms[gl_state.program][location].uniform1f = v0;
+   }
 }
 
 /*
@@ -1945,7 +1983,10 @@ void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform1fv.\n");
 #endif
-   glUniform1fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform1f != value[0]) {
+      glUniform1fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform1f = value[0];
+   }
 }
 
 /*
@@ -1959,9 +2000,10 @@ void rglUniform1iv(GLint location,  GLsizei count,  const GLint *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform1iv.\n");
 #endif
-
-   bindFBO(GL_READ_FRAMEBUFFER);
-   glUniform1iv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform1i != value[0]) {
+      glUniform1iv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform1i = value[0];
+   }
 }
 
 void rglClearBufferfv( 	GLenum buffer,
@@ -1971,7 +2013,7 @@ void rglClearBufferfv( 	GLenum buffer,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glClearBufferfv.\n");
 #endif
-   bindFBO(GL_DRAW_FRAMEBUFFER);
+   bindFBO(GL_FRAMEBUFFER);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
    glClearBufferfv(buffer, drawBuffer, value);
 #endif
@@ -2049,7 +2091,10 @@ void rglUniform1i(GLint location, GLint v0)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform1i.\n");
 #endif
-   glUniform1i(location, v0);
+   if (program_uniforms[gl_state.program][location].uniform1i != v0) {
+      glUniform1i(location, v0);
+      program_uniforms[gl_state.program][location].uniform1i = v0;
+   }
 }
 
 /*
@@ -2063,7 +2108,11 @@ void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform2f.\n");
 #endif
-   glUniform2f(location, v0, v1);
+   if (program_uniforms[gl_state.program][location].uniform2f[0] != v0 || program_uniforms[gl_state.program][location].uniform2f[1] != v1) {
+      glUniform2f(location, v0, v1);
+      program_uniforms[gl_state.program][location].uniform2f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform2f[1] = v1;
+   }
 }
 
 /*
@@ -2077,7 +2126,11 @@ void rglUniform2i(GLint location, GLint v0, GLint v1)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform2i.\n");
 #endif
-   glUniform2i(location, v0, v1);
+   if (program_uniforms[gl_state.program][location].uniform2i[0] != v0 || program_uniforms[gl_state.program][location].uniform2i[1] != v1) {
+      glUniform2i(location, v0, v1);
+      program_uniforms[gl_state.program][location].uniform2i[0] = v0;
+      program_uniforms[gl_state.program][location].uniform2i[1] = v1;
+   }
 }
 
 /*
@@ -2091,7 +2144,11 @@ void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform2fv.\n");
 #endif
-   glUniform2fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform2f[0] != value[0] || program_uniforms[gl_state.program][location].uniform2f[1] != value[1]) {
+      glUniform2fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform2f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform2f[1] = value[1];
+   }
 }
 
 /*
@@ -2105,7 +2162,12 @@ void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform3f.\n");
 #endif
-   glUniform3f(location, v0, v1, v2);
+   if (program_uniforms[gl_state.program][location].uniform3f[0] != v0 || program_uniforms[gl_state.program][location].uniform3f[1] != v1 || program_uniforms[gl_state.program][location].uniform3f[2] != v2) {
+      glUniform3f(location, v0, v1, v2);
+      program_uniforms[gl_state.program][location].uniform3f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform3f[1] = v1;
+      program_uniforms[gl_state.program][location].uniform3f[2] = v2;
+   }
 }
 
 /*
@@ -2119,7 +2181,12 @@ void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform3fv.\n");
 #endif
-   glUniform3fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform3f[0] != value[0] || program_uniforms[gl_state.program][location].uniform3f[1] != value[1] || program_uniforms[gl_state.program][location].uniform3f[2] != value[2]) {
+      glUniform3fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform3f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform3f[1] = value[1];
+      program_uniforms[gl_state.program][location].uniform3f[2] = value[2];
+   }
 }
 
 /*
@@ -2133,7 +2200,13 @@ void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform4i.\n");
 #endif
-   glUniform4i(location, v0, v1, v2, v3);
+   if (program_uniforms[gl_state.program][location].uniform4i[0] != v0 || program_uniforms[gl_state.program][location].uniform4i[1] != v1 || program_uniforms[gl_state.program][location].uniform4i[2] != v2 || program_uniforms[gl_state.program][location].uniform4i[3] != v3) {
+      glUniform4i(location, v0, v1, v2, v3);
+      program_uniforms[gl_state.program][location].uniform4i[0] = v0;
+      program_uniforms[gl_state.program][location].uniform4i[1] = v1;
+      program_uniforms[gl_state.program][location].uniform4i[2] = v2;
+      program_uniforms[gl_state.program][location].uniform4i[3] = v3;
+   }
 }
 
 /*
@@ -2147,7 +2220,13 @@ void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform4f.\n");
 #endif
-   glUniform4f(location, v0, v1, v2, v3);
+   if (program_uniforms[gl_state.program][location].uniform4f[0] != v0 || program_uniforms[gl_state.program][location].uniform4f[1] != v1 || program_uniforms[gl_state.program][location].uniform4f[2] != v2 || program_uniforms[gl_state.program][location].uniform4f[3] != v3) {
+      glUniform4f(location, v0, v1, v2, v3);
+      program_uniforms[gl_state.program][location].uniform4f[0] = v0;
+      program_uniforms[gl_state.program][location].uniform4f[1] = v1;
+      program_uniforms[gl_state.program][location].uniform4f[2] = v2;
+      program_uniforms[gl_state.program][location].uniform4f[3] = v3;
+   }
 }
 
 /*
@@ -2161,7 +2240,13 @@ void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glUniform4fv.\n");
 #endif
-   glUniform4fv(location, count, value);
+   if (program_uniforms[gl_state.program][location].uniform4f[0] != value[0] || program_uniforms[gl_state.program][location].uniform4f[1] != value[1] || program_uniforms[gl_state.program][location].uniform4f[2] != value[2] || program_uniforms[gl_state.program][location].uniform4f[3] != value[3]) {
+      glUniform4fv(location, count, value);
+      program_uniforms[gl_state.program][location].uniform4f[0] = value[0];
+      program_uniforms[gl_state.program][location].uniform4f[1] = value[1];
+      program_uniforms[gl_state.program][location].uniform4f[2] = value[2];
+      program_uniforms[gl_state.program][location].uniform4f[3] = value[3];
+   }
 }
 
 /*
@@ -2288,8 +2373,11 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glTexStorage2DMultisample.\n");
 #endif
-#if defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glTexStorage2DMultisample(target, samples, internalformat,
+         width, height, fixedsamplelocations);
+#else
+   m_glTexStorage2DMultisample(target, samples, internalformat,
          width, height, fixedsamplelocations);
 #endif
 }
@@ -2317,8 +2405,11 @@ void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
  */
 void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
 {
+#ifdef HAVE_OPENGLES
    bindFBO(GL_FRAMEBUFFER);
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
+   m_glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+#else
+   bindFBO(GL_DRAW_FRAMEBUFFER);
    glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
 #endif
 }
@@ -2334,10 +2425,10 @@ void rglMemoryBarrier( 	GLbitfield barriers)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glMemoryBarrier.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glMemoryBarrier(barriers);
 #else
-   printf("WARNING! Not implemented.\n");
+   m_glMemoryBarrier(barriers);
 #endif
 }
 
@@ -2358,10 +2449,10 @@ void rglBindImageTexture( 	GLuint unit,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBindImageTexture.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+#ifndef HAVE_OPENGLES
    glBindImageTexture(unit, texture, level, layered, layer, access, format);
 #else
-   printf("WARNING! Not implemented.\n");
+   m_glBindImageTexture(unit, texture, level, layered, layer, access, format);
 #endif
 }
 
@@ -2531,8 +2622,24 @@ void rglCopyImageSubData( 	GLuint srcName,
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glCopyImageSubData.\n");
 #endif
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
+#ifndef HAVE_OPENGLES
    glCopyImageSubData(srcName,
+         srcTarget,
+         srcLevel,
+         srcX,
+         srcY,
+         srcZ,
+         dstName,
+         dstTarget,
+         dstLevel,
+         dstX,
+         dstY,
+         dstZ,
+         srcWidth,
+         srcHeight,
+         srcDepth);
+#else
+   m_glCopyImageSubData(srcName,
          srcTarget,
          srcLevel,
          srcX,
@@ -2551,6 +2658,49 @@ void rglCopyImageSubData( 	GLuint srcName,
 }
 
 /*
+ * Category: FBO
+ *
+ * Core in:
+ * OpenGL    : 3.0
+ * OpenGLES  : 3.0
+ */
+void rglBlitFramebuffer(
+      GLint srcX0, GLint srcY0,
+      GLint srcX1, GLint srcY1,
+      GLint dstX0, GLint dstY0,
+      GLint dstX1, GLint dstY1,
+      GLbitfield mask, GLenum filter)
+{
+#ifdef GLSM_DEBUG
+   log_cb(RETRO_LOG_INFO, "glBlitFramebuffer.\n");
+#endif
+#ifndef HAVE_OPENGLES2
+   GLuint src_attachment;
+   GLuint dst_attachment;
+   const bool good_pointer = gl_state.framebuf[0].desired_location < MAX_FRAMEBUFFERS && gl_state.framebuf[1].desired_location < MAX_FRAMEBUFFERS;
+   const bool good_target = framebuffers[gl_state.framebuf[0].desired_location]->target == framebuffers[gl_state.framebuf[1].desired_location]->target;
+   const bool sameSize = dstX1 - dstX0 == srcX1 - srcX0 && dstY1 - dstY0 == srcY1 - srcY0;
+   if (sameSize && copy_image_support && good_pointer && good_target) {
+      if (mask == GL_COLOR_BUFFER_BIT) {
+         src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->color_attachment;
+         dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->color_attachment;
+      } else if (mask == GL_DEPTH_BUFFER_BIT) {
+         src_attachment = framebuffers[gl_state.framebuf[1].desired_location]->depth_attachment;
+         dst_attachment = framebuffers[gl_state.framebuf[0].desired_location]->depth_attachment;
+      }
+      rglCopyImageSubData(src_attachment, framebuffers[gl_state.framebuf[1].desired_location]->target, 0, srcX0, srcY0, 0,
+         dst_attachment, framebuffers[gl_state.framebuf[0].desired_location]->target, 0, dstX0, dstY0, 0, srcX1 - srcX0, srcY1 - srcY0, 1);
+   } else {
+      bindFBO(GL_DRAW_FRAMEBUFFER);
+      bindFBO(GL_READ_FRAMEBUFFER);
+      glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
+         dstX0, dstY0, dstX1, dstY1,
+         mask, filter);
+   }
+#endif
+}
+
+/*
  * Category: VAO
  *
  * Core in:
@@ -2562,8 +2712,8 @@ void rglBindVertexArray(GLuint array)
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBindVertexArray.\n");
 #endif
-   bindFBO(GL_FRAMEBUFFER);
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+   bindFBO(GL_FRAMEBUFFER);
    gl_state.bindvertex.array = array;
    glBindVertexArray(array);
 #endif
@@ -2664,8 +2814,10 @@ void rglBufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data, GLbitf
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glBufferStorage.\n");
 #endif
-#if defined(HAVE_OPENGL)
+#ifndef HAVE_OPENGLES
    glBufferStorage(target, size, data, flags);
+#else
+   m_glBufferStorage(target, size, data, flags);
 #endif
 }
 
@@ -2779,30 +2931,97 @@ void rglDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type,
    log_cb(RETRO_LOG_INFO, "glDrawElementsBaseVertex.\n");
 #endif
 #if defined(HAVE_OPENGL)
+   bindFBO(GL_DRAW_FRAMEBUFFER);
    glDrawElementsBaseVertex(mode, count, type, indices, basevertex);
 #endif
 }
 
 /* GLSM-side */
 
+bool isExtensionSupported(const char *extension)
+{
+#ifdef GL_NUM_EXTENSIONS
+	GLint count = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+	for (int i = 0; i < count; ++i) {
+		const char* name = (const char*)glGetStringi(GL_EXTENSIONS, i);
+		if (name == NULL)
+			continue;
+		if (strcmp(extension, name) == 0)
+			return true;
+	}
+	return false;
+#else
+	GLubyte *where = (GLubyte *)strchr(extension, ' ');
+	if (where || *extension == '\0')
+		return false;
+
+	const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+
+	const GLubyte *start = extensions;
+	for (;;) {
+		where = (GLubyte *)strstr((const char *)start, extension);
+		if (where == NULL)
+			break;
+
+		GLubyte *terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+		if (*terminator == ' ' || *terminator == '\0')
+			return true;
+
+		start = terminator;
+	}
+
+	return false;
+#endif // GL_NUM_EXTENSIONS
+}
+
 static void glsm_state_setup(void)
 {
+   GLint majorVersion = 0;
+   GLint minorVersion = 0;
+   bool copy_image_support_version = 0;
+#ifndef HAVE_OPENGLES2
+   glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+   glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+#endif
+#ifdef HAVE_OPENGLES
+   if (majorVersion >= 3 && minorVersion >= 2)
+      copy_image_support_version = 1;
+#else
+   if (majorVersion >= 4 && minorVersion >= 3)
+      copy_image_support_version = 1;
+#endif
+   copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image") || copy_image_support_version;
+#ifdef HAVE_OPENGLES
+   m_glDrawRangeElementsBaseVertex = (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)eglGetProcAddress("glDrawRangeElementsBaseVertex");
+   m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)eglGetProcAddress("glBufferStorageEXT");
+   m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
+   m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
+   m_glTexStorage2DMultisample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)eglGetProcAddress("glTexStorage2DMultisample");
+   m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubData");
+   if (m_glCopyImageSubData == NULL)
+      m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubDataEXT");
+#endif
+
    unsigned i;
 
-   gl_state.cap_translate[SGL_DEPTH_TEST]           = GL_DEPTH_TEST;
-   gl_state.cap_translate[SGL_BLEND]                = GL_BLEND;
-   gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL]  = GL_POLYGON_OFFSET_FILL;
-   gl_state.cap_translate[SGL_FOG]                  = GL_FOG;
-   gl_state.cap_translate[SGL_CULL_FACE]            = GL_CULL_FACE;
-   gl_state.cap_translate[SGL_ALPHA_TEST]           = GL_ALPHA_TEST;
-   gl_state.cap_translate[SGL_SCISSOR_TEST]         = GL_SCISSOR_TEST;
-   gl_state.cap_translate[SGL_STENCIL_TEST]         = GL_STENCIL_TEST;
-
-   gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
-   gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
-   
+   memset(&gl_state, 0, sizeof(struct gl_cached_state));
+   gl_state.cap_translate[SGL_DEPTH_TEST]               = GL_DEPTH_TEST;
+   gl_state.cap_translate[SGL_BLEND]                    = GL_BLEND;
+   gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL]      = GL_POLYGON_OFFSET_FILL;
+   gl_state.cap_translate[SGL_FOG]                      = GL_FOG;
+   gl_state.cap_translate[SGL_CULL_FACE]                = GL_CULL_FACE;
+   gl_state.cap_translate[SGL_ALPHA_TEST]               = GL_ALPHA_TEST;
+   gl_state.cap_translate[SGL_SCISSOR_TEST]             = GL_SCISSOR_TEST;
+   gl_state.cap_translate[SGL_STENCIL_TEST]             = GL_STENCIL_TEST;
+   gl_state.cap_translate[SGL_DITHER]                   = GL_DITHER;
+   gl_state.cap_translate[SGL_SAMPLE_ALPHA_TO_COVERAGE] = GL_SAMPLE_ALPHA_TO_COVERAGE;
+   gl_state.cap_translate[SGL_SAMPLE_COVERAGE]          = GL_SAMPLE_COVERAGE;
 #ifndef HAVE_OPENGLES
    gl_state.cap_translate[SGL_COLOR_LOGIC_OP]       = GL_COLOR_LOGIC_OP;
+   gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
+   gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
 #endif
 
    for (i = 0; i < MAX_ATTRIB; i++)
@@ -2820,6 +3039,11 @@ static void glsm_state_setup(void)
       gl_state.bind_textures.target[i] = GL_TEXTURE_2D;
       gl_state.bind_textures.ids[i] = 0;
    }
+
+   gl_state.pixelstore.pack             = 4;
+   gl_state.pixelstore.unpack           = 4;
+   gl_state.array_buffer                = 0;
+   gl_state.index_buffer                = 0;
 
    default_framebuffer                  = glsm_get_current_framebuffer();
 
@@ -2895,6 +3119,9 @@ static void glsm_state_bind(void)
          }
       }
     }
+    
+   glPixelStorei(GL_UNPACK_ALIGNMENT, gl_state.pixelstore.unpack);
+   glPixelStorei(GL_PACK_ALIGNMENT, gl_state.pixelstore.pack);
 
    if (EnableFBEmulation) {
       gl_state.framebuf[0].location = 0;
@@ -2905,6 +3132,12 @@ static void glsm_state_bind(void)
       gl_state.framebuf[1].location = default_framebuffer;
    }
 
+   for(i = 0; i < SGL_CAP_MAX; i ++)
+   {
+      if (gl_state.cap_state[i])
+         glEnable(gl_state.cap_translate[i]);
+   }
+   
    if (gl_state.blendfunc.used)
       glBlendFunc(
             gl_state.blendfunc.sfactor,
@@ -2960,12 +3193,6 @@ static void glsm_state_bind(void)
          gl_state.viewport.w,
          gl_state.viewport.h);
 
-   for(i = 0; i < SGL_CAP_MAX; i ++)
-   {
-      if (gl_state.cap_state[i])
-         glEnable(gl_state.cap_translate[i]);
-   }
-
    if (gl_state.frontface.used)
       glFrontFace(gl_state.frontface.mode);
 
@@ -2983,8 +3210,8 @@ static void glsm_state_bind(void)
             gl_state.stencilfunc.ref,
             gl_state.stencilfunc.mask);
 
-   glActiveTexture(GL_TEXTURE0 + 0);
-   glBindTexture(gl_state.bind_textures.target[0], gl_state.bind_textures.ids[0]);
+   glActiveTexture(GL_TEXTURE0 + active_texture);
+   glBindTexture(gl_state.bind_textures.target[active_texture], gl_state.bind_textures.ids[active_texture]);
 }
 
 static void glsm_state_unbind(void)
@@ -3000,6 +3227,7 @@ static void glsm_state_unbind(void)
 
    if (gl_state.colormask.used)
       glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+      
    if (gl_state.blendfunc_separate.used)
       glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
 
@@ -3020,6 +3248,7 @@ static void glsm_state_unbind(void)
 
    glStencilMask(1);
    glFrontFace(GL_CCW);
+   
    if (gl_state.depthfunc.used)
       glDepthFunc(GL_LESS);
 
@@ -3029,12 +3258,6 @@ static void glsm_state_unbind(void)
    if (gl_state.stencilfunc.used)
       glStencilFunc(GL_ALWAYS,0,1);
 
-   /* Clear textures */
-   for (i = 0; i < glsm_max_textures; i ++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, 0);
-   }
    glActiveTexture(GL_TEXTURE0);
 
 
