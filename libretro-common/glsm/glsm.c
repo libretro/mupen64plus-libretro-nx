@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
 #include <GLideN64_libretro.h>
