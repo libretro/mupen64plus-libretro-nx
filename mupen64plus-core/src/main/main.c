@@ -190,11 +190,13 @@ void main_message(m64p_msg_level level, unsigned int corner, const char *format,
     DebugMessage(level, "%s", buffer);
 }
 
+extern retro_input_poll_t poll_cb;
 static void main_check_inputs(void)
 {
 #ifdef WITH_LIRC
     lircCheckInput();
 #endif
+poll_cb();
 }
 
 /*********************************************************************************************************
