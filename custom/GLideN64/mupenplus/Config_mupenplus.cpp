@@ -12,8 +12,10 @@
 #include "../GBI.h"
 #include "../RSP.h"
 #include "../Log.h"
+extern "C" {
 #include "main/util.h"
 #include "GLideN64.custom.ini.h"
+}
 
 Config config;
 
@@ -53,7 +55,7 @@ void LoadCustomSettings(bool internal)
 			else
 				line = buffer;
 		}
-		ini_line l; //ini_parse_line(&line);
+		ini_line l = ini_parse_line(&line);
 		switch (l.type)
 		{
 			case INI_SECTION:
