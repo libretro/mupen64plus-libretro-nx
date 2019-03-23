@@ -855,7 +855,7 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        alternate_mapping = strcmp(var.value, "False");
+        alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     update_controllers();
