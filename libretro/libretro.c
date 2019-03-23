@@ -38,14 +38,6 @@
 #define CORE_NAME "mupen64plus"
 #endif
 
-#ifndef PRESCALE_WIDTH
-#define PRESCALE_WIDTH  640
-#endif
-
-#ifndef PRESCALE_HEIGHT
-#define PRESCALE_HEIGHT 625
-#endif
-
 #define PATH_SIZE 2048
 
 #define ISHEXDEC ((codeLine[cursor]>='0') && (codeLine[cursor]<='9')) || ((codeLine[cursor]>='a') && (codeLine[cursor]<='f')) || ((codeLine[cursor]>='A') && (codeLine[cursor]<='F'))
