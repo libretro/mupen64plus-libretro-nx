@@ -235,7 +235,7 @@ static void setup_variables(void)
         {CORE_NAME "-u-cbutton",
            "Up C Button; C4|C1|C2|C3"},
         {CORE_NAME "-alt-map",
-           "Independent C-button Controls; disabled|enabled" },
+           "Independent C-button Controls; False|True" },
         {CORE_NAME "-pak1",
            "Player 1 Pak; memory|rumble|none"},
         {CORE_NAME "-pak2",
@@ -855,10 +855,7 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "disabled"))
-            alternate_mapping = false;
-        else if (!strcmp(var.value, "enabled"))
-            alternate_mapping = true;
+        alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     update_controllers();
