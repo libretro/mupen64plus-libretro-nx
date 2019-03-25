@@ -230,7 +230,7 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/VI.cpp                                                               \
     $(VIDEODIR_GLIDEN64)/src/ZlutTexture.cpp                                                      \
     $(VIDEODIR_GLIDEN64)/src/common/CommonAPIImpl_common.cpp                                      \
-    $(VIDEODIR_GLIDEN64)/src/NoiseTexture.cpp                                      \
+    $(VIDEODIR_GLIDEN64)/src/NoiseTexture.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/DepthBufferRender/ClipPolygon.cpp                                    \
     $(VIDEODIR_GLIDEN64)/src/DepthBufferRender/DepthBufferRender.cpp                              \
     $(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM.cpp                                    \
@@ -261,10 +261,11 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramImpl.cpp             \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactory.cpp   \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_FXAA.cpp                            \
+    $(VIDEODIR_GLIDEN64)/src/mupenplus/MemoryStatus_mupenplus.cpp                                 \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_ShaderStorage.cpp                   \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_SpecialShadersFactory.cpp           \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_Utils.cpp                           \
-    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PrivateApi/GraphicBuffer.cpp     \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PrivateApi/GraphicBuffer.cpp    \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3D.cpp                                                       \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DAM.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DBETA.cpp                                                   \
@@ -279,7 +280,7 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DPD.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DSETA.cpp                                                   \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F5Indi_Naboo.cpp                                              \
-    $(VIDEODIR_GLIDEN64)/src/uCodes/F5Rogue.cpp                                                    \
+    $(VIDEODIR_GLIDEN64)/src/uCodes/F5Rogue.cpp                                                   \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DTEXA.cpp                                                   \
     $(VIDEODIR_GLIDEN64)/src/uCodes/L3D.cpp                                                       \
     $(VIDEODIR_GLIDEN64)/src/uCodes/L3DEX2.cpp                                                    \
@@ -290,9 +291,9 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/uCodes/Turbo3D.cpp                                                   \
     $(VIDEODIR_GLIDEN64)/src/uCodes/ZSort.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/uCodes/ZSortBOSS.cpp                                                 \
-	$(VIDEODIR_GLIDEN64)/src/MupenPlusPluginAPI.cpp \
-	$(VIDEODIR_GLIDEN64)/src/mupenplus/MupenPlusAPIImpl.cpp \
-	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp \
+	$(VIDEODIR_GLIDEN64)/src/MupenPlusPluginAPI.cpp                                               \
+	$(VIDEODIR_GLIDEN64)/src/mupenplus/MupenPlusAPIImpl.cpp                                       \
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp                                    \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
 ifneq (,$(findstring android,$(platform)))
 	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp \
