@@ -55,6 +55,7 @@ extern uint32_t txFilterIgnoreBG;
 extern uint32_t MultiSampling;
 extern uint32_t EnableFragmentDepthWrite;
 extern uint32_t EnableShadersStorage;
+extern uint32_t EnableTextureCache;
 extern uint32_t EnableFBEmulation;
 extern uint32_t EnableFrameDuping;
 extern uint32_t EnableNoiseEmulation;
