@@ -88,6 +88,7 @@ static unsigned initial_boot        = true;
 static unsigned audio_buffer_size   = 2048;
 
 static unsigned retro_filtering     = 0;
+static unsigned retro_dithering = 0;
 static bool     first_context_reset = false;
 static bool     initializing        = true;
 
@@ -160,7 +161,16 @@ static void setup_variables(void)
 #endif
         { CORE_NAME "-rspmode",
             "RSP Mode; HLE" },
+            { "parallel-n64-dithering","(Angrylion) Dithering; enabled|disabled" },
+	{ "parallel-n64-angrylion-vioverlay","(Angrylion) VI Overlay; Filtered|Unfiltered|Depth|Coverage"},
+	{ "parallel-n64-angrylion-multithread","(Angrylion) Multi-threading; True|False" },
+	{ "parallel-n64-angrylion-overscan","(Angrylion) Hide overscan; False|True" },
         { CORE_NAME "-43screensize",
+
+
+
+
+
             "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
         { CORE_NAME "-169screensize",
             "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|2560x1440|3840x2160|7680x4320" },
@@ -526,6 +536,33 @@ void update_controllers()
     }
 }
 
+extern void angrylion_set_vi(unsigned value);
+extern void angrylion_set_filtering(unsigned value);
+extern void angrylion_set_dithering(unsigned value);
+extern void  angrylion_set_threads(unsigned value);
+extern void parallel_set_dithering(unsigned value);
+extern void  angrylion_set_threads(unsigned value);
+extern void angrylion_set_overscan(unsigned value);
+
+unsigned setting_get_dithering(void)
+{
+   return retro_dithering;
+}
+
+static void gfx_set_filtering(void)
+{
+     if (log_cb)
+        log_cb(RETRO_LOG_DEBUG, "set filtering mode...\n");
+     angrylion_set_filtering(retro_filtering);
+}
+
+static void gfx_set_dithering(void)
+{
+   if (log_cb)
+      log_cb(RETRO_LOG_DEBUG, "set dithering mode...\n");
+   angrylion_set_dithering(retro_dithering);
+}
+
 void update_variables()
 {
     struct retro_variable var;
@@ -536,6 +573,80 @@ void update_variables()
     {
         rspMode = !strcmp(var.value, "HLE") ? 0 : 1;
     }
+
+
+
+
+var.key = "parallel-n64-angrylion-vioverlay";
+   var.value = NULL;
+
+   environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var);
+
+   if (var.value)
+   {
+      if(!strcmp(var.value, "Filtered"))
+         angrylion_set_vi(0);
+      else if(!strcmp(var.value, "Unfiltered"))
+         angrylion_set_vi(1);
+      else if(!strcmp(var.value, "Depth"))
+         angrylion_set_vi(2);
+      else if(!strcmp(var.value, "Coverage"))
+         angrylion_set_vi(3);
+   }
+   else
+      angrylion_set_vi(0);
+
+   var.key = "parallel-n64-angrylion-multithread";
+   var.value = NULL;
+
+   environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var);
+
+   if (var.value)
+   {
+      if(!strcmp(var.value, "True"))
+         angrylion_set_threads(0);
+      else if(!strcmp(var.value, "False"))
+         angrylion_set_threads(1);
+   }
+   else
+      angrylion_set_threads(0);
+
+   var.key = "parallel-n64-angrylion-overscan";
+   var.value = NULL;
+
+   environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var);
+
+   if (var.value)
+   {
+      if(!strcmp(var.value, "True"))
+         angrylion_set_overscan(1);
+      else if(!strcmp(var.value, "False"))
+         angrylion_set_overscan(0);
+   }
+   else
+      angrylion_set_overscan(0);
+
+	   var.key = "parallel-n64-dithering";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      static signed old_dithering = -1;
+
+      if (!strcmp(var.value, "True"))
+         retro_dithering = 1;
+      else if (!strcmp(var.value, "False"))
+         retro_dithering = 0;
+
+      gfx_set_dithering();
+
+      old_dithering      = retro_dithering;
+   }
+   else
+   {
+      retro_dithering = 1;
+      gfx_set_dithering();
+}
 
     var.key = CORE_NAME "-BilinearMode";
     var.value = NULL;
