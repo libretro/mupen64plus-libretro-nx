@@ -73,6 +73,7 @@ int r_cbutton;
 int l_cbutton;
 int d_cbutton;
 int u_cbutton;
+bool alternate_mapping;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -241,6 +242,8 @@ static void setup_variables(void)
            "Down C Button; C3|C4|C1|C2"},
         {CORE_NAME "-u-cbutton",
            "Up C Button; C4|C1|C2|C3"},
+        {CORE_NAME "-alt-map",
+           "Independent C-button Controls; False|True" },
         {CORE_NAME "-pak1",
            "Player 1 Pak; memory|rumble|none"},
         {CORE_NAME "-pak2",
@@ -854,6 +857,13 @@ void update_variables()
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = CORE_NAME "-alt-map";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     update_controllers();
