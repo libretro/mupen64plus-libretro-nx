@@ -344,7 +344,7 @@ void rglPolygonOffset(GLfloat factor, GLfloat units);
 void rglDrawArrays(GLenum mode, GLint first, GLsizei count);
 void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
       GLfloat z, GLfloat w);
-void rglVertexAttrib4fv(GLuint name, GLfloat* v);
+void rglVertexAttrib4fv(GLuint name, const GLfloat* v);
 void rglDeleteProgram(GLuint program);
 void rglDeleteBuffers(GLsizei n, const GLuint *buffers);
 void rglUniform2uiv(	GLint location,

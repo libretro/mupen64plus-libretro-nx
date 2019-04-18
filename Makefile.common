@@ -242,6 +242,11 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/Graphics/CombinerProgram.cpp                                         \
     $(VIDEODIR_GLIDEN64)/src/Graphics/ObjectHandle.cpp                                            \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLFunctions.cpp                               \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.cpp             \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/ThreadedOpenGl/opengl_WrappedFunctions.cpp    \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/ThreadedOpenGl/opengl_Command.cpp             \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/ThreadedOpenGl/opengl_ObjectPool.cpp          \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/ThreadedOpenGl/RingBufferPool.cpp             \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/opengl_Attributes.cpp                         \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/opengl_BufferedDrawer.cpp                     \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/opengl_BufferManipulationObjectFactory.cpp    \
@@ -261,11 +266,11 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramImpl.cpp             \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactory.cpp   \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_FXAA.cpp                            \
-    $(VIDEODIR_GLIDEN64)/src/mupenplus/MemoryStatus_mupenplus.cpp                                 \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_ShaderStorage.cpp                   \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_SpecialShadersFactory.cpp           \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_Utils.cpp                           \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PrivateApi/GraphicBuffer.cpp    \
+    $(VIDEODIR_GLIDEN64)/src/mupenplus/MemoryStatus_mupenplus.cpp                                 \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3D.cpp                                                       \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DAM.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/uCodes/F3DBETA.cpp                                                   \
