@@ -52,7 +52,7 @@ PFNGLCOPYIMAGESUBDATAPROC m_glCopyImageSubData;
 #define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
 
-#if 0
+#if 1
 extern retro_log_printf_t log_cb;
 #define GLSM_DEBUG
 #endif
@@ -1862,7 +1862,7 @@ void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglVertexAttrib4fv(GLuint name, GLfloat* v)
+void rglVertexAttrib4fv(GLuint name, const GLfloat* v)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glVertexAttrib4fv.\n");
@@ -3326,6 +3326,7 @@ GLuint glsm_get_current_framebuffer(void)
    return hw_render.get_current_framebuffer();
 }
 
+extern void initGLFunctions();
 bool glsm_ctl(enum glsm_state_ctl state, void *data)
 {
    switch (state)
@@ -3350,6 +3351,8 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          break;
       case GLSM_CTL_STATE_CONTEXT_RESET:
          rglgen_resolve_symbols(hw_render.get_proc_address);
+         initGLFunctions();
+         
          if (window_first > 0) {
             resetting_context = 1;
             glsm_state_setup();

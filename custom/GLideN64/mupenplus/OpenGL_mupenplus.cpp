@@ -10,15 +10,6 @@
 
 #include <libretro_private.h>
 
-#ifndef EGL
-#if !defined(OS_WINDOWS) || defined(GLESX) || defined(MINGW)
-
-void initGLFunctions()
-{
-}
-#endif
-#endif
-
 class OGLVideoMupenPlus : public OGLVideo
 {
 public:

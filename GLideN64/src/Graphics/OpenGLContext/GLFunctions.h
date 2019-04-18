@@ -192,8 +192,9 @@ extern PFNGLDISABLEIPROC ptrDisablei;
 typedef void (APIENTRYP PFNGLEGLIMAGETARGETTEXTURE2DOESPROC) (GLenum target, void* image);
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC ptrEGLImageTargetTexture2DOES;
 
-void initGLFunctions();
+extern "C" void initGLFunctions();
 
+#ifndef NO_GL_WRAP
 #define glGetError(...) opengl::FunctionWrapper::wrGetError(__VA_ARGS__)
 #define glBlendFunc(...) opengl::FunctionWrapper::wrBlendFunc(__VA_ARGS__)
 #define glPixelStorei(...) opengl::FunctionWrapper::wrPixelStorei(__VA_ARGS__)
@@ -327,6 +328,7 @@ void initGLFunctions();
 #define glEnablei(...) opengl::FunctionWrapper::wrEnablei(__VA_ARGS__)
 #define glDisablei(...) opengl::FunctionWrapper::wrDisablei(__VA_ARGS__)
 #define glEGLImageTargetTexture2DOES(...) opengl::FunctionWrapper::wrEGLImageTargetTexture2DOES(__VA_ARGS__)
+#endif
 
 #include "Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.h"
 

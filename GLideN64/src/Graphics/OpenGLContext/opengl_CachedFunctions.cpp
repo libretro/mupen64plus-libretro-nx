@@ -25,7 +25,7 @@ void CachedEnable::enable(bool _enable)
 	if (_enable) {
 		switch(GLenum(m_parameter)) {
 			case GL_BLEND:
-				if(IS_GL_FUNCTION_VALID(glEnablei))
+				if(IS_GL_FUNCTION_VALID(Enablei))
 					glEnablei(GL_BLEND, 0);
 				else
 					glEnable(GL_BLEND);
@@ -55,7 +55,7 @@ void CachedEnable::enable(bool _enable)
 	} else {
 		switch(GLenum(m_parameter)) {
 			case GL_BLEND:
-				if(IS_GL_FUNCTION_VALID(glDisablei))
+				if(IS_GL_FUNCTION_VALID(Disablei))
 					glDisablei(GL_BLEND, 0);
 				else
 					glDisable(GL_BLEND);
