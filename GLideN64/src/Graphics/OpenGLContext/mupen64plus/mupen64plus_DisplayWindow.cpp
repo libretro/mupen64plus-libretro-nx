@@ -3,6 +3,7 @@
 #include <Graphics/Context.h>
 #include <Graphics/OpenGLContext/GLFunctions.h>
 #include <Graphics/OpenGLContext/opengl_Utils.h>
+#include <Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.h>
 #include <mupenplus/GLideN64_mupenplus.h>
 #include <GLideN64.h>
 #include <Config.h>
@@ -19,6 +20,8 @@
 #ifdef VC
 #include <bcm_host.h>
 #endif
+
+using namespace opengl;
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +66,8 @@ void DisplayWindowMupen64plus::_setAttributes()
 
 bool DisplayWindowMupen64plus::_start()
 {
+	FunctionWrapper::setThreadedMode(false);
+
 	_setAttributes();
 
 	m_bFullscreen = false;
@@ -83,6 +88,9 @@ void DisplayWindowMupen64plus::_stop()
 
 void DisplayWindowMupen64plus::_swapBuffers()
 {
+	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
+	FunctionWrapper::WaitForSwapBuffersQueued();
+	
 	libretro_swap_buffer = true;
 }
 
@@ -100,7 +108,6 @@ bool DisplayWindowMupen64plus::_resizeWindow()
 	m_bFullscreen = true;
 	m_width = m_screenWidth = m_resizeWidth;
 	m_height = m_screenHeight = m_resizeHeight;
-
 	opengl::Utils::isGLError(); // reset GL error.
 
 	return true;
