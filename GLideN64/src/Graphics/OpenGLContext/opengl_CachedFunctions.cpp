@@ -90,6 +90,27 @@ u32 CachedEnable::get()
 	return u32(m_cached);
 }
 
+/*---------------CachedBindFramebuffer-------------*/
+
+void CachedBindFramebuffer::bind(graphics::Parameter _target, graphics::ObjectHandle _name) {
+	if (update(_target, _name))
+		glBindFramebuffer(GLenum(_target), GLuint(_name));
+}
+
+/*---------------CachedBindRenderbuffer-------------*/
+
+void CachedBindRenderbuffer::bind(graphics::Parameter _target, graphics::ObjectHandle _name) {
+	if (update(_target, _name))
+		glBindRenderbuffer(GLenum(_target), GLuint(_name));
+}
+
+/*---------------CachedBindBuffer-------------*/
+
+void CachedBindBuffer::bind(graphics::Parameter _target, graphics::ObjectHandle _name) {
+	if (update(_target, _name))
+		glBindBuffer(GLenum(_target), GLuint(_name));
+}
+
 /*---------------CachedBindTexture-------------*/
 
 void CachedBindTexture::bind(Parameter _tmuIndex, Parameter _target, ObjectHandle _name)
@@ -202,9 +223,7 @@ void CachedTextureUnpackAlignment::setTextureUnpackAlignment(s32 _param)
 /*---------------CachedFunctions-------------*/
 
 CachedFunctions::CachedFunctions(const GLInfo & _glinfo)
-: m_bindFramebuffer(glBindFramebuffer)
-, m_bindRenderbuffer(glBindRenderbuffer)
-, m_bindBuffer(glBindBuffer) {
+{
 	if (_glinfo.isGLESX) {
 		// Disable parameters, not avalible for GLESX
 		m_enables.emplace(GL_DEPTH_CLAMP, Parameter());
