@@ -52,7 +52,7 @@ PFNGLCOPYIMAGESUBDATAPROC m_glCopyImageSubData;
 #define MAX_FRAMEBUFFERS 128000
 #define MAX_UNIFORMS 1024
 
-#if 1
+#if 0
 extern retro_log_printf_t log_cb;
 #define GLSM_DEBUG
 #endif
