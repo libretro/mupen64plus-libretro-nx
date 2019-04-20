@@ -82,6 +82,8 @@ extern PFNGLBLENDCOLORPROC ptrBlendColor;
 extern PFNGLREADBUFFERPROC ptrReadBuffer;
 extern PFNGLFINISHPROC ptrFinish;
 #if defined(OS_ANDROID)
+struct AHardwareBuffer;
+typedef EGLClientBuffer (EGLAPIENTRYP PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) (const struct AHardwareBuffer *buffer);
 extern PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC ptrGetNativeClientBufferANDROID;
 #endif
 

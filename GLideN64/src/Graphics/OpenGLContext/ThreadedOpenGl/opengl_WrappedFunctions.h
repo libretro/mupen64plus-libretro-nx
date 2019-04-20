@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include "opengl_Command.h"
 #include "RingBufferPool.h"
+#include <string.h> // memcpy
 
 #ifdef MUPENPLUSAPI
 #include <mupenplus/GLideN64_mupenplus.h>
