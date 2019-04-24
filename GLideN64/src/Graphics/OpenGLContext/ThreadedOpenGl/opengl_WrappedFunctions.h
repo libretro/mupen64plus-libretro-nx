@@ -27,23 +27,7 @@
 #endif
 
 #if defined(__LIBRETRO__) && !defined(NO_GL_WRAP)
-enum glsm_state_ctl
-{
-   GLSM_CTL_NONE = 0,
-   GLSM_CTL_STATE_SETUP,
-   GLSM_CTL_STATE_BIND,
-   GLSM_CTL_STATE_UNBIND,
-   GLSM_CTL_STATE_CONTEXT_RESET,
-   GLSM_CTL_STATE_CONTEXT_DESTROY,
-   GLSM_CTL_STATE_CONTEXT_INIT,
-   GLSM_CTL_IS_IMM_VBO,
-   GLSM_CTL_SET_IMM_VBO,
-   GLSM_CTL_UNSET_IMM_VBO,
-   GLSM_CTL_IMM_VBO_DISABLE,
-   GLSM_CTL_IMM_VBO_DRAW,
-   GLSM_CTL_PROC_ADDRESS_GET
-};
-extern "C" bool glsm_ctl(enum glsm_state_ctl state, void *data);
+#include <glsm/glsm_state_ctl.h>
 #endif
 
 namespace opengl {
