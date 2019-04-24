@@ -8,34 +8,15 @@ using namespace graphics;
 using namespace opengl;
 
 #ifdef __LIBRETRO__
+#include <glsm/glsm_caps.h>
+// TODO: Fix macro mess
 #undef glDisable
 #undef glEnable
-// TODO: Resolve this
-enum
-{
-   SGL_DEPTH_TEST             = 0,
-   SGL_BLEND,
-   SGL_POLYGON_OFFSET_FILL,
-   SGL_FOG,
-   SGL_CULL_FACE,
-   SGL_ALPHA_TEST,
-   SGL_SCISSOR_TEST,
-   SGL_STENCIL_TEST,
-   SGL_DEPTH_CLAMP,
-   SGL_CLIP_DISTANCE0,
-   SGL_DITHER,
-   SGL_SAMPLE_ALPHA_TO_COVERAGE,
-   SGL_SAMPLE_COVERAGE,
-#ifndef HAVE_OPENGLES
-   SGL_COLOR_LOGIC_OP,
-#endif
-   SGL_CAP_MAX
-};
 extern "C" void rglEnable(GLenum cap);
 extern "C" void rglDisable(GLenum cap);
-#define glDisable(T)                rglDisable(S##T)
-#define glEnable(T)                 rglEnable(S##T)
-#endif
+#define glDisable(T) rglDisable(S##T)
+#define glEnable(T)  rglEnable(S##T)
+#endif // __LIBRETRO__
 
 /*---------------CachedEnable-------------*/
 
