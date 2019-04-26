@@ -342,9 +342,7 @@ static void *add_pointer(void *src, void* addr)
   //assert((ptr2[4]&0xfffffc1f)==0xd61f0000); //br
   set_jump_target((intptr_t)src,(intptr_t)addr);
   intptr_t ptr_rx=((intptr_t)ptr-(intptr_t)base_addr)+(intptr_t)base_addr_rx;
-  #ifndef HAVE_LIBNX
   cache_flush((void*)ptr_rx, (void*)(ptr_rx+4));
-  #endif // HAVE_LIBNX
   return ptr2;
 }
 
@@ -5128,9 +5126,7 @@ static void do_clear_cache(void)
               end+=4096;
               j++;
             }else{
-              #ifndef HAVE_LIBNX
               cache_flush((char *)start,(char *)end);
-              #endif // HAVE_LIBNX
               break;
             }
           }
@@ -5166,12 +5162,6 @@ static void arch_init(void) {
   jump_table_symbols[4] = (intptr_t)cached_interp_DDIV;
   jump_table_symbols[5] = (intptr_t)cached_interp_DDIVU;
 
-#ifdef HAVE_LIBNX
-  bool jit_was_executable = jit_is_executable;
-  if(jit_is_executable)
-    jit_force_writeable();
-#endif
-
   // Trampolines for jumps >128MB
   intptr_t *ptr,*ptr2,*ptr3;
   ptr=(intptr_t *)jump_table_symbols;
@@ -5193,9 +5183,6 @@ static void arch_init(void) {
     ptr2++;
     ptr3+=2;
   }
-  
-#ifdef HAVE_LIBNX
-  if(jit_was_executable)
-    jit_force_executable();
-#endif
+
+  __clear_cache((char *)base_addr+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE,(char *)base_addr+(1<<TARGET_SIZE_2));
 }
