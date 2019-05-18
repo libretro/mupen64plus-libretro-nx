@@ -1413,10 +1413,7 @@ void rglGetActiveUniformsiv( 	GLuint program,
  *
  * OpenGLES  : 3.0
  */
-void rglGetUniformIndices(GLuint program,
-  	GLsizei uniformCount,
-  	const GLchar **uniformNames,
-  	GLuint *uniformIndices)
+void rglGetUniformIndices(GLuint program, GLsizei uniformCount, const GLchar *const*uniformNames, GLuint *uniformIndices)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glGetUniformIndices.\n");
@@ -1633,8 +1630,7 @@ GLint rglGetAttribLocation(GLuint program, const GLchar *name)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglShaderSource(GLuint shader, GLsizei count,
-      const GLchar **string, const GLint *length)
+void rglShaderSource(GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glShaderSource.\n");
@@ -2404,7 +2400,7 @@ void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
  * OpenGL    : 3.2
  * OpenGLES  : 3.2
  */
-void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
+void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices, GLint basevertex)
 {
 #ifdef HAVE_OPENGLES
    bindFBO(GL_FRAMEBUFFER);
@@ -2778,7 +2774,7 @@ void *rglFenceSync(GLenum condition, GLbitfield flags)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void rglDeleteSync(void * sync)
+void rglDeleteSync(GLsync sync)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glDeleteSync.\n");
@@ -2907,7 +2903,7 @@ void rglFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-GLenum rglClientWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
+GLenum rglClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
 #ifdef GLSM_DEBUG
    log_cb(RETRO_LOG_INFO, "glClientWaitSync.\n");
