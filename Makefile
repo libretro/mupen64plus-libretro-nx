@@ -351,8 +351,11 @@ else
    endif
 	COREFLAGS += -DOS_WINDOWS -DMINGW
    ifneq (,$(findstring win32,$(platform)))
-        ASFLAGS = -f win32
+        COREFLAGS += -DWIN32
+        CXXFLAGS += -fpermissive
+        ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
 	else
+        COREFLAGS += -DWIN64
         ASFLAGS = -f win64 -d WIN64
 	endif
 endif
