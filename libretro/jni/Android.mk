@@ -58,7 +58,7 @@ endif
 
 include $(ROOT_DIR)/Makefile.common
 
-COREFLAGS += -D__LIBRETRO__ -DOS_ANDROID -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT $(INCFLAGS) $(GLFLAGS) $(DYNAFLAGS) -DANDROID -DEGL_EGLEXT_PROTOTYPES
+COREFLAGS += -D__LIBRETRO__ -DOS_ANDROID -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT $(INCFLAGS) $(GLFLAGS) $(DYNAFLAGS) -DANDROID -DEGL_EGLEXT_PROTOTYPES -DHAVE_POSIX_MEMALIGN=1
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")
@@ -74,12 +74,13 @@ include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
 LOCAL_SRC_FILES        := $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
 LOCAL_ASMFLAGS         := $(COREASMFLAGS)
-LOCAL_CPPFLAGS         := -O3 -ftree-vectorize -fno-rtti -ffast-math -funsafe-math-optimizations -funroll-loops $(COREFLAGS)
+LOCAL_CPPFLAGS         := -O3 -fpermissive -ftree-vectorize -fno-rtti -ffast-math -funsafe-math-optimizations -funroll-loops $(COREFLAGS)
 LOCAL_CFLAGS           := -O3 -ftree-vectorize -ffast-math -funsafe-math-optimizations -funroll-loops $(COREFLAGS)
 LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
 LOCAL_LDLIBS           := -lz -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := png
 LOCAL_CPP_FEATURES     := exceptions
+LOCAL_ARM_MODE         := arm
 LOCAL_ARM_NEON         := true
 LOCAL_CONLYFLAGS       := -std=gnu11
 

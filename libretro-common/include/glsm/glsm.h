@@ -31,9 +31,23 @@
 
 RETRO_BEGIN_DECLS
 
-#ifdef HAVE_OPENGLES2
+#if defined(HAVE_OPENGLES2) && defined(OS_ANDROID)
 typedef double GLclampd;
 typedef double GLdouble;
+typedef struct __GLsync* GLsync;
+typedef uint64_t GLuint64;
+typedef int64_t GLint64;
+#define ptrdiff_t khronos_ssize_t
+#endif
+
+#if defined(HAVE_OPENGLES3) && defined(OS_ANDROID)
+typedef double GLclampd;
+typedef double GLdouble;
+// These will get redefined by other GL headers.
+#undef GL_DRAW_FRAMEBUFFER_BINDING
+#undef GL_COPY_READ_BUFFER_BINDING
+#undef GL_COPY_WRITE_BUFFER_BINDING
+#define ptrdiff_t khronos_ssize_t
 #endif
 
 #if defined(HAVE_OPENGLES2)
