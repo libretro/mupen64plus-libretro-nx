@@ -31,7 +31,7 @@
 
 RETRO_BEGIN_DECLS
 
-#if defined(HAVE_OPENGLES2) && defined(OS_ANDROID)
+#if defined(HAVE_OPENGLES2)
 typedef double GLclampd;
 typedef double GLdouble;
 typedef struct __GLsync* GLsync;
@@ -40,7 +40,7 @@ typedef int64_t GLint64;
 #define ptrdiff_t khronos_ssize_t
 #endif
 
-#if defined(HAVE_OPENGLES3) && defined(OS_ANDROID)
+#if defined(HAVE_OPENGLES3)
 typedef double GLclampd;
 typedef double GLdouble;
 // These will get redefined by other GL headers.
