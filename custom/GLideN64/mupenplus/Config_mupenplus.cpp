@@ -146,6 +146,7 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
 	config.textureFilter.txHiresEnable = txHiresEnable;
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
+	config.video.fxaa          = FXAA;
 	config.video.multisampling = MultiSampling;
 	
     // Overscan
