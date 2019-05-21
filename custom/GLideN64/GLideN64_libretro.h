@@ -52,6 +52,7 @@ extern uint32_t txEnhancementMode;
 extern uint32_t txHiresEnable;
 extern uint32_t txHiresFullAlphaChannel;
 extern uint32_t txFilterIgnoreBG;
+extern uint32_t EnableFXAA;
 extern uint32_t MultiSampling;
 extern uint32_t EnableFragmentDepthWrite;
 extern uint32_t EnableShadersStorage;

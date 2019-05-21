@@ -106,6 +106,7 @@ uint32_t txEnhancementMode = 0;
 uint32_t txHiresEnable = 0;
 uint32_t txHiresFullAlphaChannel = 0;
 uint32_t txFilterIgnoreBG = 0;
+uint32_t EnableFXAA = 0;
 uint32_t MultiSampling = 0;
 uint32_t EnableFragmentDepthWrite = 0;
 uint32_t EnableShadersStorage = 0;
@@ -177,6 +178,8 @@ static void setup_variables(void)
         { CORE_NAME "-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
+        { CORE_NAME "-FXAA",
+            "FXAA; 0|1" },
         { CORE_NAME "-FrameDuping",
 #ifdef HAVE_LIBNX
             "Frame Duplication; True|False" },
@@ -554,6 +557,13 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
+    }
+
+    var.key = CORE_NAME "-FXAA";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableFXAA = atoi(var.value);
     }
 
     var.key = CORE_NAME "-MultiSampling";
