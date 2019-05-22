@@ -350,9 +350,9 @@ else
       WITH_DYNAREC = x86_64
    endif
 	COREFLAGS += -DOS_WINDOWS -DMINGW
+   CXXFLAGS += -fpermissive
    ifneq (,$(findstring win32,$(platform)))
         COREFLAGS += -DWIN32
-        CXXFLAGS += -fpermissive
         ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
 	else
         COREFLAGS += -DWIN64
