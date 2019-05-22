@@ -1,7 +1,8 @@
 #include "Log.h"
+#include <string.h>
 #include <android/log.h>
 
-void LOG(u16 type, const char * format, ...) {
+void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, ...) {
 
 	static android_LogPriority androidLogTranslate[] = {
 			ANDROID_LOG_SILENT,
@@ -12,11 +13,11 @@ void LOG(u16 type, const char * format, ...) {
 			ANDROID_LOG_VERBOSE,
 	};
 
-	if (type > LOG_LEVEL)
+	if (_type > LOG_LEVEL)
 		return;
 
 	va_list va;
-	va_start(va, format);
-	__android_log_vprint(androidLogTranslate[type], "GLideN64", format, va);
+	va_start(va, _format);
+	__android_log_vprint(androidLogTranslate[_type], "GLideN64", _format, va);
 	va_end(va);
 }
