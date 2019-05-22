@@ -123,7 +123,7 @@ ifneq (,$(findstring unix,$(platform)))
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
-   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
    GLES = 1
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
@@ -142,7 +142,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
       HAVE_NEON = 1
    endif
-   COREFLAGS += -DOS_LINUX
+   COREFLAGS += -DUNDEF_GL_GLEXT_PROTOTYPES -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 
 # Nintendo Switch
