@@ -340,24 +340,23 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
-   ifneq (,$(findstring win32,$(platform)))
-      CC = i686-w64-mingw32-gcc
-      CXX = i686-w64-mingw32-g++
-      WITH_DYNAREC = x86
-   else ifneq (,$(findstring win64,$(platform)))
+   
+   ifeq ($(MSYSTEM),MINGW64)
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
       WITH_DYNAREC = x86_64
+      COREFLAGS += -DWIN64
+      ASFLAGS = -f win64 -d WIN64
+   else ifeq ($(MSYSTEM),MINGW32)
+      CC = i686-w64-mingw32-gcc
+      CXX = i686-w64-mingw32-g++
+      WITH_DYNAREC = x86
+      COREFLAGS += -DWIN32
+      ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
-	COREFLAGS += -DOS_WINDOWS -DMINGW
+
+   COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
-   ifneq (,$(findstring win32,$(platform)))
-        COREFLAGS += -DWIN32
-        ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
-	else
-        COREFLAGS += -DWIN64
-        ASFLAGS = -f win64 -d WIN64
-	endif
 endif
 
 ifeq ($(STATIC_LINKING), 1)
