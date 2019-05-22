@@ -192,8 +192,14 @@ static void setup_variables(void)
             "VI Refresh (Overclock); Auto|1500|2200" },
         { CORE_NAME "-NoiseEmulation",
             "Noise Emulation; True|False" },
+
         { CORE_NAME "-EnableFBEmulation",
+#ifdef VC
+            "Framebuffer Emulation; False|True" },
+#else
             "Framebuffer Emulation; True|False" },
+#endif
+
         { CORE_NAME "-EnableLODEmulation",
             "LOD Emulation; True|False" },
         { CORE_NAME "-EnableCopyColorToRDRAM",

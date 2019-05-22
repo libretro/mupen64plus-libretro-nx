@@ -113,11 +113,7 @@ extern "C" void Config_LoadConfig()
 	u32 hacks = config.generalEmulation.hacks;
 	config.resetToDefaults();
 	config.frameBufferEmulation.aspect = AspectRatio;
-#ifdef VC
-	config.frameBufferEmulation.enable = 0;
-#else
 	config.frameBufferEmulation.enable = EnableFBEmulation;
-#endif
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
