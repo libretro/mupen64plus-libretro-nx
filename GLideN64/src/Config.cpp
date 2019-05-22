@@ -51,7 +51,7 @@ void Config::resetToDefaults()
 
 	graphics2D.correctTexrectCoords = tcDisable;
 	graphics2D.enableNativeResTexrects = 0;
-	graphics2D.bgMode = BGMode::bgStripped;
+	graphics2D.bgMode = BGMode::bgOnePiece;
 
 	frameBufferEmulation.enable = 1;
 	frameBufferEmulation.copyDepthToRDRAM = cdSoftwareRender;
