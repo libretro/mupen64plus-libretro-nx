@@ -221,8 +221,10 @@ static void setup_variables(void)
         { CORE_NAME "-EnableFragmentDepthWrite",
             "GPU shader depth write; True|False" },
 #endif
+#ifndef VC
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
+#endif
         { CORE_NAME "-EnableTextureCache",
             "Cache Textures; True|False" },
         { CORE_NAME "-EnableOverscan",
