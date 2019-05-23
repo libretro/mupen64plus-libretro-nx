@@ -12,7 +12,7 @@
 #define glGetProcAddress wglGetProcAddress
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("gl"#proc_name)
 
-#elif defined(VERO4K) || defined(ODROID) || defined(VC)
+#elif defined(VERO4K) || defined(ODROID) || defined(VC) || defined(AMLOGIC)
 
 #include <dlfcn.h>
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) dlsym(gles2so, "gl"#proc_name);
@@ -210,6 +210,8 @@ extern "C" void initGLFunctions()
 	void *gles2so = dlopen("/usr/lib/arm-linux-gnueabihf/libGLESv2.so", RTLD_NOW);
 #elif defined(VERO4K)
        void *gles2so = dlopen("/opt/vero3/lib/libGLESv2.so", RTLD_NOW);
+#elif defined(AMLOGIC)
+       void *gles2so = dlopen("/usr/lib/libGLESv2.so", RTLD_NOW);
 #endif
 
 #if defined(EGL) || defined(OS_IOS)
