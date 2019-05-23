@@ -213,6 +213,19 @@ else ifneq (,$(findstring odroid,$(platform)))
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
+
+# Amlogic S905/S912
+else ifneq (,$(findstring amlogic,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GLES = 1
+   GL_LIB := -lGLESv2
+   CPUFLAGS += -marm -mfloat-abi=hard -mfpu=neon
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DAMLOGIC -DOS_LINUX -DUNDEF_GL_GLEXT_PROTOTYPES
+   CPUFLAGS += -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53
+
 # OS X
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
