@@ -31,7 +31,9 @@ ifeq ($(platform),)
       platform = win
    endif
 else ifneq (,$(findstring armv,$(platform)))
+   ifeq (,$(findstring classic_,$(platform)))
    override platform += unix
+endif
 endif
 
 # system platform
@@ -225,6 +227,23 @@ else ifneq (,$(findstring amlogic,$(platform)))
    WITH_DYNAREC=arm
    COREFLAGS += -DAMLOGIC -DOS_LINUX -DUNDEF_GL_GLEXT_PROTOTYPES
    CPUFLAGS += -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53
+
+else ifneq (,$(findstring classic_armv8_a35,$(platform)))
+     TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GLES3 = 1
+   GL_LIB := -lGLESv2
+   EGL := 1
+   fpic := -fPIC
+   STRINGS := arm-linux-gnueabihf-$(STRINGS)
+   CPUFLAGS += -Ofast \
+   -marm -mcpu=cortex-a35 -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+   CXXFLAGS += -fno-rtti
+   WITH_DYNAREC = arm
+   HAVE_NEON = 1
+   COREFLAGS += -DOS_LINUX -DCLASSIC
+   ASFLAGS = -f elf -d ELF_TYPE
+   LDFLAGS += -marm -mcpu=cortex-a35 -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 
 # OS X
 else ifneq (,$(findstring osx,$(platform)))

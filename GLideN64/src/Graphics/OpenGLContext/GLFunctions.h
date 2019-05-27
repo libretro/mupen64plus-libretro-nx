@@ -35,9 +35,15 @@ typedef double GLdouble;
 #undef GL_COPY_READ_BUFFER_BINDING
 #undef GL_COPY_WRITE_BUFFER_BINDING
 #include <GL/glcorearb.h>
+
+#elif defined(CLASSIC)
+typedef double GLclampf;
+typedef double GLfloat;
+
 #else
 #include <GL/gl.h>
 #include <GL/glcorearb.h>
+
 #endif
 
 #define GL_LUMINANCE 0x1909
