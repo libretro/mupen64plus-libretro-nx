@@ -74,8 +74,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
 LOCAL_SRC_FILES        := $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
 LOCAL_ASMFLAGS         := $(COREASMFLAGS)
-LOCAL_CPPFLAGS         := -O3 -fpermissive -ftree-vectorize -fno-rtti -ffast-math -funsafe-math-optimizations -funroll-loops $(COREFLAGS)
-LOCAL_CFLAGS           := -O3 -ftree-vectorize -ffast-math -funsafe-math-optimizations -funroll-loops $(COREFLAGS)
+LOCAL_CPPFLAGS         := -std=gnu++11 $(COREFLAGS)
+LOCAL_CFLAGS           := $(COREFLAGS)
 LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
 LOCAL_LDLIBS           := -lz -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := png
