@@ -141,6 +141,9 @@ else ifneq (,$(findstring rpi,$(platform)))
    else ifneq (,$(findstring rpi3,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
       HAVE_NEON = 1
+   else ifneq (,$(findstring rpi4,$(platform)))
+      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+      HAVE_NEON = 1
    endif
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
