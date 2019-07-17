@@ -142,7 +142,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
       HAVE_NEON = 1
    endif
-   COREFLAGS += -DUNDEF_GL_GLEXT_PROTOTYPES -DOS_LINUX
+   COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 
 # Nintendo Switch
@@ -214,6 +214,34 @@ else ifneq (,$(findstring odroid,$(platform)))
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 
+# Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
+else ifneq (,$(findstring AMLG,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   CPUFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+
+   ifneq (,$(findstring AMLG12,$(platform)))
+      ifneq (,$(findstring AMLG12B,$(platform)))
+         CPUFLAGS += -mtune=cortex-a73.cortex-a53
+      else
+         CPUFLAGS += -mtune=cortex-a53
+      endif
+      GLES3 = 1
+   else ifneq (,$(findstring AMLGX,$(platform)))
+      CPUFLAGS += -mtune=cortex-a53
+      ifneq (,$(findstring AMLGXM,$(platform)))
+         GLES3 = 1
+      else
+         GLES = 1
+      endif
+   endif
+
+   GL_LIB := -lGLESv2
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
+
 # Amlogic S905/S912
 else ifneq (,$(findstring amlogic,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
@@ -223,8 +251,33 @@ else ifneq (,$(findstring amlogic,$(platform)))
    CPUFLAGS += -marm -mfloat-abi=hard -mfpu=neon
    HAVE_NEON = 1
    WITH_DYNAREC=arm
-   COREFLAGS += -DAMLOGIC -DOS_LINUX -DUNDEF_GL_GLEXT_PROTOTYPES
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
    CPUFLAGS += -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53
+
+# Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
+else ifneq (,$(findstring RK,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+
+   ifneq (,$(findstring RK33,$(platform)))
+      CPUFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+      ifneq (,$(findstring RK3399,$(platform)))
+         CPUFLAGS += -mtune=cortex-a72.cortex-a53
+         GLES3 = 1
+      else ifneq (,$(findstring RK3328,$(platform)))
+         CPUFLAGS += -mtune=cortex-a53
+         GLES = 1
+      endif
+   else ifneq (,$(findstring RK3288,$(platform)))
+      CPUFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
+      GLES3 = 1
+   endif
+
+   GL_LIB := -lGLESv2
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
 
 # OS X
 else ifneq (,$(findstring osx,$(platform)))

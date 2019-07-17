@@ -7,13 +7,9 @@
 #include <winlnxdefs.h>
 #endif
 
-#ifdef UNDEF_GL_GLEXT_PROTOTYPES
-// Issues on Raspberry since GL2.h defines it and causes
-// Macro shenanigans
 #ifdef GL_GLEXT_PROTOTYPES
 #undef GL_GLEXT_PROTOTYPES
 #endif // GL_GLEXT_PROTOTYPES
-#endif // UNDEF_GL_GLEXT_PROTOTYPES
 
 #ifdef EGL
 #include <GL/glcorearb.h>
