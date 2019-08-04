@@ -126,6 +126,12 @@ else ifneq (,$(findstring rpi,$(platform)))
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
    GLES = 1
    ifneq (,$(findstring mesa,$(platform)))
+      MESA = 1
+   endif
+   ifneq (,$(findstring rpi4,$(platform)))
+      MESA = 1
+   endif
+   ifeq ($(MESA), 1)
       GL_LIB := -lGLESv2
    else
       LLE = 0
