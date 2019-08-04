@@ -329,113 +329,42 @@ void inputGetKeys_default( int Control, BUTTONS *Keys )
       }
    }
 
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-      Keys->R_DPAD = true;
-   else
-      Keys->R_DPAD = false;
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
-      Keys->L_DPAD = true;
-   else
-      Keys->L_DPAD = false;
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
-      Keys->D_DPAD = true;
-   else
-      Keys->D_DPAD = false;
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
-      Keys->U_DPAD = true;
-   else
-      Keys->U_DPAD = false;
-
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_START)))
-      Keys->START_BUTTON = true;
-   else
-      Keys->START_BUTTON = false;
-
-   if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L2)))
-      Keys->Z_TRIG    = true;
-   else
-      Keys->Z_TRIG    = false;
+   Keys->R_DPAD       = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)));
+   Keys->L_DPAD       = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)));
+   Keys->D_DPAD       = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)));
+   Keys->U_DPAD       = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_UP)));
+   Keys->START_BUTTON = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_START)));
+   Keys->Z_TRIG       = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L2)));
 
    if (alternate_mapping)
    {
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_B)))
-         Keys->A_BUTTON = true;
-      else
-         Keys->A_BUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y)))
-         Keys->B_BUTTON = true;
-      else
-         Keys->B_BUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R)))
-         Keys->R_CBUTTON = true;
-      else
-         Keys->R_CBUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L)))
-         Keys->L_CBUTTON = true;
-      else
-         Keys->L_CBUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_A)))
-         Keys->D_CBUTTON = true;
-      else
-         Keys->D_CBUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_X)))
-         Keys->U_CBUTTON = true;
-      else
-         Keys->U_CBUTTON = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R2)))
-         Keys->R_TRIG    = true;
-      else
-         Keys->R_TRIG    = false;
-      if ((ret & (1 <<RETRO_DEVICE_ID_JOYPAD_SELECT)))
-         Keys->L_TRIG    = true;
-      else
-         Keys->L_TRIG    = false;
+      Keys->A_BUTTON  = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_B)));
+      Keys->B_BUTTON  = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y)));
+      Keys->R_CBUTTON = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R)));
+      Keys->L_CBUTTON = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L)));
+      Keys->D_CBUTTON = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_A)));
+      Keys->U_CBUTTON = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_X)));
+      Keys->R_TRIG    = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R2)));
+      Keys->L_TRIG    = !!((ret & (1 <<RETRO_DEVICE_ID_JOYPAD_SELECT)));
    }
    else
    {
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R)))
-         Keys->R_TRIG    = true;
-      else
-         Keys->R_TRIG    = false;
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L)))
-         Keys->L_TRIG    = true;
-      else
-         Keys->L_TRIG    = false;
+      Keys->R_TRIG    = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R)));
+      Keys->L_TRIG    = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_L)));
 
-      if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R2)))
-         cbuttons_mode   = true;
-      else
-         cbuttons_mode   = false;
+      cbuttons_mode   = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_R2)));
 
       if (cbuttons_mode)
       {
-         if ((ret & (1 << r_cbutton)))
-            Keys->R_CBUTTON = true;
-         else
-            Keys->R_CBUTTON = false;
-         if ((ret & (1 << l_cbutton)))
-            Keys->L_CBUTTON = true;
-         else
-            Keys->L_CBUTTON = false;
-         if ((ret & (1 << d_cbutton)))
-            Keys->D_CBUTTON = true;
-         else
-            Keys->D_CBUTTON = false;
-         if ((ret & (1 << u_cbutton)))
-            Keys->U_CBUTTON = true;
-         else
-            Keys->U_CBUTTON = false;
+         Keys->R_CBUTTON = !!((ret & (1 << r_cbutton)));
+         Keys->L_CBUTTON = !!((ret & (1 << l_cbutton)));
+         Keys->D_CBUTTON = !!((ret & (1 << d_cbutton)));
+         Keys->U_CBUTTON = !!((ret & (1 << u_cbutton)));
       }
       else
       {
-         if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_B)))
-            Keys->A_BUTTON  = true;
-         else
-            Keys->A_BUTTON  = false;
-         if ((ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y)))
-            Keys->B_BUTTON  = true;
-         else
-            Keys->B_BUTTON  = false;
+         Keys->A_BUTTON  = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_B)));
+         Keys->B_BUTTON  = !!((ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y)));
       }
    }
 
