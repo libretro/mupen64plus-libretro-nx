@@ -124,7 +124,11 @@ ifneq (,$(findstring unix,$(platform)))
 else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
-   GLES = 1
+   ifeq ($(FORCE_GLES3),1)
+      GLES3 = 1
+   else
+      GLES = 1
+   endif
    ifneq (,$(findstring mesa,$(platform)))
       MESA = 1
    endif
