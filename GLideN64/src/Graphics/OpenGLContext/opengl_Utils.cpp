@@ -51,10 +51,15 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 	if (where || *extension == '\0')
 		return false;
 
-	const char* extensions = eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS);
+	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
+	if (extensions == nullptr) {
+		EGLDisplay platformDisplay = eglGetPlatformDisplay(EGL_PLATFORM_GBM_KHR, display, NULL);
+		extensions = eglQueryString(platformDisplay, EGL_EXTENSIONS);
+	}
 
 	const char* start = extensions;
-	while (start) {
+	for (;;) {
 		where = strstr(start, extension);
 		if (where == nullptr)
 			break;
