@@ -54,7 +54,7 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 	const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
 	if (extensions == nullptr) {
-		EGLDisplay platformDisplay = eglGetPlatformDisplay(EGL_PLATFORM_GBM_KHR, display, NULL);
+		EGLDisplay platformDisplay = eglGetPlatformDisplay(EGL_PLATFORM_GBM_KHR, display, nullptr);
 		extensions = eglQueryString(platformDisplay, EGL_EXTENSIONS);
 	}
 
