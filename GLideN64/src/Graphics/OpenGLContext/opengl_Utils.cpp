@@ -51,8 +51,7 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 	if (where || *extension == '\0')
 		return false;
 
-	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
+	const char* extensions = eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS);
 	if (extensions == nullptr) {
 		// FIXME: KMS/DRM requires EGL_PLATFORM_GBM_KHR and libgbm, see mupen64plus-libretro-nx#82
 		return true;
