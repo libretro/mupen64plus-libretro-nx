@@ -31,9 +31,10 @@ ifeq ($(platform),)
       platform = win
    endif
 else ifneq (,$(findstring armv,$(platform)))
+   ifeq (,$(findstring classic_,$(platform)))
    override platform += unix
+   endif
 endif
-
 # system platform
 system_platform = unix
 ifeq ($(shell uname -a),)
@@ -145,6 +146,56 @@ else ifneq (,$(findstring rpi,$(platform)))
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 
+# NESC, SNESC, C64 mini
+else ifeq ($(platform), classic_armv7_a7)
+        TARGET := $(TARGET_NAME)_libretro.so
+        LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+        GLES = 1
+        GL_LIB := -lGLESv2
+        fpic := -fPIC
+        CPUFLAGS += -Ofast \
+        -flto=4 -fwhole-program -fuse-linker-plugin \
+        -fdata-sections -ffunction-sections -Wl,--gc-sections \
+        -fno-stack-protector -fno-ident -fomit-frame-pointer \
+        -falign-functions=1 -falign-jumps=1 -falign-loops=1 \
+        -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
+        -fmerge-all-constants -fno-math-errno \
+        -marm -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+        HAVE_NEON = 1
+        WITH_DYNAREC=arm
+        COREFLAGS += -DOS_LINUX
+        ASFLAGS = -f elf -d ELF_TYPE
+        LDFLAGS += -marm -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+        #This fixes the config for MALI based devices...
+        CPUFLAGS += -DCLASSIC
+        ifeq ($(shell echo `$(CC) -dumpversion` "< 4.9" | bc -l), 1)
+          CFLAGS += -march=armv7-a
+        else
+          CFLAGS += -march=armv7ve
+          # If gcc is 5.0 or later
+          ifeq ($(shell echo `$(CC) -dumpversion` ">= 5" | bc -l), 1)
+            LDFLAGS += -static-libgcc -static-libstdc++
+          endif
+        endif
+
+# Playstation Classic
+else ifneq (,$(findstring classic_armv8_a35,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GLES3 = 1
+   GL_LIB := -lGLESv2
+   EGL := 1
+   fpic := -fPIC
+   STRINGS := arm-linux-gnueabihf-$(STRINGS)
+   CPUFLAGS += -Ofast \
+   -marm -mcpu=cortex-a35 -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+   CXXFLAGS += -fno-rtti
+   WITH_DYNAREC = arm
+   HAVE_NEON = 1
+   COREFLAGS += -DOS_LINUX -DCLASSIC
+   ASFLAGS = -f elf -d ELF_TYPE
+   LDFLAGS += -marm -mcpu=cortex-a35 -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+
 # Nintendo Switch
 else ifeq ($(platform), libnx)
    include $(DEVKITPRO)/devkitA64/base_tools
@@ -163,6 +214,7 @@ else ifeq ($(platform), libnx)
    GLES = 0
    WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
+
 
 # 64 bit ODROIDs
 else ifneq (,$(findstring odroid64,$(platform)))
