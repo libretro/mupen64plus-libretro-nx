@@ -50,7 +50,7 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 	const char* where = strchr(extension, ' ');
 	if (where || *extension == '\0')
 		return false;
-
+	eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
 	const char* extensions = eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS);
 
 	const char* start = extensions;
