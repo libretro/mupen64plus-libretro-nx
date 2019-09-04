@@ -192,7 +192,7 @@ else ifneq (,$(findstring classic_armv8_a35,$(platform)))
    CXXFLAGS += -fno-rtti
    WITH_DYNAREC = arm
    HAVE_NEON = 1
-   COREFLAGS += -DOS_LINUX -DCLASSIC
+   COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
    LDFLAGS += -marm -mcpu=cortex-a35 -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 
