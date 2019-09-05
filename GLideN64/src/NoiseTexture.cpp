@@ -37,7 +37,7 @@ NoiseTexture::NoiseTexture()
 
 inline u32 irand()
 {
-        static u32 iseed = 1;
+	static u32 iseed = 1;
 	iseed *= 0x343fd;
 	iseed += 0x269ec3;
 	return ((iseed >> 16) & 0x7fff);
