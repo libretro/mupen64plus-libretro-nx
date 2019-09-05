@@ -2,7 +2,6 @@
 #include <math.h>
 #include "Types.h"
 #include "VI.h"
-#include "OpenGL.h"
 #include "N64.h"
 #include "gSP.h"
 #include "gDP.h"
@@ -12,11 +11,23 @@
 #include "FrameBufferInfo.h"
 #include "Config.h"
 #include "Performance.h"
-#include "Debug.h"
+#include "Debugger.h"
+#include "DebugDump.h"
+#include "Keys.h"
+#include "DisplayWindow.h"
+#include <Graphics/Context.h>
 
 using namespace std;
 
 VIInfo VI;
+
+u16 VI_GetMaxBufferHeight(u16 _width)
+{
+	if (_width > 320 || VI.interlaced)
+		return VI.PAL ? 580 : 480;
+
+	return VI.PAL ? 290 : 240;
+}
 
 void VI_UpdateSize()
 {
@@ -26,8 +37,8 @@ void VI_UpdateSize()
 	const u32 vScale = _SHIFTR(*REG.VI_Y_SCALE, 0, 12);
 //	f32 yOffset = _FIXED2FLOAT( _SHIFTR( *REG.VI_Y_SCALE, 16, 12 ), 10 );
 
-	const u32 hEnd = _SHIFTR( *REG.VI_H_START, 0, 10 );
-	const u32 hStart = _SHIFTR( *REG.VI_H_START, 16, 10 );
+//	const u32 hEnd = _SHIFTR( *REG.VI_H_START, 0, 10 );
+//	const u32 hStart = _SHIFTR( *REG.VI_H_START, 16, 10 );
 
 	// These are in half-lines, so shift an extra bit
 	const u32 vEnd = _SHIFTR( *REG.VI_V_START, 0, 10 );
@@ -73,12 +84,10 @@ void VI_UpdateSize()
 	FrameBufferList & fbList = frameBufferList();
 	FrameBuffer * pBuffer = fbList.findBuffer(VI.lastOrigin);
 	DepthBuffer * pDepthBuffer = pBuffer != nullptr ? pBuffer->m_pDepthBuffer : nullptr;
-	if (config.frameBufferEmulation.enable && ((config.generalEmulation.hacks & hack_ZeldaMM) == 0) &&
+	if (config.frameBufferEmulation.enable &&
 		((interlacedPrev != VI.interlaced) ||
 		(VI.width > 0 && VI.width != VI.widthPrev) ||
-		(!VI.interlaced && pDepthBuffer != nullptr && pDepthBuffer->m_width != VI.width) ||
-		((config.generalEmulation.hacks & hack_ignoreVIHeightChange) == 0 && pBuffer != nullptr && pBuffer->m_height != VI.height))
-	) {
+		(!VI.interlaced && pDepthBuffer != nullptr && pDepthBuffer->m_width != VI.width))) {
 		fbList.removeBuffers(VI.widthPrev);
 		fbList.removeBuffers(VI.width);
 		depthBufferList().destroy();
@@ -92,34 +101,42 @@ void VI_UpdateSize()
 void VI_UpdateScreen()
 {
 	if (VI.lastOrigin == -1) // Workaround for Mupen64Plus issue with initialization
-		isGLError();
+		gfxContext.isError();
+
+	DebugMsg(DEBUG_DETAIL, "VI_UpdateScreen Origin: %08x, Old origin: %08x, width: %d\n", *REG.VI_ORIGIN, VI.lastOrigin, *REG.VI_WIDTH);
 
 	if (ConfigOpen)
 		return;
 
 	perf.increaseVICount();
-	OGLVideo & ogl = video();
-	if (ogl.changeWindow())
+	DisplayWindow & wnd = dwnd();
+	if (wnd.changeWindow())
 		return;
-	if (ogl.resizeWindow())
+	if (wnd.resizeWindow())
 		return;
-	ogl.saveScreenshot();
+	wnd.saveScreenshot();
+	g_debugger.checkDebugState();
 
-    //printf("VI_UpdateScreen\n");
+	if (isKeyPressed(G64_VK_G, 0x0001)) {
+		SwitchDump(config.debug.dumpMode);
+	}
 
 	bool bVIUpdated = false;
 	if (*REG.VI_ORIGIN != VI.lastOrigin) {
 		VI_UpdateSize();
 		bVIUpdated = true;
-		ogl.updateScale();
+		wnd.updateScale();
+		perf.increaseFramesCount();
 	}
 
 	if (config.frameBufferEmulation.enable) {
 
 		FrameBuffer * pBuffer = frameBufferList().findBuffer(*REG.VI_ORIGIN);
-		if (pBuffer == nullptr)
+		if (pBuffer == nullptr) {
 			gDP.changed |= CHANGED_CPU_FB_WRITE;
-		else if (!FBInfo::fbInfo.isSupported() && !pBuffer->isValid(true)) {
+		} else if (!FBInfo::fbInfo.isSupported() &&
+				 (config.generalEmulation.hacks & hack_RE2) == 0 &&
+				 !pBuffer->isValid(true)) {
 			gDP.changed |= CHANGED_CPU_FB_WRITE;
 			if (config.frameBufferEmulation.copyToRDRAM == 0 && (config.generalEmulation.hacks & hack_subscreen) == 0)
 				pBuffer->copyRdram();
@@ -144,12 +161,12 @@ void VI_UpdateScreen()
 				if (pBuffer == nullptr || pBuffer->m_width != VI.width) {
 					if (!bVIUpdated) {
 						VI_UpdateSize();
-						ogl.updateScale();
+						wnd.updateScale();
 						bVIUpdated = true;
 					}
 					const u32 size = *REG.VI_STATUS & 3;
 					if (VI.height > 0 && size > G_IM_SIZ_8b  && VI.width > 0)
-						frameBufferList().saveBuffer(*REG.VI_ORIGIN, G_IM_FMT_RGBA, size, VI.width, VI.height, true);
+						frameBufferList().saveBuffer(*REG.VI_ORIGIN, G_IM_FMT_RGBA, size, VI.width, true);
 				}
 			}
 //			if ((((*REG.VI_STATUS) & 3) > 0) && (gDP.colorImage.changed || bCFB)) { // Does not work in release build!!!
@@ -160,21 +177,19 @@ void VI_UpdateScreen()
 				}
 				FrameBuffer_CopyFromRDRAM(*REG.VI_ORIGIN, bCFB);
 			}
-			frameBufferList().renderBuffer(*REG.VI_ORIGIN);
+			frameBufferList().renderBuffer();
 			frameBufferList().clearBuffersChanged();
 			VI.lastOrigin = *REG.VI_ORIGIN;
 		} 
-	}
-	else {
+	} else {
 		if (gDP.changed & CHANGED_COLORBUFFER) {
-			ogl.swapBuffers();
+			frameBufferList().renderBuffer();
 			gDP.changed &= ~CHANGED_COLORBUFFER;
 			VI.lastOrigin = *REG.VI_ORIGIN;
 		}
 	}
 
 	if (VI.lastOrigin == -1) { // Workaround for Mupen64Plus issue with initialization
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		gfxContext.clearColorBuffer(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 }

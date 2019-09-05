@@ -7,16 +7,14 @@
 #include "GBI.h"
 #include "gDP.h"
 #include "gSP.h"
-#include "OpenGL.h"
 #include "Config.h"
-#include "Debug.h"
+#include "DebugDump.h"
+#include "DisplayWindow.h"
 
 void RDP_Unknown( u32 w0, u32 w1 )
 {
-#ifdef DEBUG
-	DebugMsg( DEBUG_UNKNOWN, "RDP_Unknown\r\n" );
-	DebugMsg( DEBUG_UNKNOWN, "\tUnknown RDP opcode %02X\r\n", _SHIFTR( w0, 24, 8 ) );
-#endif
+	DebugMsg(DEBUG_NORMAL, "RDP_Unknown\r\n");
+	DebugMsg(DEBUG_NORMAL, "\tUnknown RDP opcode %02X\r\n", _SHIFTR(w0, 24, 8));
 }
 
 void RDP_NoOp( u32 w0, u32 w1 )
@@ -176,11 +174,11 @@ void RDP_SetPrimDepth( u32 w0, u32 w1 )
 
 void RDP_SetScissor( u32 w0, u32 w1 )
 {
-	gDPSetScissor( _SHIFTR( w1, 24, 2 ),						// mode
-				   _FIXED2FLOAT( _SHIFTR( w0, 12, 12 ), 2 ),	// ulx
-				   _FIXED2FLOAT( _SHIFTR( w0,  0, 12 ), 2 ),	// uly
-				   _FIXED2FLOAT( _SHIFTR( w1, 12, 12 ), 2 ),	// lrx
-				   _FIXED2FLOAT( _SHIFTR( w1,  0, 12 ), 2 ) );	// lry
+	gDPSetScissor( _SHIFTR( w1, 24,  2 ),	// mode
+				   _SHIFTR( w0, 12, 12 ),	// ulx
+				   _SHIFTR( w0,  0, 12 ),	// uly
+				   _SHIFTR( w1, 12, 12 ),	// lrx
+				   _SHIFTR( w1,  0, 12 ) );	// lry
 }
 
 void RDP_SetConvert( u32 w0, u32 w1 )
@@ -233,7 +231,7 @@ void RDP_LoadSync( u32 w0, u32 w1 )
 static
 bool _getTexRectParams(u32 & w2, u32 & w3)
 {
-	if (RSP.bLLE) {
+	if (RSP.LLE) {
 		w2 = RDP.w2;
 		w3 = RDP.w3;
 		return true;
@@ -251,10 +249,7 @@ bool _getTexRectParams(u32 & w2, u32 & w3)
 		if (cmd2 == G_RDPHALF_2)
 			texRectMode = gspTexRect;
 	} else if (cmd1 == 0xB3) {
-		if (cmd2 == 0xB2)
-			texRectMode = gspTexRect;
-		else
-			texRectMode = halfTexRect;
+		texRectMode = halfTexRect;
 	} else if (cmd1 == 0xF1)
 		texRectMode = halfTexRect;
 
@@ -270,6 +265,15 @@ bool _getTexRectParams(u32 & w2, u32 & w3)
 		if ((config.generalEmulation.hacks & hack_WinBack) != 0) {
 			RSP.PC[RSP.PCi] += 8;
 			return false;
+		}
+		{
+			const u32 ucode = GBI.getMicrocodeType();
+			if (ucode == F5Rogue || ucode == F5Indi_Naboo) {
+				w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 8];
+				w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 12];
+				RSP.PC[RSP.PCi] += 8;
+				return true;
+			}
 		}
 		w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 0];
 		w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
@@ -292,23 +296,38 @@ void _TexRect( u32 w0, u32 w1, bool flip )
 	u32 w2, w3;
 	if (!_getTexRectParams(w2, w3))
 		return;
-	const u32 ulx = _SHIFTR(w1, 12, 12);
-	const u32 uly = _SHIFTR(w1, 0, 12);
-	const u32 lrx = _SHIFTR(w0, 12, 12);
-	const u32 lry = _SHIFTR(w0, 0, 12);
-	if ((lrx >> 2) < (ulx >> 2) || (lry >> 2) < (uly >> 2))
+	RDP.w0 = w0;
+	RDP.w1 = w1;
+	const s32 ulx = _SHIFTR(w1, 12, 12);
+	const s32 uly = _SHIFTR(w1, 0, 12);
+	const s32 lrx = _SHIFTR(w0, 12, 12);
+	const s32 lry = _SHIFTR(w0, 0, 12);
+	if (lrx < ulx || lry < uly)
 		return;
-	gDPTextureRectangle(
-		_FIXED2FLOAT(ulx, 2),
-		_FIXED2FLOAT(uly, 2),
-		_FIXED2FLOAT(lrx, 2),
-		_FIXED2FLOAT(lry, 2),
-		_SHIFTR(w1, 24, 3),							// tile
-		_FIXED2FLOAT((s16)_SHIFTR(w2, 16, 16), 5),	// s
-		_FIXED2FLOAT((s16)_SHIFTR(w2, 0, 16), 5),	// t
-		_FIXED2FLOAT((s16)_SHIFTR(w3, 16, 16), 10),	// dsdx
-		_FIXED2FLOAT((s16)_SHIFTR(w3, 0, 16), 10),	// dsdy
-		flip);
+	if (gDP.otherMode.cycleType == G_CYC_COPY)
+		gDPTextureRectangle(
+			f32(ulx >> 2),
+			f32(uly >> 2),
+			f32(lrx >> 2),
+			f32(lry >> 2),
+			_SHIFTR(w1, 24, 3),							// tile
+			(s16)_SHIFTR(w2, 16, 16),					// s
+			(s16)_SHIFTR(w2, 0, 16),					// t
+			_FIXED2FLOAT((s16)_SHIFTR(w3, 16, 16), 10),	// dsdx
+			_FIXED2FLOAT((s16)_SHIFTR(w3, 0, 16), 10),	// dsdy
+			flip);
+	else
+		gDPTextureRectangle(
+			_FIXED2FLOAT(ulx, 2),
+			_FIXED2FLOAT(uly, 2),
+			_FIXED2FLOAT(lrx, 2),
+			_FIXED2FLOAT(lry, 2),
+			_SHIFTR(w1, 24, 3),							// tile
+			(s16)_SHIFTR(w2, 16, 16),					// s
+			(s16)_SHIFTR(w2, 0, 16),					// t
+			_FIXED2FLOAT((s16)_SHIFTR(w3, 16, 16), 10),	// dsdx
+			_FIXED2FLOAT((s16)_SHIFTR(w3, 0, 16), 10),	// dsdy
+			flip);
 }
 
 void RDP_TexRectFlip( u32 w0, u32 w1 )
@@ -402,8 +421,9 @@ void RDP_Init()
 	GBI.cmd[G_RDPLOADSYNC]		= RDP_LoadSync;
 	GBI.cmd[G_TEXRECTFLIP]		= RDP_TexRectFlip;
 	GBI.cmd[G_TEXRECT]			= RDP_TexRect;
+	GBI.cmd[G_RDPNOOP]			= RDP_NoOp;
 
-	RDP.w2 = RDP.w3 = 0;
+	RDP.w0 = RDP.w1 = RDP.w2 = RDP.w3 = 0;
 	RDP.cmd_ptr = RDP.cmd_cur = 0;
 }
 
@@ -505,7 +525,7 @@ void RDP_Half_1( u32 _c )
 	u32 w0 = 0, w1 = _c;
 	u32 cmd = _SHIFTR( _c, 24, 8 );
 	if (cmd >= 0xc8 && cmd <=0xcf) {//triangle command
-		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPHalf_1 LLE Triangle\n");
+		DebugMsg(DEBUG_NORMAL, "gDPHalf_1 LLE Triangle\n");
 		RDP.cmd_ptr = 0;
 		RDP.cmd_cur = 0;
 		do {
@@ -516,8 +536,7 @@ void RDP_Half_1( u32 _c )
 			w1 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 			RSP.cmd = _SHIFTR( w0, 24, 8 );
 
-			DebugRSPState( RSP.PCi, RSP.PC[RSP.PCi], _SHIFTR( w0, 24, 8 ), w0, w1 );
-			DebugMsg( DEBUG_LOW | DEBUG_HANDLED, "0x%08lX: CMD=0x%02lX W0=0x%08lX W1=0x%08lX\n", RSP.PC[RSP.PCi], _SHIFTR( w0, 24, 8 ), w0, w1 );
+			DebugMsg(DEBUG_NORMAL, "0x%08lX: CMD=0x%02lX W0=0x%08lX W1=0x%08lX\n", RSP.PC[RSP.PCi], _SHIFTR(w0, 24, 8), w0, w1);
 
 			RSP.PC[RSP.PCi] += 8;
 			// RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[RSP.PC[RSP.PCi]], 24, 8 );
@@ -528,7 +547,7 @@ void RDP_Half_1( u32 _c )
 		w1 = RDP.cmd_data[RDP.cmd_cur+1];
 		LLEcmd[RSP.cmd](w0, w1);
 	} else {
-		DebugMsg( DEBUG_HIGH | DEBUG_IGNORED, "gDPHalf_1()\n" );
+		DebugMsg(DEBUG_NORMAL | DEBUG_IGNORED, "gDPHalf_1()\n");
 	}
 }
 
@@ -550,8 +569,7 @@ inline u32 READ_RDP_DATA(u32 address)
 
 void RDP_ProcessRDPList()
 {
-	if (ConfigOpen || video().isResizeWindow()) {
-		dp_status &= ~0x0002;
+	if (ConfigOpen || dwnd().isResizeWindow()) {
 		dp_start = dp_current = dp_end;
 		gDPFullSync();
 		return;
@@ -559,11 +577,9 @@ void RDP_ProcessRDPList()
 
 	const u32 length = dp_end - dp_current;
 
-	dp_status &= ~0x0002;
-
 	if (dp_end <= dp_current) return;
 
-	RSP.bLLE = true;
+	RSP.LLE = true;
 
 	// load command data
 	for (u32 i = 0; i < length; i += 4) {
@@ -584,12 +600,12 @@ void RDP_ProcessRDPList()
 			::memcpy(RDP.cmd_data + MAXCMD, RDP.cmd_data, CmdLength[cmd] - (MAXCMD - RDP.cmd_cur) * 4);
 
 		// execute the command
-		u32 w0 = RDP.cmd_data[RDP.cmd_cur+0];
-		u32 w1 = RDP.cmd_data[RDP.cmd_cur+1];
-		RDP.w2 = RDP.cmd_data[RDP.cmd_cur+2];
+		RDP.w0 = RDP.cmd_data[RDP.cmd_cur + 0];
+		RDP.w1 = RDP.cmd_data[RDP.cmd_cur + 1];
+		RDP.w2 = RDP.cmd_data[RDP.cmd_cur + 2];
 		RDP.w3 = RDP.cmd_data[RDP.cmd_cur + 3];
 		RSP.cmd = cmd;
-		LLEcmd[cmd](w0, w1);
+		LLEcmd[cmd](RDP.w0, RDP.w1);
 
 		RDP.cmd_cur = (RDP.cmd_cur + CmdLength[cmd] / 4) & maxCMDMask;
 	}
@@ -599,7 +615,7 @@ void RDP_ProcessRDPList()
 		RDP.cmd_cur = 0;
 	}
 
-	RSP.bLLE = false;
+	RSP.LLE = false;
 	gDP.changed |= CHANGED_COLORBUFFER;
 	gDP.changed &= ~CHANGED_CPU_FB_WRITE;
 

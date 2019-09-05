@@ -1,4 +1,4 @@
-#ifdef ANDROID
+#ifdef OS_ANDROID
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -57,14 +57,14 @@ tx_wstring & tx_wstring::operator+=(const wchar_t * wstr)
 	return *this;
 }
 
-tx_wstring tx_wstring::operator + (const tx_wstring & wstr)
+tx_wstring tx_wstring::operator+(const tx_wstring & wstr) const
 {
 	tx_wstring ans(_wstring.c_str());
 	ans.append(wstr);
 	return ans;
 }
 
-tx_wstring tx_wstring::operator+(const wchar_t * wstr)
+tx_wstring tx_wstring::operator+(const wchar_t * wstr) const
 {
 	tx_wstring ans(_wstring.c_str());
 	ans.append(wstr);
@@ -116,4 +116,4 @@ bool wccmp(const wchar_t* w1, const wchar_t* w2)
 	wcstombs(cbuf2, w2, 16);
 	return cbuf1[0] == cbuf2[0];
 }
-#endif // ANDROID
+#endif // OS_ANDROID

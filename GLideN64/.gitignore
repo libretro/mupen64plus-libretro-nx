@@ -7,3 +7,10 @@ Roms/
 *.suo
 *.sdf
 *.user
+src/Revision.h
+/projects/msvc/.vs
+/projects/msvc/GLideN64.VC.VC.opendb
+/projects/msvc/GLideN64.VC.db
+/projects/msvc/GeneratedFiles
+.vs
+.vscode/ipch/*

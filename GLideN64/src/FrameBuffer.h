@@ -6,6 +6,8 @@
 
 #include "Types.h"
 #include "Textures.h"
+#include "Graphics/ObjectHandle.h"
+
 struct gDPTile;
 struct DepthBuffer;
 
@@ -15,20 +17,26 @@ struct FrameBuffer
 {
 	FrameBuffer();
 	~FrameBuffer();
-	void init(u32 _address, u32 _endAddress, u16 _format, u16 _size, u16 _width, u16 _height, bool _cfb);
-	void reinit(u16 _height);
+	void init(u32 _address, u16 _format, u16 _size, u16 _width, bool _cfb);
+	void updateEndAddress();
 	void resolveMultisampledTexture(bool _bForce = false);
 	CachedTexture * getTexture(u32 _t);
 	CachedTexture * getTextureBG(u32 _t);
 	void setBufferClearParams(u32 _fillcolor, s32 _ulx, s32 _uly, s32 _lrx, s32 _lry);
 	void copyRdram();
+	void setDirty();
 	bool isValid(bool _forceCheck) const;
-	bool _isMarioTennisScoreboard() const;
 	bool isAuxiliary() const;
 
-	u32 m_startAddress, m_endAddress;
-	u32 m_size, m_width, m_height;
-	float m_scaleX, m_scaleY;
+	u32 m_startAddress;
+	u32 m_endAddress;
+	u32 m_size;
+	u32 m_width;
+	u32 m_height;
+	u32 m_originX;
+	u32 m_originY;
+	u32 m_swapCount;
+	float m_scale;
 	bool m_copiedToRdram;
 	bool m_fingerprint;
 	bool m_cleared;
@@ -37,39 +45,50 @@ struct FrameBuffer
 	bool m_isDepthBuffer;
 	bool m_isPauseScreen;
 	bool m_isOBScreen;
-	bool m_needHeightCorrection;
+	bool m_isMainBuffer;
 	bool m_readable;
+	bool m_copied;
 
 	struct {
 		u32 uls, ult;
 	} m_loadTileOrigin;
 	u32 m_loadType;
 
-	GLuint m_FBO;
+	graphics::ObjectHandle m_FBO;
 	CachedTexture *m_pTexture;
 	DepthBuffer *m_pDepthBuffer;
 
 	// multisampling
-	GLuint m_resolveFBO;
+	graphics::ObjectHandle m_resolveFBO;
 	CachedTexture *m_pResolveTexture;
 	bool m_resolved;
 
 	// subtexture
-	GLuint m_SubFBO;
+	graphics::ObjectHandle m_SubFBO;
 	CachedTexture *m_pSubTexture;
+
+	// copy FBO
+	graphics::ObjectHandle m_copyFBO;
+	CachedTexture * m_pFrameBufferCopyTexture;
 
 	std::vector<u8> m_RdramCopy;
 
 private:
 	struct {
-		u32 fillcolor;
-		s32 ulx, uly, lrx, lry;
+		u32 fillcolor = 0;
+		s32 ulx = 0;
+		s32 uly = 0;
+		s32 lrx = 0;
+		s32 lry = 0;
 	} m_clearParams;
 
 	void _initTexture(u16 _width, u16 _height, u16 _format, u16 _size, CachedTexture *_pTexture);
-	void _setAndAttachTexture(u16 _size, CachedTexture *_pTexture);
+	void _setAndAttachTexture(graphics::ObjectHandle _fbo, CachedTexture *_pTexture, u32 _t, bool _multisampling);
 	bool _initSubTexture(u32 _t);
+	void _initCopyTexture();
+	CachedTexture * _copyFrameBufferTexture();
 	CachedTexture * _getSubTexture(u32 _t);
+
 	mutable u32 m_validityChecked;
 };
 
@@ -78,7 +97,7 @@ class FrameBufferList
 public:
 	void init();
 	void destroy();
-	void saveBuffer(u32 _address, u16 _format, u16 _size, u16 _width, u16 _height, bool _cfb);
+	void saveBuffer(u32 _address, u16 _format, u16 _size, u16 _width, bool _cfb);
 	void removeAux();
 	void copyAux();
 	void removeBuffer(u32 _address);
@@ -86,50 +105,105 @@ public:
 	void attachDepthBuffer();
 	void clearDepthBuffer(DepthBuffer * _pDepthBuffer);
 	FrameBuffer * findBuffer(u32 _startAddress);
+	FrameBuffer * getBuffer(u32 _startAddress);
 	FrameBuffer * findTmpBuffer(u32 _address);
 	FrameBuffer * getCurrent() const {return m_pCurrent;}
-	void renderBuffer(u32 _address);
-	void setBufferChanged();
-	void correctHeight();
+	void setCurrent(FrameBuffer * _pCurrent) { m_pCurrent = _pCurrent; }
+	void updateCurrentBufferEndAddress();
+	void renderBuffer();
+	void setBufferChanged(f32 _maxY);
 	void clearBuffersChanged();
 	void setCurrentDrawBuffer() const;
 	void fillRDRAM(s32 ulx, s32 uly, s32 lrx, s32 lry);
 
 	FrameBuffer * getCopyBuffer() const { return m_pCopy; }
 	void setCopyBuffer(FrameBuffer * _pBuffer) { m_pCopy = _pBuffer; }
+	void depthBufferCopyRdram();
 
 	void fillBufferInfo(void * _pinfo, u32 _size);
 
 	static FrameBufferList & get();
 
 private:
-	FrameBufferList() : m_pCurrent(nullptr), m_pCopy(nullptr) {}
-	FrameBufferList(const FrameBufferList &);
+	FrameBufferList() : m_pCurrent(nullptr), m_pCopy(nullptr), m_prevColorImageHeight(0) {}
+	FrameBufferList(const FrameBufferList &) = delete;
 
-	FrameBuffer * _findBuffer(u32 _startAddress, u32 _endAddress, u32 _width);
+	void removeIntersections();
+
+	void _createScreenSizeBuffer();
+	void _renderScreenSizeBuffer();
+
+	class OverscanBuffer
+	{
+	public:
+		void init();
+		void destroy();
+
+		void setInputBuffer(const FrameBuffer *  _pBuffer);
+		void activate();
+		void draw(u32 _fullHeight, bool _PAL);
+
+		s32 getHOffset() const;
+		s32 getVOffset() const;
+		f32 getScaleX() const;
+		f32 getScaleY(u32 _fullHeight) const;
+		u32 getDrawingWidth() const { return m_drawingWidth; }
+		u32 getBufferWidth() const { return m_bufferWidth; }
+		u32 getBufferHeight() const { return m_bufferHeight; }
+
+	private:
+		s32 m_hOffset = 0;
+		s32 m_vOffset = 0;
+		f32 m_scale = 1.0f;
+		u32 m_drawingWidth = 0U;
+		u32 m_bufferWidth = 0U;
+		u32 m_bufferHeight = 0U;
+		bool m_enabled = false;
+
+		graphics::ObjectHandle m_FBO;
+		CachedTexture *m_pTexture = nullptr;
+	};
 
 	typedef std::list<FrameBuffer> FrameBuffers;
 	FrameBuffers m_list;
 	FrameBuffer * m_pCurrent;
 	FrameBuffer * m_pCopy;
 	u32 m_prevColorImageHeight;
-};
+	OverscanBuffer m_overscan;
 
-struct PBOBinder {
-#ifndef GLES2
-	PBOBinder(GLenum _target, GLuint _PBO) : m_target(_target)
+	struct RdpUpdateResult {
+		u32 vi_vres;
+		u32 vi_hres;
+		u32 vi_v_start;
+		u32 vi_h_start;
+		u32 vi_x_start;
+		u32 vi_y_start;
+		u32 vi_x_add;
+		u32 vi_y_add;
+		u32 vi_width;
+		u32 vi_origin;
+		u32 vi_minhpass;
+		u32 vi_maxhpass;
+		bool vi_lowerfield;
+		bool vi_fsaa;
+		bool vi_divot;
+		bool vi_ispal;
+	};
+
+	class RdpUpdate
 	{
-		glBindBuffer(m_target, _PBO);
-	}
-	~PBOBinder() {
-		glBindBuffer(m_target, 0);
-	}
-	GLenum m_target;
-#else
-	PBOBinder(GLubyte* _ptr) : ptr(_ptr) {}
-	~PBOBinder() { free(ptr); }
-	GLubyte* ptr;
-#endif
+	public:
+		void init();
+		bool update(RdpUpdateResult & _result);
+
+	private:
+		s32 oldvstart = 0;
+		u32 prevvicurrent = 0U;
+		bool prevwasblank = false;
+		bool prevserrate = false;
+		bool oldlowerfield = false;
+		s32 emucontrolsvicurrent = -1;
+	} m_rdpUpdate;
 };
 
 inline
@@ -139,6 +213,7 @@ FrameBufferList & frameBufferList()
 }
 
 u32 cutHeight(u32 _address, u32 _height, u32 _stride);
+void calcCoordsScales(const FrameBuffer * _pBuffer, f32 & _scaleX, f32 & _scaleY);
 
 void FrameBuffer_Init();
 void FrameBuffer_Destroy();
@@ -148,7 +223,7 @@ void FrameBuffer_CopyFromRDRAM(u32 address, bool bUseAlpha);
 void FrameBuffer_AddAddress(u32 address, u32 _size);
 bool FrameBuffer_CopyDepthBuffer(u32 address);
 bool FrameBuffer_CopyDepthBufferChunk(u32 address);
-void FrameBuffer_ActivateBufferTexture(u32 t, FrameBuffer *pBuffer);
-void FrameBuffer_ActivateBufferTextureBG(u32 t, FrameBuffer *pBuffer);
+void FrameBuffer_ActivateBufferTexture(u32 t, u32 _frameBufferAddress);
+void FrameBuffer_ActivateBufferTextureBG(u32 t, u32 _frameBufferAddress);
 
 #endif

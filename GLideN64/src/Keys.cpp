@@ -43,8 +43,11 @@
 //
 //****************************************************************
 
-#include "OpenGL.h"
+#include "Platform.h"
 #include "Keys.h"
+#ifndef MUPENPLUSAPI
+#include "windows/GLideN64_windows.h"
+#endif
 
 Glide64Keys::Glide64Keys()
 {
@@ -73,6 +76,7 @@ m_keys[G64_VK_0]       = 0x30;
 m_keys[G64_VK_A]       = 0x41;
 m_keys[G64_VK_B]       = 0x42;
 m_keys[G64_VK_D]       = 0x44;
+m_keys[G64_VK_F]       = 0x46;
 m_keys[G64_VK_G]       = 0x47;
 m_keys[G64_VK_Q]       = 0x51;
 m_keys[G64_VK_R]       = 0x52;
@@ -104,6 +108,7 @@ m_keys[G64_VK_0]       =  48;
 m_keys[G64_VK_A]       =  97;
 m_keys[G64_VK_B]       =  98;
 m_keys[G64_VK_D]       = 100;
+m_keys[G64_VK_F]       = 102;
 m_keys[G64_VK_G]       = 103;
 m_keys[G64_VK_Q]       = 113;
 m_keys[G64_VK_R]       = 114;
@@ -117,7 +122,11 @@ bool isKeyPressed(int _key, int _mask)
 {
 	static Glide64Keys g64Keys;
 #ifdef OS_WINDOWS
+#ifdef MUPENPLUSAPI
 	return (GetAsyncKeyState(g64Keys[_key]) & _mask) != 0;
+#else
+	return (GetAsyncKeyState(g64Keys[_key]) & _mask) != 0 && GetForegroundWindow() == hWnd;
+#endif
 #else
 	// TODO
 #endif

@@ -1,24 +1,24 @@
 #ifndef TEXTURES_H
 #define TEXTURES_H
 
-#include <map>
+#include <array>
 #include <list>
+#include <map>
+#include <unordered_map>
 
 #include "CRC.h"
 #include "convert.h"
-
-extern const GLuint g_noiseTexIndex;
-extern const GLuint g_depthTexIndex;
-extern const GLuint g_MSTex0Index;
+#include "Graphics/ObjectHandle.h"
+#include "Graphics/Parameter.h"
 
 typedef u32 (*GetTexelFunc)( u64 *src, u16 x, u16 i, u8 palette );
 
 struct CachedTexture
 {
-	CachedTexture(GLuint _glName) : glName(_glName), max_level(0), frameBufferTexture(fbNone), bHDTexture(false) {}
+	CachedTexture(graphics::ObjectHandle _name) : name(_name), max_level(0), frameBufferTexture(fbNone), bHDTexture(false) {}
 
-	GLuint	glName;
-	u32		crc;
+	graphics::ObjectHandle name;
+	u32		crc = 0;
 //	float	fulS, fulT;
 //	WORD	ulS, ulT, lrS, lrT;
 	float	offsetS, offsetT;
@@ -32,7 +32,6 @@ struct CachedTexture
 	u32		palette;
 	u16		width, height;			  // N64 width and height
 	u16		clampWidth, clampHeight;  // Size to clamp to
-	u16		realWidth, realHeight;	  // Actual texture size
 	f32		scaleS, scaleT;			  // Scale to map to 0.0-1.0
 	f32		shiftScaleS, shiftScaleT; // Scale to shift
 	u32		textureBytes;
@@ -54,8 +53,7 @@ struct TextureCache
 
 	void init();
 	void destroy();
-	CachedTexture * addFrameBufferTexture();
-	void addFrameBufferTextureSize(u32 _size) {m_cachedBytes += _size;}
+	CachedTexture * addFrameBufferTexture(bool _multisample);
 	void removeFrameBufferTexture(CachedTexture * _pTexture);
 	void activateTexture(u32 _t, CachedTexture *_pTexture);
 	void activateDummy(u32 _t);
@@ -65,42 +63,49 @@ struct TextureCache
 	static TextureCache & get();
 
 private:
-	TextureCache() : m_pDummy(nullptr), m_hits(0), m_misses(0), m_maxBytes(0), m_cachedBytes(0), m_curUnpackAlignment(4), m_toggleDumpTex(false)
+	TextureCache()
+		: m_pDummy(nullptr)
+		, m_pMSDummy(nullptr)
+		, m_hits(0)
+		, m_misses(0)
+		, m_curUnpackAlignment(4)
+		, m_toggleDumpTex(false)
 	{
 		current[0] = nullptr;
 		current[1] = nullptr;
 		CRC_Init();
 	}
-	TextureCache(const TextureCache &);
+	TextureCache(const TextureCache &) = delete;
 
 	void _checkCacheSize();
 	CachedTexture * _addTexture(u32 _crc32);
 	void _load(u32 _tile, CachedTexture *_pTexture);
 	bool _loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & _ricecrc);
 	void _loadBackground(CachedTexture *pTexture);
-	bool _loadHiresBackground(CachedTexture *_pTexture);
+	bool _loadHiresBackground(CachedTexture *_pTexture, u64 & _ricecrc);
 	void _loadDepthTexture(CachedTexture * _pTexture, u16* _pDest);
 	void _updateBackground();
 	void _clear();
 	void _initDummyTexture(CachedTexture * _pDummy);
-	void _getTextureDestData(CachedTexture& tmptex, u32* pDest, GLuint glInternalFormat, GetTexelFunc GetTexel, u16* pLine);
+	void _getTextureDestData(CachedTexture& tmptex, u32* pDest, graphics::Parameter glInternalFormat, GetTexelFunc GetTexel, u16* pLine);
 
 	typedef std::list<CachedTexture> Textures;
-	typedef std::map<u32, Textures::iterator> Texture_Locations;
-	typedef std::map<u32, CachedTexture> FBTextures;
+	typedef std::unordered_map<u32, Textures::iterator> Texture_Locations;
+	typedef std::unordered_map<u32, CachedTexture> FBTextures;
 	Textures m_textures;
 	Texture_Locations m_lruTextureLocations;
 	FBTextures m_fbTextures;
 	CachedTexture * m_pDummy;
 	CachedTexture * m_pMSDummy;
 	u32 m_hits, m_misses;
-	u32 m_maxBytes;
-	u32 m_cachedBytes;
-	GLint m_curUnpackAlignment;
+	s32 m_curUnpackAlignment;
 	bool m_toggleDumpTex;
 };
 
 void getTextureShiftScale(u32 tile, const TextureCache & cache, f32 & shiftScaleS, f32 & shiftScaleT);
+
+// Check for situation when Tex0 is used instead of Tex1
+bool needReplaceTex1ByTex0();
 
 inline TextureCache & textureCache()
 {

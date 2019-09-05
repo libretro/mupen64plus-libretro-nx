@@ -1,89 +1,141 @@
 cmake_minimum_required(VERSION 2.6)
 
-option(GLES2 "Set to ON if targeting a GLES2 device" ${GLES2})
+if ((${CMAKE_VERSION} VERSION_EQUAL 3.9) OR (${CMAKE_VERSION} VERSION_GREATER 3.9))
+  cmake_policy(SET CMP0069 NEW)
+endif()
+
+option(EGL "Set to ON if targeting an EGL device" ${EGL})
 option(PANDORA "Set to ON if targeting an OpenPandora" ${PANDORA})
+option(ODROID "Set to ON if targeting an Odroid" ${ODROID})
 option(MUPENPLUSAPI "Set to ON for Mupen64Plus plugin" ${MUPENPLUSAPI})
+option(MESA "Set to ON to disable Raspberry Pi autodetection" ${MESA})
+option(VERO4K "Set to ON if targeting a Vero4k" ${VERO4K})
 
 project( GLideN64 )
 
 set(GLideN64_SOURCES
   3DMath.cpp
   Combiner.cpp
+  CombinerKey.cpp
   CommonPluginAPI.cpp
   Config.cpp
   convert.cpp
   CRC32.cpp
+  DebugDump.cpp
+  Debugger.cpp
   DepthBuffer.cpp
-  F3D.cpp
-  F3DDKR.cpp
-  F3DEX.cpp
-  F3DPD.cpp
-  F3DGOLDEN.cpp
-  F3DBETA.cpp
-  F3DSETA.cpp
-  F3DEX2.cpp
-  F3DEX2CBFD.cpp
-  F3DEX2MM.cpp
-  FBOTextureFormats.cpp
+  DisplayWindow.cpp
+  DisplayLoadProgress.cpp
   FrameBuffer.cpp
   FrameBufferInfo.cpp
   GBI.cpp
   gDP.cpp
   GLideN64.cpp
-  glState.cpp
+  GraphicsDrawer.cpp
   gSP.cpp
   Keys.cpp
-  L3D.cpp
-  L3DEX2.cpp
-  L3DEX.cpp
   Log.cpp
   N64.cpp
-  OpenGL.cpp
+  NoiseTexture.cpp
+  PaletteTexture.cpp
   Performance.cpp
+  PostProcessor.cpp
   RDP.cpp
   RSP.cpp
-  S2DEX2.cpp
-  S2DEX.cpp
-  Turbo3D.cpp
-  ZSort.cpp
-  ShaderUtils.cpp
+  RSP_LoadMatrix.cpp
   SoftwareRender.cpp
-  Textures.cpp
+  TexrectDrawer.cpp
   TextDrawer.cpp
   TextureFilterHandler.cpp
-  PostProcessor.cpp
+  Textures.cpp
   VI.cpp
+  ZlutTexture.cpp
   BufferCopy/ColorBufferToRDRAM.cpp
   BufferCopy/DepthBufferToRDRAM.cpp
   BufferCopy/RDRAMtoColorBuffer.cpp
   DepthBufferRender/ClipPolygon.cpp
   DepthBufferRender/DepthBufferRender.cpp
   common/CommonAPIImpl_common.cpp
+  Graphics/Context.cpp
+  Graphics/ColorBufferReader.cpp
+  Graphics/CombinerProgram.cpp
+  Graphics/ObjectHandle.cpp
+  Graphics/OpenGLContext/GLFunctions.cpp
+  Graphics/OpenGLContext/ThreadedOpenGl/opengl_Command.cpp
+  Graphics/OpenGLContext/ThreadedOpenGl/opengl_ObjectPool.cpp
+  Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.cpp
+  Graphics/OpenGLContext/ThreadedOpenGl/opengl_WrappedFunctions.cpp
+  Graphics/OpenGLContext/ThreadedOpenGl/RingBufferPool.cpp
+  Graphics/OpenGLContext/opengl_Attributes.cpp
+  Graphics/OpenGLContext/opengl_BufferedDrawer.cpp
+  Graphics/OpenGLContext/opengl_BufferManipulationObjectFactory.cpp
+  Graphics/OpenGLContext/opengl_CachedFunctions.cpp
+  Graphics/OpenGLContext/opengl_ColorBufferReaderWithBufferStorage.cpp
+  Graphics/OpenGLContext/opengl_ColorBufferReaderWithPixelBuffer.cpp
+  Graphics/OpenGLContext/opengl_ColorBufferReaderWithReadPixels.cpp
+  Graphics/OpenGLContext/opengl_ContextImpl.cpp
+  Graphics/OpenGLContext/opengl_GLInfo.cpp
+  Graphics/OpenGLContext/opengl_Parameters.cpp
+  Graphics/OpenGLContext/opengl_TextureManipulationObjectFactory.cpp
+  Graphics/OpenGLContext/opengl_UnbufferedDrawer.cpp
+  Graphics/OpenGLContext/opengl_Utils.cpp
+  Graphics/OpenGLContext/GLSL/glsl_CombinerInputs.cpp
+  Graphics/OpenGLContext/GLSL/glsl_CombinerProgramBuilder.cpp
+  Graphics/OpenGLContext/GLSL/glsl_CombinerProgramImpl.cpp
+  Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactory.cpp
+  Graphics/OpenGLContext/GLSL/glsl_FXAA.cpp
+  Graphics/OpenGLContext/GLSL/glsl_ShaderStorage.cpp
+  Graphics/OpenGLContext/GLSL/glsl_SpecialShadersFactory.cpp
+  Graphics/OpenGLContext/GLSL/glsl_Utils.cpp
+  uCodes/F3D.cpp
+  uCodes/F3DBETA.cpp
+  uCodes/F3DDKR.cpp
+  uCodes/F3DEX.cpp
+  uCodes/F3DAM.cpp
+  uCodes/F3DEX2.cpp
+  uCodes/F3DEX2ACCLAIM.cpp
+  uCodes/F3DEX2CBFD.cpp
+  uCodes/F3DZEX2.cpp
+  uCodes/F3DFLX2.cpp
+  uCodes/F3DGOLDEN.cpp
+  uCodes/F3DTEXA.cpp
+  uCodes/F3DPD.cpp
+  uCodes/F3DSETA.cpp
+  uCodes/F5Indi_Naboo.cpp
+  uCodes/F5Rogue.cpp
+  uCodes/L3D.cpp
+  uCodes/L3DEX2.cpp
+  uCodes/L3DEX.cpp
+  uCodes/S2DEX2.cpp
+  uCodes/S2DEX.cpp
+  uCodes/T3DUX.cpp
+  uCodes/Turbo3D.cpp
+  uCodes/ZSort.cpp
+  uCodes/ZSortBOSS.cpp
 )
 
 #check if we're running on Raspberry Pi
-MESSAGE("Looking for bcm_host.h")
-if(EXISTS "/opt/vc/include/bcm_host.h")
-  MESSAGE("bcm_host.h found")
+if(EXISTS "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/bcm_host.h" AND NOT MESA)
+  message("bcm_host.h found")
   set(BCMHOST ON)
-  set(GLES2 ON)
+  set(EGL ON)
+  set(EGL_LIB -lbrcmEGL -lbrcmGLESv2)
   add_definitions(
     -DVC
-    -DUSE_DEPTH_RENDERBUFFER
   )
   include_directories(
-    "/opt/vc/include"
-    "/opt/vc/include/interface/vcos"
-    "/opt/vc/include/interface/vmcs_host/linux"
-    "/opt/vc/include/interface/vcos/pthreads"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/include"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/interface/vcos"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/interface/vmcs_host/linux"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/interface/vcos/pthreads"
   )
   link_directories(
-    "/opt/vc/lib"
-    "/opt/vc/lib/GL"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/lib"
+    "${CMAKE_FIND_ROOT_PATH}/opt/vc/lib/GL"
   )
-else(EXISTS "/opt/vc/include/bcm_host.h")
-  MESSAGE("bcm_host.h not found")
-endif(EXISTS "/opt/vc/include/bcm_host.h")
+else(EXISTS "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/bcm_host.h" AND NOT MESA)
+  set(EGL_LIB -lEGL)
+endif(EXISTS "${CMAKE_FIND_ROOT_PATH}/opt/vc/include/bcm_host.h" AND NOT MESA)
 
 if(MUPENPLUSAPI)
   add_definitions(
@@ -95,26 +147,27 @@ if(MUPENPLUSAPI)
 	MupenPlusPluginAPI.cpp
 	mupenplus/Config_mupenplus.cpp
 	mupenplus/CommonAPIImpl_mupenplus.cpp
+	mupenplus/MemoryStatus_mupenplus.cpp
 	mupenplus/MupenPlusAPIImpl.cpp
-	mupenplus/OpenGL_mupenplus.cpp
+	Graphics/OpenGLContext/mupen64plus/mupen64plus_DisplayWindow.cpp
   )
 
   set(GLideN64_SOURCES_WIN ${GLideN64_SOURCES_UNIX}
-	common/GLFunctions.cpp
   )
   set(GLideN64_DLL_NAME mupen64plus-video-GLideN64)
 else(MUPENPLUSAPI)
-  if(NOT UNIX)
-	message(ERROR "UNIX build requires MUPENPLUSAPI!")
-  endif(NOT UNIX)
+  if(UNIX)
+    message(FATAL_ERROR "UNIX build requires MUPENPLUSAPI!")
+  endif(UNIX)
   set(GLideN64_SOURCES_WIN
 	ZilmarPluginAPI.cpp
 	windows/Config_windows.cpp
 	windows/CommonAPIImpl_windows.cpp
 	windows/GLideN64_windows.cpp
+	windows/MemoryStatus_windows.cpp
 	common/GLFunctions.cpp
-	windows/OpenGL_windows.cpp
 	windows/ZilmarAPIImpl_windows.cpp
+	Graphics/OpenGLContext/windows/windows_DisplayWindow.cpp
   )
   set(GLideN64_DLL_NAME GLideN64)
 endif(MUPENPLUSAPI)
@@ -137,6 +190,9 @@ if(UNIX)
 	add_definitions(
 	  -DOS_MAC_OS_X
 	)
+	if (NOT CMAKE_VERSION VERSION_LESS 2.8.12)
+	  set(CMAKE_MACOSX_RPATH 0)
+	endif()
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions(
 	  -DOS_LINUX
@@ -144,15 +200,21 @@ if(UNIX)
   endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(UNIX)
 
+if(MINGW)
+  add_definitions(
+    -DMINGW
+  )
+endif(MINGW)
+
 if(WIN32)
   list(APPEND GLideN64_SOURCES ${GLideN64_SOURCES_WIN})
   add_definitions(
-	-DOS_WINDOWS
-	-D__WIN32__
-	-DWIN32
-	-D_WIN32_ASM
-	-D_CRT_SECURE_NO_WARNINGS
-	-D__MSC__
+    -DOS_WINDOWS
+    -D__WIN32__
+    -DWIN32
+    -D_WIN32_ASM
+    -D_CRT_SECURE_NO_WARNINGS
+    -D__MSC__
   )
 endif(WIN32)
 
@@ -170,9 +232,21 @@ if(PANDORA)
   add_definitions(
   -DPANDORA
   -DPowerVR_SGX_540
-  -DGLES2
+  -DEGL
    )
 endif(PANDORA)
+
+if(ODROID)
+  add_definitions(
+  -DODROID
+   )
+endif(ODROID)
+
+if(VERO4K)
+  add_definitions(
+  -DVERO4K
+   )
+endif(VERO4K)
 
 if(UNIX OR BCMHOST)
   SET( FREETYPE_INCLUDE_DIRS "/usr/include/freetype2/" )
@@ -195,6 +269,14 @@ if(CRC_ARMV8)
   list(APPEND GLideN64_SOURCES
 	CRC32_ARMV8.cpp
   )
+elseif(CRC_OPT)
+  list(REMOVE_ITEM GLideN64_SOURCES
+        CRC32.cpp
+  )
+  list(APPEND GLideN64_SOURCES
+        CRC_OPT.cpp
+        xxHash/xxhash.c
+  )
 endif(CRC_ARMV8)
 
 if(NEON_OPT)
@@ -202,13 +284,24 @@ if(NEON_OPT)
     -D__NEON_OPT
   )
   list(APPEND GLideN64_SOURCES
-    3DMathNeon.cpp
-    gSPNeon.cpp
+    Neon/3DMathNeon.cpp
+    Neon/gSPNeon.cpp
+    Neon/RSP_LoadMatrixNeon.cpp
   )
   list(REMOVE_ITEM GLideN64_SOURCES
     3DMath.cpp
+    RSP_LoadMatrix.cpp
   )
 endif(NEON_OPT)
+
+if(X86_OPT)
+  list(APPEND GLideN64_SOURCES
+    RSP_LoadMatrixX86.cpp
+  )
+  list(REMOVE_ITEM GLideN64_SOURCES
+    RSP_LoadMatrix.cpp
+  )
+endif(X86_OPT)
 
 # Build type
 
@@ -219,33 +312,17 @@ endif( NOT CMAKE_BUILD_TYPE)
 if( CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set( CMAKE_BUILD_TYPE Debug)
 	set( DEBUG_BUILD TRUE)
-#	add_definitions(
-#	-DDEBUG
-#	)
+	add_definitions(
+	-DGL_DEBUG
+	)
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-if (USE_UNIFORMBLOCK)
+if(EGL)
   add_definitions(
-	-DGL_USE_UNIFORMBLOCK
-   )
-  list(APPEND GLideN64_SOURCES
-	GLUniforms/UniformBlock.cpp
+    -DEGL
   )
-else (USE_UNIFORMBLOCK)
-  list(APPEND GLideN64_SOURCES
-	GLUniforms/UniformSet.cpp
-  )
-endif (USE_UNIFORMBLOCK)
-
-if(GLES2)
-  add_definitions(
-    -DGLES2
-   )
-   list(APPEND GLideN64_SOURCES 
-    GLES2/GLSLCombiner_gles2.cpp
-   )
-   SET(OPENGL_LIBRARIES -lGLESv2 -lEGL)
-else(GLES2)
+  SET(OPENGL_LIBRARIES ${EGL_LIB})
+else(EGL)
   find_package(OpenGL REQUIRED)
   include_directories(${OpenGL_INCLUDE_DIRS})
   link_directories(${OpenGL_LIBRARY_DIRS})
@@ -253,23 +330,24 @@ else(GLES2)
   if(NOT OPENGL_FOUND)
   	message(ERROR " OPENGL not found!")
   endif(NOT OPENGL_FOUND)
-  list(APPEND GLideN64_SOURCES 
-    OGL3X/GLSLCombiner_ogl3x.cpp
-    BufferCopy/ColorBufferToRDRAM_GL.cpp
-    BufferCopy/ColorBufferToRDRAM_BufferStorageExt.cpp
-  )
-endif(GLES2)
+endif(EGL)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  #check for G++ 4.8+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  #check for compiler version
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
-  if (G++_VERSION VERSION_LESS 4.8)
-	message(SEND_ERROR "You need at least G++ 4.8 to compile GLideN64!")
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND G++_VERSION VERSION_LESS 4.8)
+    message("Found compiler version " ${G++_VERSION})
+    message(SEND_ERROR "You need at least G++ 4.8 to compile GLideN64!")
+  elseif(G++_VERSION VERSION_LESS 3.3)
+    message("Found compiler version " ${G++_VERSION})
+    message(SEND_ERROR "You need at least Clang 3.3 to compile GLideN64!")
   endif()
-  SET(GCC_CPP11_COMPILE_FLAGS "-std=c++0x -static-libgcc -static-libstdc++")
+  SET(GCC_CPP11_COMPILE_FLAGS "-std=c++11")
   SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_CPP11_COMPILE_FLAGS}" )
-  SET(GCC_STATIC_LINK_FLAGS "-static-libgcc -static-libstdc++")
-  SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_STATIC_LINK_FLAGS}" )
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    SET(GCC_STATIC_LINK_FLAGS "-static-libgcc")
+  endif()
+  SET( CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS} ${GCC_STATIC_LINK_FLAGS}" )
 endif()
 
 add_library( ${GLideN64_DLL_NAME} SHARED ${GLideN64_SOURCES})
@@ -280,7 +358,7 @@ if( CMAKE_BUILD_TYPE STREQUAL "Debug")
 	PROPERTIES
 	LINKER_LANGUAGE CXX # Or else we get an error message, because cmake can't figure out from the ".o"-suffix that it is a C-linker we need.
 	PREFIX ""
-	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugin/debug
+	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugin/Debug
   )
 
   if(SDL)
@@ -299,12 +377,21 @@ if( CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 if( CMAKE_BUILD_TYPE STREQUAL "Release")
+  if ((${CMAKE_VERSION} VERSION_EQUAL 3.9) OR (${CMAKE_VERSION} VERSION_GREATER 3.9))
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result)
+    if(result)
+      message("Interprocedural optimizations enabled")
+      set_property(TARGET ${GLideN64_DLL_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+  endif()
+
   SET_TARGET_PROPERTIES(
 	${GLideN64_DLL_NAME}
 	PROPERTIES
 	LINKER_LANGUAGE CXX # Or else we get an error message, because cmake can't figure out from the ".o"-suffix that it is a C-linker we need.
 	PREFIX ""
-	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugin/release
+	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/plugin/Release
   )
 
   if(SDL)

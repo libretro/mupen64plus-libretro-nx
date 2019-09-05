@@ -29,9 +29,51 @@
 
 #include <functional>
 #include <thread>
+#include <assert.h>
 
-#include <convert.h>
 #include "TxQuantize.h"
+
+static const unsigned char One2Eight[2] =
+{
+	0, // 0 = 00000000
+	255, // 1 = 11111111
+};
+
+static const unsigned char Five2Eight[32] =
+{
+	0, // 00000 = 00000000
+	8, // 00001 = 00001000
+	16, // 00010 = 00010000
+	25, // 00011 = 00011001
+	33, // 00100 = 00100001
+	41, // 00101 = 00101001
+	49, // 00110 = 00110001
+	58, // 00111 = 00111010
+	66, // 01000 = 01000010
+	74, // 01001 = 01001010
+	82, // 01010 = 01010010
+	90, // 01011 = 01011010
+	99, // 01100 = 01100011
+	107, // 01101 = 01101011
+	115, // 01110 = 01110011
+	123, // 01111 = 01111011
+	132, // 10000 = 10000100
+	140, // 10001 = 10001100
+	148, // 10010 = 10010100
+	156, // 10011 = 10011100
+	165, // 10100 = 10100101
+	173, // 10101 = 10101101
+	181, // 10110 = 10110101
+	189, // 10111 = 10111101
+	197, // 11000 = 11000101
+	206, // 11001 = 11001110
+	214, // 11010 = 11010110
+	222, // 11011 = 11011110
+	230, // 11100 = 11100110
+	239, // 11101 = 11101111
+	247, // 11110 = 11110111
+	255  // 11111 = 11111111
+};
 
 TxQuantize::TxQuantize()
 {
@@ -509,12 +551,6 @@ TxQuantize::ARGB8888_ARGB4444_ErrD(uint32* src, uint32* dst, int width, int heig
 {
 	/* Floyd-Steinberg error-diffusion halftoning */
 
-	/* NOTE: alpha dithering looks better for alpha gradients, but are prone
-   * to producing noisy speckles for constant or step level alpha. Output
-   * results should always be checked.
-   */
-	boolean ditherAlpha = 0;
-
 	int i, x, y;
 	int qr, qg, qb, qa; /* quantized incoming values */
 	int ir, ig, ib, ia; /* incoming values */
@@ -573,13 +609,8 @@ TxQuantize::ARGB8888_ARGB4444_ErrD(uint32* src, uint32* dst, int width, int heig
 			qb = qb * 0xF / 2550000;
 			qa = qa * 0xF / 2550000;
 
-			/* this is the value to be returned */
-			if (ditherAlpha) {
-				t = (qa << 12) | (qr <<  8) | (qg << 4) | qb;
-			} else {
-				t = (qr <<  8) | (qg << 4) | qb;
-				t |= (*src >> 16) & 0xF000;
-			}
+			t = (qr <<  8) | (qg << 4) | qb;
+			t |= (*src >> 16) & 0xF000;
 
 			/* compute the errors */
 			qr = ((qr << 4) | qr) * 10000;
@@ -633,12 +664,6 @@ TxQuantize::ARGB8888_AI44_ErrD(uint32* src, uint32* dst, int width, int height)
 {
 	/* Floyd-Steinberg error-diffusion halftoning */
 
-	/* NOTE: alpha dithering looks better for alpha gradients, but are prone
-   * to producing noisy speckles for constant or step level alpha. Output
-   * results should always be checked.
-   */
-	boolean ditherAlpha = 0;
-
 	int i, x, y;
 	int qi, qa; /* quantized incoming values */
 	int ii, ia; /* incoming values */
@@ -685,13 +710,8 @@ TxQuantize::ARGB8888_AI44_ErrD(uint32* src, uint32* dst, int width, int height)
 			qi = qi * 0xF / 2550000;
 			qa = qa * 0xF / 2550000;
 
-			/* this is the value to be returned */
-			if (ditherAlpha) {
-				t = (qa << 4) | qi;
-			} else {
-				t = qi;
-				t |= ((*src >> 24) & 0xF0);
-			}
+			t = qi;
+			t |= ((*src >> 24) & 0xF0);
 
 			/* compute the errors */
 			qi = ((qi << 4) | qi) * 10000;
@@ -812,29 +832,26 @@ TxQuantize::P8_16BPP(uint32* src, uint32* dest, int width, int height, uint32* p
 }
 
 boolean
-TxQuantize::quantize(uint8* src, uint8* dest, int width, int height, uint16 srcformat, uint16 destformat, boolean fastQuantizer)
+TxQuantize::quantize(uint8* src, uint8* dest, int width, int height, ColorFormat srcformat, ColorFormat destformat, boolean fastQuantizer)
 {
 	typedef void (TxQuantize::*quantizerFunc)(uint32* src, uint32* dest, int width, int height);
+	assert(srcformat != graphics::colorFormat::RGBA);
+	assert(destformat != graphics::colorFormat::RGBA);
 	quantizerFunc quantizer;
 	int bpp_shift = 0;
 
-	if (destformat == GL_RGBA8 || destformat == GL_RGBA) {
-		switch (srcformat) {
-		case GL_RGB5_A1:
+	if (destformat == graphics::internalcolorFormat::RGBA8) {
+		if (srcformat == graphics::internalcolorFormat::RGB5_A1) {
 			quantizer = &TxQuantize::ARGB1555_ARGB8888;
 			bpp_shift = 1;
-		break;
-		case GL_RGBA4:
+		} else if (srcformat == graphics::internalcolorFormat::RGBA4) {
 			quantizer = &TxQuantize::ARGB4444_ARGB8888;
 			bpp_shift = 1;
-		break;
-		case GL_RGB:
+		} else if (srcformat == graphics::internalcolorFormat::RGB8) {
 			quantizer = &TxQuantize::RGB565_ARGB8888;
 			bpp_shift = 1;
-		break;
-		default:
-		return 0;
-		}
+		} else
+			return 0;
 
 		unsigned int numcore = _numcore;
 		unsigned int blkrow = 0;
@@ -843,58 +860,47 @@ TxQuantize::quantize(uint8* src, uint8* dest, int width, int height, uint16 srcf
 			numcore--;
 		}
 		if (blkrow > 0 && numcore > 1) {
-#ifndef HAVE_LIBNX
-			std::thread *thrd[MAX_NUMCORE];
-#endif
+		//	std::thread *thrd[MAX_NUMCORE];
 			unsigned int i;
 			int blkheight = blkrow << 2;
 			unsigned int srcStride = (width * blkheight) << (2 - bpp_shift);
 			unsigned int destStride = srcStride << bpp_shift;
 			for (i = 0; i < numcore - 1; i++) {
-#ifndef HAVE_LIBNX
-				thrd[i] = new std::thread(std::bind(quantizer,
+				/*thrd[i] = new std::thread(std::bind(quantizer,
 														this,
 														(uint32*)src,
 														(uint32*)dest,
 														width,
-														blkheight));
-#endif
+														blkheight));*/
 				src  += srcStride;
 				dest += destStride;
 			}
-#ifndef HAVE_LIBNX
-			thrd[i] = new std::thread(std::bind(quantizer,
+			/*thrd[i] = new std::thread(std::bind(quantizer,
 													this,
 													(uint32*)src,
 													(uint32*)dest,
 													width,
-													height - blkheight * i));
+													height - blkheight * i));*/
 			for (i = 0; i < numcore; i++) {
-				thrd[i]->join();
-				delete thrd[i];
+			//	thrd[i]->join();
+			//	delete thrd[i];
 			}
-#endif
 		} else {
 			(*this.*quantizer)((uint32*)src, (uint32*)dest, width, height);
 		}
 
-	} else if (srcformat == GL_RGBA8 || srcformat == GL_RGBA) {
-		switch (destformat) {
-		case GL_RGB5_A1:
+	} else if (srcformat == graphics::internalcolorFormat::RGBA8) {
+		if (destformat == graphics::internalcolorFormat::RGB5_A1) {
 			quantizer = fastQuantizer ? &TxQuantize::ARGB8888_ARGB1555 : &TxQuantize::ARGB8888_ARGB1555_ErrD;
 			bpp_shift = 1;
-		break;
-		case GL_RGBA4:
+		} else if (destformat == graphics::internalcolorFormat::RGBA4) {
 			quantizer = fastQuantizer ? &TxQuantize::ARGB8888_ARGB4444 : &TxQuantize::ARGB8888_ARGB4444_ErrD;
 			bpp_shift = 1;
-		break;
-		case GL_RGB:
+		} else if (destformat == graphics::internalcolorFormat::RGB8) {
 			quantizer = fastQuantizer ? &TxQuantize::ARGB8888_RGB565 : &TxQuantize::ARGB8888_RGB565_ErrD;
 			bpp_shift = 1;
-		break;
-		default:
-		return 0;
-		}
+		} else
+			return 0;
 
 		unsigned int numcore = _numcore;
 		unsigned int blkrow = 0;
@@ -903,37 +909,31 @@ TxQuantize::quantize(uint8* src, uint8* dest, int width, int height, uint16 srcf
 			numcore--;
 		}
 		if (blkrow > 0 && numcore > 1) {
-#ifndef HAVE_LIBNX
-			std::thread *thrd[MAX_NUMCORE];
-#endif
+			//std::thread *thrd[MAX_NUMCORE];
 			unsigned int i;
 			int blkheight = blkrow << 2;
 			unsigned int srcStride = (width * blkheight) << 2;
 			unsigned int destStride = srcStride >> bpp_shift;
 			for (i = 0; i < numcore - 1; i++) {
-#ifndef HAVE_LIBNX
-				thrd[i] = new std::thread(std::bind(quantizer,
+				/*thrd[i] = new std::thread(std::bind(quantizer,
 														this,
 														(uint32*)src,
 														(uint32*)dest,
 														width,
-														blkheight));
-#endif
+														blkheight));*/
 				src  += srcStride;
 				dest += destStride;
 			}
-#ifndef HAVE_LIBNX
-            thrd[i] = new std::thread(std::bind(quantizer,
+			/*thrd[i] = new std::thread(std::bind(quantizer,
 													this,
 													(uint32*)src,
 													(uint32*)dest,
 													width,
-													height - blkheight * i));
+													height - blkheight * i));*/
 			for (i = 0; i < numcore; i++) {
-				thrd[i]->join();
-				delete thrd[i];
+			//	thrd[i]->join();
+			//	delete thrd[i];
 			}
-#endif
 		} else {
 			(*this.*quantizer)((uint32*)src, (uint32*)dest, width, height);
 		}

@@ -6,7 +6,7 @@
 #define HOST_BTREG 19 /* callee-save */
 #define EXCLUDE_REG 29 /* FP */
 
-#define DISABLE_BLOCK_LINKING 1
+//#define DISABLE_BLOCK_LINKING 1
 #define NATIVE_64 1
 #define HOST_IMM8 1
 //#define HAVE_CMOV_IMM 1

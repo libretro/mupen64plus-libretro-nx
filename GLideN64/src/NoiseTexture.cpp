@@ -34,7 +34,6 @@ NoiseTexture::NoiseTexture()
 		m_pTexture[i] = nullptr;
 }
 
-
 inline u32 irand()
 {
         static u32 iseed = 1;

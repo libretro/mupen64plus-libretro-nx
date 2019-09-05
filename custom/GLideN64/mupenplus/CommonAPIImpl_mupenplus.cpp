@@ -2,24 +2,33 @@
 #include <algorithm>
 #include <string>
 #include "../PluginAPI.h"
-#include "../OpenGL.h"
+#include <Graphics/Context.h>
+#include "../DisplayWindow.h"
+#include <Graphics/OpenGLContext/GLFunctions.h>
+#include <Graphics/OpenGLContext/opengl_Utils.h>
 #include "../RSP.h"
 
 #ifdef ANDROID
 #include <sys/stat.h>
 #endif
 
+#include <libretro_private.h>
+
 extern retro_environment_t environ_cb;
 
-void retroChangeWindow()
+extern "C" void retroChangeWindow()
 {
-	video().setToggleFullscreen();
-	video().changeWindow();
+	dwnd().setToggleFullscreen();
+	dwnd().changeWindow();
 }
 
+extern unsigned int* rdram_size;
 int PluginAPI::InitiateGFX(const GFX_INFO & _gfxInfo)
 {
 	_initiateGFX(_gfxInfo);
+
+    REG.SP_STATUS = _gfxInfo.SP_STATUS_REG;
+    rdram_size = (unsigned int*)_gfxInfo.RDRAM_SIZE;
 
 	return TRUE;
 }
@@ -50,7 +59,7 @@ void _getWSPath(const char * _path, wchar_t * _strPath)
 }
 
 void getRetroArchDir(wchar_t * _strPath)
-{
+{ 
 	const char* systemDir = NULL;
 	if (!environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,&systemDir) || !systemDir || !*systemDir)
 		systemDir = "./";

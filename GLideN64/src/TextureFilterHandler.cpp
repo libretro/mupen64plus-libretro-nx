@@ -1,12 +1,16 @@
 #include <stdarg.h>
+#include <osal_files.h>
 #include "GLideNHQ/Ext_TxFilter.h"
+#include <Graphics/Context.h>
+#include <Graphics/Parameters.h>
 
 #include "RSP.h"
-#include "OpenGL.h"
 #include "Config.h"
 #include "PluginAPI.h"
 #include "FrameBuffer.h"
 #include "TextureFilterHandler.h"
+#include "DisplayWindow.h"
+#include "DisplayLoadProgress.h"
 #include "wst.h"
 
 static
@@ -37,44 +41,6 @@ u32 textureEnhancements[] = {
 	BRZ5X_ENHANCEMENT, //"5XBRZ"
 	BRZ6X_ENHANCEMENT  //"6XBRZ"
 };
-
-void displayLoadProgress(const wchar_t *format, ...)
-{
-	va_list args;
-	wchar_t wbuf[INFO_BUF];
-	char buf[INFO_BUF];
-
-	// process input
-#ifdef ANDROID
-	const u32 bufSize = 2048;
-	char cbuf[bufSize];
-	char fmt[bufSize];
-	wcstombs(fmt, format, bufSize);
-	va_start(args, format);
-	vsprintf(cbuf, fmt, args);
-	va_end(args);
-	mbstowcs(wbuf, cbuf, INFO_BUF);
-#else
-	va_start(args, format);
-	vswprintf(wbuf, INFO_BUF, format, args);
-	va_end(args);
-#endif
-
-	// XXX: convert to multibyte
-	wcstombs(buf, wbuf, INFO_BUF);
-
-	FrameBuffer* pBuffer = frameBufferList().getCurrent();
-	if (pBuffer != nullptr)
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-	OGLRender & render = video().getRender();
-	render.clearColorBuffer(nullptr);
-	render.drawText(buf, -0.9f, 0);
-	video().swapBuffers();
-
-	if (pBuffer != nullptr)
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pBuffer->m_FBO);
-}
 
 u32 TextureFilterHandler::_getConfigOptions() const
 {
@@ -107,26 +73,44 @@ void TextureFilterHandler::init()
 
 	m_options = _getConfigOptions();
 
-	GLint maxTextureSize;
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+	s32 maxTextureSize = gfxContext.getMaxTextureSize();
 	wchar_t wRomName[32];
 	::mbstowcs(wRomName, RSP.romname, 32);
+
 	wchar_t txPath[PLUGIN_PATH_SIZE + 16];
 	wchar_t * pTexPackPath = config.textureFilter.txPath;
-	if (::wcslen(config.textureFilter.txPath) == 0) {
+	if (::wcslen(config.textureFilter.txPath) == 0 ||
+		osal_is_absolute_path(config.textureFilter.txPath) == 0) {
 		api().GetUserDataPath(txPath);
 		gln_wcscat(txPath, wst("/hires_texture"));
 		pTexPackPath = txPath;
 	}
-	wchar_t txCachePath[PLUGIN_PATH_SIZE];
-	api().GetUserCachePath(txCachePath);
+
+	wchar_t txCachePath[PLUGIN_PATH_SIZE + 16];
+	wchar_t * pTexCachePath = config.textureFilter.txCachePath;
+	if (::wcslen(config.textureFilter.txCachePath) == 0 ||
+		osal_is_absolute_path(config.textureFilter.txCachePath) == 0) {
+		api().GetUserCachePath(txCachePath);
+		gln_wcscat(txCachePath, wst("/cache"));
+		pTexCachePath = txCachePath;
+	}
+
+	wchar_t txDumpPath[PLUGIN_PATH_SIZE + 16];
+	wchar_t * pTexDumpPath = config.textureFilter.txDumpPath;
+	if (::wcslen(config.textureFilter.txDumpPath) == 0 ||
+		osal_is_absolute_path(config.textureFilter.txDumpPath) == 0) {
+		api().GetUserCachePath(txDumpPath);
+		gln_wcscat(txDumpPath, wst("/texture_dump"));
+		pTexDumpPath = txDumpPath;
+	}
 
 	m_inited = txfilter_init(maxTextureSize, // max texture width supported by hardware
 		maxTextureSize, // max texture height supported by hardware
 		32, // max texture bpp supported by hardware
 		m_options,
 		config.textureFilter.txCacheSize, // cache texture to system memory
-		txCachePath, // path to store cache files
+		pTexCachePath, // path to store cache files
+		pTexDumpPath, // path to folder with dumped textures
 		pTexPackPath, // path to texture packs folder
 		wRomName, // name of ROM. must be no longer than 256 characters
 		displayLoadProgress);
@@ -139,6 +123,12 @@ void TextureFilterHandler::shutdown()
 		txfilter_shutdown();
 		m_inited = m_options = 0;
 	}
+}
+
+void TextureFilterHandler::dumpcache()
+{
+	if (isInited())
+		txfilter_dumpcache();
 }
 
 TextureFilterHandler TFH;

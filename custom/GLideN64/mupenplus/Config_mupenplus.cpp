@@ -8,7 +8,6 @@
 
 #include "../Config.h"
 #include "../GLideN64.h"
-#include "../OpenGL.h"
 #include "../GBI.h"
 #include "../RSP.h"
 #include "../Log.h"
@@ -68,13 +67,7 @@ void LoadCustomSettings(bool internal)
 			case INI_PROPERTY:
 			{
 				if (found) {
-					if (!strcmp(l.name, "video\\cropMode"))
-						config.video.cropMode = atoi(l.value);
-					else if (!strcmp(l.name, "video\\cropWidth"))
-						config.video.cropWidth = atoi(l.value);
-					else if (!strcmp(l.name, "video\\cropHeight"))
-						config.video.cropHeight = atoi(l.value);
-					else if (!strcmp(l.name, "video\\multisampling"))
+					if (!strcmp(l.name, "video\\multisampling"))
 						config.video.multisampling = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\aspect"))
 						config.frameBufferEmulation.aspect = atoi(l.value);
@@ -97,9 +90,9 @@ void LoadCustomSettings(bool internal)
 					else if (!strcmp(l.name, "texture\\maxAnisotropy"))
 						config.texture.maxAnisotropy = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\enableNativeResTexrects"))
-						config.generalEmulation.enableNativeResTexrects = atoi(l.value);
+						config.graphics2D.enableNativeResTexrects = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords"))
-						config.generalEmulation.correctTexrectCoords = atoi(l.value);
+						config.graphics2D.correctTexrectCoords = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\enableLegacyBlending"))
 						config.generalEmulation.enableLegacyBlending = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\enableFragmentDepthWrite"))
@@ -120,15 +113,9 @@ extern "C" void Config_LoadConfig()
 	u32 hacks = config.generalEmulation.hacks;
 	config.resetToDefaults();
 	config.frameBufferEmulation.aspect = AspectRatio;
-#ifdef VC
-	config.frameBufferEmulation.enable = 0;
-#else
 	config.frameBufferEmulation.enable = EnableFBEmulation;
-#endif
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
-	config.generalEmulation.correctTexrectCoords = CorrectTexrectCoords;
-	config.generalEmulation.enableNativeResTexrects = enableNativeResTexrects;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.generalEmulation.enableNoise = EnableNoiseEmulation;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
@@ -147,14 +134,39 @@ extern "C" void Config_LoadConfig()
 #else
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 #endif
+
+#ifdef VC
+	config.generalEmulation.enableShadersStorage = 0;
+#else
 	config.generalEmulation.enableShadersStorage = EnableShadersStorage;
+#endif
+
+	config.textureFilter.txSaveCache = EnableTextureCache;
+	
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
 	config.textureFilter.txHiresEnable = txHiresEnable;
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
+	config.video.fxaa = EnableFXAA;
 	config.video.multisampling = MultiSampling;
-	config.video.cropMode = CropMode;
+	
+    // Overscan
+    config.frameBufferEmulation.enableOverscan = EnableOverscan;
+    // NTSC
+    config.frameBufferEmulation.overscanNTSC.left = OverscanLeft;
+    config.frameBufferEmulation.overscanNTSC.right = OverscanRight;
+    config.frameBufferEmulation.overscanNTSC.top = OverscanTop;
+    config.frameBufferEmulation.overscanNTSC.bottom = OverscanBottom;
+    // PAL
+    config.frameBufferEmulation.overscanPAL.left = OverscanLeft;
+    config.frameBufferEmulation.overscanPAL.right = OverscanRight;
+    config.frameBufferEmulation.overscanPAL.top = OverscanTop;
+    config.frameBufferEmulation.overscanPAL.bottom = OverscanBottom;
+
+	config.graphics2D.correctTexrectCoords = CorrectTexrectCoords;
+	config.graphics2D.enableNativeResTexrects = enableNativeResTexrects;
+
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings(true);
 	LoadCustomSettings(false);

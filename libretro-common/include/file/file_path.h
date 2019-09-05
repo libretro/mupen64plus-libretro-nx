@@ -147,13 +147,38 @@ void path_parent_dir(char *path);
 
 /**
  * path_resolve_realpath:
- * @buf                : buffer for path
+ * @buf                : input and output buffer for path
  * @size               : size of buffer
+ * @resolve_symlinks   : whether to resolve symlinks or not
  *
- * Turns relative paths into absolute path.
- * If relative, rebases on current working dir.
+ * Resolves use of ".", "..", multiple slashes etc in absolute paths.
+ *
+ * Relative paths are rebased on the current working dir.
+ *
+ * Returns: @buf if successful, NULL otherwise.
+ * Note: Not implemented on consoles
+ * Note: Symlinks are only resolved on Unix-likes
+ * Note: The current working dir might not be what you expect,
+ *       e.g. on Android it is "/"
+ *       Use of fill_pathname_resolve_relative() should be prefered
  **/
-void path_resolve_realpath(char *buf, size_t size);
+char *path_resolve_realpath(char *buf, size_t size, bool resolve_symlinks);
+
+/**
+ * path_relative_to:
+ * @out                : buffer to write the relative path to
+ * @path               : path to be expressed relatively
+ * @base               : relative to this
+ * @size               : size of output buffer
+ *
+ * Turns @path into a path relative to @base and writes it to @out.
+ *
+ * @base is assumed to be a base directory, i.e. a path ending with '/' or '\'.
+ * Both @path and @base are assumed to be absolute paths without "." or "..".
+ *
+ * E.g. path /a/b/e/f.cgp with base /a/b/c/d/ turns into ../../e/f.cgp
+ **/
+void path_relative_to(char *out, const char *path, const char *base, size_t size);
 
 /**
  * path_is_absolute:
@@ -359,8 +384,7 @@ void fill_pathname_join_special_ext(char *out_path,
       const char *last, const char *ext,
       size_t size);
 
-void fill_pathname_join_concat_noext(
-      char *out_path,
+void fill_pathname_join_concat_noext(char *out_path,
       const char *dir, const char *path,
       const char *concat,
       size_t size);
@@ -494,9 +518,13 @@ bool path_is_directory(const char *path);
 
 bool path_is_character_special(const char *path);
 
+int path_stat(const char *path);
+
 bool path_is_valid(const char *path);
 
 int32_t path_get_size(const char *path);
+
+bool is_path_accessible_using_standard_io(const char *path);
 
 RETRO_END_DECLS
 
