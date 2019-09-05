@@ -21,24 +21,28 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <thread>
 #include "TxUtil.h"
 #include "TxDbg.h"
 #include <zlib.h>
-#include <stdlib.h>
 #include <assert.h>
 
-#if defined (OS_MAC_OS_X)
+#if defined (OS_WINDOWS)
+#include <malloc.h>
+#elif defined (OS_MAC_OS_X)
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#elif defined OS_LINUX
+#include <stdlib.h>
+#elif defined (OS_LINUX)
 #include <unistd.h>
+#include <malloc.h>
 #endif
 
 /*
  * Utilities
  ******************************************************************************/
 uint32
-TxUtil::checksumTx(uint8 *src, int width, int height, uint16 format)
+TxUtil::checksumTx(uint8 *src, int width, int height, ColorFormat format)
 {
 	int dataSize = sizeofTx(width, height, format);
 
@@ -52,27 +56,22 @@ TxUtil::checksumTx(uint8 *src, int width, int height, uint16 format)
 }
 
 int
-TxUtil::sizeofTx(int width, int height, uint16 format)
+TxUtil::sizeofTx(int width, int height, ColorFormat format)
 {
 	int dataSize = 0;
 
 	/* a lookup table for the shifts would be better */
-	switch (format) {
-	case GL_COLOR_INDEX8_EXT:
+	if (format == graphics::internalcolorFormat::COLOR_INDEX8) {
 		dataSize = width * height;
-	break;
-	case GL_RGBA4:
-	case GL_RGB5_A1:
-	case GL_RGB:
+	} else if (format == graphics::internalcolorFormat::RGBA4 ||
+			   format == graphics::internalcolorFormat::RGB5_A1 ||
+			   format == graphics::internalcolorFormat::RGB8) {
 		dataSize = (width * height) << 1;
-	break;
-	case GL_RGBA8:
+	} else if (format == graphics::internalcolorFormat::RGBA8) {
 		dataSize = (width * height) << 2;
-	break;
-	default:
+	} else {
 		/* unsupported format */
 		DBG_INFO(80, wst("Error: cannot get size. unsupported gfmt:%x\n"), format);
-		;
 	}
 
 	return dataSize;
@@ -150,7 +149,7 @@ TxUtil::RiceCRC32(const uint8* src, int width, int height, int size, int rowStri
 	const uint32 bytesPerLine = width << size >> 1;
 
 	try {
-#ifdef __MSC__
+#ifdef WIN32_ASM
 		__asm {
 			push ebx;
 			push esi;
@@ -263,7 +262,7 @@ TxUtil::RiceCRC32_CI4(const uint8* src, int width, int height, int rowStride,
 
 	/* 4bit CI */
 	try {
-#ifdef __MSC__
+#ifdef WIN32_ASM
 		__asm {
 			push ebx;
 			push esi;
@@ -396,7 +395,7 @@ TxUtil::RiceCRC32_CI8(const uint8* src, int width, int height, int rowStride,
 
 	/* 8bit CI */
 	try {
-#ifdef __MSC__
+#ifdef WIN32_ASM
 		const uint32 bytes_per_width = width;
 		__asm {
 			push ebx;
@@ -487,45 +486,11 @@ findmax0:
 	return 1;
 }
 
-int
-TxUtil::getNumberofProcessors()
+uint32 TxUtil::getNumberofProcessors()
 {
-	int numcore = 1;
-    #ifdef SWITCH
-    return 1;
-    #endif
-    
-#ifndef ANDROID
-	try {
-#if defined (OS_WINDOWS)
-		SYSTEM_INFO sysinfo;
-		GetSystemInfo(&sysinfo);
-		numcore = sysinfo.dwNumberOfProcessors;
-#elif defined (OS_MAC_OS_X)
-		int nm[2];
-		size_t len = 4;
-		uint32_t count;
-
-		nm[0] = CTL_HW; nm[1] = HW_AVAILCPU;
-		sysctl(nm, 2, &count, &len, nullptr, 0);
-
-		if (count < 1) {
-			nm[1] = HW_NCPU;
-			sysctl(nm, 2, &count, &len, nullptr, 0);
-			if (count < 1) { count = 1; }
-		}
-		numcore = count;
-#elif defined (OS_LINUX)
-		numcore = sysconf(_SC_NPROCESSORS_ONLN);
-#endif
-	} catch (...) {
-		DBG_INFO(80, wst("Error: number of processor detection failed!\n"));
-	}
-
+	uint32 numcore = 1; //std::thread::hardware_concurrency();
 	if (numcore > MAX_NUMCORE) numcore = MAX_NUMCORE;
-#endif // ANDROID
 	DBG_INFO(80, wst("Number of processors : %d\n"), numcore);
-
 	return numcore;
 }
 
@@ -584,9 +549,7 @@ TxMemBuf::shutdown()
 		_size[i] = 0;
 	}
 
-	for (auto i: _bufs) {
-		i.clear();
-	}
+	_bufs.clear();
 }
 
 uint8*
@@ -621,29 +584,23 @@ TxMemBuf::getThreadBuf(uint32 threadIdx, uint32 num, uint32 size)
 	return buf.data();
 }
 
-void setTextureFormat(uint16 internalFormat, GHQTexInfo * info)
+void setTextureFormat(ColorFormat internalFormat, GHQTexInfo * info)
 {
-	info->format = internalFormat;
-	switch (internalFormat) {
-	case GL_RGBA8:
-		info->texture_format = GL_RGBA;
-		info->pixel_type = GL_UNSIGNED_BYTE;
-	break;
-	case GL_RGB:
-		info->texture_format = GL_RGB;
-		info->pixel_type = GL_UNSIGNED_SHORT_5_6_5;
-	break;
-	case GL_RGBA4:
-		info->texture_format = GL_RGBA;
-		info->pixel_type = GL_UNSIGNED_SHORT_4_4_4_4;
-	break;
-	case GL_RGB5_A1:
-		info->texture_format = GL_RGBA;
-		info->pixel_type = GL_UNSIGNED_SHORT_5_5_5_1;
-	break;
-	default:
-		info->texture_format = GL_RGBA;
-		info->pixel_type = GL_UNSIGNED_BYTE;
-	break;
+	info->format = u32(internalFormat);
+	if (internalFormat == graphics::internalcolorFormat::RGBA8) {
+		info->texture_format = static_cast<unsigned short>(u32(graphics::colorFormat::RGBA));
+		info->pixel_type = static_cast<unsigned short>(u32(graphics::datatype::UNSIGNED_BYTE));
+	} else if (internalFormat == graphics::internalcolorFormat::RGB8) {
+		info->texture_format = static_cast<unsigned short>(u32(graphics::colorFormat::RED_GREEN_BLUE));
+		info->pixel_type = static_cast<unsigned short>(u32(graphics::datatype::UNSIGNED_SHORT_5_6_5));
+	} else if (internalFormat == graphics::internalcolorFormat::RGBA4) {
+		info->texture_format = static_cast<unsigned short>(u32(graphics::colorFormat::RGBA));
+		info->pixel_type = static_cast<unsigned short>(u32(graphics::datatype::UNSIGNED_SHORT_4_4_4_4));
+	} else if (internalFormat == graphics::internalcolorFormat::RGB5_A1) {
+		info->texture_format = static_cast<unsigned short>(u32(graphics::colorFormat::RGBA));
+		info->pixel_type = static_cast<unsigned short>(u32(graphics::datatype::UNSIGNED_SHORT_5_5_5_1));
+	} else {
+		info->texture_format = static_cast<unsigned short>(u32(graphics::colorFormat::RGBA));
+		info->pixel_type = static_cast<unsigned short>(u32(graphics::datatype::UNSIGNED_BYTE));
 	}
 }

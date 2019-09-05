@@ -34,9 +34,6 @@
 #define CHDIR(a) SetCurrentDirectoryW(a)
 #else
 #include <iostream>
-#ifndef __LIBRETRO__
-#include <dlfcn.h>
-#endif
 #include <unistd.h>
 #define MAX_PATH 4095
 #define TXHMODULE void*
@@ -222,7 +219,8 @@ extern "C"{
 
 TAPI boolean TAPIENTRY
 txfilter_init(int maxwidth, int maxheight, int maxbpp, int options, int cachesize,
-	const wchar_t *path, const wchar_t * texPackPath, const wchar_t*ident, dispInfoFuncExt callback);
+	const wchar_t *txCachePath, const wchar_t *txDumpPath, const wchar_t * texPackPath,
+	const wchar_t* ident, dispInfoFuncExt callback);
 
 TAPI void TAPIENTRY
 txfilter_shutdown(void);
@@ -242,6 +240,9 @@ txfilter_dmptx(uint8 *src, int width, int height, int rowStridePixel, uint16 gfm
 
 TAPI boolean TAPIENTRY
 txfilter_reloadhirestex();
+
+TAPI void TAPIENTRY
+txfilter_dumpcache(void);
 
 #ifdef __cplusplus
 }

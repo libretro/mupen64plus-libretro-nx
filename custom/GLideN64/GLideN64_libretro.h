@@ -38,15 +38,6 @@ typedef char GLchar;
 #endif // OS_MAC_OS_X
 #endif // GLES2
 
-#ifdef __cplusplus
-struct GLState {
-	GLState() { reset(); }
-	void reset();
-};
-
-extern GLState glState;
-#endif
-
 extern uint32_t bilinearMode;
 extern uint32_t EnableHWLighting;
 extern uint32_t CorrectTexrectCoords;
@@ -61,10 +52,11 @@ extern uint32_t txEnhancementMode;
 extern uint32_t txHiresEnable;
 extern uint32_t txHiresFullAlphaChannel;
 extern uint32_t txFilterIgnoreBG;
+extern uint32_t EnableFXAA;
 extern uint32_t MultiSampling;
 extern uint32_t EnableFragmentDepthWrite;
 extern uint32_t EnableShadersStorage;
-extern uint32_t CropMode;
+extern uint32_t EnableTextureCache;
 extern uint32_t EnableFBEmulation;
 extern uint32_t EnableFrameDuping;
 extern uint32_t EnableNoiseEmulation;
@@ -73,4 +65,10 @@ extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;
 extern uint32_t CountPerScanlineOverride;
 
+// Overscan Options
+extern uint32_t EnableOverscan;
+extern uint32_t OverscanTop;
+extern uint32_t OverscanLeft;
+extern uint32_t OverscanRight;
+extern uint32_t OverscanBottom;
 #endif

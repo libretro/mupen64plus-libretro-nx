@@ -9,15 +9,15 @@
 
 #include <N64.h>
 #include <GLideN64.h>
-#include <OpenGL.h>
 #include <RSP.h>
 #include <RDP.h>
 #include <VI.h>
 #include <Config.h>
-#include <Debug.h>
 #include <FrameBufferInfo.h>
 #include <TextureFilterHandler.h>
 #include <Log.h>
+#include "Graphics/Context.h"
+#include <DisplayWindow.h>
 
 PluginAPI & PluginAPI::get()
 {
@@ -37,8 +37,8 @@ void RSP_ThreadProc(std::mutex * _pRspThreadMtx, std::mutex * _pPluginThreadMtx,
 	RSP_Init();
 	GBI.init();
 	Config_LoadConfig();
-	video().start();
-	assert(!isGLError());
+	dwnd().start();
+	assert(!gfxContext.isError());
 
 	while (true) {
 		_pPluginThreadMtx->lock();
@@ -47,7 +47,7 @@ void RSP_ThreadProc(std::mutex * _pRspThreadMtx, std::mutex * _pPluginThreadMtx,
 		_pRspThreadCv->wait(*_pRspThreadMtx);
 		if (*_pCommand != nullptr && !(*_pCommand)->run())
 			return;
-		assert(!isGLError());
+		assert(!gfxContext.isError());
 	}
 }
 
@@ -109,7 +109,7 @@ public:
 	}
 
 	bool run() {
-		video().readScreen(m_dest, m_width, m_height);
+		dwnd().readScreen(m_dest, m_width, m_height);
 		return true;
 	}
 
@@ -132,8 +132,8 @@ public:
 	}
 
 	bool run() {
-		TFH.shutdown();
-		video().stop();
+		TFH.dumpcache();
+		dwnd().stop();
 		GBI.destroy();
 		m_pRspThreadMtx->unlock();
 		m_pPluginThreadMtx->lock();
@@ -152,7 +152,7 @@ private:
 
 void PluginAPI::ProcessDList()
 {
-	LOG(LOG_APIFUNC, "ProcessDList\n");
+	LOG(LOG_APIFUNC, "ProcessDList");
 #ifdef RSPTHREAD
 	_callAPICommand(ProcessDListCommand());
 #else
@@ -162,7 +162,7 @@ void PluginAPI::ProcessDList()
 
 void PluginAPI::ProcessRDPList()
 {
-	LOG(LOG_APIFUNC, "ProcessRDPList\n");
+	LOG(LOG_APIFUNC, "ProcessRDPList");
 #ifdef RSPTHREAD
 	_callAPICommand(ProcessRDPListCommand());
 #else
@@ -172,7 +172,12 @@ void PluginAPI::ProcessRDPList()
 
 void PluginAPI::RomClosed()
 {
-	LOG(LOG_APIFUNC, "RomClosed\n");
+	if (!m_bRomOpen)
+		return;
+
+	m_bRomOpen = false;
+
+	LOG(LOG_APIFUNC, "RomClosed");
 #ifdef RSPTHREAD
 	_callAPICommand(RomClosedCommand(
 					&m_rspThreadMtx,
@@ -183,20 +188,15 @@ void PluginAPI::RomClosed()
 	delete m_pRspThread;
 	m_pRspThread = nullptr;
 #else
-	TFH.shutdown();
-	video().stop();
+	TFH.dumpcache();
+	dwnd().stop();
 	GBI.destroy();
-#endif
-
-#ifdef DEBUG
-	CloseDebugDlg();
 #endif
 }
 
 void PluginAPI::RomOpen()
 {
-	LOG(LOG_APIFUNC, "RomOpen\n");
-    printf("RomOpen\n");
+	LOG(LOG_APIFUNC, "RomOpen");
 #ifdef RSPTHREAD
 	m_pluginThreadMtx.lock();
 	m_pRspThread = new std::thread(RSP_ThreadProc, &m_rspThreadMtx, &m_pluginThreadMtx, &m_rspThreadCv, &m_pluginThreadCv, &m_pCommand);
@@ -207,12 +207,9 @@ void PluginAPI::RomOpen()
 	RSP_Init();
 	GBI.init();
 	Config_LoadConfig();
-	video().start();
+	dwnd().start();
 #endif
-
-#ifdef DEBUG
-	OpenDebugDlg();
-#endif
+	m_bRomOpen = true;
 }
 
 void PluginAPI::ShowCFB()
@@ -222,7 +219,7 @@ void PluginAPI::ShowCFB()
 
 void PluginAPI::UpdateScreen()
 {
-	//LOG(LOG_APIFUNC, "UpdateScreen\n");
+	LOG(LOG_APIFUNC, "UpdateScreen");
 #ifdef RSPTHREAD
 	_callAPICommand(ProcessUpdateScreenCommand());
 #else
@@ -262,23 +259,25 @@ void PluginAPI::_initiateGFX(const GFX_INFO & _gfxInfo) const {
 	REG.VI_Y_SCALE = _gfxInfo.VI_Y_SCALE_REG;
 
 	CheckInterrupts = _gfxInfo.CheckInterrupts;
+
+	REG.SP_STATUS = nullptr;
 }
 
 void PluginAPI::ChangeWindow()
 {
-    printf("ChangeWindow\n");
-	video().setToggleFullscreen();
+	LOG(LOG_APIFUNC, "ChangeWindow");
+	dwnd().setToggleFullscreen();
+	if (!m_bRomOpen)
+		dwnd().closeWindow();
 }
 
 void PluginAPI::FBWrite(unsigned int _addr, unsigned int _size)
 {
-    printf("FbWrite\n");
 	FBInfo::fbInfo.Write(_addr, _size);
 }
 
 void PluginAPI::FBRead(unsigned int _addr)
 {
-    printf("FBRead\n");
 #ifdef RSPTHREAD
 	_callAPICommand(FBReadCommand(_addr));
 #else
@@ -302,7 +301,7 @@ void PluginAPI::ReadScreen(void **_dest, long *_width, long *_height)
 #ifdef RSPTHREAD
 	_callAPICommand(ReadScreenCommand(_dest, _width, _height));
 #else
-	video().readScreen(_dest, _width, _height);
+	dwnd().readScreen(_dest, _width, _height);
 #endif
 }
 #endif

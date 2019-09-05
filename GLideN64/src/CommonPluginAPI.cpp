@@ -10,7 +10,6 @@ extern "C" {
 
 EXPORT BOOL CALL InitiateGFX (GFX_INFO Gfx_Info)
 {
-    printf("InitiateGFX\n");
 	return api().InitiateGFX(Gfx_Info);
 }
 
@@ -61,13 +60,11 @@ EXPORT void CALL ChangeWindow(void)
 
 EXPORT void CALL FBWrite(unsigned int addr, unsigned int size)
 {
-    printf("FBWrite\n");
 	api().FBWrite(addr, size);
 }
 
 EXPORT void CALL FBRead(unsigned int addr)
 {
-    printf("FBRead\n");
 	api().FBRead(addr);
 }
 

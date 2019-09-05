@@ -1,16 +1,18 @@
 #ifndef COMMONPLUGINAPI_H
 #define COMMONPLUGINAPI_H
 
-#include <thread>
-#include <condition_variable>
-
 #ifdef MUPENPLUSAPI
 #include "m64p_plugin.h"
 #else
 #include "windows/GLideN64_windows.h"
 #include "ZilmarGFX_1_3.h"
 #include "FrameBufferInfoAPI.h"
-#define RSPTHREAD
+//#define RSPTHREAD
+#endif
+
+#ifdef RSPTHREAD
+#include <thread>
+#include <condition_variable>
 #endif
 
 class APICommand;
@@ -43,6 +45,7 @@ public:
 	void FindPluginPath(wchar_t * _strPath);
 	void GetUserDataPath(wchar_t * _strPath);
 	void GetUserCachePath(wchar_t * _strPath);
+	bool isRomOpen() const { return m_bRomOpen; }
 
 #ifndef MUPENPLUSAPI
 	// Zilmar
@@ -88,14 +91,17 @@ public:
 
 private:
 	PluginAPI()
+		: m_bRomOpen(false)
 #ifdef RSPTHREAD
-		: m_pRspThread(NULL), m_pCommand(nullptr)
+		, m_pRspThread(NULL)
+		, m_pCommand(nullptr)
 #endif
 	{}
-	PluginAPI(const PluginAPI &);
+	PluginAPI(const PluginAPI &) = delete;
 
 	void _initiateGFX(const GFX_INFO & _gfxInfo) const;
 
+	bool m_bRomOpen;
 #ifdef RSPTHREAD
 	void _callAPICommand(APICommand & _command);
 	std::mutex m_rspThreadMtx;

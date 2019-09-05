@@ -123,7 +123,7 @@ ifneq (,$(findstring unix,$(platform)))
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
-   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
    GLES = 1
    ifneq (,$(findstring mesa,$(platform)))
       GL_LIB := -lGLESv2
@@ -152,13 +152,14 @@ else ifeq ($(platform), libnx)
    PATH := $(PORTLIBS)/bin:$(PATH)
    LIBNX ?= $(DEVKITPRO)/libnx
    STRINGS := $(PREFIX)$(STRINGS)
+   EGL := 1
    PIC = 1
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CPUOPTS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
+   CPUOPTS := -g -march=armv8-a+crc -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
    PLATCFLAGS = -O3 -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec -specs=$(LIBNX)/switch.specs
    PLATCFLAGS += $(INCLUDE) -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX -D_GLIBCXX_USE_C99_MATH_TR1 -D_LDBL_EQ_DBL -funroll-loops
-   CXXFLAGS += -fno-rtti
-   COREFLAGS += -DOS_LINUX
+   CXXFLAGS += -fno-rtti -std=gnu++11
+   COREFLAGS += -DOS_LINUX -DEGL
    GLES = 0
    WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
@@ -212,6 +213,72 @@ else ifneq (,$(findstring odroid,$(platform)))
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
+
+# Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
+else ifneq (,$(findstring AMLG,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   CPUFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+
+   ifneq (,$(findstring AMLG12,$(platform)))
+      ifneq (,$(findstring AMLG12B,$(platform)))
+         CPUFLAGS += -mtune=cortex-a73.cortex-a53
+      else
+         CPUFLAGS += -mtune=cortex-a53
+      endif
+      GLES3 = 1
+   else ifneq (,$(findstring AMLGX,$(platform)))
+      CPUFLAGS += -mtune=cortex-a53
+      ifneq (,$(findstring AMLGXM,$(platform)))
+         GLES3 = 1
+      else
+         GLES = 1
+      endif
+   endif
+
+   GL_LIB := -lGLESv2
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
+
+# Amlogic S905/S912
+else ifneq (,$(findstring amlogic,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GLES = 1
+   GL_LIB := -lGLESv2
+   CPUFLAGS += -marm -mfloat-abi=hard -mfpu=neon
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
+   CPUFLAGS += -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53
+
+# Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
+else ifneq (,$(findstring RK,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+
+   ifneq (,$(findstring RK33,$(platform)))
+      CPUFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+      ifneq (,$(findstring RK3399,$(platform)))
+         CPUFLAGS += -mtune=cortex-a72.cortex-a53
+         GLES3 = 1
+      else ifneq (,$(findstring RK3328,$(platform)))
+         CPUFLAGS += -mtune=cortex-a53
+         GLES = 1
+      endif
+   else ifneq (,$(findstring RK3288,$(platform)))
+      CPUFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
+      GLES3 = 1
+   endif
+
+   GL_LIB := -lGLESv2
+   HAVE_NEON = 1
+   WITH_DYNAREC=arm
+   COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
+   ASFLAGS = -f elf -d ELF_TYPE
+
 # OS X
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
@@ -271,6 +338,7 @@ else ifneq (,$(findstring ios,$(platform)))
    ASFLAGS = -f elf -d ELF_TYPE
 # Android
 else ifneq (,$(findstring android,$(platform)))
+   ANDROID = 1
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -Wl,--warn-common -llog
    INCFLAGS += -I$(ROOT_DIR)/GLideN64/src/GLideNHQ/inc
    ifneq (,$(findstring x86,$(platform)))
@@ -296,7 +364,6 @@ else ifneq (,$(findstring android,$(platform)))
       TARGET := $(TARGET_NAME)_libretro_android.so
    endif
    CPUFLAGS += -DANDROID -DEGL_EGLEXT_PROTOTYPES
-
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 # emscripten
@@ -339,21 +406,23 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
-   ifneq (,$(findstring win32,$(platform)))
-      CC = i686-w64-mingw32-gcc
-      CXX = i686-w64-mingw32-g++
-      WITH_DYNAREC = x86
-   else ifneq (,$(findstring win64,$(platform)))
+   
+   ifeq ($(MSYSTEM),MINGW64)
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
       WITH_DYNAREC = x86_64
+      COREFLAGS += -DWIN64
+      ASFLAGS = -f win64 -d WIN64
+   else ifeq ($(MSYSTEM),MINGW32)
+      CC = i686-w64-mingw32-gcc
+      CXX = i686-w64-mingw32-g++
+      WITH_DYNAREC = x86
+      COREFLAGS += -DWIN32
+      ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
-	COREFLAGS += -DOS_WINDOWS -DMINGW
-   ifneq (,$(findstring win32,$(platform)))
-        ASFLAGS = -f win32
-	else
-        ASFLAGS = -f win64 -d WIN64
-	endif
+
+   COREFLAGS += -DOS_WINDOWS -DMINGW
+   CXXFLAGS += -fpermissive
 endif
 
 ifeq ($(STATIC_LINKING), 1)

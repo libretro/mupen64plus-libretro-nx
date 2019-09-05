@@ -1,7 +1,9 @@
 #ifndef WST_H
 #define WST_H
 
-#ifdef ANDROID
+#include <cstdlib>
+
+#ifdef OS_ANDROID
 static
 void gln_wcscat(wchar_t* destination, const wchar_t* source)
 {
@@ -33,9 +35,9 @@ private:
 };
 
 #define wst(A) dummyWString(A).c_str()
-#else // ANDROID
+#else // OS_ANDROID
 #define gln_wcscat wcscat
 #define wst(A) L##A
-#endif // ANDROID
+#endif // OS_ANDROID
 
 #endif // WST_H

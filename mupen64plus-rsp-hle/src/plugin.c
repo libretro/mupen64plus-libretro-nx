@@ -92,26 +92,14 @@ static void DebugMessage(int level, const char *message, va_list args)
 /* Global functions needed by HLE core */
 void HleVerboseMessage(void* UNUSED(user_defined), const char *message, ...)
 {
-    va_list args;
-    va_start(args, message);
-    DebugMessage(M64MSG_VERBOSE, message, args);
-    va_end(args);
 }
 
 void HleErrorMessage(void* UNUSED(user_defined), const char *message, ...)
 {
-    va_list args;
-    va_start(args, message);
-    DebugMessage(M64MSG_ERROR, message, args);
-    va_end(args);
 }
 
 void HleWarnMessage(void* UNUSED(user_defined), const char *message, ...)
 {
-    va_list args;
-    va_start(args, message);
-    DebugMessage(M64MSG_WARNING, message, args);
-    va_end(args);
 }
 
 void HleCheckInterrupts(void* UNUSED(user_defined))

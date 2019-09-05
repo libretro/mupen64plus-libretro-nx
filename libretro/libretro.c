@@ -73,6 +73,7 @@ int r_cbutton;
 int l_cbutton;
 int d_cbutton;
 int u_cbutton;
+bool alternate_mapping;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -84,6 +85,8 @@ static unsigned audio_buffer_size   = 2048;
 static unsigned retro_filtering     = 0;
 static bool     first_context_reset = false;
 static bool     initializing        = true;
+
+bool libretro_swap_buffer;
 
 uint32_t retro_screen_width = 320;
 uint32_t retro_screen_height = 240;
@@ -103,10 +106,11 @@ uint32_t txEnhancementMode = 0;
 uint32_t txHiresEnable = 0;
 uint32_t txHiresFullAlphaChannel = 0;
 uint32_t txFilterIgnoreBG = 0;
+uint32_t EnableFXAA = 0;
 uint32_t MultiSampling = 0;
 uint32_t EnableFragmentDepthWrite = 0;
 uint32_t EnableShadersStorage = 0;
-uint32_t CropMode = 0;
+uint32_t EnableTextureCache = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableNoiseEmulation = 0;
@@ -114,6 +118,14 @@ uint32_t EnableLODEmulation = 0;
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
 uint32_t CountPerScanlineOverride = 0;
+
+// Overscan options
+#define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
+uint32_t EnableOverscan = 0;
+uint32_t OverscanTop = 0;
+uint32_t OverscanLeft = 0;
+uint32_t OverscanRight = 0;
+uint32_t OverscanBottom = 0;
 
 int rspMode = 0;
 
@@ -155,9 +167,9 @@ static void setup_variables(void)
         { CORE_NAME "-rspmode",
             "RSP Mode; HLE" },
         { CORE_NAME "-43screensize",
-            "4:3 Resolution; 320x240|640x480|960x720|1280x960|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
+            "4:3 Resolution; 320x240|640x480|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
         { CORE_NAME "-169screensize",
-            "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|2560x1440|3840x2160|7680x4320" },
+            "16:9 Resolution; 640x360|960x540|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
         { CORE_NAME "-aspect",
             "Aspect Ratio; 4:3|16:9|16:9 adjusted" },
         { CORE_NAME "-BilinearMode",
@@ -166,6 +178,8 @@ static void setup_variables(void)
         { CORE_NAME "-MultiSampling",
             "MSAA level; 0|2|4|8|16" },
 #endif
+        { CORE_NAME "-FXAA",
+            "FXAA; 0|1" },
         { CORE_NAME "-FrameDuping",
 #ifdef HAVE_LIBNX
             "Frame Duplication; True|False" },
@@ -178,8 +192,14 @@ static void setup_variables(void)
             "VI Refresh (Overclock); Auto|1500|2200" },
         { CORE_NAME "-NoiseEmulation",
             "Noise Emulation; True|False" },
+
         { CORE_NAME "-EnableFBEmulation",
+#ifdef VC
+            "Framebuffer Emulation; False|True" },
+#else
             "Framebuffer Emulation; True|False" },
+#endif
+
         { CORE_NAME "-EnableLODEmulation",
             "LOD Emulation; True|False" },
         { CORE_NAME "-EnableCopyColorToRDRAM",
@@ -207,10 +227,23 @@ static void setup_variables(void)
         { CORE_NAME "-EnableFragmentDepthWrite",
             "GPU shader depth write; True|False" },
 #endif
+#ifndef VC
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
-        { CORE_NAME "-CropMode",
-            "Crop Mode; Auto|Off" },
+#endif
+        { CORE_NAME "-EnableTextureCache",
+            "Cache Textures; True|False" },
+        { CORE_NAME "-EnableOverscan",
+            "Overscan; Enabled|Disabled" },
+        { CORE_NAME "-OverscanTop",
+            "Overscan Offset (Top); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanLeft",
+            "Overscan Offset (Left); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanRight",
+            "Overscan Offset (Right); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanBottom",
+            "Overscan Offset (Bottom); " GLN64_OVERSCAN_SCALING },
+
         { CORE_NAME "-MaxTxCacheSize",
 #if defined(VC)
             "Max texture cache size; 1500|8000|4000" },
@@ -229,25 +262,27 @@ static void setup_variables(void)
             "Use High-Res textures; False|True" },
         { CORE_NAME "-txHiresFullAlphaChannel",
             "Use High-Res Full Alpha Channel; False|True" },
-        {CORE_NAME "-astick-deadzone",
+        { CORE_NAME "-astick-deadzone",
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-        {CORE_NAME "-astick-sensitivity",
+        { CORE_NAME "-astick-sensitivity",
            "Analog Sensitivity (percent); 100|105|110|115|120|125|130|135|140|145|150|50|55|60|65|70|75|80|85|90|95"},
-        {CORE_NAME "-r-cbutton",
+        { CORE_NAME "-r-cbutton",
            "Right C Button; C1|C2|C3|C4"},
-        {CORE_NAME "-l-cbutton",
+        { CORE_NAME "-l-cbutton",
            "Left C Button; C2|C3|C4|C1"},
-        {CORE_NAME "-d-cbutton",
+        { CORE_NAME "-d-cbutton",
            "Down C Button; C3|C4|C1|C2"},
-        {CORE_NAME "-u-cbutton",
+        { CORE_NAME "-u-cbutton",
            "Up C Button; C4|C1|C2|C3"},
-        {CORE_NAME "-pak1",
+        { CORE_NAME "-alt-map",
+           "Independent C-button Controls; False|True" },
+        { CORE_NAME "-pak1",
            "Player 1 Pak; memory|rumble|none"},
-        {CORE_NAME "-pak2",
+        { CORE_NAME "-pak2",
            "Player 2 Pak; none|memory|rumble"},
-        {CORE_NAME "-pak3",
+        { CORE_NAME "-pak3",
            "Player 3 Pak; none|memory|rumble"},
-        {CORE_NAME "-pak4",
+        { CORE_NAME "-pak4",
            "Player 4 Pak; none|memory|rumble"},
         { CORE_NAME "-CountPerOp",
             "Count Per Op; 0|1|2|3" },
@@ -532,6 +567,13 @@ void update_variables()
         bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
     }
 
+    var.key = CORE_NAME "-FXAA";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableFXAA = atoi(var.value);
+    }
+
     var.key = CORE_NAME "-MultiSampling";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -735,11 +777,11 @@ void update_variables()
         EnableShadersStorage = !strcmp(var.value, "False") ? 0 : 1;
     }
 
-    var.key = CORE_NAME "-CropMode";
+    var.key = CORE_NAME "-EnableTextureCache";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        CropMode = !strcmp(var.value, "Auto") ? 1 : 0;
+        EnableTextureCache = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-cpucore";
@@ -855,6 +897,48 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
+    
+    var.key = CORE_NAME "-EnableOverscan";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableOverscan = !strcmp(var.value, "Enabled") ? 1 : 0;
+    }
+
+    var.key = CORE_NAME "-OverscanTop";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanTop = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanLeft";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanLeft = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanRight";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanRight = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-OverscanBottom";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        OverscanBottom = atoi(var.value);
+    }
+
+    var.key = CORE_NAME "-alt-map";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
+    }
 
     update_controllers();
 }
@@ -913,7 +997,6 @@ bool retro_load_game(const struct retro_game_info *game)
     params.stencil               = false;
 
     params.framebuffer_lock      = context_framebuffer_lock;
-
     if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
     {
         if (log_cb)
@@ -943,8 +1026,11 @@ void retro_run (void)
 {
     libretro_swap_buffer = false;
     static bool updated = false;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+    
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
         update_controllers();
+    }
+
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     co_switch(game_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);

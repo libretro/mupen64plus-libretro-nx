@@ -62,7 +62,7 @@ static task_queue_t tasks_finished = {NULL, NULL};
 static struct retro_task_impl *impl_current = NULL;
 static bool task_threaded_enable            = false;
 
-static uint32_t task_count = 0;
+static uint32_t task_count                  = 0;
 
 static void task_queue_msg_push(retro_task_t *task,
       unsigned prio, unsigned duration,
@@ -610,7 +610,7 @@ void task_queue_check(void)
    impl_current->gather();
 }
 
-void task_queue_push(retro_task_t *task)
+bool task_queue_push(retro_task_t *task)
 {
    /* Ignore this task if a related one is already running */
    if (task->type == TASK_TYPE_BLOCKING)
@@ -634,12 +634,14 @@ void task_queue_push(retro_task_t *task)
 
       /* skip this task, user must try again later */
       if (found)
-         return;
+         return false;
    }
 
    /* The lack of NULL checks in the following functions
     * is proposital to ensure correct control flow by the users. */
    impl_current->push_running(task);
+
+   return true;
 }
 
 void task_queue_wait(retro_task_condition_fn_t cond, void* data)
@@ -823,17 +825,11 @@ char* task_get_title(retro_task_t *task)
    return title;
 }
 
-static uint32_t task_get_next_ident()
+retro_task_t *task_init(void)
 {
-   return task_count++;
-}
+   retro_task_t *task      = (retro_task_t*)calloc(1, sizeof(*task));
 
-retro_task_t *task_init()
-{
-   retro_task_t *task = (retro_task_t*)calloc(1, sizeof(*task));
-
-   task->ident             = task_get_next_ident();
-   task->frontend_userdata = NULL;
+   task->ident             = task_count++;
 
    return task;
 }

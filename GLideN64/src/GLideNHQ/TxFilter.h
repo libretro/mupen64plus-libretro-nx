@@ -44,7 +44,7 @@ private:
   int _options;
   int _cacheSize;
   tx_wstring _ident;
-  tx_wstring _path;
+  tx_wstring _dumpPath;
   TxQuantize *_txQuantize;
   TxTexCache *_txTexCache;
   TxHiResCache *_txHiResCache;
@@ -58,23 +58,25 @@ public:
 		   int maxbpp,
 		   int options,
 		   int cachesize,
-		   const wchar_t *path,
+		   const wchar_t * texCachePath,
+		   const wchar_t * texDumpPath,
 		   const wchar_t * texPackPath,
-		   const wchar_t *ident,
+		   const wchar_t * ident,
 		   dispInfoFuncExt callback);
   boolean filter(uint8 *src,
 				  int srcwidth,
 				  int srcheight,
-				  uint16 srcformat,
+				  ColorFormat srcformat,
 				  uint64 g64crc, /* glide64 crc, 64bit for future use */
 				  GHQTexInfo *info);
   boolean hirestex(uint64 g64crc, /* glide64 crc, 64bit for future use */
-					  uint64 r_crc64,   /* checksum hi:palette low:texture */
-					  uint16 *palette,
-					  GHQTexInfo *info);
+				   uint64 r_crc64,   /* checksum hi:palette low:texture */
+				   uint16 *palette,
+				   GHQTexInfo *info);
   uint64 checksum64(uint8 *src, int width, int height, int size, int rowStride, uint8 *palette);
-  boolean dmptx(uint8 *src, int width, int height, int rowStridePixel, uint16 gfmt, uint16 n64fmt, uint64 r_crc64);
+  boolean dmptx(uint8 *src, int width, int height, int rowStridePixel, ColorFormat gfmt, uint16 n64fmt, uint64 r_crc64);
   boolean reloadhirestex();
+  void dumpcache();
 };
 
 #endif /* __TXFILTER_H__ */

@@ -1,11 +1,8 @@
+#include "GLideN64_mupenplus.h"
 #include "../PluginAPI.h"
 #include "../GLideN64.h"
-#include "../OpenGL.h"
-
-#define PLUGIN_VERSION              0x020000
-#define VIDEO_PLUGIN_API_VERSION	0x020200
-#define CONFIG_API_VERSION          0x020000
-#define VIDEXT_API_VERSION          0x030000
+#include "../Config.h"
+#include <DisplayWindow.h>
 
 void(*renderCallback)(int) = nullptr;
 
@@ -32,7 +29,6 @@ m64p_error PluginAPI::PluginGetVersion(
 	int * _Capabilities
 )
 {
-    printf("PluginGetVer\n");
 	/* set version info */
 	if (_PluginType != nullptr)
 		*_PluginType = M64PLUGIN_GFX;
@@ -56,18 +52,15 @@ m64p_error PluginAPI::PluginGetVersion(
 
 void PluginAPI::SetRenderingCallback(void (*callback)(int))
 {
-    printf("SetRenderingCallback\n");
 	renderCallback = callback;
 }
 
 void PluginAPI::ResizeVideoOutput(int _Width, int _Height)
 {
-    printf("ResizeVideoOutput\n");
-	video().setWindowSize(_Width, _Height);
+	dwnd().setWindowSize(_Width, _Height);
 }
 
 void PluginAPI::ReadScreen2(void * _dest, int * _width, int * _height, int _front)
 {
-    printf("ReadScreen2\n");
-	video().readScreen2(_dest, _width, _height, _front);
+	dwnd().readScreen2(_dest, _width, _height, _front);
 }

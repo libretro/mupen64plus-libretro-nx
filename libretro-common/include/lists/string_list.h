@@ -41,6 +41,7 @@ union string_list_elem_attr
 struct string_list_elem
 {
    char *data;
+   void *userdata;
    union string_list_elem_attr attr;
 };
 
@@ -154,6 +155,8 @@ void string_list_join_concat(char *buffer, size_t size,
  **/
 void string_list_set(struct string_list *list, unsigned idx,
       const char *str);
+
+struct string_list *string_list_clone(const struct string_list *src);
 
 RETRO_END_DECLS
 

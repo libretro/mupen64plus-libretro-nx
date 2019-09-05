@@ -10,58 +10,91 @@
 #include "GBI.h"
 #include "RDP.h"
 #include "RSP.h"
-#include "F3D.h"
-#include "F3DEX.h"
-#include "F3DEX2.h"
-#include "L3D.h"
-#include "L3DEX.h"
-#include "L3DEX2.h"
-#include "S2DEX.h"
-#include "S2DEX2.h"
-#include "F3DDKR.h"
-#include "F3DBETA.h"
-#include "F3DPD.h"
-#include "F3DSETA.h"
-#include "F3DGOLDEN.h"
-#include "F3DEX2CBFD.h"
-#include "F3DEX2MM.h"
-#include "ZSort.h"
+#include "uCodes/F3D.h"
+#include "uCodes/F3DEX.h"
+#include "uCodes/F3DEX2.h"
+#include "uCodes/L3D.h"
+#include "uCodes/L3DEX.h"
+#include "uCodes/L3DEX2.h"
+#include "uCodes/S2DEX.h"
+#include "uCodes/S2DEX2.h"
+#include "uCodes/F3DAM.h"
+#include "uCodes/F3DDKR.h"
+#include "uCodes/F3DBETA.h"
+#include "uCodes/F3DPD.h"
+#include "uCodes/F3DSETA.h"
+#include "uCodes/F3DGOLDEN.h"
+#include "uCodes/F3DEX2CBFD.h"
+#include "uCodes/F3DZEX2.h"
+#include "uCodes/F3DTEXA.h"
+#include "uCodes/F3DEX2ACCLAIM.h"
+#include "uCodes/F3DFLX2.h"
+#include "uCodes/F5Indi_Naboo.h"
+#include "uCodes/F5Rogue.h"
+#include "uCodes/ZSort.h"
+#include "uCodes/ZSortBOSS.h"
 #include "CRC.h"
 #include "Log.h"
-#include "OpenGL.h"
-#include "Debug.h"
+#include "DebugDump.h"
+#include "Graphics/Context.h"
+#include "Graphics/Parameters.h"
 
 u32 last_good_ucode = (u32) -1;
 
-SpecialMicrocodeInfo specialMicrocodes[] =
+struct SpecialMicrocodeInfo
 {
-	{ F3D,			false,	0xe62a706d, "Fast3D" },
-	{ F3D,			false,	0x7d372819, "Fast3D" },
-	{ F3D,			false,	0xe01e14be, "Fast3D" },
-	{ F3D,			false,	0x4AED6B3B, "Fast3D" }, //Vivid Dolls [ALECK64]
+	u32 type;
+	bool NoN; // ucode does not use near clipping
+	bool negativeY; // Y is inverted
+	bool fast3DPerspNorm; // ucode is from Fast3D family and has G_PERSPNORMALIZE. See #1303
+	u32 crc;
+};
 
-	{ F3DSETA,		false,	0x2edee7be, "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3DBETA,		false,	0xd17906e2, "RSP SW Version: 2.0D, 04-01-96" }, // Wave Race (U)
-	{ F3DBETA,		false,	0x94c4c833, "RSP SW Version: 2.0D, 04-01-96" }, // Star Wars Shadows of Empire
-	{ F3DEX,		true,	0x637b4b58, "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3D,			true,	0x54c558ba, "RSP SW Version: 2.0D, 04-01-96" }, // Pilot Wings
-	{ F3DGOLDEN,	true,	0x302bca09, "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye
-
-	{ S2DEX,		false,	0x9df31081, "RSP Gfx ucode S2DEX  1.06 Yoshitaka Yasumoto Nintendo." },
-
-	{ F3DDKR,		false,	0x8d91244f, "Diddy Kong Racing" },
-	{ F3DDKR,		false,	0x6e6fc893, "Diddy Kong Racing" },
-	{ F3DJFG,		false,	0xbde9d1fb, "Jet Force Gemini" },
-	{ F3DPD,		true,	0x1c4f7869, "Perfect Dark" },
-	{ Turbo3D,		false,	0x2bdcfc8a, "Turbo3D" },
-	{ F3DEX2CBFD,	true,	0x1b4ace88, "Conker's Bad Fur Day" },
-	{ F3DEX2MM,	true,	0xd39a0d4f, "Animal Forest" }
+static const
+std::vector<SpecialMicrocodeInfo> specialMicrocodes =
+{
+	{ S2DEX2,		false,	true,	false,	0x02c399dd }, // Animal Forest
+	{ F3DEX,		false,	false,	true,	0x0ace4c3f }, // Mario Kart 64
+	{ F3D,			true,	false,	false,	0x16c3a775 }, // AeroFighters
+	{ F3DEX2CBFD,	true,	true,	false,	0x1b4ace88 }, // Conker's Bad Fur Day
+	{ F3DPD,		true,	true,	false,	0x1c4f7869 }, // Perfect Dark
+	{ F3D,			false,	false,	true,	0x1f24cc84 }, // Wayne Gretzky's 3D Hockey (U)
+	{ F5Indi_Naboo,	false,	false,	false,	0x23fef05f }, // SW Ep.1 Battle for Naboo
+	{ Turbo3D,		false,	true,	false,	0x2bdcfc8a }, // Dark Rift, Turbo3D
+	{ F3DSETA,		false,	true,	true,	0x2edee7be }, // RSP SW Version: 2.0D, 04-01-96
+	{ F3DGOLDEN,	true,	true,	false,	0x302bca09 }, // RSP SW Version: 2.0G, 09-30-96 GoldenEye
+	{ F3D,			false,	true,	false,	0x4AED6B3B }, // Vivid Dolls [ALECK64]
+	{ F3D,			true,	true,	true,	0x54c558ba }, // RSP SW Version: 2.0D, 04-01-96 Pilot Wings, Blast Corps
+	{ ZSortBOSS,	false,	false,	false,	0x553538cc }, // World Driver Championship
+	{ F3D,			false,	false,	true,	0x55be9bad }, // RSP SW Version: 2.0D, 04-01-96, Mischief Makers, Mortal Combat Trilogy, J.League Live
+	{ F3DEX,		true,	true,	true,	0x637b4b58 }, // RSP SW Version: 2.0D, 04-01-96 Power League
+	{ F5Indi_Naboo,	false,	false,	false,	0x6859bf8e }, // Indiana Jones
+	{ F3D,			false,	false,	true,	0x6932365f }, // Super Mario 64
+	{ ZSortBOSS,	false,	false,	false,	0x6a76f8dd }, // Stunt Racer
+	{ F3DDKR,		false,	true,	true,	0x6e6fc893 }, // Diddy Kong Racing
+	{ ZSortBOSS,	false,	false,	false,	0x75ed44cc }, // World Driver Championship, European
+	{ F3D,			true,	false,	true,	0x77195a68 }, // Dark Rift
+	{ L3D,			true,	true,	true,	0x771ce0c4 }, // RSP SW Version: 2.0D, 04-01-96 Blast Corps
+	{ F3D,			false,	false,	false,	0x7d372819 }, // Pachinko nichi 365
+	{ F3DDKR,		false,	true,	true,	0x8d91244f }, // Diddy Kong Racing
+	{ F3DBETA,		false,	true,	true,	0x94c4c833 }, // Star Wars Shadows of Empire
+	{ S2DEX_1_05,	false,	true,	false,	0x9df31081 }, // RSP Gfx ucode S2DEX  1.06 Yoshitaka Yasumoto Nintendo
+	{ T3DUX,		false,	true,	false,	0xbad437f2 }, // T3DUX vers 0.83 for Toukon Road
+	{ F3DJFG,		false,	true,	true,	0xbde9d1fb }, // Jet Force Gemini, Mickey
+	{ T3DUX,		false,	true,	false,	0xd0a1aa3d }, // T3DUX vers 0.85 for Toukon Road 2
+	{ F3DBETA,		false,	true,	true,	0xd17906e2 }, // RSP SW Version: 2.0D, 04-01-96, Wave Race (U)
+	{ F3DZEX2MM,	true,	true,	false,	0xd39a0d4f }, // Animal Forest
+	{ F3D,			false,	false,	true,	0xd3ab59b2 }, // Cruise'n USA
+	{ F5Rogue,		false,	false,	false,	0xda51ccdb }, // Star Wars RS
+	{ F3D,			false,	false,	false,	0xe01e14be }, // Eikou no Saint Andrews
+	{ F3DEX2ACCLAIM,true,	true,	false,	0xe44df568 }, // Acclaim games: Turok2 & 3, Armories and South park
+	{ F3D,			false,	true,	false,	0xe62a706d }, // Fast3D
 };
 
 u32 G_RDPHALF_1, G_RDPHALF_2, G_RDPHALF_CONT;
 u32 G_SPNOOP;
 u32 G_SETOTHERMODE_H, G_SETOTHERMODE_L;
-u32 G_DL, G_ENDDL, G_CULLDL, G_BRANCH_Z;
+u32 G_DL, G_ENDDL, G_CULLDL, G_BRANCH_Z, G_BRANCH_W;
 u32 G_LOAD_UCODE;
 u32 G_MOVEMEM, G_MOVEWORD;
 u32 G_MTX, G_POPMTX;
@@ -80,6 +113,7 @@ u32 G_SELECT_DL, G_OBJ_RENDERMODE, G_OBJ_RECTANGLE_R;
 u32 G_OBJ_LOADTXTR, G_OBJ_LDTX_SPRITE, G_OBJ_LDTX_RECT, G_OBJ_LDTX_RECT_R;
 u32 G_RDPHALF_0;
 u32 G_PERSPNORM;
+u32 G_ZOBJ, G_ZRDPCMD, G_ZWAITSIGNAL, G_ZMTXCAT, G_ZMULT_MPMTX, G_ZLIGHTING;
 
 
 u32 G_MTX_STACKSIZE;
@@ -112,18 +146,12 @@ GBIInfo GBI;
 
 void GBI_Unknown( u32 w0, u32 w1 )
 {
-#ifdef DEBUG
-	if (Debug.level == DEBUG_LOW)
-		DebugMsg( DEBUG_LOW | DEBUG_UNKNOWN, "UNKNOWN GBI COMMAND 0x%02X", _SHIFTR( w0, 24, 8 ) );
-	if (Debug.level == DEBUG_MEDIUM)
-		DebugMsg( DEBUG_MEDIUM | DEBUG_UNKNOWN, "Unknown GBI Command 0x%02X", _SHIFTR( w0, 24, 8 ) );
-	else if (Debug.level == DEBUG_HIGH)
-		DebugMsg( DEBUG_HIGH | DEBUG_UNKNOWN, "// Unknown GBI Command 0x%02X", _SHIFTR( w0, 24, 8 ) );
-#endif
+	DebugMsg(DEBUG_NORMAL, "UNKNOWN GBI COMMAND 0x%02X", _SHIFTR(w0, 24, 8));
 }
 
 void GBIInfo::init()
 {
+	m_hwlSupported = true;
 	m_pCurrent = nullptr;
 	_flushCommands();
 }
@@ -136,17 +164,12 @@ void GBIInfo::destroy()
 
 bool GBIInfo::isHWLSupported() const
 {
-	if (m_pCurrent == nullptr)
-		return false;
-	switch (m_pCurrent->type) {
-		case S2DEX:
-		case S2DEX2:
-		case F3DDKR:
-		case F3DJFG:
-		case F3DEX2CBFD:
-		return false;
-	}
-	return true;
+	return m_hwlSupported;
+}
+
+void GBIInfo::setHWLSupported(bool _supported)
+{
+	m_hwlSupported = _supported;
 }
 
 void GBIInfo::_flushCommands()
@@ -157,8 +180,12 @@ void GBIInfo::_flushCommands()
 void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 {
 	if (_pCurrent->type == NONE) {
-		LOG(LOG_ERROR, "[GLideN64]: error - unknown ucode!!!\n");
+		LOG(LOG_ERROR, "[GLideN64]: error - unknown ucode!!!");
 		return;
+	}
+
+	if ((_pCurrent->type == ZSortBOSS) && (!REG.SP_STATUS)) {
+		assert(false && "ZSortBOSS ucode needs access to SP_STATUS register'n");
 	}
 
 	if (m_pCurrent == nullptr || (m_pCurrent->type != _pCurrent->type)) {
@@ -170,50 +197,137 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 		G_TRI1 = G_TRI2 = G_TRIX = G_QUAD = -1; // For correct work of gSPFlushTriangles()
 
 		switch (m_pCurrent->type) {
-			case F3D:		F3D_Init();			break;
-			case F3DEX:		F3DEX_Init();		break;
-			case F3DEX2:	F3DEX2_Init();		break;
-			case L3D:		L3D_Init();			break;
-			case L3DEX:		L3DEX_Init();		break;
-			case L3DEX2:	L3DEX2_Init();		break;
-			case S2DEX:		S2DEX_Init();		break;
-			case S2DEX2:	S2DEX2_Init();		break;
-			case F3DDKR:	F3DDKR_Init();		break;
-			case F3DJFG:	F3DJFG_Init();		break;
-			case F3DBETA:	F3DBETA_Init();		break;
-			case F3DPD:		F3DPD_Init();		break;
-			case Turbo3D:	F3D_Init();			break;
-			case ZSortp:	ZSort_Init();		break;
-			case F3DEX2CBFD:F3DEX2CBFD_Init();	break;
-			case F3DSETA:	F3DSETA_Init();		break;
-			case F3DGOLDEN:	F3DGOLDEN_Init();	break;
-			case F3DEX2MM:	F3DEX2MM_Init();	break;
+			case F3D:
+				F3D_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DEX:
+				F3DEX_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DEX2:
+				F3DEX2_Init();
+				m_hwlSupported = true;
+			break;
+			case L3D:
+				L3D_Init();
+				m_hwlSupported = false;
+			break;
+			case L3DEX:
+				L3DEX_Init();
+				m_hwlSupported = false;
+			break;
+			case L3DEX2:
+				L3DEX2_Init();
+				m_hwlSupported = false;
+			break;
+			case S2DEX_1_03:
+				S2DEX_1_03_Init();
+				m_hwlSupported = false;
+				break;
+			case S2DEX_1_05:
+				S2DEX_1_05_Init();
+				m_hwlSupported = false;
+				break;
+			case S2DEX_1_07:
+				S2DEX_1_07_Init();
+				m_hwlSupported = false;
+				break;
+			case S2DEX2:
+				S2DEX2_Init();
+				m_hwlSupported = false;
+				break;
+			case F3DDKR:
+				F3DDKR_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DJFG:
+				F3DJFG_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DBETA:
+				F3DBETA_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DPD:
+				F3DPD_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DAM:
+				F3DAM_Init();
+				m_hwlSupported = true;
+			break;
+			case Turbo3D:
+				F3D_Init();
+				m_hwlSupported = true;
+			break;
+			case ZSortp:
+				ZSort_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DEX2CBFD:
+				F3DEX2CBFD_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DSETA:
+				F3DSETA_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DGOLDEN:
+				F3DGOLDEN_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DZEX2OOT:
+				F3DZEX2_Init();
+				m_hwlSupported = true;
+			break;
+			case F3DZEX2MM:
+				F3DZEX2_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DTEXA:
+				F3DTEXA_Init();
+				m_hwlSupported = true;
+			break;
+			case T3DUX:
+				F3D_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DEX2ACCLAIM:
+				F3DEX2ACCLAIM_Init();
+				m_hwlSupported = false;
+			break;
+			case F5Rogue:
+				F5Rogue_Init();
+				m_hwlSupported = false;
+			break;
+			case F3DFLX2:
+				F3DFLX2_Init();
+				m_hwlSupported = true;
+			break;
+			case ZSortBOSS:
+				ZSortBOSS_Init();
+				m_hwlSupported = true;
+			break;
+			case F5Indi_Naboo:
+				F5Indi_Naboo_Init();
+				m_hwlSupported = false;
+				break;
 		}
-
-#ifndef GLESX
-		if (m_pCurrent->NoN) {
-			// Disable near and far plane clipping
-			glEnable(GL_DEPTH_CLAMP);
-			// Enable Far clipping plane in vertex shader
-			glEnable(GL_CLIP_DISTANCE0);
-		} else {
-			glDisable(GL_DEPTH_CLAMP);
-			glDisable(GL_CLIP_DISTANCE0);
+		if (m_pCurrent->NoN)
+			gfxContext.setClampMode(graphics::ClampMode::NoNearPlaneClipping);
+		else
+			gfxContext.setClampMode(graphics::ClampMode::ClippingEnabled);
+		if (m_pCurrent->fast3DPersp) {
+			GBI_SetGBI(G_PERSPNORM, F3DBETA_PERSPNORM, F3DBETA_Perpnorm);
+			GBI_SetGBI(G_RDPHALF_1, F3DBETA_RDPHALF_1, F3D_RDPHalf_1);
+			GBI_SetGBI(G_RDPHALF_2, F3DBETA_RDPHALF_2, F3D_RDPHalf_2);
 		}
-#endif
 	} else if (m_pCurrent->NoN != _pCurrent->NoN) {
-#ifndef GLESX
-		if (_pCurrent->NoN) {
-			// Disable near and far plane clipping
-			glEnable(GL_DEPTH_CLAMP);
-			// Enable Far clipping plane in vertex shader
-			glEnable(GL_CLIP_DISTANCE0);
-		}
-		else {
-			glDisable(GL_DEPTH_CLAMP);
-			glDisable(GL_CLIP_DISTANCE0);
-		}
-#endif
+		if (_pCurrent->NoN)
+			gfxContext.setClampMode(graphics::ClampMode::NoNearPlaneClipping);
+		else
+			gfxContext.setClampMode(graphics::ClampMode::ClippingEnabled);
 	}
 	m_pCurrent = _pCurrent;
 }
@@ -241,21 +355,23 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 	current.address = uc_start;
 	current.dataAddress = uc_dstart;
 	current.dataSize = uc_dsize;
-	current.NoN = false;
-	current.textureGen = true;
-	current.texturePersp = true;
 	current.type = NONE;
 
 	// See if we can identify it by CRC
 	const u32 uc_crc = CRC_Calculate_Strict( 0xFFFFFFFF, &RDRAM[uc_start & 0x1FFFFFFF], 4096 );
-	const u32 numSpecialMicrocodes = sizeof(specialMicrocodes) / sizeof(SpecialMicrocodeInfo);
-	for (u32 i = 0; i < numSpecialMicrocodes; ++i) {
-		if (uc_crc == specialMicrocodes[i].crc) {
-			current.type = specialMicrocodes[i].type;
-			current.NoN = specialMicrocodes[i].NoN;
-			_makeCurrent(&current);
-			return;
-		}
+	SpecialMicrocodeInfo infoToSearch;
+	infoToSearch.crc = uc_crc;
+	auto it = std::lower_bound(specialMicrocodes.begin(), specialMicrocodes.end(), infoToSearch,
+			[](const SpecialMicrocodeInfo & i, const SpecialMicrocodeInfo & j){ return i.crc < j.crc; });
+	if (it != specialMicrocodes.end() && it->crc == uc_crc)	{
+		const SpecialMicrocodeInfo & info = *it;
+		current.type = info.type;
+		current.NoN = info.NoN;
+		current.negativeY = info.negativeY;
+		current.fast3DPersp = info.fast3DPerspNorm;
+		LOG(LOG_VERBOSE, "Load microcode type: %d crc: 0x%08x romname: %s", current.type, uc_crc, RSP.romname);
+		_makeCurrent(&current);
+		return;
 	}
 
 	// See if we can identify it by text
@@ -276,23 +392,38 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 
 			int type = NONE;
 
-			if (strncmp( &uc_str[4], "SW", 2 ) == 0)
+			if (strncmp(&uc_str[4], "SW", 2) == 0) {
 				type = F3D;
-			else if (strncmp( &uc_str[4], "Gfx", 3 ) == 0) {
+			} else if (strncmp(&uc_str[4], "Gfx", 3) == 0) {
 				current.NoN = (strstr( uc_str + 4, ".NoN") != nullptr);
+				current.Rej = (strstr(uc_str + 4, ".Rej") != nullptr);
 
 				if (strncmp( &uc_str[14], "F3D", 3 ) == 0) {
 					if (uc_str[28] == '1' || strncmp(&uc_str[28], "0.95", 4) == 0 || strncmp(&uc_str[28], "0.96", 4) == 0)
 						type = F3DEX;
-					else if (uc_str[31] == '2')
+					else if (uc_str[31] == '2') {
 						type = F3DEX2;
-					if (strncmp(&uc_str[14], "F3DF", 4) == 0)
-						current.textureGen = false;
-					else if (strncmp(&uc_str[14], "F3DZ", 4) == 0)
-						type = F3DEX2MM;
-					else if (strncmp(&uc_str[14], "F3DLX.Rej", 9) == 0)
+						if (uc_str[35] == 'H')
+							current.combineMatrices = true;
+					}
+					if (strncmp(&uc_str[14], "F3DFLX", 6) == 0) {
+						type = F3DFLX2;
 						current.NoN = true;
-					else if (strncmp(&uc_str[14], "F3DLP.Rej", 9) == 0) {
+					} else if (strncmp(&uc_str[14], "F3DZEX", 6) == 0) {
+						// Zelda games
+						if (uc_str[34] == '6')
+							type = F3DZEX2OOT;
+						else
+							type = F3DZEX2MM;
+						current.combineMatrices = false;
+					} else if (strncmp(&uc_str[14], "F3DTEX/A", 8) == 0)
+						type = F3DTEXA;
+					else if (strncmp(&uc_str[14], "F3DAM", 5) == 0)
+						type = F3DAM;
+					else if (strncmp(&uc_str[14], "F3DLX.Rej", 9) == 0) {
+						current.NoN = true;
+						current.cullBoth = false;
+					} else if (strncmp(&uc_str[14], "F3DLP.Rej", 9) == 0) {
 						current.texturePersp = false;
 						current.NoN = true;
 					}
@@ -308,9 +439,14 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 				else if (strncmp( &uc_str[14], "S2D", 3 ) == 0) {
 					u32 t = 20;
 					while (!std::isdigit(uc_str[t]) && t++ < j);
-					if (uc_str[t] == '1')
-						type = S2DEX;
-					else if (uc_str[t] == '2')
+					if (uc_str[t] == '1') {
+						if (strncmp(&uc_str[21], "1.03", 4) == 0)
+							type = S2DEX_1_03;
+						else if (strncmp(&uc_str[21], "1.05", 4) == 0)
+							type = S2DEX_1_05;
+						else
+							type = S2DEX_1_07;
+					} else if (uc_str[t] == '2')
 						type = S2DEX2;
 					current.texturePersp = false;
 				}
@@ -321,6 +457,7 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 
 			if (type != NONE) {
 				current.type = type;
+				LOG(LOG_VERBOSE, "Load microcode (%s) type: %d crc: 0x%08x romname: %s", uc_str, current.type, uc_crc, RSP.romname);
 				_makeCurrent(&current);
 				return;
 			}

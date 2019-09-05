@@ -972,10 +972,11 @@ extern audio_plugin_functions dummy_audio;
 
 unsigned int emumode;
 
+uint32_t rdram_size;
+
 m64p_error main_run(void)
 {
     size_t i, k;
-    size_t rdram_size;
     unsigned int count_per_op;
     unsigned int disable_extra_mem;
     int si_dma_duration;
