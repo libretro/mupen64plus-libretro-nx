@@ -57,7 +57,7 @@ DisplayWindow & DisplayWindow::get()
 
 void DisplayWindowMupen64plus::_setAttributes()
 {
-	LOG(LOG_VERBOSE, "[gles2GlideN64]: _setAttributes");
+	LOG(LOG_VERBOSE, "[GlideN64]: _setAttributes");
 }
 
 bool DisplayWindowMupen64plus::_start()
@@ -71,10 +71,12 @@ bool DisplayWindowMupen64plus::_start()
 	m_screenHeight = get_retro_screen_height();
 	_getDisplaySize();
 	_setBufferSize();
-	
-	LOG(LOG_VERBOSE, "[gles2GlideN64]: Create setting videomode %dx%d", m_screenWidth, m_screenHeight);
 
+#ifdef EGL
+	eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
+#endif // EGL
 
+	LOG(LOG_VERBOSE, "[GlideN64]: Create setting videomode %dx%d", m_screenWidth, m_screenHeight);
 	return true;
 }
 
@@ -86,7 +88,7 @@ void DisplayWindowMupen64plus::_swapBuffers()
 {
 	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
 	FunctionWrapper::WaitForSwapBuffersQueued();
-	
+
 	libretro_swap_buffer = true;
 }
 
