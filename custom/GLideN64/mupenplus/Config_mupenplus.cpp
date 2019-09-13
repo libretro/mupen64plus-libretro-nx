@@ -167,6 +167,8 @@ extern "C" void Config_LoadConfig()
 	config.graphics2D.correctTexrectCoords = CorrectTexrectCoords;
 	config.graphics2D.enableNativeResTexrects = enableNativeResTexrects;
 
+	config.graphics2D.bgMode = BackgroundMode;
+
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings(true);
 	LoadCustomSettings(false);

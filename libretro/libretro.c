@@ -118,6 +118,7 @@ uint32_t EnableLODEmulation = 0;
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
 uint32_t CountPerScanlineOverride = 0;
+uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -210,6 +211,8 @@ static void setup_variables(void)
 #endif
         { CORE_NAME "-EnableCopyDepthToRDRAM",
             "Depth buffer to RDRAM; Software|FromMem|Off" },
+        { CORE_NAME "-BackgroundMode",
+            "Background Mode; OnePiece|Stripped" },
         { CORE_NAME "-EnableHWLighting",
             "Hardware per-pixel lighting; False|True" },
         { CORE_NAME "-CorrectTexrectCoords",
@@ -664,6 +667,13 @@ void update_variables()
             CorrectTexrectCoords = 1;
         else
             CorrectTexrectCoords = 0;
+    }
+
+    var.key = CORE_NAME "-BackgroundMode";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        BackgroundMode = !strcmp(var.value, "OnePiece") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-EnableNativeResTexrects";
