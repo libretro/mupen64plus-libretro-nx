@@ -65,6 +65,8 @@ extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;
 extern uint32_t CountPerScanlineOverride;
 extern uint32_t BackgroundMode;
+extern uint32_t EnableEnhancedTextureStorage;
+extern uint32_t EnableEnhancedHighResStorage;
 
 // Overscan Options
 extern uint32_t EnableOverscan;
