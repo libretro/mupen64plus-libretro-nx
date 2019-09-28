@@ -283,7 +283,7 @@ void Debugger::_fillTriInfo(TriInfo & _info)
 
 void Debugger::_addTrianglesByElements(const Context::DrawTriangleParameters & _params)
 {
-	u8 * elements = reinterpret_cast<u8*>(_params.elements);
+	u16 * elements = reinterpret_cast<u16*>(_params.elements);
 	u32 cur_tri = static_cast<u32>(m_triangles.size());
 	for (u32 i = 0; i < _params.elementsCount;) {
 		m_triangles.emplace_back();
@@ -308,12 +308,14 @@ void Debugger::_addTriangles(const Context::DrawTriangleParameters & _params)
 		} else {
 			assert(_params.mode == drawmode::TRIANGLE_STRIP);
 			for (u32 j = 0; j < 3; ++j)
-				info.vertices[j] = Vertex(_params.vertices[i+j]);
+				info.vertices[j] = Vertex(_params.vertices[i + j]);
 			++i;
 		}
 		info.tri_n = cur_tri++;
 		info.type = ttTriangle;
 		_fillTriInfo(info);
+		if (i + 3 >= _params.verticesCount)
+			return;
 	}
 }
 
