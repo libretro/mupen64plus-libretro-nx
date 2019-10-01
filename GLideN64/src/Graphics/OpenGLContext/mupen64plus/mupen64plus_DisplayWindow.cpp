@@ -64,6 +64,21 @@ bool DisplayWindowMupen64plus::_start()
 {
 	FunctionWrapper::setThreadedMode(false);
 
+#ifdef EGL
+	// Normally this is initialized externally through VidExt, but if VidExt is not implemented,
+	// do this here anyways. Calling eglInitialize has no negative effect according to the spec
+
+	EGLDisplay display;
+	if ((display = eglGetDisplay(EGL_DEFAULT_DISPLAY)) == EGL_NO_DISPLAY) {
+		LOG(LOG_ERROR, "eglGetDisplay() returned error %d", eglGetError());
+		return false;
+	}
+	if (!eglInitialize(display, nullptr, nullptr)) {
+		LOG(LOG_ERROR, "eglInitialize() returned error %d", eglGetError());
+		return false;
+	}
+#endif
+
 	_setAttributes();
 
 	m_bFullscreen = false;
@@ -71,10 +86,6 @@ bool DisplayWindowMupen64plus::_start()
 	m_screenHeight = get_retro_screen_height();
 	_getDisplaySize();
 	_setBufferSize();
-
-#ifdef EGL
-	eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
-#endif // EGL
 
 	LOG(LOG_VERBOSE, "[GlideN64]: Create setting videomode %dx%d", m_screenWidth, m_screenHeight);
 	return true;

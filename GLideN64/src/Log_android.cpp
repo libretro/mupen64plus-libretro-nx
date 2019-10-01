@@ -1,9 +1,10 @@
 #include "Log.h"
 #include <string.h>
 #include <android/log.h>
+#include <vector>
+#include <sstream>
 
 void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, ...) {
-
 	static android_LogPriority androidLogTranslate[] = {
 			ANDROID_LOG_SILENT,
 			ANDROID_LOG_ERROR,

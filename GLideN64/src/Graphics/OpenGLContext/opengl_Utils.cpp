@@ -80,7 +80,6 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 #endif
 }
 
-
 static
 const char* GLErrorString(GLenum errorCode)
 {
