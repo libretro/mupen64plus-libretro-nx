@@ -384,7 +384,7 @@ m64p_error main_core_state_query(m64p_core_param param, int *rval)
         case M64CORE_AUDIO_VOLUME:
         {
             if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;    
+                return M64ERR_INVALID_STATE;
             return main_volume_get_level(rval);
         }
         case M64CORE_AUDIO_MUTE:
@@ -412,7 +412,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             if (val == M64EMU_STOPPED)
-            {        
+            {
                 /* this stop function is asynchronous.  The emulator may not terminate until later */
                 main_stop();
                 return M64ERR_SUCCESS;
@@ -424,7 +424,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
                 return M64ERR_SUCCESS;
             }
             else if (val == M64EMU_PAUSED)
-            {    
+            {
                 if (!main_is_paused())
                     main_toggle_pause();
                 return M64ERR_SUCCESS;
@@ -1003,7 +1003,8 @@ m64p_error main_run(void)
 
     count_per_op = CountPerOp;
     disable_extra_mem = ROM_PARAMS.disableextramem;
-
+    if (DisableExtraMem == 1)
+        disable_extra_mem = 1;
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;
 
     if (count_per_op <= 0)
@@ -1026,7 +1027,7 @@ m64p_error main_run(void)
     extern void set_audio_format_via_libretro(void* user_data, unsigned int frequency, unsigned int bits);
     extern void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size);
     audio_out_backend_libretro = (struct audio_out_backend_interface){ set_audio_format_via_libretro, push_audio_samples_via_libretro };
-    
+
     /* Fill-in l_pak_type_idx and l_ipaks according to game compatibility */
     k = 0;
     if (ROM_SETTINGS.biopak) {

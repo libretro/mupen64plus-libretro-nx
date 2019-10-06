@@ -119,7 +119,8 @@ extern "C" void Config_LoadConfig()
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.generalEmulation.enableNoise = EnableNoiseEmulation;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
-	
+	config.generalEmulation.disableExtraMem = DisableExtraMem;
+
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 #if defined(GLES2) && !defined(ANDROID)
 	config.frameBufferEmulation.copyToRDRAM = Config::ctDisable;
@@ -142,7 +143,7 @@ extern "C" void Config_LoadConfig()
 #endif
 
 	config.textureFilter.txSaveCache = EnableTextureCache;
-	
+
 	config.textureFilter.txFilterMode = txFilterMode;
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
@@ -150,7 +151,7 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.fxaa = EnableFXAA;
 	config.video.multisampling = MultiSampling;
-	
+
     // Overscan
     config.frameBufferEmulation.enableOverscan = EnableOverscan;
     // NTSC

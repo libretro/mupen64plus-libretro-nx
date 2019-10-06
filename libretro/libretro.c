@@ -121,6 +121,7 @@ uint32_t CountPerScanlineOverride = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 uint32_t EnableEnhancedTextureStorage;
 uint32_t EnableEnhancedHighResStorage;
+uint32_t DisableExtraMem = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -285,6 +286,8 @@ static void setup_variables(void)
            "Up C Button; C4|C1|C2|C3"},
         { CORE_NAME "-alt-map",
            "Independent C-button Controls; False|True" },
+        { CORE_NAME "-DisableExtraMem",
+           "Disable Extra Memory; False|True"},
         { CORE_NAME "-pak1",
            "Player 1 Pak; memory|rumble|none"},
         { CORE_NAME "-pak2",
@@ -927,7 +930,7 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
-    
+
     var.key = CORE_NAME "-EnableOverscan";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -968,6 +971,13 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
+    }
+
+    var.key = CORE_NAME "-DisableExtraMem";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        DisableExtraMem = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     update_controllers();
@@ -1056,7 +1066,7 @@ void retro_run (void)
 {
     libretro_swap_buffer = false;
     static bool updated = false;
-    
+
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
         update_controllers();
     }
