@@ -1004,6 +1004,9 @@ m64p_error main_run(void)
     count_per_op = CountPerOp;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
+    if (ForceDisableExtraMem == 1)
+        disable_extra_mem = 1;
+
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;
 
     if (count_per_op <= 0)
