@@ -3,6 +3,7 @@ FORCE_GLES=0
 FORCE_GLES3=0
 LLE=0
 
+HAVE_LTCG ?= 0
 DYNAFLAGS :=
 INCFLAGS  :=
 COREFLAGS :=
@@ -181,7 +182,7 @@ else ifeq ($(platform), libnx)
 else ifneq (,$(findstring odroid64,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
-   BOARD := $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
+   BOARD ?= $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
    GLES = 1
    GL_LIB := -lGLESv2
    WITH_DYNAREC := aarch64
@@ -203,25 +204,25 @@ else ifneq (,$(findstring odroid64,$(platform)))
 else ifneq (,$(findstring odroid,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
-   BOARD := $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
+   BOARD ?= $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
    GLES = 1
    GL_LIB := -lGLESv2
-   CPUFLAGS += -marm -mfloat-abi=hard -mfpu=neon
+   CPUFLAGS += -marm -mfloat-abi=hard
    HAVE_NEON = 1
    WITH_DYNAREC=arm
    ifneq (,$(findstring ODROIDC,$(BOARD)))
       # ODROID-C1
-      CPUFLAGS += -mcpu=cortex-a5
+      CPUFLAGS += -mcpu=cortex-a5 -mfpu=neon
    else ifneq (,$(findstring ODROID-XU,$(BOARD)))
       # ODROID-XU3 & -XU3 Lite and -XU4
       ifeq "$(shell expr `gcc -dumpversion` \>= 4.9)" "1"
-         CPUFLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7
+         CPUFLAGS += -mcpu=cortex-a15 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
       else
-         CPUFLAGS += -mcpu=cortex-a9
+         CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
       endif
    else
       # ODROID-U2, -U3, -X & -X2
-      CPUFLAGS += -mcpu=cortex-a9
+      CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
    endif
 
    COREFLAGS += -DOS_LINUX
@@ -471,6 +472,10 @@ endif
 CFLAGS += -std=gnu11
 CXXFLAGS += -std=gnu++11
 
+ifeq ($(HAVE_LTCG),1)
+   CPUFLAGS += -flto
+endif
+
 ifeq ($(PIC), 1)
    fpic = -fPIC
 else
@@ -485,7 +490,7 @@ ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread
 endif
 
-LDFLAGS    += $(fpic) -O2 -lz -lpng
+LDFLAGS    += $(fpic) -O2 -lz -lpng $(CPUFLAGS)
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
