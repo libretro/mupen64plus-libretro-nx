@@ -463,7 +463,7 @@ ifeq ($(DEBUG), 1)
 else
    CPUOPTS += -DNDEBUG -fsigned-char -ffast-math -fno-strict-aliasing -fomit-frame-pointer -fvisibility=hidden
 ifneq ($(platform), libnx)
-   CPUOPTS := -O2 $(CPUOPTS)
+   CPUOPTS := -O3 $(CPUOPTS)
 endif
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
@@ -490,7 +490,7 @@ ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread
 endif
 
-LDFLAGS    += $(fpic) -O2 -lz -lpng $(CPUFLAGS)
+LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUFLAGS)
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
