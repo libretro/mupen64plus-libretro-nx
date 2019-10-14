@@ -576,18 +576,6 @@ void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 	u32 tileWidth = ((pTile->lrs - pTile->uls) & 0x03FF) + 1;
 	u32 tileHeight = ((pTile->lrt - pTile->ult) & 0x03FF) + 1;
 
-	if (tileWidth == 1 && tileHeight == 1 &&
-		gDP.otherMode.cycleType == G_CYC_COPY &&
-		_pLoadTile != nullptr &&
-		_pLoadTile->loadType == LOADTYPE_BLOCK) {
-		const u32 ulx = _SHIFTR(RDP.w1, 14, 10);
-		const u32 uly = _SHIFTR(RDP.w1, 2, 10);
-		const u32 lrx = _SHIFTR(RDP.w0, 14, 10);
-		const u32 lry = _SHIFTR(RDP.w0, 2, 10);
-		tileWidth = lrx - ulx + 1;
-		tileHeight = lry - uly + 1;
-	}
-
 	const u32 tMemMask = gDP.otherMode.textureLUT == G_TT_NONE ? 0x1FF : 0xFF;
 	gDPLoadTileInfo &info = gDP.loadInfo[pTile->tmem & tMemMask];
 	if (pTile->tmem == gDP.loadTile->tmem) {
@@ -604,16 +592,34 @@ void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 	}
 	_sizes.bytes = info.bytes;
 
+	if (tileWidth == 1 && tileHeight == 1 &&
+		gDP.otherMode.cycleType == G_CYC_COPY &&
+		_pLoadTile != nullptr) {
+		const u32 ulx = _SHIFTR(RDP.w1, 14, 10);
+		const u32 uly = _SHIFTR(RDP.w1, 2, 10);
+		const u32 lrx = _SHIFTR(RDP.w0, 14, 10);
+		const u32 lry = _SHIFTR(RDP.w0, 2, 10);
+		tileWidth = lrx - ulx + 1;
+		tileHeight = lry - uly + 1;
+	}
+
 	u32 width = 0, height = 0;
 	if (info.loadType == LOADTYPE_TILE) {
 		width = min(info.width, info.texWidth);
+		if (width == 0)
+			width = tileWidth;
 		if (info.size > pTile->size)
 			width <<= info.size - pTile->size;
 
 		height = info.height;
+		if (height == 0)
+			height = tileHeight;
 		if ((config.generalEmulation.hacks & hack_MK64) != 0 && (height % 2) != 0)
 			height--;
 	} else {
+		const TextureLoadParameters & loadParams =
+			ImageFormat::get().tlp[gDP.otherMode.textureLUT][pTile->size][pTile->format];
+
 		int tile_width = pTile->lrs - pTile->uls + 1;
 		int tile_height = pTile->lrt - pTile->ult + 1;
 
@@ -622,13 +628,17 @@ void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 
 		if ((pTile->clamps && tile_width <= 256))
 			width = min(mask_width, tile_width);
-		else
+		else if ((u32)(mask_width * mask_height) <= loadParams.maxTexels)
 			width = mask_width;
+		else
+			width = tileWidth;
 
 		if ((pTile->clampt && tile_height <= 256) || (mask_height > 256))
 			height = min(mask_height, tile_height);
-		else
+		else if ((u32)(mask_width * mask_height) <= loadParams.maxTexels)
 			height = mask_height;
+		else
+			height = tileHeight;
 	}
 
 	_sizes.clampWidth = (pTile->clamps && gDP.otherMode.cycleType != G_CYC_COPY) ? tileWidth : width;
@@ -1393,8 +1403,8 @@ void TextureCache::_updateBackground()
 	pCurrent->shiftScaleS = 1.0f;
 	pCurrent->shiftScaleT = 1.0f;
 
-	pCurrent->offsetS = 0.5f;
-	pCurrent->offsetT = 0.5f;
+	pCurrent->offsetS = 0.0f;
+	pCurrent->offsetT = 0.0f;
 
 	_loadBackground(pCurrent);
 	activateTexture(0, pCurrent);
@@ -1543,8 +1553,8 @@ void TextureCache::update(u32 _t)
 	pCurrent->scaleS = 1.0f / (pCurrent->maskS ? f32(pow2(pCurrent->width)) : f32(pCurrent->width));
 	pCurrent->scaleT = 1.0f / (pCurrent->maskT ? f32(pow2(pCurrent->height)) : f32(pCurrent->height));
 
-	pCurrent->offsetS = 0.5f;
-	pCurrent->offsetT = 0.5f;
+	pCurrent->offsetS = 0.0f;
+	pCurrent->offsetT = 0.0f;
 
 	_load(_t, pCurrent);
 	activateTexture( _t, pCurrent );

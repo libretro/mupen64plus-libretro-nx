@@ -336,6 +336,8 @@ extern "C" void initGLFunctions();
 #define glEGLImageTargetTexture2DOES(...) opengl::FunctionWrapper::wrEGLImageTargetTexture2DOES(__VA_ARGS__)
 #endif
 
+#define GL_TEXTURE_EXTERNAL_OES 0x8D65
+
 #include "Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.h"
 
 #endif // GLFUNCTIONS_H

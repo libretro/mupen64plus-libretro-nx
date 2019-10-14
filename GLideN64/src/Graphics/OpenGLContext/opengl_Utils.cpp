@@ -28,7 +28,7 @@ bool Utils::isExtensionSupported(const opengl::GLInfo & _glinfo, const char *ext
 
 	const GLubyte *extensions = glGetString(GL_EXTENSIONS);
 	if (extensions == nullptr) {
-		LOG(LOG_WARNING, "[GlideN64]: could not query GL extensions on this device");
+		LOG(LOG_WARNING, "Could not query GL extensions on this device");
 		return false;
 	}
 
@@ -57,7 +57,7 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 
 	const char* extensions = eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS);
 	if (extensions == nullptr) {
-		LOG(LOG_WARNING, "[GlideN64]: could not query EGL extensions on this device");
+		LOG(LOG_WARNING, "Could not query EGL extensions on this device");
 		return false;
 	}
 
