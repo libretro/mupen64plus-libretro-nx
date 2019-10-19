@@ -327,15 +327,15 @@ else ifneq (,$(findstring ios,$(platform)))
 		EGL := 0
 		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
 		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS -DPNG_WRITE_FILLER_SUPPORTED
-		CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
+		#CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
 		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
-		HAVE_NEON=1
+		HAVE_NEON=0
 		CC         += -miphoneos-version-min=8.0
 		CC_AS      += -miphoneos-version-min=8.0
 		CXX        += -miphoneos-version-min=8.0
 		PLATCFLAGS += -miphoneos-version-min=8.0 -Wno-error=implicit-function-declaration
 		CC = clang -arch arm64 -isysroot $(IOSSDK)
-		CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
+		#CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
 		CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
 	else
 		PLATCFLAGS += -DOS_MAC_OS_X
