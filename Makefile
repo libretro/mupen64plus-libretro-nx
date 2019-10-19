@@ -314,42 +314,47 @@ else ifneq (,$(findstring osx,$(platform)))
    ASFLAGS = -f elf -d ELF_TYPE
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
-   ifeq ($(IOSSDK),)
-      IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
-   endif
+	ifeq ($(IOSSDK),)
+		IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
+	endif
 
-   TARGET := $(TARGET_NAME)_libretro_ios.dylib
-   DEFINES += -DIOS
-   GLES = 1
-   WITH_DYNAREC=arm
-
-   PLATCFLAGS += -DOS_MAC_OS_X
-   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-   PLATCFLAGS += -DIOS -marm
-   CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
-   CPUFLAGS += -marm -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp
-   LDFLAGS += -dynamiclib
-   HAVE_NEON=1
-
-   GL_LIB := -framework OpenGLES
-
-   CC = clang -arch armv7 -isysroot $(IOSSDK)
-   CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
-   ifeq ($(platform),ios9)
-      CC         += -miphoneos-version-min=8.0
-      CC_AS      += -miphoneos-version-min=8.0
-      CXX        += -miphoneos-version-min=8.0
-      PLATCFLAGS += -miphoneos-version-min=8.0
-   else
-      CC += -miphoneos-version-min=5.0
-      CC_AS += -miphoneos-version-min=5.0
-      CXX += -miphoneos-version-min=5.0
-      PLATCFLAGS += -miphoneos-version-min=5.0
-   endif
-
-   COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
+	TARGET := $(TARGET_NAME)_libretro_ios.dylib
+	DEFINES += -DIOS
+	GLES = 1
+	ifeq ($(platform),ios-arm64)
+		WITH_DYNAREC=
+		GLES3=1
+		EGL := 0
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS -DPNG_WRITE_FILLER_SUPPORTED
+		CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
+		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
+		HAVE_NEON=1
+		CC         += -miphoneos-version-min=8.0
+		CC_AS      += -miphoneos-version-min=8.0
+		CXX        += -miphoneos-version-min=8.0
+		PLATCFLAGS += -miphoneos-version-min=8.0 -Wno-error=implicit-function-declaration
+		CC = clang -arch arm64 -isysroot $(IOSSDK)
+		CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
+		CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
+	else
+		PLATCFLAGS += -DOS_MAC_OS_X
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+		PLATCFLAGS += -DIOS -marm
+		CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
+		CPUFLAGS += -marm -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp
+		WITH_DYNAREC=arm
+		HAVE_NEON=1
+		CC         += -miphoneos-version-min=5.0
+		CC_AS      += -miphoneos-version-min=5.0
+		CXX        += -miphoneos-version-min=5.0
+		PLATCFLAGS += -miphoneos-version-min=5.0
+		CC = clang -arch armv7 -isysroot $(IOSSDK)
+		CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
+		CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+	endif
+	LDFLAGS += -dynamiclib
+	GL_LIB := -framework OpenGLES
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -452,7 +457,11 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+	ifeq ($(platform),ios-arm64)
+		COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only
+	else
+		COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+	endif
 endif
 
 COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
@@ -490,7 +499,11 @@ ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread
 endif
 
-LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+ifeq ($(platform),ios-arm64)
+	LDFLAGS    += $(fpic) -O3 -lz $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+else
+	LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+endif
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)

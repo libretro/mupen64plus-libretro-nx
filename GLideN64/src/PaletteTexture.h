@@ -1,6 +1,11 @@
 #pragma once
 #include <memory>
-#include <malloc.h>
+
+#ifdef IOS
+	#include <stdlib.h>
+#else
+	#include <malloc.h>
+#endif
 
 struct CachedTexture;
 
