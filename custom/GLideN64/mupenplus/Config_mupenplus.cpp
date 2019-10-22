@@ -171,6 +171,7 @@ extern "C" void Config_LoadConfig()
 
 	config.textureFilter.txEnhancedTextureFileStorage = EnableEnhancedTextureStorage;
 	config.textureFilter.txHiresTextureFileStorage = EnableEnhancedHighResStorage;
+	config.frameBufferEmulation.nativeResFactor = EnableNativeResFactor;
 
 	config.generalEmulation.hacks = hacks;
 	LoadCustomSettings(true);

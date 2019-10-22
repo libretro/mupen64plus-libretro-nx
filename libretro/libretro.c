@@ -122,6 +122,7 @@ uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 uint32_t EnableEnhancedTextureStorage;
 uint32_t EnableEnhancedHighResStorage;
 uint32_t ForceDisableExtraMem = 0;
+uint32_t EnableNativeResFactor = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -850,6 +851,15 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
+
+        // Sanity check... not optimal since we will render at a higher res, but otherwise
+        // GLideN64 might blit a bigger image onto a smaller framebuffer
+        // This is a recent regression.
+        if(retro_screen_width == 320 && retro_screen_height == 240 ||
+           retro_screen_width == 640 && retro_screen_height == 360)
+        {
+            EnableNativeResFactor = 1; // Force factor == 1
+        }
     }
 
     var.key = CORE_NAME "-astick-deadzone";

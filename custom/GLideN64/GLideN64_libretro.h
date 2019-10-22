@@ -68,6 +68,7 @@ extern uint32_t BackgroundMode;
 extern uint32_t EnableEnhancedTextureStorage;
 extern uint32_t EnableEnhancedHighResStorage;
 extern uint32_t ForceDisableExtraMem;
+extern uint32_t EnableNativeResFactor;
 
 // Overscan Options
 extern uint32_t EnableOverscan;
