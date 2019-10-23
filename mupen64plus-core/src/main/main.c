@@ -1298,7 +1298,7 @@ m64p_error main_run(void)
      * Jump back to frontend for deinit
      */
     extern cothread_t retro_thread;
-    co_switch(retro_thread);
+    //co_switch(retro_thread);
 
     return M64ERR_SUCCESS;
 

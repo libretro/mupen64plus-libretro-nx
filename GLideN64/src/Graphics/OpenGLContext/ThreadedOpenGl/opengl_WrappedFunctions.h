@@ -20,6 +20,9 @@
 #include "RingBufferPool.h"
 #include <string.h> // memcpy
 
+#include <libco.h>
+extern "C" cothread_t retro_thread;
+
 #ifdef MUPENPLUSAPI
 #include <mupenplus/GLideN64_mupenplus.h>
 #else
@@ -5142,6 +5145,7 @@ private:
 	int* m_value;
 };
 
+extern "C" bool libretro_swap_buffer;
 class CoreVideoGLSwapBuffersCommand : public OpenGlCommand
 {
 public:
@@ -5162,8 +5166,11 @@ public:
 	{
 #ifndef __LIBRETRO__
 		::CoreVideo_GL_SwapBuffers();
-#endif
+#else
+		libretro_swap_buffer = true;
+		co_switch(retro_thread);
 		m_swapBuffersCallback();
+#endif
 	}
 
 private:

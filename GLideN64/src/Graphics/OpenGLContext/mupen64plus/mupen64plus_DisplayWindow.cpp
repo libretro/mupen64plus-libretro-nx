@@ -62,7 +62,7 @@ void DisplayWindowMupen64plus::_setAttributes()
 
 bool DisplayWindowMupen64plus::_start()
 {
-	FunctionWrapper::setThreadedMode(false);
+	FunctionWrapper::setThreadedMode(true);
 	
 	_setAttributes();
 
@@ -88,8 +88,7 @@ void DisplayWindowMupen64plus::_swapBuffers()
 {
 	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
 	FunctionWrapper::WaitForSwapBuffersQueued();
-
-	libretro_swap_buffer = true;
+	FunctionWrapper::CoreVideo_GL_SwapBuffers();
 }
 
 void DisplayWindowMupen64plus::_saveScreenshot()

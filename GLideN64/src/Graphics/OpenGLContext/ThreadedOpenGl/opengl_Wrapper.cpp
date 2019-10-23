@@ -4,6 +4,14 @@
 #include <memory>
 #include <set>
 
+#include <libco.h>
+extern "C" cothread_t retro_thread;
+extern "C" void context_reset();
+extern "C" void call_cmd_loop()
+{
+    opengl::FunctionWrapper::commandLoop();
+}
+
 namespace opengl {
 
 	bool FunctionWrapper::m_threaded_wrapper = false;
@@ -62,8 +70,7 @@ namespace opengl {
 
 	void FunctionWrapper::commandLoop()
 	{
-		bool timeToShutdown = false;
-		while (!timeToShutdown) {
+		while (true) {
 			std::shared_ptr<OpenGlCommand> command;
 
 			if (m_commandQueueHighPriority.peek() != nullptr) {
@@ -73,7 +80,6 @@ namespace opengl {
 			} else {
 				if (m_commandQueue.wait_dequeue_timed(command, std::chrono::milliseconds(10)) && command != nullptr) {
 					command->performCommand();
-					timeToShutdown = command->isTimeToShutdown();
 				}
 			}
 		}
@@ -125,7 +131,7 @@ namespace opengl {
 		if (_threaded == 1) {
 			m_threaded_wrapper = true;
 			m_shutdown = false;
-			m_commandExecutionThread = std::thread(&FunctionWrapper::commandLoop);
+			//m_commandExecutionThread = std::thread(&FunctionWrapper::commandLoop);
 
 		}
 		else {
@@ -1418,7 +1424,6 @@ namespace opengl {
 #endif
 
 #ifdef MUPENPLUSAPI
-
 	m64p_error FunctionWrapper::CoreVideo_Init()
 	{
 		m64p_error returnValue;
@@ -1443,7 +1448,7 @@ namespace opengl {
 #ifndef GL_DEBUG
 		if (m_threaded_wrapper) {
 			m_condition.notify_all();
-			m_commandExecutionThread.join();
+			//m_commandExecutionThread.join();
 		}
 #endif
 	}
@@ -1484,7 +1489,6 @@ namespace opengl {
 			executeCommand(CoreVideoGLSwapBuffersCommand::get([]{ReduceSwapBuffersQueued();}));
 		else
 			CoreVideoGLSwapBuffersCommand::get([]{ReduceSwapBuffersQueued();})->performCommandSingleThreaded();
-
 	}
 #else
 	bool FunctionWrapper::windowsStart()
@@ -1512,7 +1516,7 @@ namespace opengl {
 #ifndef GL_DEBUG
 		if (m_threaded_wrapper) {
 			m_condition.notify_all();
-			m_commandExecutionThread.join();
+			//m_commandExecutionThread.join();
 		}
 #endif
 	}

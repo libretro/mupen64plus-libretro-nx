@@ -20,7 +20,7 @@ namespace opengl {
 				std::stringstream errorString;
 				errorString << " OpenGL error: 0x" << std::hex << error << ", on function: " << m_functionName;
 				LOG(LOG_ERROR, errorString.str().c_str());
-				throw std::runtime_error(errorString.str().c_str());
+				//throw std::runtime_error(errorString.str().c_str());
 			}
 		}
 #endif
