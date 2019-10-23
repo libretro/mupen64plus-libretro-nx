@@ -7520,6 +7520,9 @@ static void disassemble_inst(int i)
     }
 }
 
+#ifdef HAVE_LIBNX
+ALIGN(4096, char jit_memory[33554432]) __attribute__((section(".text")));
+#endif
 void new_dynarec_init(void)
 {
   DebugMessage(M64MSG_INFO, "Init new dynarec");
@@ -7544,8 +7547,8 @@ void new_dynarec_init(void)
 
 #if CACHE_ADDR==DOUBLE_CACHE_ADDR
 #ifdef HAVE_LIBNX
-  base_addr = mmap((u_char *)g_dev.r4300.extra_memory, 1<<TARGET_SIZE_2, 0,0,0,0);
-  base_addr_rx = jit_rx_addr;
+  base_addr = mmap((u_char *)jit_memory, 1<<TARGET_SIZE_2, 0,0,0,0);
+  base_addr_rx = (void*)jit_memory;
 #else
   #include <unistd.h>
   #include <sys/types.h>
