@@ -22,7 +22,7 @@ INCFLAGS += \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
 	-I$(VIDEODIR_GLIDEN64)/src/inc \
-	-I$(ROOT_DIR)/xxHash \
+	-I$(CORE_DIR)/subprojects/xxhash \
 	-I$(PNG_DIR) \
 	-I$(ZLIB_DIR)
 
