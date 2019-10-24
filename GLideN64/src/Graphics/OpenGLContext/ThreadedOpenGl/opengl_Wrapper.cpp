@@ -70,7 +70,8 @@ namespace opengl {
 
 	void FunctionWrapper::commandLoop()
 	{
-		while (true) {
+		bool timeToShutdown = false;
+		while (!timeToShutdown) {
 			std::shared_ptr<OpenGlCommand> command;
 
 			if (m_commandQueueHighPriority.peek() != nullptr) {
@@ -80,9 +81,13 @@ namespace opengl {
 			} else {
 				if (m_commandQueue.wait_dequeue_timed(command, std::chrono::milliseconds(10)) && command != nullptr) {
 					command->performCommand();
+					timeToShutdown = command->isTimeToShutdown();
 				}
 			}
 		}
+
+        // Return
+        co_switch(retro_thread);
 	}
 
 #if defined(GL_DEBUG) && defined(GL_PROFILE)

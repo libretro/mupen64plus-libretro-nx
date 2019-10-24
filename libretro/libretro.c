@@ -10,6 +10,7 @@
 
 #ifdef HAVE_LIBNX
 #include <switch.h>
+Thread* thread = NULL;
 #endif
 #include <pthread.h>
 #include <glsm/glsmsym.h>
@@ -65,7 +66,7 @@ struct retro_rumble_interface rumble;
 
 save_memory_data saved_memory;
 
-static cothread_t game_thread;
+static cothread_t gl_thread;
 cothread_t retro_thread;
 
 int astick_deadzone;
@@ -140,6 +141,10 @@ int rspMode = 0;
 extern struct device g_dev;
 extern unsigned int emumode;
 extern struct cheat_ctx g_cheat_ctx;
+
+
+static bool emuThreadRunning = false;
+static pthread_t emuThread;
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -375,12 +380,17 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void EmuThreadFunction(void* param)
+static void* EmuThreadFunction(void* param)
 {
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
+
+    // Runs until CMD_STOP
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+
+    // Unset
+    emuThreadRunning = false;
 }
 
 void reinit_gfx_plugin(void)
@@ -490,18 +500,10 @@ void retro_init(void)
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
-    initializing = true;
-
-    retro_thread = co_active();
-    game_thread = co_create(65536 * sizeof(void*) * 16, call_cmd_loop);
 }
 
 void retro_deinit(void)
 {
-    CoreDoCommand(M64CMD_STOP, 0, NULL);
-    //co_switch(game_thread); /* Let the core thread finish */
-    deinit_audio_libretro();
-
     if (perf_cb.perf_log)
         perf_cb.perf_log();
 }
@@ -1073,6 +1075,10 @@ bool retro_load_game(const struct retro_game_info *game)
     update_variables();
     initial_boot = false;
 
+    initializing = true;
+
+    retro_thread = co_active();
+    gl_thread = co_create(65536 * sizeof(void*) * 16, call_cmd_loop);
     init_audio_libretro(audio_buffer_size);
 
     params.context_reset         = context_reset;
@@ -1103,36 +1109,51 @@ bool retro_load_game(const struct retro_game_info *game)
 void retro_unload_game(void)
 {
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+    CoreDoCommand(M64CMD_STOP, 0, NULL);
+
+    // Run one more frame to unlock it
+    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+    co_switch(gl_thread);
+    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    
+#ifndef HAVE_LIBNX
+    pthread_join(emuThread, NULL);
+#else
+    threadWaitForExit(thread);
+    threadClose(thread);
+    free(thread);
+    thread = NULL;
+#endif
+
     emu_initialized = false;
+    deinit_audio_libretro();
 }
 
 void retro_run (void)
 {
     libretro_swap_buffer = false;
     static bool updated = false;
-    static bool initial = false;
     
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
         update_controllers();
     }
 
-    if(!initial)
+    if(!emuThreadRunning)
     {
 #ifndef HAVE_LIBNX
-        pthread_t thread;
-        pthread_create(&thread, NULL, &EmuThreadFunction, NULL);
+        pthread_create(&emuThread, NULL, &EmuThreadFunction, NULL);
 #else
-        Thread* thread = (Thread*)malloc(sizeof(Thread));
+        thread = (Thread*)malloc(sizeof(Thread));
         u32 thread_priority = 0;
         svcGetThreadPriority(&thread_priority, CUR_THREAD_HANDLE);
         threadCreate(thread, EmuThreadFunction, NULL, 1024 * 1024 * 12, thread_priority - 1, 2);
         threadStart(thread);
 #endif
-        initial = true;
+        emuThreadRunning = true;
     }
     
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-    co_switch(game_thread);
+    co_switch(gl_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
 }
