@@ -89,6 +89,7 @@ static bool     first_context_reset = false;
 static bool     initializing        = true;
 
 bool libretro_swap_buffer;
+extern bool threaded_gl_safe_shutdown;
 
 uint32_t retro_screen_width = 320;
 uint32_t retro_screen_height = 240;
@@ -380,7 +381,12 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void* EmuThreadFunction(void* param)
+#ifdef HAVE_LIBNX
+#define EMUTHREAD_RET_TYPE void
+#else
+#define EMUTHREAD_RET_TYPE void*
+#endif
+static EMUTHREAD_RET_TYPE EmuThreadFunction(void* param)
 {
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
@@ -391,6 +397,10 @@ static void* EmuThreadFunction(void* param)
 
     // Unset
     emuThreadRunning = false;
+
+#ifdef HAVE_LIBNX
+    threadExit();
+#endif
 }
 
 void reinit_gfx_plugin(void)
@@ -1113,7 +1123,8 @@ void retro_unload_game(void)
 
     // Run one more frame to unlock it
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-    co_switch(gl_thread);
+    while(!threaded_gl_safe_shutdown)
+        co_switch(gl_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     
 #ifndef HAVE_LIBNX

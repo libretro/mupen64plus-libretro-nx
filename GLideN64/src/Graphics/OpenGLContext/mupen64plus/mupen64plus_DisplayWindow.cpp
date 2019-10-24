@@ -82,6 +82,7 @@ bool DisplayWindowMupen64plus::_start()
 
 void DisplayWindowMupen64plus::_stop()
 {
+    FunctionWrapper::CoreVideo_Quit();
 }
 
 void DisplayWindowMupen64plus::_swapBuffers()
