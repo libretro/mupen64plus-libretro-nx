@@ -196,7 +196,9 @@ static void main_check_inputs(void)
 #ifdef WITH_LIRC
     lircCheckInput();
 #endif
-poll_cb();
+#if 0 // Disable for threaded only
+    poll_cb();
+#endif
 }
 
 /*********************************************************************************************************

@@ -1167,6 +1167,9 @@ void retro_run (void)
     co_switch(gl_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+
+    // Poll needs to happen here on threaded gl
+    poll_cb();
 }
 
 void retro_reset (void)
