@@ -1,3 +1,4 @@
+
 RSPDIR             = $(ROOT_DIR)/mupen64plus-rsp-hle
 CXD4DIR            = $(ROOT_DIR)/mupen64plus-rsp-cxd4
 CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
@@ -377,15 +378,17 @@ else
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
 
-EGL_LIB ?= -lEGL
+ifneq ($(platform), ios-arm64)
+	EGL_LIB ?= -lEGL
+endif
 
 ifeq ($(GLES3),1)
 	ifeq ($(platform),ios-arm64)
 		GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
 	else
 		GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
-		LDFLAGS += $(EGL_LIB)
 	endif
+	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
 	ifeq ($(ANDROID),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
@@ -400,7 +403,7 @@ else ifeq ($(GLES),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
 	endif
-else
+else				   
 	ifeq (,$(findstring win,$(platform)))
 		GLFLAGS += -DCORE
 	endif

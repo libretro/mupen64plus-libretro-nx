@@ -314,20 +314,21 @@ else ifneq (,$(findstring osx,$(platform)))
    ASFLAGS = -f elf -d ELF_TYPE
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
-	ifeq ($(IOSSDK),)
-		IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
-	endif
+   ifeq ($(IOSSDK),)
+      IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
+   endif
 
-	TARGET := $(TARGET_NAME)_libretro_ios.dylib
-	DEFINES += -DIOS
-	GLES = 1
+   TARGET := $(TARGET_NAME)_libretro_ios.dylib
+   DEFINES += -DIOS
+   GLES = 1
 	ifeq ($(platform),ios-arm64)
 		WITH_DYNAREC=
+		GLES=1
 		GLES3=1
+		FORCE_GLES3=1
 		EGL := 0
 		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS -DGL_DEBUG
-		#CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
+		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
 		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
 		HAVE_NEON=0
 		CC         += -miphoneos-version-min=8.0
@@ -335,7 +336,6 @@ else ifneq (,$(findstring ios,$(platform)))
 		CXX        += -miphoneos-version-min=8.0
 		PLATCFLAGS += -miphoneos-version-min=8.0 -Wno-error=implicit-function-declaration
 		CC = clang -arch arm64 -isysroot $(IOSSDK)
-		#CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
 		CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
 	else
 		PLATCFLAGS += -DOS_MAC_OS_X
@@ -353,8 +353,8 @@ else ifneq (,$(findstring ios,$(platform)))
 		CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
 		CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
 	endif
-	LDFLAGS += -dynamiclib
-	GL_LIB := -framework OpenGLES
+   LDFLAGS += -dynamiclib
+   GL_LIB := -framework OpenGLES
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -457,11 +457,7 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-	ifeq ($(platform),ios-arm64)
-		COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only
-	else
-		COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
-	endif
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
 endif
 
 COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
@@ -499,7 +495,7 @@ ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread
 endif
 
-ifeq ($(platform),ios-arm64)
+ifeq ($(platform), ios-arm64)
 	LDFLAGS    += $(fpic) -O3 -lz $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
 else
 	LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
