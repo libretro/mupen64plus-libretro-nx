@@ -855,8 +855,8 @@ void update_variables()
         // Sanity check... not optimal since we will render at a higher res, but otherwise
         // GLideN64 might blit a bigger image onto a smaller framebuffer
         // This is a recent regression.
-        if(retro_screen_width == 320 && retro_screen_height == 240 ||
-           retro_screen_width == 640 && retro_screen_height == 360)
+        if((retro_screen_width == 320 && retro_screen_height == 240) ||
+           (retro_screen_width == 640 && retro_screen_height == 360))
         {
             EnableNativeResFactor = 1; // Force factor == 1
         }
