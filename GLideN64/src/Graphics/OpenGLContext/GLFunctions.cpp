@@ -5,10 +5,14 @@
 
 #include "GLFunctions.h"
 
+// For Libretro
 #define ASSIGN_PROC_ADR(proc_type, proc_name) ptr##proc_name = gl##proc_name
+#define glGetProcAddress glsm_get_proc_address
+#define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("gl"#proc_name)
+#define GL_GET_PROC_ADR_EGL(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("egl"#proc_name)
 
+#if 0
 #ifdef OS_WINDOWS
-
 #define glGetProcAddress wglGetProcAddress
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("gl"#proc_name)
 
@@ -65,6 +69,7 @@ static void* IOSGLGetProcAddress (const char *name)
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type)glGetProcAddress("gl"#proc_name)
 
 #endif
+#endif // if 0
 
 //GL Functions
 PFNGLBLENDFUNCPROC ptrBlendFunc;
@@ -204,6 +209,7 @@ PFNGLEGLIMAGETARGETTEXTURE2DOESPROC ptrEGLImageTargetTexture2DOES;
 
 extern "C" void initGLFunctions()
 {
+#if 0
 #ifdef VC
 	void *gles2so = dlopen("/opt/vc/lib/libbrcmGLESv2.so", RTLD_NOW);
 #elif defined(ODROID)
@@ -213,6 +219,7 @@ extern "C" void initGLFunctions()
 #elif defined(USE_GENERIC_GLESV2)
        void *gles2so = dlopen("/usr/lib/libGLESv2.so", RTLD_NOW);
 #endif
+#endif // if 0
 
 #if defined(EGL) || defined(OS_IOS)
 	ASSIGN_PROC_ADR(PFNGLBLENDFUNCPROC, BlendFunc);

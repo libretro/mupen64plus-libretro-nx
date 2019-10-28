@@ -27,8 +27,10 @@
 #include <glsm/glsm.h>
 #include <GLideN64_libretro.h>
 
-#ifdef HAVE_OPENGLES
+#if defined(HAVE_OPENGLES)
+#if !defined(IOS)
 #include <EGL/egl.h>
+#endif // !defined(IOS)
 typedef void (GL_APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
 typedef void (GL_APIENTRYP PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
@@ -41,7 +43,7 @@ PFNGLMEMORYBARRIERPROC m_glMemoryBarrier;
 PFNGLBINDIMAGETEXTUREPROC m_glBindImageTexture;
 PFNGLTEXSTORAGE2DMULTISAMPLEPROC m_glTexStorage2DMultisample;
 PFNGLCOPYIMAGESUBDATAPROC m_glCopyImageSubData;
-#endif
+#endif // defined(HAVE_OPENGLES)
 
 #ifndef GL_DEPTH_CLAMP
 #define GL_DEPTH_CLAMP                    0x864F
@@ -2991,14 +2993,14 @@ static void glsm_state_setup(void)
 #endif
    copy_image_support = isExtensionSupported("GL_ARB_copy_image") || isExtensionSupported("GL_EXT_copy_image") || copy_image_support_version;
 #ifdef HAVE_OPENGLES
-   m_glDrawRangeElementsBaseVertex = (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)eglGetProcAddress("glDrawRangeElementsBaseVertex");
-   m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)eglGetProcAddress("glBufferStorageEXT");
-   m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)eglGetProcAddress("glMemoryBarrier");
-   m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress("glBindImageTexture");
-   m_glTexStorage2DMultisample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)eglGetProcAddress("glTexStorage2DMultisample");
-   m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubData");
+   m_glDrawRangeElementsBaseVertex = (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)glsm_get_proc_address("glDrawRangeElementsBaseVertex");
+   m_glBufferStorage = (PFNGLBUFFERSTORAGEEXTPROC)glsm_get_proc_address("glBufferStorageEXT");
+   m_glMemoryBarrier = (PFNGLMEMORYBARRIERPROC)glsm_get_proc_address("glMemoryBarrier");
+   m_glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)glsm_get_proc_address("glBindImageTexture");
+   m_glTexStorage2DMultisample = (PFNGLTEXSTORAGE2DMULTISAMPLEPROC)glsm_get_proc_address("glTexStorage2DMultisample");
+   m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)glsm_get_proc_address("glCopyImageSubData");
    if (m_glCopyImageSubData == NULL)
-      m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress("glCopyImageSubDataEXT");
+      m_glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)glsm_get_proc_address("glCopyImageSubDataEXT");
 #endif
 
    unsigned i;
@@ -3324,6 +3326,14 @@ static bool glsm_state_ctx_init(glsm_ctx_params_t *params)
 GLuint glsm_get_current_framebuffer(void)
 {
    return hw_render.get_current_framebuffer();
+}
+
+void* glsm_get_proc_address(const char* sym)
+{
+   if (!hw_render.get_proc_address)
+      return NULL;
+   
+   return hw_render.get_proc_address(sym);
 }
 
 extern void initGLFunctions();

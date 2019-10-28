@@ -111,6 +111,7 @@ typedef struct glsm_ctx_proc_address
 {
    retro_get_proc_address_t addr;
 } glsm_ctx_proc_address_t;
+void* glsm_get_proc_address(const char* sym);
 
 typedef struct glsm_ctx_params
 {
