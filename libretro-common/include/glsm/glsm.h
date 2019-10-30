@@ -47,8 +47,10 @@ typedef double GLdouble;
 #undef GL_DRAW_FRAMEBUFFER_BINDING
 #undef GL_COPY_READ_BUFFER_BINDING
 #undef GL_COPY_WRITE_BUFFER_BINDING
+#ifndef IOS
 #define ptrdiff_t khronos_ssize_t
-#endif
+#endif // !IOS
+#endif // HAVE_OPENGLES3
 
 #if defined(HAVE_OPENGLES2)
 #define RARCH_GL_RENDERBUFFER GL_RENDERBUFFER

@@ -1,6 +1,7 @@
 RSPDIR             = $(ROOT_DIR)/mupen64plus-rsp-hle
 CXD4DIR            = $(ROOT_DIR)/mupen64plus-rsp-cxd4
 CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
+PNG_DIR            = $(ROOT_DIR)/custom/dependencies/libpng
 LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
@@ -20,7 +21,8 @@ INCFLAGS += \
 	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(LIBRETRO_DIR) \
 	-I$(VIDEODIR_GLIDEN64)/src/inc \
-	-I$(ROOT_DIR)/xxHash
+	-I$(ROOT_DIR)/xxHash \
+	-I$(PNG_DIR)
 
 ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
@@ -96,7 +98,22 @@ SOURCES_C = \
 	$(CORE_DIR)/src/main/savestates.c \
 	$(CORE_DIR)/src/plugin/plugin.c \
 	$(CORE_DIR)/src/plugin/dummy_audio.c \
-	$(CORE_DIR)/src/plugin/dummy_input.c
+	$(CORE_DIR)/src/plugin/dummy_input.c \
+	$(PNG_DIR)/png.c \
+	$(PNG_DIR)/pngerror.c \
+	$(PNG_DIR)/pngget.c \
+	$(PNG_DIR)/pngmem.c \
+	$(PNG_DIR)/pngpread.c \
+	$(PNG_DIR)/pngread.c \
+	$(PNG_DIR)/pngrio.c \
+	$(PNG_DIR)/pngrtran.c \
+	$(PNG_DIR)/pngrutil.c \
+	$(PNG_DIR)/pngset.c \
+	$(PNG_DIR)/pngtrans.c \
+	$(PNG_DIR)/pngwio.c \
+	$(PNG_DIR)/pngwrite.c \
+	$(PNG_DIR)/pngwtran.c \
+	$(PNG_DIR)/pngwutil.c
 
 AWK_DEST_DIR    := $(CORE_DIR)/src/asm_defines
 ASM_DEFINES_OBJ := $(AWK_DEST_DIR)/asm_defines.o
@@ -362,9 +379,23 @@ else
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
 
-EGL_LIB ?= -lEGL
+ifneq ($(platform), ios-arm64)
+	EGL_LIB ?= -lEGL
+endif
 
-ifeq ($(GLES),1)
+ifeq ($(GLES3),1)
+	ifeq ($(platform),ios-arm64)
+		GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
+	else
+		GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
+	endif
+	LDFLAGS += $(EGL_LIB)
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
+	ifeq ($(ANDROID),1)
+		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
+		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
+	endif
+else ifeq ($(GLES),1)
 	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
@@ -373,16 +404,7 @@ ifeq ($(GLES),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
 	endif
-				   
-else ifeq ($(GLES3),1)
-	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
-	LDFLAGS += $(EGL_LIB)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
-	ifeq ($(ANDROID),1)
-		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
-		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
-	endif
-else
+else				   
 	ifeq (,$(findstring win,$(platform)))
 		GLFLAGS += -DCORE
 	endif
