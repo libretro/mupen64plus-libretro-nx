@@ -321,35 +321,40 @@ else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
    DEFINES += -DIOS
    GLES = 1
-   WITH_DYNAREC=arm
-
-   PLATCFLAGS += -DOS_MAC_OS_X
-   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-   PLATCFLAGS += -DIOS -marm
-   CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
-   CPUFLAGS += -marm -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp
+	ifeq ($(platform),ios-arm64)
+		WITH_DYNAREC=
+		GLES=1
+		GLES3=1
+		FORCE_GLES3=1
+		EGL := 0
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
+		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
+		HAVE_NEON=0
+		CC         += -miphoneos-version-min=8.0
+		CC_AS      += -miphoneos-version-min=8.0
+		CXX        += -miphoneos-version-min=8.0
+		PLATCFLAGS += -miphoneos-version-min=8.0 -Wno-error=implicit-function-declaration
+		CC = clang -arch arm64 -isysroot $(IOSSDK)
+		CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
+	else
+		PLATCFLAGS += -DOS_MAC_OS_X
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+		PLATCFLAGS += -DIOS -marm
+		CPUFLAGS += -DNO_ASM  -DARM -D__arm__ -DARM_ASM -D__NEON_OPT
+		CPUFLAGS += -marm -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp
+		WITH_DYNAREC=arm
+		HAVE_NEON=1
+		CC         += -miphoneos-version-min=5.0
+		CC_AS      += -miphoneos-version-min=5.0
+		CXX        += -miphoneos-version-min=5.0
+		PLATCFLAGS += -miphoneos-version-min=5.0
+		CC = clang -arch armv7 -isysroot $(IOSSDK)
+		CC_AS = perl ./custom/tools/gas-preprocessor.pl $(CC)
+		CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+	endif
    LDFLAGS += -dynamiclib
-   HAVE_NEON=1
-
    GL_LIB := -framework OpenGLES
-
-   CC = clang -arch armv7 -isysroot $(IOSSDK)
-   CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
-   ifeq ($(platform),ios9)
-      CC         += -miphoneos-version-min=8.0
-      CC_AS      += -miphoneos-version-min=8.0
-      CXX        += -miphoneos-version-min=8.0
-      PLATCFLAGS += -miphoneos-version-min=8.0
-   else
-      CC += -miphoneos-version-min=5.0
-      CC_AS += -miphoneos-version-min=5.0
-      CXX += -miphoneos-version-min=5.0
-      PLATCFLAGS += -miphoneos-version-min=5.0
-   endif
-
-   COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -490,7 +495,11 @@ ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread
 endif
 
-LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+ifeq ($(platform), ios-arm64)
+	LDFLAGS    += $(fpic) -O3 -lz $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+else
+	LDFLAGS    += $(fpic) -O3 -lz -lpng $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+endif
 
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
