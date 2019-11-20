@@ -496,9 +496,9 @@ ifeq (,$(findstring android,$(platform)))
 endif
 
 ifeq ($(platform), ios-arm64)
-	LDFLAGS    += $(fpic) -O3 -lz $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+	LDFLAGS    += $(fpic) -O3 $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
 else
-	LDFLAGS    += $(fpic) -O3 -lz $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
+	LDFLAGS    += $(fpic) -O3 $(CPUOPTS) $(PLATCFLAGS) $(CPUFLAGS)
 endif
 
 all: $(TARGET)

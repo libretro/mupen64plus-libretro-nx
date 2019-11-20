@@ -2,6 +2,7 @@ RSPDIR             = $(ROOT_DIR)/mupen64plus-rsp-hle
 CXD4DIR            = $(ROOT_DIR)/mupen64plus-rsp-cxd4
 CORE_DIR           = $(ROOT_DIR)/mupen64plus-core
 PNG_DIR            = $(ROOT_DIR)/custom/dependencies/libpng
+ZLIB_DIR           = $(ROOT_DIR)/custom/dependencies/libzlib
 LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
@@ -22,7 +23,8 @@ INCFLAGS += \
 	-I$(LIBRETRO_DIR) \
 	-I$(VIDEODIR_GLIDEN64)/src/inc \
 	-I$(ROOT_DIR)/xxHash \
-	-I$(PNG_DIR)
+	-I$(PNG_DIR) \
+	-I$(ZLIB_DIR)
 
 ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
@@ -99,6 +101,21 @@ SOURCES_C = \
 	$(CORE_DIR)/src/plugin/plugin.c \
 	$(CORE_DIR)/src/plugin/dummy_audio.c \
 	$(CORE_DIR)/src/plugin/dummy_input.c \
+	$(ZLIB_DIR)/adler32.c \
+	$(ZLIB_DIR)/compress.c \
+	$(ZLIB_DIR)/crc32.c \
+	$(ZLIB_DIR)/deflate.c \
+	$(ZLIB_DIR)/gzclose.c \
+	$(ZLIB_DIR)/gzlib.c \
+	$(ZLIB_DIR)/gzread.c \
+	$(ZLIB_DIR)/gzwrite.c \
+	$(ZLIB_DIR)/infback.c \
+	$(ZLIB_DIR)/inffast.c \
+	$(ZLIB_DIR)/inflate.c \
+	$(ZLIB_DIR)/inftrees.c \
+	$(ZLIB_DIR)/trees.c \
+	$(ZLIB_DIR)/uncompr.c \
+	$(ZLIB_DIR)/zutil.c \
 	$(PNG_DIR)/png.c \
 	$(PNG_DIR)/pngerror.c \
 	$(PNG_DIR)/pngget.c \
