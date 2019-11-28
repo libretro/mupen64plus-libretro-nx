@@ -111,9 +111,12 @@ void LoadCustomSettings(bool internal)
 extern "C" void Config_LoadConfig()
 {
 	u32 hacks = config.generalEmulation.hacks;
+	
 	config.resetToDefaults();
 	config.frameBufferEmulation.aspect = AspectRatio;
 	config.frameBufferEmulation.enable = EnableFBEmulation;
+	config.frameBufferEmulation.N64DepthCompare = EnableN64DepthCompare;
+
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
@@ -147,6 +150,7 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txEnhancementMode = txEnhancementMode;
 	config.textureFilter.txFilterIgnoreBG = txFilterIgnoreBG;
 	config.textureFilter.txHiresEnable = txHiresEnable;
+	config.textureFilter.txCacheCompression = EnableTxCacheCompression;
 	config.textureFilter.txHiresFullAlphaChannel = txHiresFullAlphaChannel;
 	config.video.fxaa = EnableFXAA;
 	config.video.multisampling = MultiSampling;

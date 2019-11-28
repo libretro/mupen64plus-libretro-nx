@@ -67,8 +67,10 @@ extern uint32_t CountPerScanlineOverride;
 extern uint32_t BackgroundMode;
 extern uint32_t EnableEnhancedTextureStorage;
 extern uint32_t EnableEnhancedHighResStorage;
+extern uint32_t EnableTxCacheCompression;
 extern uint32_t ForceDisableExtraMem;
 extern uint32_t EnableNativeResFactor;
+extern uint32_t EnableN64DepthCompare;
 
 // Overscan Options
 extern uint32_t EnableOverscan;

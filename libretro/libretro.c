@@ -121,8 +121,10 @@ uint32_t CountPerScanlineOverride = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 uint32_t EnableEnhancedTextureStorage;
 uint32_t EnableEnhancedHighResStorage;
+uint32_t EnableTxCacheCompression = 0;
 uint32_t ForceDisableExtraMem = 0;
 uint32_t EnableNativeResFactor = 0;
+uint32_t EnableN64DepthCompare = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -234,10 +236,17 @@ static void setup_variables(void)
         { CORE_NAME "-EnableFragmentDepthWrite",
             "GPU shader depth write; True|False" },
 #endif
-#ifndef VC
+#if !defined(VC) && !defined(HAVE_OPENGLES)
+        // Not supported on all GPU's
+        { CORE_NAME "-EnableN64DepthCompare",
+#ifdef HAVE_LIBNX
+            "N64 Depth Compare; False|True" },
+#else
+            "N64 Depth Compare; True|False" },
+#endif // HAVE_LIBNX
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
-#endif
+#endif // !defined(VC) && !defined(HAVE_OPENGLES)
         { CORE_NAME "-EnableTextureCache",
             "Cache Textures; True|False" },
         { CORE_NAME "-EnableOverscan",
@@ -267,6 +276,8 @@ static void setup_variables(void)
             "Filter background textures; True|False" },
         { CORE_NAME "-txHiresEnable",
             "Use High-Res textures; False|True" },
+        { CORE_NAME "-txCacheCompression",
+            "Use High-Res Texture Cache Compression; True|False" },
         { CORE_NAME "-txHiresFullAlphaChannel",
             "Use High-Res Full Alpha Channel; False|True" },
         { CORE_NAME "-EnableEnhancedTextureStorage",
@@ -636,6 +647,13 @@ void update_variables()
         EnableFBEmulation = !strcmp(var.value, "False") ? 0 : 1;
     }
 
+    var.key = CORE_NAME "-EnableN64DepthCompare";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableN64DepthCompare = !strcmp(var.value, "False") ? 0 : 1;
+    }
+
     var.key = CORE_NAME "-EnableCopyColorToRDRAM";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -760,6 +778,13 @@ void update_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         txHiresEnable = !strcmp(var.value, "False") ? 0 : 1;
+    }
+
+    var.key = CORE_NAME "-txCacheCompression";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        EnableTxCacheCompression = !strcmp(var.value, "False") ? 0 : 1;
     }
 
     var.key = CORE_NAME "-txHiresFullAlphaChannel";
