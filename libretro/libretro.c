@@ -224,7 +224,7 @@ static void setup_variables(void)
         { CORE_NAME "-CorrectTexrectCoords",
             "Continuous texrect coords; Off|Auto|Force" },
         { CORE_NAME "-EnableNativeResTexrects",
-            "Native res. 2D texrects; False|True" },
+            "Native res. 2D texrects; Disabled|Optimized|Unoptimized" },
 #if defined(HAVE_OPENGLES)
         { CORE_NAME "-EnableLegacyBlending",
             "Less accurate blending mode; True|False" },
@@ -708,7 +708,18 @@ void update_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        enableNativeResTexrects = !strcmp(var.value, "False") ? 0 : 1;
+        if(!strcmp(var.value, "False") || !strcmp(var.value, "Disabled"))
+        {
+            enableNativeResTexrects = 0; // NativeResTexrectsMode::ntDisable
+        }
+        else if(!strcmp(var.value, "Optimized"))
+        {
+            enableNativeResTexrects = 1; // NativeResTexrectsMode::ntOptimized
+        }
+        else if(!strcmp(var.value, "Unoptimized"))
+        {
+            enableNativeResTexrects = 2; // NativeResTexrectsMode::ntUnptimized (Note: upstream typo)
+        }
     }
 
     var.key = CORE_NAME "-txFilterMode";
