@@ -52,6 +52,7 @@ typedef void (APIENTRYP PFNGLDRAWARRAYSPROC) (GLenum mode, GLint first, GLsizei 
 typedef void (APIENTRYP PFNGLDRAWELEMENTSPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices);
 typedef void (APIENTRYP PFNGLDELETETEXTURESPROC) (GLsizei n, const GLuint *textures);
 typedef void (APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
+typedef void (APIENTRYP PFNGLCOPYTEXIMAGE2DPROC) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 #endif
 
 extern PFNGLBLENDFUNCPROC ptrBlendFunc;
@@ -194,9 +195,15 @@ extern PFNGLTEXTUREBARRIERNVPROC ptrTextureBarrierNV;
 extern PFNGLCLEARBUFFERFVPROC ptrClearBufferfv;
 extern PFNGLENABLEIPROC ptrEnablei;
 extern PFNGLDISABLEIPROC ptrDisablei;
+extern PFNGLDEBUGMESSAGECALLBACKPROC ptrDebugMessageCallback;
+extern PFNGLDEBUGMESSAGECONTROLPROC ptrDebugMessageControl;
+extern PFNGLCOPYTEXIMAGE2DPROC ptrCopyTexImage2D;
 
 typedef void (APIENTRYP PFNGLEGLIMAGETARGETTEXTURE2DOESPROC) (GLenum target, void* image);
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC ptrEGLImageTargetTexture2DOES;
+
+typedef void (APIENTRYP PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC) (GLenum target, void* image);
+extern PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC ptrEGLImageTargetRenderbufferStorageOES;
 
 extern "C" void initGLFunctions();
 
@@ -333,7 +340,11 @@ extern "C" void initGLFunctions();
 #define glClearBufferfv(...) opengl::FunctionWrapper::wrClearBufferfv(__VA_ARGS__)
 #define glEnablei(...) opengl::FunctionWrapper::wrEnablei(__VA_ARGS__)
 #define glDisablei(...) opengl::FunctionWrapper::wrDisablei(__VA_ARGS__)
+#define glCopyTexImage2D(...) opengl::FunctionWrapper::wrCopyTexImage2D(__VA_ARGS__)
+#define glDebugMessageCallback(...) opengl::FunctionWrapper::wrDebugMessageCallback(__VA_ARGS__)
+#define glDebugMessageControl(...) opengl::FunctionWrapper::wrDebugMessageControl(__VA_ARGS__)
 #define glEGLImageTargetTexture2DOES(...) opengl::FunctionWrapper::wrEGLImageTargetTexture2DOES(__VA_ARGS__)
+#define glEGLImageTargetRenderbufferStorageOES(...) opengl::FunctionWrapper::wrEGLImageTargetRenderbufferStorageOES(__VA_ARGS__)
 #endif
 
 #define GL_TEXTURE_EXTERNAL_OES 0x8D65

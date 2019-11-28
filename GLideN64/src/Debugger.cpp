@@ -1189,7 +1189,7 @@ void Debugger::_findSelected()
 	}
 }
 
-void Debugger::_drawDebugInfo(FrameBuffer * _pBuffer)
+void Debugger::_drawDebugInfo()
 {
 	DisplayWindow & wnd = dwnd();
 	m_triSel = m_triangles.begin();
@@ -1204,7 +1204,19 @@ void Debugger::_drawDebugInfo(FrameBuffer * _pBuffer)
 		if (i.frameBufferAddress != gDP.depthImageAddress)
 			m_fbAddrs.insert(i.frameBufferAddress);
 	}
-	m_curFBAddr = m_fbAddrs.find(_pBuffer->m_startAddress);
+	FrameBuffer * pBuffer = frameBufferList().getCurrent();
+	if (pBuffer == nullptr)
+		return;
+	m_curFBAddr = m_fbAddrs.find(pBuffer->m_startAddress);
+	if (m_curFBAddr == m_fbAddrs.end()) {
+		for (m_curFBAddr = m_fbAddrs.begin(); m_curFBAddr != m_fbAddrs.end(); ++m_curFBAddr) {
+			pBuffer = frameBufferList().findBuffer(*m_curFBAddr);
+			if (pBuffer != nullptr && pBuffer->m_isMainBuffer && !pBuffer->m_isDepthBuffer)
+				break;
+		}
+	}
+	if (m_curFBAddr == m_fbAddrs.end())
+		return;
 
 	const u32 winWidth = wnd.getWidth();
 	const u32 winHeight = wnd.getHeight();
@@ -1279,19 +1291,17 @@ void Debugger::_drawDebugInfo(FrameBuffer * _pBuffer)
 
 void Debugger::draw()
 {
-	FrameBuffer *pBuffer = frameBufferList().getCurrent();
-	if (pBuffer == nullptr)
-		return;
-
 	if (m_triangles.empty()) {
-		_drawFrameBuffer(pBuffer);
+		_drawFrameBuffer(frameBufferList().getCurrent());
 		dwnd().swapBuffers();
 	} else {
-		_drawDebugInfo(pBuffer);
+		_drawDebugInfo();
 	}
 
 	gfxContext.bindFramebuffer(bufferTarget::READ_FRAMEBUFFER, ObjectHandle::defaultFramebuffer);
-	gfxContext.bindFramebuffer(bufferTarget::DRAW_FRAMEBUFFER, pBuffer->m_FBO);
+	FrameBuffer *pBuffer = frameBufferList().getCurrent();
+	if (pBuffer != nullptr)
+		gfxContext.bindFramebuffer(bufferTarget::DRAW_FRAMEBUFFER, pBuffer->m_FBO);
 	gDP.changed |= CHANGED_SCISSOR;
 }
 

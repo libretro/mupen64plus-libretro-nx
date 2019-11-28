@@ -5,8 +5,8 @@
 
 namespace opengl {
 
-	// 15MB memory pool
-	RingBufferPool OpenGlCommand::m_ringBufferPool(1024 * 1024 * 15 );
+	// Max memory pool size
+	RingBufferPool OpenGlCommand::m_ringBufferPool(1024 * 1024 * 200 );
 
 	void OpenGlCommand::performCommandSingleThreaded()
 	{
@@ -58,7 +58,12 @@ namespace opengl {
 
 		m_executed = false;
 	}
-
+#ifdef GL_DEBUG
+	std::string OpenGlCommand::getFunctionName()
+	{
+		return m_functionName;
+	}
+#endif
 	OpenGlCommand::OpenGlCommand(bool _synced, bool _logIfSynced, const std::string &_functionName,
 		bool _isGlCommand) :
 		m_synced(_synced), m_executed(false)
