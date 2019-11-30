@@ -90,7 +90,14 @@ bool libretro_swap_buffer;
 
 uint32_t retro_screen_width = 320;
 uint32_t retro_screen_height = 240;
+uint32_t max_retro_screen_width = 320;
+uint32_t max_retro_screen_height = 240;
+uint32_t last_retro_screen_width = 320;
+uint32_t last_retro_screen_height = 240;
+struct retro_game_geometry active_geometry;
 float retro_screen_aspect = 4.0 / 3.0;
+extern uint32_t last_vi_width;
+extern uint32_t last_vi_height;
 
 uint32_t bilinearMode = 0;
 uint32_t EnableHWLighting = 0;
@@ -442,9 +449,18 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.base_height  = retro_screen_height;
     info->geometry.max_width    = retro_screen_width;
     info->geometry.max_height   = retro_screen_height;
-    info->geometry.aspect_ratio = retro_screen_aspect;
+    info->geometry.aspect_ratio = ((float)retro_screen_width) / ((float)retro_screen_height);
     info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
+    memcpy(&active_geometry, &info->geometry, sizeof(struct retro_game_geometry));
+}
+
+void retro_set_geometry_runtime(uint32_t width, uint32_t height)
+{
+    active_geometry.base_height = height;
+    active_geometry.base_width = width;
+    active_geometry.aspect_ratio = ((float)retro_screen_width) / ((float)retro_screen_height);
+    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &active_geometry);
 }
 
 unsigned retro_get_region (void)
@@ -896,6 +912,12 @@ void update_variables()
         {
             EnableNativeResFactor = 1; // Force factor == 1
         }
+
+        // Save active configuration as max value
+        max_retro_screen_width = retro_screen_width;
+        max_retro_screen_height = retro_screen_height;
+
+        EnableNativeResFactor = 1;
     }
 
     var.key = CORE_NAME "-astick-deadzone";
@@ -1120,6 +1142,14 @@ void retro_run (void)
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     co_switch(game_thread);
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    
+    if(last_vi_height != last_retro_screen_height && last_vi_width != last_retro_screen_width)
+    {
+        last_retro_screen_height = last_vi_height;
+        last_retro_screen_width = last_vi_width;
+        retro_set_geometry_runtime(last_retro_screen_width, last_retro_screen_height);
+    }
+
     if (libretro_swap_buffer)
         video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
     else if(EnableFrameDuping)
