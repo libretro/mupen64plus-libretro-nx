@@ -459,7 +459,7 @@ void TextureCache::init()
 
 	u32 dummyTexture[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-	m_pDummy = addFrameBufferTexture(false); // we don't want to remove dummy texture
+	m_pDummy = addFrameBufferTexture(textureTarget::TEXTURE_2D); // we don't want to remove dummy texture
 	_initDummyTexture(m_pDummy);
 
 	Context::InitTextureParams params;
@@ -481,7 +481,7 @@ void TextureCache::init()
 
 	m_pMSDummy = nullptr;
 	if (config.video.multisampling != 0 && Context::Multisampling) {
-		m_pMSDummy = addFrameBufferTexture(true); // we don't want to remove dummy texture
+		m_pMSDummy = addFrameBufferTexture(textureTarget::TEXTURE_2D_MULTISAMPLE); // we don't want to remove dummy texture
 		_initDummyTexture(m_pMSDummy);
 
 		Context::InitTextureParams msParams;
@@ -549,10 +549,9 @@ void TextureCache::removeFrameBufferTexture(CachedTexture * _pTexture)
 	m_fbTextures.erase(iter);
 }
 
-CachedTexture * TextureCache::addFrameBufferTexture(bool _multisample)
+CachedTexture * TextureCache::addFrameBufferTexture(graphics::Parameter _target)
 {
-	ObjectHandle texName(gfxContext.createTexture(_multisample ?
-		textureTarget::TEXTURE_2D_MULTISAMPLE : textureTarget::TEXTURE_2D));
+	ObjectHandle texName(gfxContext.createTexture(_target));
 	m_fbTextures.emplace(u32(texName), texName);
 	return &m_fbTextures.at(u32(texName));
 }

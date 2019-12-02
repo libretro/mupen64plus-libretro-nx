@@ -14,6 +14,9 @@
 
 #include "Types.h"
 #include <cstdio>
+#include <string>
+
+// for strrchr
 #include <string.h>
 
 #ifdef OS_WINDOWS
