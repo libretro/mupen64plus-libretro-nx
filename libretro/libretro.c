@@ -239,11 +239,7 @@ static void setup_variables(void)
 #if !defined(VC) && !defined(HAVE_OPENGLES)
         // Not supported on all GPU's
         { CORE_NAME "-EnableN64DepthCompare",
-#ifdef HAVE_LIBNX
             "N64 Depth Compare; False|True" },
-#else
-            "N64 Depth Compare; True|False" },
-#endif // HAVE_LIBNX
         { CORE_NAME "-EnableShadersStorage",
             "Cache GPU Shaders; True|False" },
 #endif // !defined(VC) && !defined(HAVE_OPENGLES)
