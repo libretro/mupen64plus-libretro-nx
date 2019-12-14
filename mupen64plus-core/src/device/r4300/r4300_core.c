@@ -442,7 +442,7 @@ void generic_jump_to(struct r4300_core* r4300, uint32_t address)
         cached_interpreter_jump_to(r4300, address);
         break;
 
-#ifndef NO_ASM
+#ifdef DYNAREC
     case EMUMODE_DYNAREC:
 #ifdef NEW_DYNAREC
         r4300->new_dynarec_hot_state.pcaddr = address;

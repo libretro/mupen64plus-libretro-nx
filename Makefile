@@ -4,14 +4,15 @@ FORCE_GLES3=0
 LLE=0
 
 HAVE_LTCG ?= 0
-DYNAFLAGS :=
-INCFLAGS  :=
-COREFLAGS :=
-CPUFLAGS  :=
-GLFLAGS   :=
-AWK       ?= awk
-STRINGS   ?= strings
-TR        ?= tr
+DYNAFLAGS  :=
+LIBCOFLAGS :=
+INCFLAGS   :=
+COREFLAGS  :=
+CPUFLAGS   :=
+GLFLAGS    :=
+AWK        ?= awk
+STRINGS    ?= strings
+TR         ?= tr
 
 UNAME=$(shell uname -a)
 
@@ -412,6 +413,7 @@ else ifeq ($(platform), emscripten)
    CC = emcc
    CXX = em++
    HAVE_NEON = 0
+   NO_LIBCO = 1
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
@@ -420,7 +422,7 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32
    GL_LIB := -lopengl32
-   
+
    ifeq ($(MSYSTEM),MINGW64)
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
@@ -443,7 +445,7 @@ ifeq ($(STATIC_LINKING), 1)
    ifneq (,$(findstring win,$(platform)))
       TARGET := $(TARGET:.dll=.lib)
    else ifneq ($(platform), $(filter $(platform), osx ios))
-      TARGET := $(TARGET:.dylib=.a)            
+      TARGET := $(TARGET:.dylib=.a)
    else
       TARGET := $(TARGET:.so=.a)
    endif
@@ -483,8 +485,8 @@ else
 endif
 
 OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o) $(SOURCES_NASM:.asm=.o)
-CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
-CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
+CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS) $(LIBCOFLAGS)
+CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS) $(LIBCOFLAGS)
 
 ifeq (,$(findstring android,$(platform)))
    LDFLAGS    += -lpthread

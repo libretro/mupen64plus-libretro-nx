@@ -514,7 +514,7 @@ void retro_deinit(void)
 #ifndef NO_LIBCO
     co_switch(game_thread); /* Let the core thread finish */
 #else
-    m64p_error err = m64 CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+    m64p_error err = CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
     if (err != M64ERR_EXECUTION_STOP)
     {
         log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_STOP did not stop execution!\n");

@@ -170,7 +170,11 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
             memcpy(ParamPtr, &ROM_SETTINGS, ParamInt);
             return M64ERR_SUCCESS;
         case M64CMD_EXECUTE:
-            if (g_EmulatorRunning || !l_ROMOpen)
+#ifndef NO_LIBCO
+            if (g_EmulatorRunning)
+                return M64ERR_INVALID_STATE;
+#endif
+            if (!l_ROMOpen)
                 return M64ERR_INVALID_STATE;
             /* the main_run() function will either run until the player has quit the game or
                return after each VI, depending on whether coroutines are supported */

@@ -144,7 +144,7 @@ void cp0_update_count(struct r4300_core* r4300)
 
 static void exception_epilog(struct r4300_core* r4300)
 {
-#ifndef NO_ASM
+#ifdef DYNAREC
     if (r4300->emumode == EMUMODE_DYNAREC)
     {
 #ifndef NEW_DYNAREC
@@ -283,4 +283,3 @@ void exception_general(struct r4300_core* r4300)
 
     exception_epilog(r4300);
 }
-
