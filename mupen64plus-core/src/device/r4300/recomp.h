@@ -33,6 +33,7 @@ void dynarec_free_block(struct precomp_block* block);
 void dynarec_recompile_block(struct r4300_core* r4300, const uint32_t* source, struct precomp_block* block, uint32_t func);
 void recompile_opcode(struct r4300_core* r4300);
 void dyna_jump(void);
+void dyna_start_init();
 void dyna_start(void (*code)(void));
 void dyna_stop(struct r4300_core* r4300);
 void *realloc_exec(void *ptr, size_t oldsize, size_t newsize);
@@ -59,4 +60,3 @@ void profile_write_end_of_code_blocks(struct r4300_core* r4300);
 #endif
 
 #endif /* M64P_DEVICE_R4300_RECOMP_H */
-

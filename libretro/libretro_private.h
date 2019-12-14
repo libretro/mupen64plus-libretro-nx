@@ -6,6 +6,10 @@
 #include "libretro.h"
 #include "libretro_perf.h"
 
+#ifndef NO_LIBCO
+#include <libco.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,7 +21,11 @@ extern retro_perf_get_counter_t perf_get_counter_cb;
 extern retro_log_printf_t log_cb;
 extern retro_perf_register_t perf_register_cb;
 extern bool libretro_swap_buffer;
+
+#ifndef NO_LIBCO
+extern cothread_t retro_thread;
 void retro_return();
+#endif
 
 #define SDL_GetTicks() FAKE_SDL_TICKS
 

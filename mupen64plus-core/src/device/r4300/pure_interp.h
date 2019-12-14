@@ -24,6 +24,7 @@
 
 struct r4300_core;
 
-void run_pure_interpreter(struct r4300_core* r4300);
+void run_pure_interpreter_init(struct r4300_core* r4300);
+void run_pure_interpreter_step(struct r4300_core* r4300);
 
 #endif /* M64P_DEVICE_R4300_PURE_INTERP_H */

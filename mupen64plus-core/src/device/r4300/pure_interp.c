@@ -713,20 +713,20 @@ void InterpretOpcode(struct r4300_core* r4300)
 	} /* switch ((op >> 26) & 0x3F) */
 }
 
-void run_pure_interpreter(struct r4300_core* r4300)
+void run_pure_interpreter_init(struct r4300_core* r4300)
 {
-   *r4300_stop(r4300) = 0;
-   *r4300_pc_struct(r4300) = &r4300->interp_PC;
-   *r4300_pc(r4300) = r4300->cp0.last_addr = 0xa4000040;
+	DebugMessage(M64MSG_INFO, "Starting R4300 emulator: Pure Interpreter");
+   	*r4300_pc_struct(r4300) = &r4300->interp_PC;
+   	*r4300_pc(r4300) = r4300->cp0.last_addr = 0xa4000040;
+}
 
-   while (!*r4300_stop(r4300))
-   {
+void run_pure_interpreter_step(struct r4300_core* r4300)
+{
 #ifdef COMPARE_CORE
-     CoreCompareCallback();
+	CoreCompareCallback();
 #endif
 #ifdef DBG
-     if (g_DebuggerActive) update_debugger(*r4300_pc(r4300));
+	if (g_DebuggerActive) update_debugger(*r4300_pc(r4300));
 #endif
-     InterpretOpcode(r4300);
-   }
+	InterpretOpcode(r4300);
 }

@@ -55,6 +55,10 @@ extern m64p_frame_callback g_FrameCallback;
 
 extern int g_gs_vi_counter;
 
+#ifdef NO_LIBCO
+extern int vi_occurred;
+#endif
+
 const char* get_savestatepath(void);
 const char* get_savesrampath(void);
 
@@ -100,4 +104,3 @@ int        main_volume_get_muted(void);
 m64p_error main_reset(int do_hard_reset);
 
 #endif /* __MAIN_H__ */
-

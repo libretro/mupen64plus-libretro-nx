@@ -48,7 +48,9 @@ void free_blocks(struct cached_interp* cinterp);
 
 void invalidate_cached_code_hacktarux(struct r4300_core* r4300, uint32_t address, size_t size);
 
-void run_cached_interpreter(struct r4300_core* r4300);
+int run_cached_interpreter_init(struct r4300_core* r4300);
+void run_cached_interpreter_step(struct r4300_core* r4300);
+void run_cached_interpreter_end(struct r4300_core* r4300);
 
 /* Jumps to the given address. This is for the cached interpreter. */
 void cached_interpreter_jump_to(struct r4300_core* r4300, uint32_t address);

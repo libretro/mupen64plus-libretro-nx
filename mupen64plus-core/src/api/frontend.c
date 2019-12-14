@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-                       
+
 /* This file contains the Core front-end functions which will be exported
  * outside of the core library.
  */
@@ -69,12 +69,12 @@ EXPORT m64p_error CALL CoreStartup(int APIVersion, const char *ConfigPath, const
                      VERSION_PRINTF_SPLIT(APIVersion), VERSION_PRINTF_SPLIT(FRONTEND_API_VERSION));
         return M64ERR_INCOMPATIBLE;
     }
-   
+
     /* allocate base memory */
     g_mem_base = init_mem_base();
     if (g_mem_base == NULL) {
         return M64ERR_NO_MEMORY;
-    } 
+    }
     /* The ROM database contains MD5 hashes, goodnames, and some game-specific parameters */
     romdatabase_open();
 
@@ -172,7 +172,8 @@ EXPORT m64p_error CALL CoreDoCommand(m64p_command Command, int ParamInt, void *P
         case M64CMD_EXECUTE:
             if (g_EmulatorRunning || !l_ROMOpen)
                 return M64ERR_INVALID_STATE;
-            /* the main_run() function will not return until the player has quit the game */
+            /* the main_run() function will either run until the player has quit the game or
+               return after each VI, depending on whether coroutines are supported */
             rval = main_run();
             return rval;
         case M64CMD_STOP:
@@ -311,5 +312,3 @@ EXPORT m64p_error CALL CoreGetRomSettings(m64p_rom_settings *RomSettings, int Ro
 
     return M64ERR_SUCCESS;
 }
-
-

@@ -92,7 +92,8 @@ typedef enum {
   M64ERR_PLUGIN_FAIL,     /* A plugin function returned a fatal error */
   M64ERR_SYSTEM_FAIL,     /* A system function call, such as an SDL or file operation, failed */
   M64ERR_UNSUPPORTED,     /* Function call is not supported (ie, core not built with debugger) */
-  M64ERR_WRONG_TYPE       /* A given input type parameter cannot be used for desired operation */
+  M64ERR_WRONG_TYPE,      /* A given input type parameter cannot be used for desired operation */
+  M64ERR_EXECUTION_STOP   /* A special error code for when execution has stopped */
 } m64p_error;
 
 typedef enum {
@@ -408,4 +409,3 @@ typedef struct {
 } m64p_video_extension_functions;
 
 #endif /* define M64P_TYPES_H */
-

@@ -119,6 +119,10 @@ m64p_media_loader g_media_loader;
 
 int g_gs_vi_counter = 0;
 
+#ifdef NO_LIBCO
+int vi_occurred = 0;
+#endif
+
 /** static (local) variables **/
 static int   l_CurrentFrame = 0;         // frame counter
 static int   l_TakeScreenshot = 0;       // Tell OSD Rendering callback to take a screenshot just before drawing the OSD
@@ -136,6 +140,10 @@ static size_t l_pak_type_idx[6];
 /*********************************************************************************************************
 * static functions
 */
+
+static m64p_error main_run_init(void);
+static void main_run_step(void);
+static m64p_error main_run_end(void);
 
 static const char *get_savepathdefault(const char *configpath)
 {
@@ -384,7 +392,7 @@ m64p_error main_core_state_query(m64p_core_param param, int *rval)
         case M64CORE_AUDIO_VOLUME:
         {
             if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;    
+                return M64ERR_INVALID_STATE;
             return main_volume_get_level(rval);
         }
         case M64CORE_AUDIO_MUTE:
@@ -412,7 +420,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
             if (!g_EmulatorRunning)
                 return M64ERR_INVALID_STATE;
             if (val == M64EMU_STOPPED)
-            {        
+            {
                 /* this stop function is asynchronous.  The emulator may not terminate until later */
                 main_stop();
                 return M64ERR_SUCCESS;
@@ -424,7 +432,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
                 return M64ERR_SUCCESS;
             }
             else if (val == M64EMU_PAUSED)
-            {    
+            {
                 if (!main_is_paused())
                     main_toggle_pause();
                 return M64ERR_SUCCESS;
@@ -629,7 +637,11 @@ void new_vi(void)
 
     main_check_inputs();
 
+#ifndef NO_LIBCO
     retro_return();
+#else
+    vi_occurred = 1;
+#endif
 }
 
 static void main_switch_pak(int control_id)
@@ -972,9 +984,28 @@ extern audio_plugin_functions dummy_audio;
 
 unsigned int emumode;
 
+#ifdef NO_LIBCO
+static bool main_is_running;
+#endif
+
 uint32_t rdram_size;
 
-m64p_error main_run(void)
+static struct audio_out_backend_interface audio_out_backend_libretro;
+static struct file_storage eep;
+static struct file_storage fla;
+static struct file_storage sra;
+static struct file_storage dd_disk;
+
+static struct file_storage mpk_storages[GAME_CONTROLLERS_COUNT];
+static struct file_storage mpk;
+
+static int control_ids[GAME_CONTROLLERS_COUNT];
+static struct controller_input_compat cin_compats[GAME_CONTROLLERS_COUNT];
+
+static const struct video_capture_backend_interface* igbcam_backend;
+static void* gbcam_backend;
+
+m64p_error main_run_init(void)
 {
     size_t i, k;
     unsigned int count_per_op;
@@ -982,21 +1013,7 @@ m64p_error main_run(void)
     int si_dma_duration;
     int no_compiled_jump;
     int randomize_interrupt;
-    struct file_storage eep;
-    struct file_storage fla;
-    struct file_storage sra;
     size_t dd_rom_size;
-    struct file_storage dd_disk;
-    struct audio_out_backend_interface audio_out_backend_libretro;
-
-    int control_ids[GAME_CONTROLLERS_COUNT];
-    struct controller_input_compat cin_compats[GAME_CONTROLLERS_COUNT];
-
-    struct file_storage mpk_storages[GAME_CONTROLLERS_COUNT];
-    struct file_storage mpk;
-
-    void* gbcam_backend;
-    const struct video_capture_backend_interface* igbcam_backend;
 
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
@@ -1029,7 +1046,7 @@ m64p_error main_run(void)
     extern void set_audio_format_via_libretro(void* user_data, unsigned int frequency, unsigned int bits);
     extern void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size);
     audio_out_backend_libretro = (struct audio_out_backend_interface){ set_audio_format_via_libretro, push_audio_samples_via_libretro };
-    
+
     /* Fill-in l_pak_type_idx and l_ipaks according to game compatibility */
     k = 0;
     if (ROM_SETTINGS.biopak) {
@@ -1262,7 +1279,44 @@ m64p_error main_run(void)
     poweron_device(&g_dev);
     pif_bootrom_hle_execute(&g_dev.r4300);
 
+    return M64ERR_SUCCESS;
+
+on_input_open_failure:
+    audio.romClosed();
+on_audio_open_failure:
+    gfx.romClosed();
+on_gfx_open_failure:
+    /* release gb_carts */
+    for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
+        if (!Controls[i].RawData && g_dev.gb_carts[i].read_gb_cart != NULL) {
+            release_gb_rom(&l_gb_carts_data[i]);
+            release_gb_ram(&l_gb_carts_data[i]);
+        }
+    }
+
+#if 0
+    igbcam_backend->close(gbcam_backend);
+    igbcam_backend->release(gbcam_backend);
+
+    /* release storage files */
+    close_file_storage(&sra);
+    close_file_storage(&fla);
+    close_file_storage(&eep);
+    close_file_storage(&mpk);
+    close_file_storage(&dd_disk);
+#endif
+
+    return M64ERR_PLUGIN_FAIL;
+}
+
+void main_run_step(void)
+{
     run_device(&g_dev);
+}
+
+m64p_error main_run_end(void)
+{
+    size_t i;
 
     /* release gb_carts */
     for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
@@ -1293,41 +1347,54 @@ m64p_error main_run(void)
     g_EmulatorRunning = 0;
     StateChanged(M64CORE_EMU_STATE, M64EMU_STOPPED);
 
+#ifndef NO_LIBCO
     /**
      * Actually never returns.
      * Jump back to frontend for deinit
      */
-    extern cothread_t retro_thread;
     co_switch(retro_thread);
+#endif
 
-    return M64ERR_SUCCESS;
+    return M64ERR_EXECUTION_STOP;
+}
 
-on_input_open_failure:
-    audio.romClosed();
-on_audio_open_failure:
-    gfx.romClosed();
-on_gfx_open_failure:
-    /* release gb_carts */
-    for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
-        if (!Controls[i].RawData && g_dev.gb_carts[i].read_gb_cart != NULL) {
-            release_gb_rom(&l_gb_carts_data[i]);
-            release_gb_ram(&l_gb_carts_data[i]);
+m64p_error main_run(void)
+{
+    m64p_error ret;
+
+#ifndef NO_LIBCO
+    ret = main_run_init();
+    if (ret == M64ERR_SUCCESS)
+    {
+        main_run_step();
+        ret = main_run_end();
+    }
+#else
+    if (!main_is_running)
+    {
+        ret = main_run_init();
+        if (ret == M64ERR_SUCCESS)
+        {
+            main_is_running = true;
         }
     }
 
-#if 0
-    igbcam_backend->close(gbcam_backend);
-    igbcam_backend->release(gbcam_backend);
-
-    /* release storage files */
-    close_file_storage(&sra);
-    close_file_storage(&fla);
-    close_file_storage(&eep);
-    close_file_storage(&mpk);
-    close_file_storage(&dd_disk);
+    if (main_is_running)
+    {
+        main_run_step();
+        if (*r4300_stop(&g_dev.r4300))
+        {
+            ret = main_run_end();
+            main_is_running = false;
+        }
+        else
+        {
+            ret = M64ERR_SUCCESS;
+        }
+    }
 #endif
 
-    return M64ERR_PLUGIN_FAIL;
+    return ret;
 }
 
 void main_stop(void)

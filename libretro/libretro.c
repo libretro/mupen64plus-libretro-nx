@@ -6,7 +6,9 @@
 #include "libretro_private.h"
 #include "GLideN64_libretro.h"
 
+#ifndef NO_LIBCO
 #include <libco.h>
+#endif
 
 #ifdef HAVE_LIBNX
 #include <switch.h>
@@ -50,6 +52,11 @@
 
 #define ISHEXDEC ((codeLine[cursor]>='0') && (codeLine[cursor]<='9')) || ((codeLine[cursor]>='a') && (codeLine[cursor]<='f')) || ((codeLine[cursor]>='A') && (codeLine[cursor]<='F'))
 
+// sanity check
+#if defined(NO_LIBCO) && defined(DYNAREC)
+#error dynarec requires libco support
+#endif
+
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -64,8 +71,10 @@ struct retro_rumble_interface rumble;
 
 save_memory_data saved_memory;
 
+#ifndef NO_LIBCO
 static cothread_t game_thread;
 cothread_t retro_thread;
+#endif
 
 int astick_deadzone;
 int astick_sensitivity;
@@ -374,6 +383,7 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
+#ifndef NO_LIBCO
 static void EmuThreadFunction(void)
 {
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
@@ -381,6 +391,7 @@ static void EmuThreadFunction(void)
     initializing = false;
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 }
+#endif
 
 void reinit_gfx_plugin(void)
 {
@@ -490,14 +501,26 @@ void retro_init(void)
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
     initializing = true;
 
+#ifndef NO_LIBCO
     retro_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+#endif
 }
 
 void retro_deinit(void)
 {
     CoreDoCommand(M64CMD_STOP, 0, NULL);
+
+#ifndef NO_LIBCO
     co_switch(game_thread); /* Let the core thread finish */
+#else
+    m64p_error err = m64 CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+    if (err != M64ERR_EXECUTION_STOP)
+    {
+        log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_STOP did not stop execution!\n");
+    }
+#endif
+
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -972,7 +995,7 @@ void update_variables()
         else if (!strcmp(var.value, "C4"))
             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
     }
-    
+
     var.key = CORE_NAME "-EnableOverscan";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1108,13 +1131,20 @@ void retro_run (void)
 {
     libretro_swap_buffer = false;
     static bool updated = false;
-    
+
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
         update_controllers();
     }
 
     glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+
+#ifndef NO_LIBCO
     co_switch(game_thread);
+#else
+    initializing = false;
+    CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+#endif
+
     glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     if (libretro_swap_buffer)
         video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
@@ -1253,10 +1283,12 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
     cheat_set_enabled(&g_cheat_ctx, name, enabled);
 }
 
+#ifndef NO_LIBCO
 void retro_return(void)
 {
     co_switch(retro_thread);
 }
+#endif
 
 uint32_t get_retro_screen_width()
 {

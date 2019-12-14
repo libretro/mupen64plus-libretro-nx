@@ -118,22 +118,41 @@ void poweron_r4300(struct r4300_core* r4300)
     poweron_cp1(&r4300->cp1);
 }
 
+static int r4300_running;
 
 void run_r4300(struct r4300_core* r4300)
 {
-    *r4300_stop(r4300) = 0;
-    g_rom_pause = 0;
+    if (!r4300_running)
+    {
+        *r4300_stop(r4300) = 0;
+        g_rom_pause = 0;
 
-    /* clear instruction counters */
+        /* clear instruction counters */
 #if defined(COUNT_INSTR)
-    memset(instr_count, 0, 131*sizeof(instr_count[0]));
+        memset(instr_count, 0, 131*sizeof(instr_count[0]));
+#endif
+    }
+
+#ifdef NO_LIBCO
+    vi_occurred = 0;
 #endif
 
     if (r4300->emumode == EMUMODE_PURE_INTERPRETER)
     {
-        DebugMessage(M64MSG_INFO, "Starting R4300 emulator: Pure Interpreter");
-        r4300->emumode = EMUMODE_PURE_INTERPRETER;
-        run_pure_interpreter(r4300);
+        if (!r4300_running)
+        {
+            run_pure_interpreter_init(r4300);
+            r4300_running = 1;
+        }
+
+#ifndef NO_LIBCO
+        while (!*r4300_stop(r4300))
+#else
+        while (!*r4300_stop(r4300) && !vi_occurred)
+#endif
+        {
+            run_pure_interpreter_step(r4300);
+        }
     }
 #if defined(DYNAREC)
     else if (r4300->emumode >= 2)
@@ -160,42 +179,49 @@ void run_r4300(struct r4300_core* r4300)
         profile_write_end_of_code_blocks(r4300);
 #endif
 #endif
-        free_blocks(&r4300->cached_interp);
     }
 #endif
     else /* if (r4300->emumode == EMUMODE_INTERPRETER) */
     {
-        DebugMessage(M64MSG_INFO, "Starting R4300 emulator: Cached Interpreter");
-        r4300->emumode = EMUMODE_INTERPRETER;
-        r4300->cached_interp.fin_block = cached_interp_FIN_BLOCK;
-        r4300->cached_interp.not_compiled = cached_interp_NOTCOMPILED;
-        r4300->cached_interp.not_compiled2 = cached_interp_NOTCOMPILED2;
-        r4300->cached_interp.init_block = cached_interp_init_block;
-        r4300->cached_interp.free_block = cached_interp_free_block;
-        r4300->cached_interp.recompile_block = cached_interp_recompile_block;
-
-        init_blocks(&r4300->cached_interp);
-        cached_interpreter_jump_to(r4300, UINT32_C(0xa4000040));
-
-        /* Prevent segfault on failed cached_interpreter_jump_to */
-        if (!r4300->cached_interp.actual->block) {
-            return;
+        if (!r4300_running)
+        {
+            int ok = run_cached_interpreter_init(r4300);
+            if (!ok)
+            {
+                *r4300_stop(r4300) = 1;
+            }
+            else
+            {
+                r4300_running = 1;
+            }
         }
 
-        r4300->cp0.last_addr = *r4300_pc(r4300);
-
-        run_cached_interpreter(r4300);
-
-        free_blocks(&r4300->cached_interp);
+#ifndef NO_LIBCO
+        while (!*r4300_stop(r4300))
+#else
+        while (!*r4300_stop(r4300) && !vi_occurred)
+#endif
+        {
+            run_cached_interpreter_step(r4300);
+        }
     }
 
-    DebugMessage(M64MSG_INFO, "R4300 emulator finished.");
-
-    /* print instruction counts */
-#if defined(COUNT_INSTR)
-    if (r4300->emumode == EMUMODE_DYNAREC)
-        instr_counters_print();
+#ifdef NO_LIBCO
+    if (*r4300_stop(r4300))
 #endif
+    {
+        DebugMessage(M64MSG_INFO, "R4300 emulator finished.");
+
+        free_blocks(&r4300->cached_interp);
+
+        /* print instruction counts */
+#if defined(COUNT_INSTR)
+        if (r4300->emumode == EMUMODE_DYNAREC)
+            instr_counters_print();
+#endif
+
+        r4300_running = 0;
+    }
 }
 
 int64_t* r4300_regs(struct r4300_core* r4300)

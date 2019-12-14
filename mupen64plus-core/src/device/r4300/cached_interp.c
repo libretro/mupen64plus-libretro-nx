@@ -992,18 +992,43 @@ void invalidate_cached_code_hacktarux(struct r4300_core* r4300, uint32_t address
     }
 }
 
-void run_cached_interpreter(struct r4300_core* r4300)
+int run_cached_interpreter_init(struct r4300_core* r4300)
 {
-    while (!*r4300_stop(r4300))
-    {
+    DebugMessage(M64MSG_INFO, "Starting R4300 emulator: Cached Interpreter");
+    r4300->emumode = EMUMODE_INTERPRETER;
+    r4300->cached_interp.fin_block = cached_interp_FIN_BLOCK;
+    r4300->cached_interp.not_compiled = cached_interp_NOTCOMPILED;
+    r4300->cached_interp.not_compiled2 = cached_interp_NOTCOMPILED2;
+    r4300->cached_interp.init_block = cached_interp_init_block;
+    r4300->cached_interp.free_block = cached_interp_free_block;
+    r4300->cached_interp.recompile_block = cached_interp_recompile_block;
+
+    init_blocks(&r4300->cached_interp);
+    cached_interpreter_jump_to(r4300, UINT32_C(0xa4000040));
+
+    /* Prevent segfault on failed cached_interpreter_jump_to */
+    if (!r4300->cached_interp.actual->block) {
+        return 0;
+    }
+
+    r4300->cp0.last_addr = *r4300_pc(r4300);
+    return 1;
+}
+
+void run_cached_interpreter_step(struct r4300_core* r4300)
+{
 #ifdef COMPARE_CORE
-        if ((*r4300_pc_struct(r4300))->ops == cached_interp_FIN_BLOCK && ((*r4300_pc_struct(r4300))->addr < 0x80000000 || (*r4300_pc_struct(r4300))->addr >= 0xc0000000))
-            virtual_to_physical_address(r4300, (*r4300_pc_struct(r4300))->addr, 2);
-        CoreCompareCallback();
+    if ((*r4300_pc_struct(r4300))->ops == cached_interp_FIN_BLOCK && ((*r4300_pc_struct(r4300))->addr < 0x80000000 || (*r4300_pc_struct(r4300))->addr >= 0xc0000000))
+        virtual_to_physical_address(r4300, (*r4300_pc_struct(r4300))->addr, 2);
+    CoreCompareCallback();
 #endif
 #ifdef DBG
-        if (g_DebuggerActive) update_debugger((*r4300_pc_struct(r4300))->addr);
+    if (g_DebuggerActive) update_debugger((*r4300_pc_struct(r4300))->addr);
 #endif
-        (*r4300_pc_struct(r4300))->ops();
-    }
+    (*r4300_pc_struct(r4300))->ops();
+}
+
+void run_cached_interpreter_end(struct r4300_core* r4300)
+{
+    free_blocks(&r4300->cached_interp);
 }
