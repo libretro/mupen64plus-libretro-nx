@@ -170,31 +170,35 @@ endif
 
 # Libretro
 SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
-	$(LIBRETRO_COMM_DIR)/memmap/memalign.c \
-	$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/plugin/emulate_game_controller_via_libretro.c \
-	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
-	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/nearest_resampler.c \
-	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/null_resampler.c \
 	$(AUDIO_LIBRETRO_DIR)/audio_backend_libretro.c \
-	$(LIBRETRO_COMM_DIR)/file/config_file.c \
-	$(LIBRETRO_COMM_DIR)/file/config_file_userdata.c \
-	$(LIBRETRO_COMM_DIR)/file/file_path.c \
-	$(LIBRETRO_COMM_DIR)/hash/rhash.c \
-	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
-	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
-	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
-	$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
-	$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
-	$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
-	$(LIBRETRO_COMM_DIR)/lists/string_list.c \
-	$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
-	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
-	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
-	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
-	$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
 	$(LIBRETRO_COMM_DIR)/glsm/glsm.c
+
+ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
+	$(info "TEST")
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/memmap/memalign.c \
+		$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \
+		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
+		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/nearest_resampler.c \
+		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/null_resampler.c \
+		$(LIBRETRO_COMM_DIR)/file/config_file.c \
+		$(LIBRETRO_COMM_DIR)/file/config_file_userdata.c \
+		$(LIBRETRO_COMM_DIR)/file/file_path.c \
+		$(LIBRETRO_COMM_DIR)/hash/rhash.c \
+		$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
+		$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
+		$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
+		$(LIBRETRO_COMM_DIR)/audio/conversion/float_to_s16.c \
+		$(LIBRETRO_COMM_DIR)/audio/conversion/s16_to_float.c \
+		$(LIBRETRO_COMM_DIR)/features/features_cpu.c \
+		$(LIBRETRO_COMM_DIR)/lists/string_list.c \
+		$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
+		$(LIBRETRO_COMM_DIR)/string/stdstring.c \
+		$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
+		$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
+		$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c
+endif
 
 
 SOURCES_CXX   += \
@@ -370,7 +374,9 @@ EGL_LIB ?= -lEGL
 ifeq ($(GLES),1)
 	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	LDFLAGS += $(EGL_LIB)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
+	ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
+		SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
+	endif
 
 	ifeq ($(ANDROID),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
@@ -380,7 +386,9 @@ ifeq ($(GLES),1)
 else ifeq ($(GLES3),1)
 	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
 	LDFLAGS += $(EGL_LIB)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
+	ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
+		SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es3.c
+	endif
 	ifeq ($(ANDROID),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
@@ -390,6 +398,10 @@ else
 		GLFLAGS += -DCORE
 	endif
 	GLFLAGS += -DHAVE_OPENGL
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
+	ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
+		SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
+	endif
 endif
-SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
+ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
+	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/rglgen.c
+endif

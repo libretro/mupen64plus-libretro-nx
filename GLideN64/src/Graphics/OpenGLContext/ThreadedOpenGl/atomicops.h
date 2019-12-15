@@ -58,7 +58,7 @@
 #if defined(AE_VCPP) || defined(AE_ICC)
 #define AE_FORCEINLINE __forceinline
 #elif defined(AE_GCC)
-//#define AE_FORCEINLINE __attribute__((always_inline)) 
+//#define AE_FORCEINLINE __attribute__((always_inline))
 #define AE_FORCEINLINE inline
 #else
 #define AE_FORCEINLINE inline
@@ -528,6 +528,10 @@ namespace moodycamel
 
 			bool timed_wait(std::uint64_t usecs) AE_NO_TSAN
 			{
+#ifdef EMSCRIPTEN
+				// emscripten doesn't have sem_timedwait, just do a try wait
+				return try_wait();
+#else
 				struct timespec ts;
 				const int usecs_in_1_sec = 1000000;
 				const int nsecs_in_1_sec = 1000000000;
@@ -546,6 +550,7 @@ namespace moodycamel
 					rc = sem_timedwait(&m_sema, &ts);
 				} while (rc == -1 && errno == EINTR);
 				return !(rc == -1 && errno == ETIMEDOUT);
+#endif
 			}
 
 			void signal() AE_NO_TSAN

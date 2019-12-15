@@ -402,14 +402,6 @@ void reinit_gfx_plugin(void)
     }
 }
 
-const char* retro_get_system_directory(void)
-{
-    const char* dir;
-    environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir);
-
-    return dir ? dir : ".";
-}
-
 
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
 void retro_set_audio_sample(retro_audio_sample_t cb)   { }
