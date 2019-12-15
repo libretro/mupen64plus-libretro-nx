@@ -176,7 +176,6 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/glsm/glsm.c
 
 ifneq ($(NO_BUILD_LIBRETRO_COMMON), 1)
-	$(info "TEST")
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/memmap/memalign.c \
 		$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \
 		$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
