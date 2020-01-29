@@ -1157,7 +1157,7 @@ void retro_run (void)
         thread = (Thread*)malloc(sizeof(Thread));
         u32 thread_priority = 0;
         svcGetThreadPriority(&thread_priority, CUR_THREAD_HANDLE);
-        threadCreate(thread, EmuThreadFunction, NULL, 1024 * 1024 * 12, thread_priority - 1, 2);
+        threadCreate(thread, EmuThreadFunction, NULL, NULL, 1024 * 1024 * 12, thread_priority - 1, 2);
         threadStart(thread);
 #endif
         emuThreadRunning = true;
