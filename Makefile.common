@@ -333,6 +333,7 @@ SOURCES_C += \
 	$(RSPDIR)/src/audio.c \
 	$(RSPDIR)/src/cicx105.c \
 	$(RSPDIR)/src/hle.c \
+	$(RSPDIR)/src/hvqm.c \
 	$(RSPDIR)/src/jpeg.c \
 	$(RSPDIR)/src/memory.c \
 	$(RSPDIR)/src/mp3.c \
