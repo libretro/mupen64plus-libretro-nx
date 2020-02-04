@@ -102,6 +102,13 @@ ifneq ("$(filter ppc64 powerpc64,$(HOST_CPU))","")
   PIC ?= 1
   $(warning Architecture "$(HOST_CPU)" not officially supported.')
 endif
+ifneq ("$(filter ppc64le powerpc64le,$(HOST_CPU))","")
+  CPU := PPC
+  ARCH_DETECTED := 64BITS
+  BIG_ENDIAN := 0
+  PIC ?= 1
+  $(warning Architecture "$(HOST_CPU)" not officially supported.')
+endif
 ifneq ("$(filter arm%,$(HOST_CPU))","")
   ifeq ("$(filter arm%b,$(HOST_CPU))","")
     CPU := ARM
@@ -251,6 +258,7 @@ SOURCE = \
 	$(SRCDIR)/audio.c \
 	$(SRCDIR)/cicx105.c \
 	$(SRCDIR)/hle.c \
+	$(SRCDIR)/hvqm.c \
 	$(SRCDIR)/jpeg.c \
 	$(SRCDIR)/memory.c \
 	$(SRCDIR)/mp3.c \
