@@ -8,7 +8,7 @@ extern uint32_t rdram_size;
 
 extern "C" {
 
-EXPORT int CALL RomOpen(void)
+EXPORT int CALL gln64RomOpen(void)
 {
 	if (rdram_size != 0)
 		RDRAMSize = rdram_size - 1;
@@ -18,7 +18,7 @@ EXPORT int CALL RomOpen(void)
 	return api().RomOpen();
 }
 
-EXPORT m64p_error CALL PluginGetVersion(
+EXPORT m64p_error CALL gln64PluginGetVersion(
 	m64p_plugin_type * _PluginType,
 	int * _PluginVersion,
 	int * _APIVersion,
@@ -29,7 +29,7 @@ EXPORT m64p_error CALL PluginGetVersion(
 	return api().PluginGetVersion(_PluginType, _PluginVersion, _APIVersion, _PluginNamePtr, _Capabilities);
 }
 
-EXPORT m64p_error CALL PluginStartup(
+EXPORT m64p_error CALL gln64PluginStartup(
 	m64p_dynlib_handle CoreLibHandle,
 	void *Context,
 	void (*DebugCallback)(void *, int, const char *)
@@ -38,22 +38,22 @@ EXPORT m64p_error CALL PluginStartup(
 	return api().PluginStartup(CoreLibHandle);
 }
 
-EXPORT m64p_error CALL PluginShutdown(void)
+EXPORT m64p_error CALL gln64PluginShutdown(void)
 {
 	return api().PluginShutdown();
 }
 
-EXPORT void CALL ReadScreen2(void *dest, int *width, int *height, int front)
+EXPORT void CALL gln64ReadScreen2(void *dest, int *width, int *height, int front)
 {
 	api().ReadScreen2(dest, width, height, front);
 }
 
-EXPORT void CALL SetRenderingCallback(void (*callback)(int))
+EXPORT void CALL gln64SetRenderingCallback(void (*callback)(int))
 {
 	api().SetRenderingCallback(callback);
 }
 
-EXPORT void CALL ResizeVideoOutput(int width, int height)
+EXPORT void CALL gln64ResizeVideoOutput(int width, int height)
 {
 	api().ResizeVideoOutput(width, height);
 }
