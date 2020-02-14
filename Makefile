@@ -2,6 +2,7 @@ DEBUG=0
 FORCE_GLES=0
 FORCE_GLES3=0
 LLE=0
+HAVE_PARALLEL_RSP=0
 
 HAVE_LTCG ?= 0
 DYNAFLAGS :=
@@ -432,6 +433,7 @@ else
       WITH_DYNAREC = x86_64
       COREFLAGS += -DWIN64
       ASFLAGS = -f win64 -d WIN64
+      PIC = 1
    else ifeq ($(MSYSTEM),MINGW32)
       CC = i686-w64-mingw32-gcc
       CXX = i686-w64-mingw32-g++
@@ -440,6 +442,8 @@ else
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
 
+   HAVE_PARALLEL_RSP = 1
+   LLE = 1
    COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
 endif
@@ -460,7 +464,11 @@ ifeq ($(HAVE_NEON), 1)
    COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
 endif
 
-COREFLAGS += -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
+ifeq ($(LLE), 1)
+   COREFLAGS += -DHAVE_LLE
+endif
+
+COREFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
 
 ifeq ($(DEBUG), 1)
    CPUOPTS += -O0 -g
@@ -474,8 +482,8 @@ endif
 endif
 
 # set C/C++ standard to use
-CFLAGS += -std=gnu11
-CXXFLAGS += -std=gnu++11
+CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS
+CXXFLAGS += -std=gnu++11 -D_CRT_SECURE_NO_WARNINGS
 
 ifeq ($(HAVE_LTCG),1)
    CPUFLAGS += -flto
@@ -507,7 +515,7 @@ $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB) -lversion
 endif
 
 # Script hackery fll or generating ASM include files for the new dynarec assembly code
