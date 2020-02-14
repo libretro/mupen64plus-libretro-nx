@@ -36,7 +36,6 @@
 #include "device/rcp/vi/vi_controller.h"
 #include "dummy_audio.h"
 #include "dummy_input.h"
-#include "dummy_video.h"
 #include "main/main.h"
 #include "main/rom.h"
 #include "main/version.h"
@@ -46,8 +45,6 @@
 #include <stdio.h>
 
 CONTROL Controls[4];
-/* global function pointers - initialized on core startup */
-
 
 /* local data structures and functions */
 #define DEFINE_GFX(X) \
@@ -92,6 +89,9 @@ CONTROL Controls[4];
     }
 
 DEFINE_GFX(gln64);
+#if defined(HAVE_THR_AL)
+DEFINE_GFX(angrylion);
+#endif
 
 gfx_plugin_functions gfx;
 GFX_INFO gfx_info;
@@ -169,10 +169,11 @@ static void EmptyFunc(void)
         X##RomClosed \
     }
 
-DEFINE_RSP(hle);
-#ifndef VC
-//DEFINE_RSP(lle);
+DEFINE_RSP(parallelRSP);
+#if defined(HAVE_LLE)
+DEFINE_RSP(cxd4);
 #endif
+
 static void                     (*l_mainRenderCallback)(int) = NULL;
 static ptr_SetRenderingCallback   l_old1SetRenderingCallback = NULL;
 
@@ -189,6 +190,8 @@ static void backcompat_setRenderCallbackIntercept(void (*callback)(int))
 
 m64p_error plugin_start_gfx(void)
 {
+    printf("plugin_start_gfx\n");
+
     uint8_t media = *((uint8_t*)mem_base_u32(g_mem_base, MM_CART_ROM) + (0x3b ^ S8));
 
     /* Here we feed 64DD IPL ROM header to GFX plugin if 64DD is present.
@@ -376,7 +379,7 @@ void plugin_connect_all()
     l_GfxAttached = 1;
     plugin_start_gfx();
 
-    rsp = rsp_hle;
+    rsp = rsp_parallelRSP;
     l_RspAttached = 1;
     plugin_start_rsp();
 
