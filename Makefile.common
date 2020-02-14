@@ -5,6 +5,7 @@ LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 RSPDIR_PARALLEL    = $(ROOT_DIR)/mupen64plus-rsp-paraLLEl
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
+VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion
 
 DYNAREC_USED := 0
 
@@ -324,6 +325,15 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxTexCache.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxUtil.cpp \
 	$(VIDEODIR_GLIDEN64)/src/RSP_LoadMatrix.cpp
+
+ifeq ($(HAVE_THR_AL), 1)
+CFLAGS      += -DHAVE_THR_AL
+CXXFLAGS    += -DHAVE_THR_AL
+### Angrylion's renderer ###
+SOURCES_CXX += $(VIDEODIR_ANGRYLION)/parallel_al.cpp
+SOURCES_C   += $(VIDEODIR_ANGRYLION)/interface.c \
+				   $(VIDEODIR_ANGRYLION)/n64video.c
+endif
 
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
