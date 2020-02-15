@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <boolean.h>
 
+#include "mupen64plus-next_common.h"
 #include "m64p_plugin.h"
 
 extern void DebugMessage(int level, const char *message, ...);
@@ -17,8 +18,6 @@ extern void DebugMessage(int level, const char *message, ...);
 #include "m64p_config.h"
 #include "vdac.h"
 
-int retro_return();
-
 #define DP_INTERRUPT    0x20
 
 static bool angrylion_init = false;
@@ -27,10 +26,15 @@ int ProcessDListShown = 0;
 
 extern GFX_INFO gfx_info;
 
-extern unsigned int screen_width, screen_height;
+extern uint32_t retro_screen_width;
+extern uint32_t retro_screen_height;
 extern uint32_t screen_pitch;
 
-#define config _config
+// Some macro trickery to avoid conflicting symbols and ease maintenance efforts
+#define config _al_config
+#define screen_width retro_screen_width
+#define screen_height retro_screen_height
+
 struct n64video_config config;
 
 void plugin_init(void)
@@ -143,7 +147,6 @@ void vdac_write(struct frame_buffer* fb)
    screen_pitch = fb->pitch * 4;
 }
 
-extern bool libretro_swap_buffer;
 void vdac_sync(bool invalid) { 
    libretro_swap_buffer = !invalid;
 }
@@ -300,7 +303,7 @@ void angrylionSetRenderingCallback(void (*callback)(int)) { }
 int angrylionInitiateGFX (GFX_INFO Gfx_Info)
 {
    n64video_config_init(&config);
-   return 0;
+   return 1;
 }
  
 void angrylionMoveScreen (int xpos, int ypos) { }

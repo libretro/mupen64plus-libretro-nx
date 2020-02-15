@@ -999,7 +999,7 @@ extern rsp_plugin_functions rsp_hle;
 extern input_plugin_functions dummy_input;
 extern audio_plugin_functions dummy_audio;
 
-unsigned int emumode;
+unsigned int r4300_emumode;
 
 uint32_t rdram_size;
 struct file_storage eep;
@@ -1248,7 +1248,7 @@ m64p_error main_run(void)
 
     init_device(&g_dev,
                 g_mem_base,
-                emumode,
+                r4300_emumode,
                 count_per_op,
                 no_compiled_jump,
                 randomize_interrupt,

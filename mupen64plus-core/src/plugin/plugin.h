@@ -26,17 +26,7 @@
 #include "api/m64p_common.h"
 #include "api/m64p_plugin.h"
 #include "api/m64p_types.h"
-
-extern void plugin_connect_all();
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-uint32_t get_retro_screen_width();
-uint32_t get_retro_screen_height();
-#ifdef __cplusplus
-}
-#endif
+#include "mupen64plus-next_common.h"
 
 extern GFX_INFO gfx_info;
 
