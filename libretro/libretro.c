@@ -1504,9 +1504,23 @@ void retro_run (void)
     }
     
     if (libretro_swap_buffer)
-        video_cb(prescale, retro_screen_width, retro_screen_height, screen_pitch);
+    {
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+       {
+          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+       }
+#ifdef HAVE_THR_AL
+       else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
+       {
+          video_cb(prescale, retro_screen_width, retro_screen_height, screen_pitch);
+       }
+#endif // HAVE_THR_AL
+    }
     else if(EnableFrameDuping)
+    {
+        // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
+    }
         
 }
 
