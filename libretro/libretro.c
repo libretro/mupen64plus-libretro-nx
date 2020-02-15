@@ -241,19 +241,113 @@ static void setup_variables(void)
         { CORE_NAME "-rsp-plugin",
             "RSP Mode; " OPTION_ENTRY_RSP_HLE OPTION_ENTRY_RSP_PARALLEL OPTION_ENTRY_RSP_CXD4 },
         { CORE_NAME "-43screensize",
-            "4:3 Resolution; 640x480|320x240|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
+            "(GLN64) 4:3 Resolution; 640x480|320x240|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
         { CORE_NAME "-169screensize",
-            "16:9 Resolution; 960x540|640x360|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
+            "(GLN64) 16:9 Resolution; 960x540|640x360|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
         { CORE_NAME "-aspect",
-            "Aspect Ratio; 4:3|16:9|16:9 adjusted" },
+            "(GLN64) Aspect Ratio; 4:3|16:9|16:9 adjusted" },
         { CORE_NAME "-BilinearMode",
-            "Bilinear filtering mode; standard|3point" },
+            "(GLN64) Bilinear filtering mode; standard|3point" },
 #ifndef HAVE_OPENGLES2
         { CORE_NAME "-MultiSampling",
-            "MSAA level; 0|2|4|8|16" },
+            "(GLN64) MSAA level; 0|2|4|8|16" },
 #endif
         { CORE_NAME "-FXAA",
-            "FXAA; 0|1" },
+            "(GLN64) FXAA; 0|1" },
+
+        { CORE_NAME "-NoiseEmulation",
+            "(GLN64) Noise Emulation; True|False" },
+
+        { CORE_NAME "-EnableFBEmulation",
+#ifdef VC
+            "(GLN64) Framebuffer Emulation; False|True" },
+#else
+            "(GLN64) Framebuffer Emulation; True|False" },
+#endif
+
+        { CORE_NAME "-EnableLODEmulation",
+            "(GLN64) LOD Emulation; True|False" },
+        { CORE_NAME "-EnableCopyColorToRDRAM",
+#ifndef HAVE_OPENGLES
+            "(GLN64) Color buffer to RDRAM; Async|Sync|Off" },
+#else
+            "(GLN64) Color buffer to RDRAM; Off|Async|Sync" },
+#endif
+        { CORE_NAME "-EnableCopyDepthToRDRAM",
+            "(GLN64) Depth buffer to RDRAM; Software|FromMem|Off" },
+        { CORE_NAME "-BackgroundMode",
+            "(GLN64) Background Mode; OnePiece|Stripped" },
+        { CORE_NAME "-EnableHWLighting",
+            "(GLN64) Hardware per-pixel lighting; False|True" },
+        { CORE_NAME "-CorrectTexrectCoords",
+            "(GLN64) Continuous texrect coords; Off|Auto|Force" },
+        { CORE_NAME "-EnableNativeResTexrects",
+            "(GLN64) Native res. 2D texrects; Disabled|Optimized|Unoptimized" },
+#if defined(HAVE_OPENGLES)
+        { CORE_NAME "-EnableLegacyBlending",
+            "(GLN64) Less accurate blending mode; True|False" },
+        { CORE_NAME "-EnableFragmentDepthWrite",
+            "(GLN64) GPU shader depth write; False|True" },
+#else
+        { CORE_NAME "-EnableLegacyBlending",
+            "(GLN64) Less accurate blending mode; False|True" },
+        { CORE_NAME "-EnableFragmentDepthWrite",
+            "(GLN64) GPU shader depth write; True|False" },
+#endif
+#if !defined(VC) && !defined(HAVE_OPENGLES)
+        // Not supported on all GPU's
+        { CORE_NAME "-EnableN64DepthCompare",
+            "(GLN64) N64 Depth Compare; False|True" },
+        { CORE_NAME "-EnableShadersStorage",
+            "(GLN64) Cache GPU Shaders; True|False" },
+#endif // !defined(VC) && !defined(HAVE_OPENGLES)
+        { CORE_NAME "-EnableTextureCache",
+            "(GLN64) Cache Textures; True|False" },
+        { CORE_NAME "-EnableOverscan",
+            "(GLN64) Overscan; Enabled|Disabled" },
+        { CORE_NAME "-OverscanTop",
+            "(GLN64) Overscan Offset (Top); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanLeft",
+            "(GLN64) Overscan Offset (Left); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanRight",
+            "(GLN64) Overscan Offset (Right); " GLN64_OVERSCAN_SCALING },
+        { CORE_NAME "-OverscanBottom",
+            "(GLN64) Overscan Offset (Bottom); " GLN64_OVERSCAN_SCALING },
+
+        { CORE_NAME "-MaxTxCacheSize",
+#if defined(VC)
+            "(GLN64) Max texture cache size; 1500|8000|4000" },
+#elif defined(HAVE_LIBNX)
+            "(GLN64) Max texture cache size; 4000|1500|8000" },
+#else
+            "(GLN64) Max texture cache size; 8000|4000|1500" },
+#endif
+        { CORE_NAME "-txFilterMode",
+            "(GLN64) Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
+        { CORE_NAME "-txEnhancementMode",
+            "(GLN64) Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
+        { CORE_NAME "-txFilterIgnoreBG",
+            "(GLN64) Filter background textures; True|False" },
+        { CORE_NAME "-txHiresEnable",
+            "(GLN64) Use High-Res textures; False|True" },
+        { CORE_NAME "-txCacheCompression",
+            "(GLN64) Use High-Res Texture Cache Compression; True|False" },
+        { CORE_NAME "-txHiresFullAlphaChannel",
+            "(GLN64) Use High-Res Full Alpha Channel; False|True" },
+        { CORE_NAME "-EnableEnhancedTextureStorage",
+            "(GLN64) Use enhanced Texture Storage; False|True" },
+        { CORE_NAME "-EnableEnhancedHighResStorage",
+            "(GLN64) Use enhanced Hi-Res Storage; False|True" },
+#ifdef HAVE_THR_AL
+        { CORE_NAME "-angrylion-vioverlay",
+            "(AL) VI Overlay; Filtered|AA+Blur|AA+Dedither|AA only|Unfiltered|Depth|Coverage" },
+        { CORE_NAME "-angrylion-sync",
+            "(AL) Thread sync level; Low|Medium|High" },
+        { CORE_NAME "-angrylion-multithread",
+            "(AL) Multi-threading; all threads|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63" },
+        { CORE_NAME "-angrylion-overscan",
+            "(AL) Hide overscan; disabled|enabled" },
+#endif // HAVE_THR_AL
         { CORE_NAME "-FrameDuping",
 #ifdef HAVE_LIBNX
             "Frame Duplication; True|False" },
@@ -264,89 +358,6 @@ static void setup_variables(void)
             "Framerate; Original|Fullspeed" },
         { CORE_NAME "-virefresh",
             "VI Refresh (Overclock); Auto|1500|2200" },
-        { CORE_NAME "-NoiseEmulation",
-            "Noise Emulation; True|False" },
-
-        { CORE_NAME "-EnableFBEmulation",
-#ifdef VC
-            "Framebuffer Emulation; False|True" },
-#else
-            "Framebuffer Emulation; True|False" },
-#endif
-
-        { CORE_NAME "-EnableLODEmulation",
-            "LOD Emulation; True|False" },
-        { CORE_NAME "-EnableCopyColorToRDRAM",
-#ifndef HAVE_OPENGLES
-            "Color buffer to RDRAM; Async|Sync|Off" },
-#else
-            "Color buffer to RDRAM; Off|Async|Sync" },
-#endif
-        { CORE_NAME "-EnableCopyDepthToRDRAM",
-            "Depth buffer to RDRAM; Software|FromMem|Off" },
-        { CORE_NAME "-BackgroundMode",
-            "Background Mode; OnePiece|Stripped" },
-        { CORE_NAME "-EnableHWLighting",
-            "Hardware per-pixel lighting; False|True" },
-        { CORE_NAME "-CorrectTexrectCoords",
-            "Continuous texrect coords; Off|Auto|Force" },
-        { CORE_NAME "-EnableNativeResTexrects",
-            "Native res. 2D texrects; Disabled|Optimized|Unoptimized" },
-#if defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableLegacyBlending",
-            "Less accurate blending mode; True|False" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "GPU shader depth write; False|True" },
-#else
-        { CORE_NAME "-EnableLegacyBlending",
-            "Less accurate blending mode; False|True" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "GPU shader depth write; True|False" },
-#endif
-#if !defined(VC) && !defined(HAVE_OPENGLES)
-        // Not supported on all GPU's
-        { CORE_NAME "-EnableN64DepthCompare",
-            "N64 Depth Compare; False|True" },
-        { CORE_NAME "-EnableShadersStorage",
-            "Cache GPU Shaders; True|False" },
-#endif // !defined(VC) && !defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableTextureCache",
-            "Cache Textures; True|False" },
-        { CORE_NAME "-EnableOverscan",
-            "Overscan; Enabled|Disabled" },
-        { CORE_NAME "-OverscanTop",
-            "Overscan Offset (Top); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanLeft",
-            "Overscan Offset (Left); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanRight",
-            "Overscan Offset (Right); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanBottom",
-            "Overscan Offset (Bottom); " GLN64_OVERSCAN_SCALING },
-
-        { CORE_NAME "-MaxTxCacheSize",
-#if defined(VC)
-            "Max texture cache size; 1500|8000|4000" },
-#elif defined(HAVE_LIBNX)
-            "Max texture cache size; 4000|1500|8000" },
-#else
-            "Max texture cache size; 8000|4000|1500" },
-#endif
-        { CORE_NAME "-txFilterMode",
-            "Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
-        { CORE_NAME "-txEnhancementMode",
-            "Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
-        { CORE_NAME "-txFilterIgnoreBG",
-            "Filter background textures; True|False" },
-        { CORE_NAME "-txHiresEnable",
-            "Use High-Res textures; False|True" },
-        { CORE_NAME "-txCacheCompression",
-            "Use High-Res Texture Cache Compression; True|False" },
-        { CORE_NAME "-txHiresFullAlphaChannel",
-            "Use High-Res Full Alpha Channel; False|True" },
-        { CORE_NAME "-EnableEnhancedTextureStorage",
-            "Use enhanced Texture Storage; False|True" },
-        { CORE_NAME "-EnableEnhancedHighResStorage",
-            "Use enhanced Hi-Res Storage; False|True" },
         { CORE_NAME "-astick-deadzone",
            "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
         { CORE_NAME "-astick-sensitivity",
@@ -373,20 +384,6 @@ static void setup_variables(void)
            "Player 4 Pak; none|memory|rumble"},
         { CORE_NAME "-CountPerOp",
             "Count Per Op; 0|1|2|3" },
-#ifdef HAVE_THR_AL
-        { CORE_NAME "-angrylion-vioverlay",
-           "(Angrylion) VI Overlay; Filtered|AA+Blur|AA+Dedither|AA only|Unfiltered|Depth|Coverage"
-        },
-        { CORE_NAME "-angrylion-sync",
-           "(Angrylion) Thread sync level; Low|Medium|High"
-        },
-        { CORE_NAME "-angrylion-multithread",
-         "(Angrylion) Multi-threading; all threads|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63"
-        },
-        { CORE_NAME "-angrylion-overscan",
-         "(Angrylion) Hide overscan; disabled|enabled"
-        },
-#endif // HAVE_THR_AL
         { NULL, NULL },
     };
 
