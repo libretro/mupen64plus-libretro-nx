@@ -88,7 +88,7 @@ void angrylion_set_vi(unsigned value);
 #define CMD_ID_SET_MASK_IMAGE                  0x3e
 #define CMD_ID_SET_COLOR_IMAGE                 0x3f
 
-#define config _config
+#define config al_config
 static struct n64video_config config;
 
 static struct
@@ -160,10 +160,6 @@ void n64video_config_init(struct n64video_config* config)
     config->parallel = true;
     config->vi.vsync = true;
     config->dp.compat = DP_COMPAT_MEDIUM;
-
-   angrylion_set_threads(0);
-   angrylion_set_vi(VI_MODE_COLOR);
-   angrylion_set_synclevel(DP_COMPAT_LOW);
 }
 
 void rdp_init_worker(uint32_t worker_id)
