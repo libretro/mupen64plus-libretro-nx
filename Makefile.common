@@ -389,7 +389,6 @@ ifeq ($(LLE), 1)
 	SOURCES_C += $(CXD4DIR)/rsp.c
 endif
 
-
 ifeq ($(HAVE_PARALLEL_RSP), 1)
 	PARALLEL_RSP_ARCH := simd
 	SOURCES_CXX += $(RSPDIR_PARALLEL)/parallel.cpp \
