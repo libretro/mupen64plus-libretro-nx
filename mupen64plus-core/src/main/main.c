@@ -80,8 +80,12 @@
 #include <sys/stat.h>
 #endif
 
+#ifdef __LIBRETRO__
+#include <file/file_path.h>
 #include "../../../libretro/libretro_memory.h"
 #include "../../../custom/GLideN64/GLideN64_libretro.h"
+extern retro_environment_t environ_cb;
+#endif // __LIBRETRO__
 
 #ifdef DBG
 #include "debugger/dbg_debugger.h"
@@ -703,6 +707,18 @@ static void load_dd_rom(uint8_t* rom, size_t* rom_size)
         ? NULL
         : g_media_loader.get_dd_rom(g_media_loader.cb_data);
 
+    char* sys_pathname;
+    environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys_pathname);
+    char* pathname = (char*)malloc(2048);
+    strncpy(pathname, sys_pathname, 2048 - 1);
+    if (pathname[(strlen(pathname)-1)] != '/' && pathname[(strlen(pathname)-1)] != '\\')
+        strcat(pathname, path_default_slash());
+    strcat(pathname, "Mupen64plus");
+    strcat(pathname, path_default_slash());
+    strcat(pathname, "IPL.n64");
+
+    dd_ipl_rom_filename = pathname;
+
     if ((dd_ipl_rom_filename == NULL) || (strlen(dd_ipl_rom_filename) == 0)) {
         goto no_dd;
     }
@@ -757,13 +773,18 @@ no_dd:
     *rom_size = 0;
 }
 
+extern char* retro_dd_path_img;
+extern char* retro_dd_path_rom;
 static void load_dd_disk(struct file_storage* dd_disk, const struct storage_backend_interface** dd_idisk)
 {
     const char* format_desc;
     /* ask the core loader for DD disk filename */
     char* dd_disk_filename = (g_media_loader.get_dd_disk == NULL)
-        ? NULL
+        ? retro_dd_path_img
         : g_media_loader.get_dd_disk(g_media_loader.cb_data);
+
+    printf("Load DD disk %s\n", dd_disk_filename);
+    fflush(stdout);
 
     /* handle the no disk case */
     if (dd_disk_filename == NULL || strlen(dd_disk_filename) == 0) {
@@ -805,12 +826,13 @@ static void load_dd_disk(struct file_storage* dd_disk, const struct storage_back
         } break;
 
     default:
+        format_desc = "ERR";
         DebugMessage(M64MSG_ERROR, "Invalid DD Disk size %u.", (uint32_t) dd_disk->size);
         close_file_storage(dd_disk);
         goto no_disk;
     }
-
-    DebugMessage(M64MSG_INFO, "DD Disk: %s - %zu - %s",
+    
+    DebugMessage(M64MSG_INFO, "DD Disk: %s - %u - %s",
             dd_disk->filename,
             dd_disk->size,
             format_desc);
@@ -973,6 +995,11 @@ extern audio_plugin_functions dummy_audio;
 unsigned int emumode;
 
 uint32_t rdram_size;
+struct file_storage eep;
+struct file_storage fla;
+struct file_storage sra;
+struct file_storage dd_disk;
+size_t dd_rom_size;
 
 m64p_error main_run(void)
 {
@@ -982,11 +1009,6 @@ m64p_error main_run(void)
     int si_dma_duration;
     int no_compiled_jump;
     int randomize_interrupt;
-    struct file_storage eep;
-    struct file_storage fla;
-    struct file_storage sra;
-    size_t dd_rom_size;
-    struct file_storage dd_disk;
     struct audio_out_backend_interface audio_out_backend_libretro;
 
     int control_ids[GAME_CONTROLLERS_COUNT];
