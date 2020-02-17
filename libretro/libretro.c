@@ -1122,6 +1122,27 @@ static bool context_framebuffer_lock(void *data)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
+    char* gamePath;
+    char* newPath;
+
+    // Workaround for broken subsystem on static platforms
+    if(!retro_dd_path_img)
+    {
+        gamePath = (char*)game->path;
+        newPath = (char*)calloc(1, strlen(gamePath)+5);
+        strcpy(newPath, gamePath);
+        strcat(newPath, ".ndd");
+        FILE* fileTest = fopen(newPath, "r");
+        if(!fileTest)
+        {
+            free(newPath);
+        } else {
+            fclose(fileTest);
+            // Free'd later in Mupen Core
+            retro_dd_path_img = newPath;
+        }
+    }
+
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 

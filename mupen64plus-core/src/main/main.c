@@ -85,6 +85,8 @@
 #include "../../../libretro/libretro_memory.h"
 #include "../../../custom/GLideN64/GLideN64_libretro.h"
 extern retro_environment_t environ_cb;
+extern char* retro_dd_path_img;
+extern char* retro_dd_path_rom;
 #endif // __LIBRETRO__
 
 #ifdef DBG
@@ -717,7 +719,14 @@ static void load_dd_rom(uint8_t* rom, size_t* rom_size)
     strcat(pathname, path_default_slash());
     strcat(pathname, "IPL.n64");
 
-    dd_ipl_rom_filename = pathname;
+    if(retro_dd_path_img)
+    {
+        dd_ipl_rom_filename = pathname;
+    }
+    else
+    {
+        dd_ipl_rom_filename = NULL;
+    }
 
     if ((dd_ipl_rom_filename == NULL) || (strlen(dd_ipl_rom_filename) == 0)) {
         goto no_dd;
@@ -773,8 +782,6 @@ no_dd:
     *rom_size = 0;
 }
 
-extern char* retro_dd_path_img;
-extern char* retro_dd_path_rom;
 static void load_dd_disk(struct file_storage* dd_disk, const struct storage_backend_interface** dd_idisk)
 {
     const char* format_desc;
