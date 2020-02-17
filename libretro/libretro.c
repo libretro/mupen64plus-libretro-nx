@@ -92,6 +92,9 @@ uint32_t retro_screen_width = 320;
 uint32_t retro_screen_height = 240;
 float retro_screen_aspect = 4.0 / 3.0;
 
+char* retro_dd_path_img;
+char* retro_dd_path_rom;
+
 uint32_t bilinearMode = 0;
 uint32_t EnableHWLighting = 0;
 uint32_t CorrectTexrectCoords = 0;
@@ -406,11 +409,65 @@ void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) { audio_batch_c
 void retro_set_input_poll(retro_input_poll_t cb) { poll_cb = cb; }
 void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
+bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info)
+{
+    if(retro_dd_path_img)
+    {
+        free(retro_dd_path_img);
+        retro_dd_path_img = NULL;
+    }
+
+    if(retro_dd_path_rom)
+    {
+        free(retro_dd_path_rom);
+        retro_dd_path_rom = NULL;
+    }
+
+    switch(game_type)
+    {
+        case RETRO_GAME_TYPE_DD:
+            if(num_info == 1)
+            {
+                retro_dd_path_img = strdup(info[0].path);
+            }
+            else if(num_info == 2)
+            {
+                retro_dd_path_img = strdup(info[0].path);
+                retro_dd_path_rom = strdup(info[1].path);
+            } else {
+                return false;
+            }
+            
+            printf("Loading %s...\n", info[0].path);
+            load_file(info[1].path, (void**)&info[1].data, &info[1].size);
+            return retro_load_game(&info[1]);
+        default:
+            return false;
+    }
+    
+	return false;
+}
 
 void retro_set_environment(retro_environment_t cb)
 {
     environ_cb = cb;
 
+    static const struct retro_subsystem_memory_info memory_info[] = {
+        { "srm", RETRO_MEMORY_DD },
+    };
+
+    static const struct retro_subsystem_rom_info dd_roms[] = {
+        { "Disk", "ndd", true, false, true, memory_info, 1 },
+        { "Cartridge", "n64|v64|z64|bin|u1", true, false, true, NULL, 0 },
+    };
+
+    static const struct retro_subsystem_info subsystems[] = {
+        { "N64 Disk Drive", "ndd", dd_roms, 2, RETRO_GAME_TYPE_DD },
+        {}
+    };
+
+    environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
+    
     setup_variables();
 }
 
@@ -427,7 +484,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #define GIT_VERSION " git"
 #endif
     info->library_version = "1.0" GIT_VERSION;
-    info->valid_extensions = "n64|v64|z64|bin|u1|ndd";
+    info->valid_extensions = "n64|v64|z64|bin|u1";
     info->need_fullpath = false;
     info->block_extract = false;
 }
@@ -1132,6 +1189,7 @@ void *retro_get_memory_data(unsigned type)
     switch (type)
     {
         case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
+        case RETRO_MEMORY_DD:
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
     return NULL;
@@ -1142,6 +1200,7 @@ size_t retro_get_memory_size(unsigned type)
     switch (type)
     {
         case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
+        case RETRO_MEMORY_DD:
         case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
     }
     return 0;
@@ -1205,7 +1264,6 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) {
 }
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
-bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info) { return false; }
 
 void retro_cheat_reset(void)
 {
