@@ -23,6 +23,7 @@
 #include "api/callbacks.h"
 #include "main/cheat.h"
 #include "main/version.h"
+#include "main/util.h"
 #include "main/savestates.h"
 #include "main/mupen64plus.ini.h"
 #include "api/m64p_config.h"
