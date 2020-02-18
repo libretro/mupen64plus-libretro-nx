@@ -36,7 +36,7 @@ A special thanks to:
 - gonetz and those that have worked on GLideN64, especially fzurita
 - The Authors of cxd4 and angrylion-rdp-plus (ata4)
 - themaister for parallel-rsp
-- Everyone in libretro Team
+- Everyone in the libretro Team
 
 
 \- m4xw
