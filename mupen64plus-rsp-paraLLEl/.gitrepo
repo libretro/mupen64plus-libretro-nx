@@ -7,6 +7,6 @@
 	remote = git@github.com:Themaister/parallel-rsp.git
 	branch = master
 	commit = efbf80b24f2fa56d20ae0f92d2ac30d249f72eb2
-	parent = ec0e0e0e6aec553983f89e0071deb6392bcb4b8f
+	parent = a3dcc7bfc8960663a34d8d1a0b96ac29b0616345
 	method = rebase
 	cmdver = 0.4.0

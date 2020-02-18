@@ -1,17 +1,42 @@
 # Mupen64Plus-Next
 
-Mupen64Plus-Next is [mupen64plus](https://github.com/mupen64plus/mupen64plus-core) + [GLideN64](https://github.com/gonetz/GLideN64) + [libretro](http://www.libretro.com/)
+Mupen64Plus-Next is N64 emulation library for the [libretro API](http://www.libretro.com/), based on Mupen64Plus (see below).
 
 It is also the successor of the old Mupen64Plus libretro core.
 
-#### How is this different from [Parallel-N64](https://github.com/libretro/parallel-n64)?
+> You can *always* rely on it to  give you a excellent Majora's Mask experience. Seriously.
 
-Parallel-N64 implements multiple Graphics plugins. There are also code modifications that make it different than standalone mupen64plus.
+#### How is this different from any N64 libretro-core, ever?
 
-Mupen64Plus-Next uses GLideN64 (a graphics plugin that is not available in Parallel-N64). The emulator code itself is identical to standalone mupen64plus.
+Due to the amount of libraries that are used and are in regular need of maintenance, I have strict rules about adding dependencies.  
+This allows for easy maintenance, so available time can be spent on useful improvements and lowers the burden.  
+By default the experience will be very simliar to the N64 emulators you know and love with *a lot extra*.
 
-By choosing one graphics plugin (GLideN64), we will be able to keep the code in line with upstream, and maintaining the code will be much simpler.
+> **Sidenote:**  
+While I accept pretty much every reasonable contribution, hacks must not impact behavior by default, unless justified.  
+If you need to add a dependency, please consult me first.  
+Force-pushes on all branches but `develop` and `master` are fair game.
+`master` has the best stability memes, if that's your *thing*.
+
+#### Used Technologies
+
+The following projects have been incorporated into this repository:
+
+- [mupen64plus](https://github.com/mupen64plus/mupen64plus-core)
+- [GLideN64](https://github.com/gonetz/GLideN64)
+- [cxd4](https://github.com/cxd4/rsp)
+- [parallel-rsp](https://github.com/Themaister/parallel-rsp)
+- [angrylion-rdp-plus](https://github.com/ata4/angrylion-rdp-plus) (Currently based on it's [ParaLLel](https://github.com/libretro/parallel-n64/) variant)
 
 #### Acknowledgments
 
-A special thanks to the mupen64plus team, the libretro team, and gonetz and those that have worked on GLideN64.
+A special thanks to:
+
+- The Mupen64Plus Team, especially Gillou68310
+- gonetz and those that have worked on GLideN64, especially fzurita
+- The Authors of cxd4 and angrylion-rdp-plus (ata4)
+- themaister for parallel-rsp
+- Everyone in libretro Team
+
+
+\- m4xw
