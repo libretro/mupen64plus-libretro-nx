@@ -5,11 +5,16 @@
 
 #include "GLFunctions.h"
 
-// For Libretro
 #define ASSIGN_PROC_ADR(proc_type, proc_name) ptr##proc_name = gl##proc_name
+#if defined(GL_USE_DLSYM)
+// Use dlsym() to load GL symbols from the default shared object search order
+#define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) dlsym(RTLD_DEFAULT, "gl"#proc_name)
+#else
+// Use libretro API to load GL/EGL symbols
 #define glGetProcAddress glsm_get_proc_address
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("gl"#proc_name)
 #define GL_GET_PROC_ADR_EGL(proc_type, proc_name) ptr##proc_name = (proc_type) glGetProcAddress("egl"#proc_name)
+#endif
 
 #if 0
 #ifdef OS_WINDOWS

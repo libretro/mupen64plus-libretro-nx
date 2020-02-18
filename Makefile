@@ -141,7 +141,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       GL_LIB := -lGLESv2
    else
       LLE = 0
-      CPUFLAGS += -DVC
+      COREFLAGS += -DVC -DGL_USE_DLSYM
       GL_LIB := -L/opt/vc/lib -lbrcmGLESv2
       EGL_LIB := -lbrcmEGL
       INCFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vcos -I/opt/vc/include/interface/vcos/pthreads
