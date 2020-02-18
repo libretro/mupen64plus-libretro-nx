@@ -13,7 +13,6 @@ DYNAFLAGS    :=
 GLES         :=
 GLFLAGS      :=
 HAVE_NEON    :=
-PNG_PATH     :=
 SOURCES_C    :=
 SOURCES_CXX  :=
 SOURCES_ASM  :=
@@ -31,14 +30,12 @@ WITH_DYNAREC :=
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
   WITH_DYNAREC := arm
   HAVE_NEON := 1
-  PNG_PATH := $(ROOT_DIR)/custom/android/arm/libpng.a
   STRINGS := arm-linux-androideabi-$(STRINGS)
   LLE = 1
   HAVE_PARALLEL_RSP = 1
   HAVE_THR_AL = 1
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
   WITH_DYNAREC := aarch64
-  PNG_PATH := $(ROOT_DIR)/custom/android/arm64/libpng.a
   STRINGS := aarch64-linux-android-$(STRINGS)
   LLE = 1
   HAVE_PARALLEL_RSP = 1
@@ -47,14 +44,12 @@ else ifeq ($(TARGET_ARCH_ABI),x86)
   # X86 dynarec isn't position independent, so it fails to build on newer ndks.
   # No warn shared textrel allows it to build, but still won't allow it to run on api 23+.
   WITH_DYNAREC := x86
-  PNG_PATH := $(ROOT_DIR)/custom/android/x86/libpng.a
   STRINGS := i686-linux-android-$(STRINGS)
   COREASMFLAGS := -f elf -d ELF_TYPE
   CORELDLIBS := -Wl,-no-warn-shared-textrel
 else ifeq ($(TARGET_ARCH_ABI),x86_64)
   WITH_DYNAREC := x86_64
   STRINGS := x86_64-linux-android-$(STRINGS)
-  PNG_PATH := $(ROOT_DIR)/custom/android/x86_64/libpng.a
 endif
 
 ifeq ($(GLES3),1)
@@ -78,9 +73,6 @@ ifneq ($(GIT_VERSION)," unknown")
 endif
 
 include $(CLEAR_VARS)
-LOCAL_MODULE    := png
-LOCAL_SRC_FILES := $(PNG_PATH)
-include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
@@ -89,8 +81,8 @@ LOCAL_ASMFLAGS         := $(COREASMFLAGS)
 LOCAL_CPPFLAGS         := -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
 LOCAL_CFLAGS           := $(CFLAGS) $(COREFLAGS)
 LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
-LOCAL_LDLIBS           := -lz -llog -lEGL $(GLLIB) $(CORELDLIBS)
-LOCAL_STATIC_LIBRARIES := png
+LOCAL_LDLIBS           := -llog -lEGL $(GLLIB) $(CORELDLIBS)
+LOCAL_STATIC_LIBRARIES := 
 LOCAL_CPP_FEATURES     := exceptions
 LOCAL_ARM_MODE         := arm
 LOCAL_ARM_NEON         := true
