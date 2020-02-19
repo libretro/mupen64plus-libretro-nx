@@ -4,7 +4,7 @@ Mupen64Plus-Next is N64 emulation library for the [libretro API](http://www.libr
 
 It is also the successor of the old Mupen64Plus libretro core.
 
-> You can *always* rely on it to  give you a excellent Majora's Mask experience. Seriously.
+> You can *always* rely on it to give you an excellent Majora's Mask experience. Seriously.
 
 #### How is this different from any N64 libretro-core, ever?
 
