@@ -1102,6 +1102,8 @@ struct retro_core_option_definition option_defs_us[] = {
             {"1", NULL},
             {"2", NULL},
             {"3", NULL},
+            {"4", NULL},
+            {"5", NULL},
             {NULL, NULL},
         },
         "0"
