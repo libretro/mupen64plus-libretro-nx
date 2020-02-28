@@ -441,7 +441,11 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void* EmuThreadFunction(void* param)
+#if defined(HAVE_LIBNX)
+static void EmuThreadFunction(void* param)
+#else
+static void EmuThreadFunction(void)
+#endif
 {
     uint32_t netplay_port = 0;
     uint16_t netplay_player = 1;
