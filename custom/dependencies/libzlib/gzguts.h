@@ -27,6 +27,11 @@
 #endif
 #include <fcntl.h>
 
+/* TODO: Do other platforms need this? */
+#ifdef EMSCRIPTEN
+#  include <unistd.h>
+#endif
+
 #ifdef _WIN32
 #  include <stddef.h>
 #endif
