@@ -81,6 +81,8 @@ void LoadCustomSettings(bool internal)
 						config.frameBufferEmulation.copyDepthToRDRAM = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\copyAuxToRDRAM"))
 						config.frameBufferEmulation.copyAuxToRDRAM = atoi(l.value);
+					else if (!strcmp(l.name, "frameBufferEmulation\\fbInfoDisabled"))
+						config.frameBufferEmulation.fbInfoDisabled = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\N64DepthCompare"))
 						config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\bufferSwapMode"))
