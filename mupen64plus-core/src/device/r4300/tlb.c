@@ -100,10 +100,16 @@ void tlb_map(struct tlb* tlb, size_t entry)
     }
 }
 
+#include <stdio.h>
 uint32_t virtual_to_physical_address(struct r4300_core* r4300, uint32_t address, int w)
 {
     const struct tlb* tlb = &r4300->cp0.tlb;
     unsigned int addr = address >> 12;
+     if(address >= 0x3b5000 && address <= 0x3da7ff)
+    {
+        printf("virtual_to_physical_address 0x3b5000-0x3b5000!\n");
+        fflush(stdout);
+    }
 
 #ifdef NEW_DYNAREC
     if (r4300->emumode == EMUMODE_DYNAREC)

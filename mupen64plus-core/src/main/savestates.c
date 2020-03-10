@@ -488,9 +488,23 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->dp.dps_regs[DPS_BUFTEST_ADDR_REG] = GETDATA(curr, uint32_t);
     dev->dp.dps_regs[DPS_BUFTEST_DATA_REG] = GETDATA(curr, uint32_t);
 
+	DWORD old_protect;
+	if (!VirtualProtect((LPVOID)(dev->r4300.mem->base + 0x3b5000), 0x4AFFF, PAGE_READWRITE, &old_protect))
+	{
+		printf("ExceptionHandler 0 VirtualProtect failed!\n");
+		fflush(stdout);
+	}
+
+    if(!VirtualProtect((LPVOID)(g_dev.r4300.mem->base + 0x1d98c0), 0x2507F, PAGE_READWRITE, &old_protect))
+    {
+        printf("unprotect_framebuffers VirtualProtect failed!\n");
+        fflush(stdout);
+    }
+
     COPYARRAY(dev->rdram.dram, curr, uint32_t, RDRAM_MAX_SIZE/4);
     COPYARRAY(dev->sp.mem, curr, uint32_t, SP_MEM_SIZE/4);
     COPYARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);
+
 
     dev->cart.use_flashram = GETDATA(curr, int32_t);
     dev->cart.flashram.mode = GETDATA(curr, int32_t);

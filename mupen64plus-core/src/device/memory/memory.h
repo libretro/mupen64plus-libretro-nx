@@ -24,6 +24,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "osal/preproc.h"
 
@@ -79,11 +80,21 @@ static osal_inline const struct mem_handler* mem_get_handler(const struct memory
 
 static osal_inline void mem_read32(const struct mem_handler* handler, uint32_t address, uint32_t* value)
 {
+    if(address >= 0x3b5000 && address <= 0x3da7ff)
+    {
+        printf("mem_read32 0x3b5000-0x3b5000!\n");
+        fflush(stdout);
+    }
     handler->read32(handler->opaque, address, value);
 }
 
 static osal_inline void mem_write32(const struct mem_handler* handler, uint32_t address, uint32_t value, uint32_t mask)
 {
+    if(address >= 0x3b5000 && address <= 0x3da7ff)
+    {
+        printf("mem_write32 0x3b5000-0x3b5000!\n");
+        fflush(stdout);
+    }
     handler->write32(handler->opaque, address, value, mask);
 }
 

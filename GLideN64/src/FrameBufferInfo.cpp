@@ -8,7 +8,7 @@
 #include "RSP.h"
 #include "VI.h"
 #include "Log.h"
-
+#include <stdio.h>
 namespace FBInfo {
 
 	FBInfo fbInfo;
@@ -45,6 +45,8 @@ namespace FBInfo {
 		const auto findRes = _findBuffer(m_writeBuffers, writeBuffer);
 		if (!findRes.first)
 			m_writeBuffers[findRes.second] = writeBuffer;
+		printf("Addr: 0x%x Size: %d\n", address, size);
+		fflush(stdout);
 		FrameBuffer_AddAddress(address, size);
 	}
 

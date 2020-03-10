@@ -24,11 +24,11 @@
 #include "api/m64p_types.h"
 #include "api/callbacks.h"
 #include "device/memory/memory.h"
+#include "device/device.h"
 #include "device/r4300/r4300_core.h"
 #include "device/rdram/rdram.h"
 #include "osal/preproc.h"
 #include "plugin/plugin.h"
-
 #include <string.h>
 
 static osal_inline size_t fb_buffer_size(const FrameBufferInfo* fb_info)
@@ -97,7 +97,7 @@ void post_framebuffer_write(struct fb* fb, uint32_t address, uint32_t length)
     }
 }
 
-
+struct fb* _fb;
 void init_fb(struct fb* fb,
              struct memory* mem,
              struct rdram* rdram,
@@ -106,13 +106,17 @@ void init_fb(struct fb* fb,
     fb->mem = mem;
     fb->rdram = rdram;
     fb->r4300 = r4300;
+    _fb = fb;
 }
 
+static PVOID handler;
+LONG WINAPI ExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo);
 void poweron_fb(struct fb* fb)
 {
     memset(fb->dirty_page, 0, FB_DIRTY_PAGES_COUNT*sizeof(fb->dirty_page[0]));
     memset(fb->infos, 0, FB_INFOS_COUNT*sizeof(fb->infos[0]));
     fb->once = 1;
+    handler = AddVectoredExceptionHandler(1, ExceptionHandler);
 }
 
 void read_rdram_fb(void* opaque, uint32_t address, uint32_t* value)
@@ -124,6 +128,9 @@ void read_rdram_fb(void* opaque, uint32_t address, uint32_t* value)
 
 void write_rdram_fb(void* opaque, uint32_t address, uint32_t value, uint32_t mask)
 {
+    printf("write_rdram_fb address %x value %x mask %x\n", address, value, mask);
+    fflush(stdout);
+
     struct fb* fb = (struct fb*)opaque;
     write_rdram_dram(fb->rdram, address, value, mask);
 
@@ -179,14 +186,103 @@ void write_rdram_fb(void* opaque, uint32_t address, uint32_t value, uint32_t mas
 #define W(x) write_ ## x
 #define RW(x) R(x), W(x)
 
+extern struct device g_dev;
+static uint64_t dummy[10];
+LONG WINAPI ExceptionHandler(struct _EXCEPTION_POINTERS *ExceptionInfo)
+{
+	if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+	{
+        uintptr_t fault_addr = ExceptionInfo->ExceptionRecord->ExceptionInformation[1];
+
+        if ((fault_addr < (uintptr_t)g_dev.r4300.mem->base)
+            || (fault_addr >= (uintptr_t)g_dev.r4300.mem->base + 0x20000000))
+        {
+            // Ghetto Stepping :shrek:
+            ExceptionInfo->ContextRecord->Rip++;
+            return EXCEPTION_CONTINUE_EXECUTION;
+        }
+
+		// TODO: fix non full mem base
+		uint32_t offset = (uint32_t)(fault_addr - (uintptr_t)g_dev.r4300.mem->base);
+              
+#define READ_FLAG 0
+#define WRITE_FLAG 1
+        int rw = ExceptionInfo->ExceptionRecord->ExceptionInformation[0];
+        printf("Fault Addr: %p, Offset: 0x%x RW: %d\n", fault_addr, offset, rw);
+        printf("RAX: %p\n", ExceptionInfo->ContextRecord->Rax);
+        printf("RBX: %p\n", ExceptionInfo->ContextRecord->Rbx);
+        printf("RCX: %p\n", ExceptionInfo->ContextRecord->Rcx);
+        printf("RDX: %p\n", ExceptionInfo->ContextRecord->Rdx);
+        printf("RSI: %p\n", ExceptionInfo->ContextRecord->Rsi);
+        printf("RDI: %p\n", ExceptionInfo->ContextRecord->Rdi);
+        printf("RSP: %p\n", ExceptionInfo->ContextRecord->Rsp);
+        printf("RSP[0]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[0]);
+        printf("RSP[1]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[1]);
+        printf("RSP[2]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[2]);
+        printf("RSP[3]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[3]);
+        printf("RSP[4]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[4]);
+        printf("RSP[4]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[4]);
+        printf("RSP[4]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rsp)[5]);
+		printf("RIP: %p\n", ExceptionInfo->ContextRecord->Rip);
+        printf("RIP[0]: 0x%x\n", ((uint32_t*)ExceptionInfo->ContextRecord->Rip)[0]);
+		printf("PC: 0x%x\n", g_dev.r4300.new_dynarec_hot_state.pcaddr);
+        fflush(stdout);
+		DWORD old_protect;
+
+        if(rw) // write
+        {
+            unprotect_framebuffers(_fb);
+            int matched = 0;
+
+            for (int i = 0; i < FB_INFOS_COUNT; ++i) {
+
+                /* skip empty fb info */
+                if (_fb->infos[i].addr == 0) {
+                    continue;
+                }
+
+                if(offset >= _fb->infos[i].addr && offset <= (_fb->infos[i].addr + fb_buffer_size(&_fb->infos[i]) - 1))
+                {
+                    matched = 1;
+                    uint32_t mask = ExceptionInfo->ContextRecord->Rbx - 1;
+                    // MOV DWORD PTR
+                    if((((uint32_t*)ExceptionInfo->ContextRecord->Rip)[0] & 0x00FF0000) == 0x00890000)
+                    {
+                        write_rdram_fb(_fb, offset, ExceptionInfo->ContextRecord->Rax, mask);
+                        write_rdram_fb(_fb, offset, ExceptionInfo->ContextRecord->Rax << 16, 0xffff0000);
+                    } else {
+                        write_rdram_fb(_fb, offset, ExceptionInfo->ContextRecord->Rax, mask);     
+                    }
+                    ExceptionInfo->ContextRecord->Rip++;
+                    break;
+                }
+            }
+            
+            if(matched)
+            {
+                // Prevents issues due to forced internal page alignment in VirtualProtect
+                protect_framebuffers(_fb);
+            }
+        }
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else
+	{
+            // Ghetto Stepping :shrek:
+            ExceptionInfo->ContextRecord->Rip++;
+            return EXCEPTION_CONTINUE_EXECUTION;
+	}
+}
+
 void protect_framebuffers(struct fb* fb)
 {
+    DWORD old_protect;
     size_t i, j;
     struct mem_mapping fb_mapping = { 0, 0, M64P_MEM_RDRAM, { fb, RW(rdram_fb) } };
 
     /* check API support */
-    if (!(gfx.fBGetFrameBufferInfo && gfx.fBRead && gfx.fBWrite)
-        || fb->r4300->emumode == EMUMODE_DYNAREC /* Dynarecs currently miss some of the read/writes needed for FBInfo */) {
+    if (!(gfx.fBGetFrameBufferInfo && gfx.fBRead && gfx.fBWrite)) {
         return;
     }
 
@@ -208,7 +304,15 @@ void protect_framebuffers(struct fb* fb)
         /* map fb rw handlers */
         fb_mapping.begin = fb->infos[i].addr;
         fb_mapping.end   = fb->infos[i].addr + fb_buffer_size(&fb->infos[i]) - 1;
-        apply_mem_mapping(fb->mem, &fb_mapping);
+        printf("FB Begin: 0x%x, FB End: 0x%x\n", fb_mapping.begin, fb_mapping.end);
+        fflush(stdout);
+
+        //apply_mem_mapping(fb->mem, &fb_mapping);
+        if(!VirtualProtect((LPVOID)g_dev.r4300.mem->base + fb->infos[i].addr, fb_buffer_size(&fb->infos[i]) - 1, PAGE_READONLY, &old_protect))
+        {
+            printf("protect_framebuffers VirtualProtect failed!\n");
+            fflush(stdout);
+        }
 
         /* mark all pages that are within a fb as dirty */
         for (j = fb_mapping.begin >> 12; j <= (fb_mapping.end >> 12); ++j) {
@@ -231,6 +335,7 @@ void protect_framebuffers(struct fb* fb)
 void unprotect_framebuffers(struct fb* fb)
 {
     size_t i;
+    DWORD old_protect;
     struct mem_mapping ram_mapping = { 0, 0, M64P_MEM_RDRAM, { fb->rdram, RW(rdram_dram) } };
 
     /* return early if FB info is not supported or empty */
@@ -248,6 +353,11 @@ void unprotect_framebuffers(struct fb* fb)
         /* restore ram rw handlers */
         ram_mapping.begin = fb->infos[i].addr;
         ram_mapping.end   = fb->infos[i].addr + fb_buffer_size(&fb->infos[i]) - 1;
-        apply_mem_mapping(fb->mem, &ram_mapping);
+        //apply_mem_mapping(fb->mem, &ram_mapping);
+        if(!VirtualProtect((LPVOID)g_dev.r4300.mem->base + fb->infos[i].addr, fb_buffer_size(&fb->infos[i]) - 1, PAGE_READWRITE, &old_protect))
+        {
+            printf("unprotect_framebuffers VirtualProtect failed!\n");
+            fflush(stdout);
+        }
     }
 }
