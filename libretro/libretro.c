@@ -272,7 +272,7 @@ static void setup_variables(void)
         { CORE_NAME "-EnableLODEmulation",
             "(GLN64) LOD Emulation; True|False" },
         { CORE_NAME "-EnableCopyColorToRDRAM",
-#ifndef HAVE_OPENGLES
+#ifndef HAVE_OPENGLES2
             "(GLN64) Color buffer to RDRAM; Async|Sync|Off" },
 #else
             "(GLN64) Color buffer to RDRAM; Off|Async|Sync" },
