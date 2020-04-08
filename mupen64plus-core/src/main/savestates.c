@@ -60,7 +60,7 @@ enum { GB_CART_FINGERPRINT_OFFSET = 0x134 };
 enum { DD_DISK_ID_OFFSET = 0x43670 };
 
 static const char* savestate_magic = "M64+SAVE";
-static const int savestate_latest_version = 0x00010500;  /* 1.5 */
+static const int savestate_latest_version = 0x00010600;  /* 1.6 */
 static const unsigned char pj64_magic[4] = { 0xC8, 0xA6, 0xD8, 0x23 };
 
 static savestates_job job = savestates_job_nothing;
@@ -546,7 +546,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
     savestates_load_set_pc(&dev->r4300, GETDATA(curr, uint32_t));
 
     *r4300_cp0_next_interrupt(&dev->r4300.cp0) = GETDATA(curr, uint32_t);
-    dev->vi.next_vi = GETDATA(curr, uint32_t);
+    curr += 4; /* here there used to be next_vi */
     dev->vi.field = GETDATA(curr, uint32_t);
 
     // assert(savestateData+savestateSize == curr)
@@ -1076,7 +1076,7 @@ static int savestates_load_pj64(struct device* dev,
     *r4300_cp0_next_interrupt(&dev->r4300.cp0) = (cp0_regs[CP0_COMPARE_REG] < vi_timer)
                   ? cp0_regs[CP0_COMPARE_REG]
                   : vi_timer;
-    dev->vi.next_vi = vi_timer;
+
     dev->vi.field = 0;
     *((unsigned int*)&buffer[0]) = VI_INT;
     *((unsigned int*)&buffer[4]) = vi_timer;
@@ -1815,7 +1815,7 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, *r4300_pc((struct r4300_core*)&dev->r4300));
 
     PUTDATA(curr, uint32_t, *r4300_cp0_next_interrupt((struct cp0*)&dev->r4300.cp0));
-    PUTDATA(curr, uint32_t, dev->vi.next_vi);
+    PUTDATA(curr, uint32_t, 0); /* here there used to be next_vi */
     PUTDATA(curr, uint32_t, dev->vi.field);
 
     to_little_endian_buffer(queue, 4, sizeof(queue)/4);
@@ -1982,7 +1982,11 @@ static int savestates_save_pj64(const struct device* dev,
     PUTARRAY(pj64_magic, curr, unsigned char, 4);
     PUTDATA(curr, unsigned int, SaveRDRAMSize);
     PUTARRAY(dev->cart.cart_rom.rom, curr, unsigned int, 0x40/4);
-    PUTDATA(curr, uint32_t, get_event(&dev->r4300.cp0.q, VI_INT) - cp0_regs[CP0_COUNT_REG]); // vi_timer
+    uint32_t* next_vi = get_event(&dev->r4300.cp0.q, VI_INT);
+    if (next_vi != NULL)
+        PUTDATA(curr, uint32_t, *next_vi - cp0_regs[CP0_COUNT_REG]); // vi_timer
+    else
+        PUTDATA(curr, uint32_t, 0 - cp0_regs[CP0_COUNT_REG]);
     PUTDATA(curr, uint32_t, *r4300_pc((struct r4300_core*)&dev->r4300));
     PUTARRAY(r4300_regs((struct r4300_core*)&dev->r4300), curr, int64_t, 32);
     const cp1_reg* cp1_regs = r4300_cp1_regs((struct cp1*)&dev->r4300.cp1);

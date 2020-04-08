@@ -202,7 +202,7 @@ static void main_check_inputs(void)
 #ifdef WITH_LIRC
     lircCheckInput();
 #endif
-poll_cb();
+    poll_cb();
 }
 
 /*********************************************************************************************************
