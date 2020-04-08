@@ -562,7 +562,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #ifndef GIT_VERSION
 #define GIT_VERSION " git"
 #endif
-    info->library_version = "2.0" GIT_VERSION;
+    info->library_version = "2.0.5" GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1";
     info->need_fullpath = false;
     info->block_extract = false;
