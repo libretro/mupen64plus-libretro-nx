@@ -38,7 +38,7 @@ libretro-build-linux-x64:
   image: $CI_SERVER_HOST:4567/libretro/infrastructure/libretro-build-amd64-ubuntu:latest
   stage: build-shared
   script:
-    - make -j10
+    - make -j10 HAVE_PARALLEL_RSP=1 HAVE_THR_AL=1 LLE=1
   artifacts:
     paths:
     - mupen64plus_next_libretro.so
