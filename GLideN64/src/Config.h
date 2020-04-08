@@ -53,6 +53,7 @@ struct Config
 		u32 enableCustomSettings;
 		u32 enableShadersStorage;
 		u32 enableLegacyBlending;
+		u32 enableHybridFilter;
 		u32 enableFragmentDepthWrite;
 		u32 enableBlitScreenWorkaround;
 		u32 hacks;
@@ -105,6 +106,12 @@ struct Config
 		cdDisable = 0,
 		cdCopyFromVRam = 1,
 		cdSoftwareRender = 2
+	};
+
+	enum N64DepthCompareMode {
+		dcDisable = 0,
+		dcFast,
+		dcCompatible
 	};
 
 	struct {

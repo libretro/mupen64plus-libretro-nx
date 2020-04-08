@@ -50,8 +50,6 @@ private slots:
 
 	void on_aliasingSlider_valueChanged(int value);
 
-	void on_n64DepthCompareCheckBox_toggled(bool checked);
-
 	void on_gammaLevelSpinBox_valueChanged(double value);
 
 	void on_gammaCorrectionCheckBox_toggled(bool checked);
@@ -76,7 +74,9 @@ private slots:
 
 	void on_removeProfilePushButton_clicked();
 
-    void on_nativeRes2DComboBox_currentIndexChanged(int index);
+	void on_nativeRes2DComboBox_currentIndexChanged(int index);
+
+	void on_n64DepthCompareComboBox_currentIndexChanged(int index);
 
 private:
 	void _init(bool reInit = false, bool blockCustomSettings = false);

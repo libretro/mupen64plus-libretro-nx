@@ -118,7 +118,7 @@ void GraphicsDrawer::_updateDepthUpdate() const
 
 void GraphicsDrawer::_updateDepthCompare() const
 {
-	if (config.frameBufferEmulation.N64DepthCompare != 0) {
+	if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
 		gfxContext.enable(enable::DEPTH_TEST, false);
 		gfxContext.enableDepthWrite(false);
 	}
@@ -674,7 +674,7 @@ void GraphicsDrawer::_updateStates(DrawingState _drawingState) const
 
 	if (isCurrentColorImageDepthImage() &&
 		config.generalEmulation.enableFragmentDepthWrite != 0 &&
-		config.frameBufferEmulation.N64DepthCompare == 0) {
+		config.frameBufferEmulation.N64DepthCompare == Config::dcDisable) {
 		// Current render target is depth buffer.
 		// Shader will set gl_FragDepth to shader color, see ShaderCombiner ctor
 		// Here we enable depth buffer write.
@@ -1026,10 +1026,12 @@ bool texturedRectDepthBufferCopy(const GraphicsDrawer::TexturedRectParams & _par
 	// Data from depth buffer loaded into TMEM and then rendered to RDRAM by texrect.
 	// Works only with depth buffer emulation enabled.
 	// Load of arbitrary data to that area causes weird camera rotation in CBFD.
+	if (_params.uly != 0.0f || std::min(_params.lry, gDP.scissor.lry) != 1.0f)
+		return false;
 	const gDPTile * pTile = gSP.textureTile[0];
 	if (pTile->loadType == LOADTYPE_BLOCK && gDP.textureImage.size == 2 &&
 		gDP.textureImage.address >= gDP.depthImageAddress &&
-		gDP.textureImage.address < (gDP.depthImageAddress + gDP.colorImage.width*gDP.scissor.lry*2)) {
+		gDP.textureImage.address < (gDP.depthImageAddress + gDP.colorImage.width*VI.height*2)) {
 		if (config.frameBufferEmulation.copyDepthToRDRAM == Config::cdDisable)
 			return true;
 		FrameBuffer * pBuffer = frameBufferList().getCurrent();
@@ -1623,7 +1625,7 @@ void GraphicsDrawer::_initStates()
 	gfxContext.enableDepthWrite(false);
 	gfxContext.setDepthCompare(compare::ALWAYS);
 
-	if (config.frameBufferEmulation.N64DepthCompare != 0) {
+	if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
 		gfxContext.enable(enable::DEPTH_TEST, false);
 		gfxContext.enable(enable::POLYGON_OFFSET_FILL, false);
 	}

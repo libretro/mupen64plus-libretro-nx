@@ -101,11 +101,13 @@ void GLInfo::init() {
 	fragment_interlock = Utils::isExtensionSupported(*this, "GL_ARB_fragment_shader_interlock") && !hasBuggyFragmentShaderInterlock;
 	fragment_interlockNV = Utils::isExtensionSupported(*this, "GL_NV_fragment_shader_interlock") && !fragment_interlock && !hasBuggyFragmentShaderInterlock;
 	fragment_ordering = Utils::isExtensionSupported(*this, "GL_INTEL_fragment_shader_ordering") && !fragment_interlock && !fragment_interlockNV;
+	
+	const bool imageTexturesInterlock = imageTextures && (fragment_interlock || fragment_interlockNV || fragment_ordering);
 
-	imageTextures = imageTextures && (fragment_interlock || fragment_interlockNV || fragment_ordering);
-
-	if (isGLES2)
+	if (isGLES2) {
 		config.generalEmulation.enableFragmentDepthWrite = 0;
+		config.generalEmulation.enableHybridFilter = 0;
+	}
 
 	bufferStorage = (!isGLESX && (numericVersion >= 44)) || Utils::isExtensionSupported(*this, "GL_ARB_buffer_storage") ||
 			Utils::isExtensionSupported(*this, "GL_EXT_buffer_storage");
@@ -164,7 +166,7 @@ void GLInfo::init() {
 	texture_barrier = !isGLESX && (numericVersion >= 45 || Utils::isExtensionSupported(*this, "GL_ARB_texture_barrier"));
 	texture_barrierNV = Utils::isExtensionSupported(*this, "GL_NV_texture_barrier");
 
-	ext_fetch = Utils::isExtensionSupported(*this, "GL_EXT_shader_framebuffer_fetch") && !isGLES2 && (!isGLESX || ext_draw_buffers_indexed) && !imageTextures;
+	ext_fetch = Utils::isExtensionSupported(*this, "GL_EXT_shader_framebuffer_fetch") && !isGLES2 && (!isGLESX || ext_draw_buffers_indexed) && !imageTexturesInterlock;
 	eglImage = (Utils::isEGLExtensionSupported("EGL_KHR_image_base") || Utils::isEGLExtensionSupported("EGL_KHR_image"));
 
 #ifdef OS_ANDROID
@@ -175,10 +177,18 @@ void GLInfo::init() {
 
 	eglImageFramebuffer = eglImage && !isGLES2;
 
-	if (config.frameBufferEmulation.N64DepthCompare != 0) {
-		if (!imageTextures && !ext_fetch) {
-			config.frameBufferEmulation.N64DepthCompare = 0;
-			LOG(LOG_WARNING, "Your GPU does not support the extensions needed for N64 Depth Compare.");
+	if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
+		if (config.frameBufferEmulation.N64DepthCompare == Config::dcFast) {
+			if (!imageTexturesInterlock && !ext_fetch) {
+				config.frameBufferEmulation.N64DepthCompare = Config::dcDisable;
+				LOG(LOG_WARNING, "Your GPU does not support the extensions needed for fast N64 Depth Compare.");
+			}
+		} else {
+			// Compatible
+			if (!imageTextures) {
+				config.frameBufferEmulation.N64DepthCompare = Config::dcDisable;
+				LOG(LOG_WARNING, "Your GPU does not support the extensions needed for N64 Depth Compare.");
+			}
 		}
 	}
 
