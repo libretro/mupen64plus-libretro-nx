@@ -70,6 +70,7 @@ endif
 
 TARGET_NAME := mupen64plus_next
 CC_AS ?= $(CC)
+NASM  ?= nasm
 
 GIT_VERSION ?= " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")
@@ -525,7 +526,7 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
 
 %.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
-	nasm -i$(AWK_DEST_DIR)/ $(ASFLAGS) $< -o $@
+	$(NASM) -i$(AWK_DEST_DIR)/ $(ASFLAGS) $< -o $@
 
 %.o: %.S $(AWK_DEST_DIR)/asm_defines_gas.h
 	$(CC_AS) $(CFLAGS) -c $< -o $@
