@@ -1,4 +1,5 @@
 #include "CRC.h"
+#define XXH_INLINE_ALL
 #include "xxhash.h"
 
 #define CRC32_POLYNOMIAL     0x04C11DB7
@@ -45,7 +46,7 @@ u32 CRC_Calculate_Strict( u32 crc, const void * buffer, u32 count )
 	return crc ^ orig;
 }
 
-u32 CRC_Calculate( u32 crc, const void * buffer, u32 count )
+u64 CRC_Calculate( u64 crc, const void * buffer, u32 count )
 {
 #ifdef __x86_64__
 	return XXH64(buffer, count, crc);
@@ -54,7 +55,7 @@ u32 CRC_Calculate( u32 crc, const void * buffer, u32 count )
 #endif
 }
 
-u32 CRC_CalculatePalette(u32 crc, const void * buffer, u32 count )
+u64 CRC_CalculatePalette(u64 crc, const void * buffer, u32 count )
 {
 	u8 *p;
 	u32 orig = crc;

@@ -5,6 +5,7 @@
 #include <chrono>         // std::chrono::seconds
 #include "Platform.h"
 #include "Textures.h"
+#include "CRC.h"
 #include "GBI.h"
 #include "RSP.h"
 #include "RDP.h"

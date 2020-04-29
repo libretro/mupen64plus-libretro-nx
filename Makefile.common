@@ -150,8 +150,6 @@ SOURCES_C += \
 COREFLAGS += -I$(CORE_DIR)/subprojects/minizip
 
 # xxHash
-SOURCES_C += \
-	$(CORE_DIR)/subprojects/xxhash/xxhash.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/xxhash
 
 ifneq (,$(findstring win,$(platform)))
@@ -268,6 +266,7 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/NoiseTexture.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/DepthBufferRender/ClipPolygon.cpp                                    \
     $(VIDEODIR_GLIDEN64)/src/DepthBufferRender/DepthBufferRender.cpp                              \
+    $(VIDEODIR_GLIDEN64)/src/BufferCopy/BlueNoiseTexture.cpp                                    \
     $(VIDEODIR_GLIDEN64)/src/BufferCopy/ColorBufferToRDRAM.cpp                                    \
     $(VIDEODIR_GLIDEN64)/src/BufferCopy/DepthBufferToRDRAM.cpp                                    \
     $(VIDEODIR_GLIDEN64)/src/BufferCopy/RDRAMtoColorBuffer.cpp                                    \
