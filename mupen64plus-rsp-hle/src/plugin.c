@@ -144,7 +144,7 @@ void HleShowCFB(void* UNUSED(user_defined))
 
 int HleForwardTask(void* user_defined)
 {
-    return 0;
+    return -1;
 }
 
 /* DLL-exported functions */
