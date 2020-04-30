@@ -251,14 +251,34 @@ struct gDPInfo
 	u32 changed;
 
 	u16 TexFilterPalette[512];
-	u32 paletteCRC16[16];
-	u32 paletteCRC256;
+	u64 paletteCRC16[16];
+	u64 paletteCRC256;
 	u32 half_1, half_2;
 
 	 gDPLoadTileInfo loadInfo[512];
 };
 
 extern gDPInfo gDP;
+
+//#define OLD_LLE
+
+class LLETriangle
+{
+public:
+	void draw(bool _shade, bool _texture, bool _zbuffer, s32 * _pData);
+	void flush(u32 _cmd);
+	static LLETriangle& get();
+
+private:
+	LLETriangle();
+	LLETriangle(LLETriangle&) = delete;
+	void start(u32 _tile);
+
+	gDPTile *m_textureTileOrg[2];
+	f32 m_textureScaleOrg[2];
+	bool m_flushed{ true };
+	u32 m_tile{ 0 };
+};
 
 void gDPSetOtherMode( u32 mode0, u32 mode1 );
 void gDPSetPrimDepth( u16 z, u16 dz );
