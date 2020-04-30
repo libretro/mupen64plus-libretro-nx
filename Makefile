@@ -58,7 +58,7 @@ ifeq (,$(ARCH))
 endif
 
 # Target Dynarec
-WITH_DYNAREC = $(ARCH)
+WITH_DYNAREC ?= $(ARCH)
 
 PIC = 1
 ifeq ($(ARCH), $(filter $(ARCH), i386 i686))
