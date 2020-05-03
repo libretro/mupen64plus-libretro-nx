@@ -12,3 +12,5 @@ asm_defines_gas.h
 .vscode/ipch/*
 .vscode/c_cpp_properties.json
 linker.list
+.kdev4
+*.kdev4
