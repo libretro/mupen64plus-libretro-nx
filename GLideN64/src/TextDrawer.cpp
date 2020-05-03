@@ -185,10 +185,6 @@ void TextDrawer::destroy()
 {
 	m_atlas.reset();
 	m_program.reset();
-	FT_Done_Face(g_face);
-	g_face = NULL;
-	FT_Done_FreeType(g_ft);
-	g_ft = NULL;
 }
 
 /**
