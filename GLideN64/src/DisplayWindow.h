@@ -1,13 +1,7 @@
 #pragma once
 #include "Types.h"
 #include "GraphicsDrawer.h"
-#include "VI.h"
 
-extern uint32_t retro_screen_width;
-extern uint32_t retro_screen_height;
-extern uint32_t max_retro_screen_width;
-extern uint32_t max_retro_screen_height;
-extern uint32_t EnableNativeResFactor;
 class DisplayWindow
 {
 public:
@@ -34,10 +28,10 @@ public:
 	f32 getScaleY() const { return m_scaleY; }
 	f32 getAdjustScale() const { return m_adjustScale; }
 	u32 getBuffersSwapCount() const { return m_buffersSwapCount; }
-	u32 getWidth() const { return retro_screen_width; }
-	u32 getHeight() const { return retro_screen_height; }
-	u32 getScreenWidth() const { return max_retro_screen_width; }
-	u32 getScreenHeight() const { return max_retro_screen_height; }
+	u32 getWidth() const { return m_width; }
+	u32 getHeight() const { return m_height; }
+	u32 getScreenWidth() const { return m_screenWidth; }
+	u32 getScreenHeight() const { return m_screenHeight; }
 	u32 getHeightOffset() const { return m_heightOffset; }
 	bool isFullscreen() const { return m_bFullscreen; }
 	bool isAdjustScreen() const { return m_bAdjustScreen; }
