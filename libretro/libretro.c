@@ -249,10 +249,10 @@ static void setup_variables(void)
             "RDP Mode; " OPTION_ENTRY_RDP_GLIDEN64 OPTION_ENTRY_RDP_ANGRYLION },
         { CORE_NAME "-rsp-plugin",
             "RSP Mode; " OPTION_ENTRY_RSP_HLE OPTION_ENTRY_RSP_PARALLEL OPTION_ENTRY_RSP_CXD4 },
-        { CORE_NAME "-43screensize",
-            "(GLN64) 4:3 Resolution; 640x480|320x240|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
-        { CORE_NAME "-169screensize",
-            "(GLN64) 16:9 Resolution; 960x540|640x360|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
+        { CORE_NAME "-43resfactor",
+            "(GLN64) 4:3 ResFactor; 1|2|3|4" },
+        { CORE_NAME "-169resfactor",
+            "(GLN64) 16:9 Resolution; 1|2|3|4" },
         { CORE_NAME "-aspect",
             "(GLN64) Aspect Ratio; 4:3|16:9|16:9 adjusted" },
         { CORE_NAME "-BilinearMode",
@@ -1086,26 +1086,14 @@ static void update_variables(bool startup)
           }
        }
 
-       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
+       var.key = (AspectRatio == 1 ? CORE_NAME "-43resfactor" : CORE_NAME "-169resfactor");
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
-
-          // Sanity check... not optimal since we will render at a higher res, but otherwise
-          // GLideN64 might blit a bigger image onto a smaller framebuffer
-          // This is a recent regression.
-          if((retro_screen_width == 320 && retro_screen_height == 240) ||
-             (retro_screen_width == 640 && retro_screen_height == 360))
-          {
-            EnableNativeResFactor = 1; // Force factor == 1
-          }
-
-        // Save active configuration as max value
-        max_retro_screen_width = retro_screen_width;
-        max_retro_screen_height = retro_screen_height;
-
-        EnableNativeResFactor = 1;
+            sscanf(var.value, "%d", &EnableNativeResFactor);
+            // Save active configuration as max value
+            max_retro_screen_width = retro_screen_width;
+            max_retro_screen_height = retro_screen_height;
        }
 
        // If we use Angrylion, we force 640x480
