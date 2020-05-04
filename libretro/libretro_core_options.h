@@ -593,7 +593,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-MaxTxCacheSize",
         "Max texture cache size",
-        "(GLN64) Set Max texture cache size (in elements). Reduce it if you experiment black textures leading to a crash.",
+        "(GLN64) Set Max texture cache size (in elements). Reduce it if you experience black textures leading to a crash.",
         {
             {"1500", NULL},
             {"4000", NULL},
