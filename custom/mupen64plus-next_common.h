@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Mupen64plus-Next - mupen64plus-next_common.h                          *
- *   Copyright (C) 2020 M4xw <m4x@m4xw.net                                 *
+ *   Copyright (C) 2020 M4xw <m4x@m4xw.net>                                *
  *   Copyright (C) 2020 Daniel De Matteis                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
