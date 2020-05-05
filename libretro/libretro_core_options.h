@@ -64,40 +64,43 @@ struct retro_core_option_definition option_defs_us[] = {
         "CPU Core",
         "Select the R4300 CPU Backend, use Interpreter for best compability",
         {
-            {"dynamic_recompiler", "Dynarec"},
-            {"cached_interpreter", "IR Interpreter"},
             {"pure_interpreter", "Pure Interpreter"},
+            {"cached_interpreter", "IR Interpreter"},
+            {"dynamic_recompiler", "Dynarec"},
             {NULL, NULL},
         },
+        "dynamic_recompiler"
     },
     {
         CORE_NAME "-rdp-plugin",
         "RDP Plugin",
         "Select a RDP Plugin, use Angrylion (if available) for best compability, GLideN64 for Performance",
         {
-            {"gliden64", "GLideN64"},
             {"angrylion", "Angrylion"},
+            {"gliden64", "GLideN64"},
             {NULL, NULL},
         },
+        "gliden64"
     },
     {
         CORE_NAME "-rsp-plugin",
         "RSP Plugin",
         "Select a RSP Plugin, use HLE for best performance, paraLLEl for best LLE Performance and CXD4 as LLE fallback",
         {
-            {"hle", NULL},
-            {"parallel", NULL},
             {"cxd4", NULL},
+            {"parallel", NULL},
+            {"hle", NULL},
             {NULL, NULL},
         },
+        "hle"
     },
     {
         CORE_NAME "-43screensize",
         "4:3 Resolution",
-        "(GLN64) Select Render Viewport dimensions (4:3)",
+        "(GLN64) Select Render Viewport dimensions (4:3).",
         {
-            {"640x480", NULL},
             {"320x240", NULL},
+            {"640x480", NULL},
             {"960x720", NULL},
             {"1280x960", NULL},
             {"1440x1080", NULL},
@@ -111,14 +114,15 @@ struct retro_core_option_definition option_defs_us[] = {
             {"3840x2880", NULL},
             {NULL, NULL},
         },
+        "640x480"
     },
     {
         CORE_NAME "-169screensize",
         "16:9 Resolution",
-        "(GLN64) Select Render Viewport dimensions (16:9)",
+        "(GLN64) Select Render Viewport dimensions (16:9).",
         {
-            {"960x540", NULL},
             {"640x360", NULL},
+            {"960x540", NULL},
             {"1280x720", NULL},
             {"1920x1080", NULL},
             {"2560x1440", NULL},
@@ -127,32 +131,35 @@ struct retro_core_option_definition option_defs_us[] = {
             {"7680x4320", NULL},
             {NULL, NULL},
         },
+        "960x540"
     },
     {
         CORE_NAME "-aspect",
         "Aspect Ratio",
-        "(GLN64) Select a aspect ratio, 16:9 adjusted means essentially Widescreen hacks",
+        "(GLN64) Select the aspect ratio, 16:9 adjusted means essentially Widescreen hacks.",
         {
             {"4:3", NULL},
             {"16:9", NULL},
             {"16:9 adjusted", NULL},
             {NULL, NULL},
         },
+        "4:3"
     },
     {
         CORE_NAME "-BilinearMode",
         "Bilinear filtering mode",
-        "(GLN64) Select a Bilinear Filter",
+        "(GLN64) Select a Bilinear filtering method, 3point is the original system specific way.",
         {
-            {"standard", NULL},
             {"3point", NULL},
+            {"standard", NULL},
             {NULL, NULL},
         },
+        "standard"
     },
     {
         CORE_NAME "-MultiSampling",
         "MSAA level",
-        "(GLN64) Enable/Disable MultiSampling (0 = disabled)",
+        "(GLN64) Anti-Aliasing level (0 = disabled).",
         {
             {"0", NULL},
             {"2", NULL},
@@ -161,110 +168,121 @@ struct retro_core_option_definition option_defs_us[] = {
             {"16", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-FXAA",
         "FXAA",
-        "(GLN64) Enable/Disable Fast Approximate Anti-Aliasing FXAA (0 = disabled)",
+        "(GLN64) Fast Approximate Anti-Aliasing shader, moderately blur textures (0 = disabled).",
         {
             {"0", NULL},
             {"1", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-NoiseEmulation",
         "Noise Emulation",
-        "(GLN64) Enable Color Noise Emulation (example: SM64 Teleport)",
+        "(GLN64) Enable Color Noise Emulation (example: SM64 Teleport).",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableFBEmulation",
         "Framebuffer Emulation",
-        "(GLN64) Enable frame and|or depth buffer emulation. Should almost always be enabled",
+        "(GLN64) Frame and|or depth buffer emulation. Disabling it can shorthen input lag for particular games but also break some special effects.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableLODEmulation",
         "LOD Emulation",
-        "(GLN64) Enable or Disable LOD Emulation",
+        "(GLN64) Calculate per-pixel Level Of Details to select texture mip levels and blend them with each other using LOD fraction.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableCopyColorToRDRAM",
         "Color buffer to RDRAM",
-        "(GLN64) Enable color buffer copy to RDRAM (Off will trade compatibility for Performance)",
+        "(GLN64) Color buffer copy to RDRAM (Off will trade compatibility for Performance).",
         {
+            {"Off", NULL},
             {"Async", NULL},
             {"Sync", NULL},
-            {"Off", NULL},
             {NULL, NULL},
         },
+        "Async"
     },
     {
         CORE_NAME "-EnableCopyDepthToRDRAM",
         "Depth buffer to RDRAM",
-        "(GLN64) Enable depth buffer copy to RDRAM (Off will trade compatibility for Performance)",
+        "(GLN64) Depth buffer copy to RDRAM (Off will trade compatibility for Performance).",
         {
+            {"Off", NULL},
             {"Software", NULL},
             {"FromMem", NULL},
-            {"Off", NULL},
             {NULL, NULL},
         },
+        "Software"
     },
     {
         CORE_NAME "-BackgroundMode",
         "Background Mode",
-        "(GLN64)  Render backgrounds mode (HLE only). One piece (fast), Stripped (precise)",
+        "(GLN64) Render backgrounds mode (HLE only). One piece (fast), Stripped (precise)",
         {
-            {"OnePiece", NULL},
             {"Stripped", NULL},
+            {"OnePiece", NULL},
             {NULL, NULL},
         },
+        "OnePiece"
     },
     {
         CORE_NAME "-EnableHWLighting",
         "Hardware per-pixel lighting",
-        "(GLN64) Enable hardware per-pixel lighting",
+        "(GLN64) Standard per-vertex lighting when disabled. Slightly different rendering.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-CorrectTexrectCoords",
         "Continuous texrect coords",
-        "(GLN64) Make texrect coordinates continuous to avoid black lines between them",
+        "(GLN64) Make texrect coordinates continuous to avoid black lines between them.",
         {
             {"Off", NULL},
             {"Auto", NULL},
             {"Force", NULL},
             {NULL, NULL},
         },
+        "Off"
     },
     {
         CORE_NAME "-EnableNativeResTexrects",
         "Native res. 2D texrects",
-        "(GLN64) Render 2D texrects in native resolution to fix misalignment between parts of 2D image",
+        "(GLN64) Render 2D texrects in native resolution to fix misalignment between parts of 2D image (example: Mario Kart driver selection portraits).",
         {
             {"Disabled", NULL},
-            {"Optimized", NULL},
             {"Unoptimized", NULL},
+            {"Optimized", NULL},
             {NULL, NULL},
         },
+        "Disabled"
     },
     {
         CORE_NAME "-EnableLegacyBlending",
@@ -275,61 +293,67 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-EnableFragmentDepthWrite",
         "GPU shader depth write",
         "(GLN64) Enable writing of fragment depth. Some mobile GPUs do not support it, thus it's optional. Leave enabled.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableN64DepthCompare",
         "N64 Depth Compare",
-        "(GLN64) Enable N64 depth compare instead of OpenGL standard one. Experimental",
+        "(GLN64) Enable N64 depth compare instead of OpenGL standard one. Experimental.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-EnableShadersStorage",
         "Cache GPU Shaders",
-        "(GLN64) Use persistent storage for compiled shaders",
+        "(GLN64) Use persistent storage for compiled shaders.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableTextureCache",
         "Cache Textures",
-        "(GLN64) Save texture cache to hard disk",
+        "(GLN64) Save texture cache to hard disk.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-EnableOverscan",
         "Overscan",
-        "(GLN64) Enable resulted image crop by Oversca",
+        "(GLN64) Crop black borders from the overscan region around the screen.",
         {
-            {"Enabled", NULL},
             {"Disabled", NULL},
+            {"Enabled", NULL},
             {NULL, NULL},
         },
+        "Enabled"
     },
     {
         CORE_NAME "-OverscanTop",
         "Overscan Offset (Top)",
-        "(GLN64) Overscan Top Offset",
+        "(GLN64) Overscan Top Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -384,11 +408,12 @@ struct retro_core_option_definition option_defs_us[] = {
             {"50", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-OverscanLeft",
         "Overscan Offset (Left)",
-        "(GLN64) Overscan Left Offset",
+        "(GLN64) Overscan Left Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -443,11 +468,12 @@ struct retro_core_option_definition option_defs_us[] = {
             {"50", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-OverscanRight",
         "Overscan Offset (Right)",
-        "(GLN64) Overscan Right Offset",
+        "(GLN64) Overscan Right Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -502,11 +528,12 @@ struct retro_core_option_definition option_defs_us[] = {
             {"50", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-OverscanBottom",
         "Overscan Offset (Bottom)",
-        "(GLN64) Overscan Bottom Offset",
+        "(GLN64) Overscan Bottom Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -561,22 +588,24 @@ struct retro_core_option_definition option_defs_us[] = {
             {"50", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {
         CORE_NAME "-MaxTxCacheSize",
         "Max texture cache size",
-        "(GLN64) Set Max texture cache size (in elements). Prevents instability if black squared pop in",
+        "(GLN64) Set Max texture cache size (in elements). Reduce it if you experience black textures leading to a crash.",
         {
-            {"8000", NULL},
-            {"4000", NULL},
             {"1500", NULL},
+            {"4000", NULL},
+            {"8000", NULL},
             {NULL, NULL},
         },
+        "8000"
     },
     {
         CORE_NAME "-txFilterMode",
         "Texture filter",
-        "(GLN64) Select Texture Filtering mode",
+        "(GLN64) Select Texture Filtering mode.",
         {
             {"None", NULL},
             {"Smooth filtering 1", NULL},
@@ -587,11 +616,12 @@ struct retro_core_option_definition option_defs_us[] = {
             {"Sharp filtering 2", NULL},
             {NULL, NULL},
         },
+        "None"
     },
     {
         CORE_NAME "-txEnhancementMode",
         "Texture Enhancement",
-        "(GLN64) Enable Texture enhancements (As-Is will just cache)",
+        "(GLN64) Various Texture Filters ('As-Is' will just cache).",
         {
             {"None", NULL},
             {"As Is", NULL},
@@ -609,71 +639,78 @@ struct retro_core_option_definition option_defs_us[] = {
             {"6xBRZ", NULL},
             {NULL, NULL},
         },
+        "None"
     },
     {
         CORE_NAME "-txFilterIgnoreBG",
         "Don't filter background textures",
-        "(GLN64) Ignore filtering for Background Textures",
+        "(GLN64) Ignore filtering for Background Textures.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-txHiresEnable",
         "Use High-Res textures",
-        "(GLN64) Enable High-Res Texture packs",
+        "(GLN64) Enable High-Res Texture packs if available.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-txCacheCompression",
         "Use High-Res Texture Cache Compression",
-        "(GLN64) Compress created texture caches",
+        "(GLN64) Compress created texture caches.",
         {
-            {"True", NULL},
             {"False", NULL},
+            {"True", NULL},
             {NULL, NULL},
         },
+        "True"
     },
     {
         CORE_NAME "-txHiresFullAlphaChannel",
         "Use High-Res Full Alpha Channel",
-        "(GLN64) This should be enabled unless it's a old RICE Texture pack",
+        "(GLN64) This should be enabled unless it's a old RICE Texture pack.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-EnableEnhancedTextureStorage",
         "Use enhanced Texture Storage",
-        "(GLN64) Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds",
+        "(GLN64) Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-EnableEnhancedHighResStorage",
         "Use enhanced Hi-Res Storage",
-        "(GLN64) Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds",
+        "(GLN64) Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-angrylion-vioverlay",
         "VI Overlay",
-        "(AL) Select VI Overlay filtering",
+        "(AL) Select VI Overlay filtering. 'Filtered' is the original system rendering.",
         {
             {"Filtered", NULL},
             {"AA+Blur", NULL},
@@ -684,22 +721,24 @@ struct retro_core_option_definition option_defs_us[] = {
             {"Coverage", NULL},
             {NULL, NULL},
         },
+        "Filtered"
     },
     {
         CORE_NAME "-angrylion-sync",
         "Thread sync level",
-        "(AL) Select Sync level (trades accuracy for performance)",
+        "(AL) Select Sync level (trades accuracy for performance).",
         {
             {"Low", NULL},
             {"Medium", NULL},
             {"High", NULL},
             {NULL, NULL},
         },
+        "Low"
     },
     {
         CORE_NAME "-angrylion-multithread",
         "Multi-threading",
-        "(AL) Enable multithread, it's prefered to have it match your Physical CPU Core count",
+        "(AL) Default 'all threads' is prefered to have it match your Physical CPU Core count. '1' should behave as the original angrylion, possibly fixing some bugs.",
         {
             {"all threads", NULL},
             {"1", NULL},
@@ -768,26 +807,29 @@ struct retro_core_option_definition option_defs_us[] = {
             {"75", NULL},
             {NULL, NULL},
         },
+        "all threads"
     },
     {
         CORE_NAME "-angrylion-overscan",
         "Hide overscan",
-        "(AL) Hide overscan borders",
+        "(AL) Hide overscan borders.",
         {
             {"disabled", NULL},
             {"enabled", NULL},
             {NULL, NULL},
         },
+        "disabled"
     },
     {
         CORE_NAME "-FrameDuping",
         "Frame Duplication",
-        "Enable Frame duplication to improve smoothing on low-end. It's not frameskip",
+        "Enable Frame duplication to improve smoothing on low-end. Different from frameskip.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-Framerate",
@@ -798,38 +840,51 @@ struct retro_core_option_definition option_defs_us[] = {
             {"Fullspeed", NULL},
             {NULL, NULL},
         },
+        "Original"
     },
     {
         CORE_NAME "-virefresh",
         "VI Refresh (Overclock)",
-        "Select a VI Refresh clock, Auto does not impact behaviour, other values override CountPerScanline",
+        "Select a VI Refresh clock, Auto does not impact behaviour, other values override CountPerScanline.",
         {
             {"Auto", NULL},
             {"1500", NULL},
             {"2200", NULL},
             {NULL, NULL},
         },
+        "Auto"
     },
     {
         CORE_NAME "-astick-deadzone",
         "Analog Deadzone (percent)",
-        "Select a Analog Deadzone",
+        "Size of the non responsive area around an analog stick.",
         {
+            {"0", NULL},
+            {"5", NULL},
+            {"10", NULL},
             {"15", NULL},
             {"20", NULL},
             {"25", NULL},
             {"30", NULL},
-            {"0", NULL},
-            {"5", NULL},
-            {"10", NULL},
             {NULL, NULL},
         },
+        "15"
     },
     {
         CORE_NAME "-astick-sensitivity",
         "Analog Sensitivity (percent)",
-        "Select a Analog Sensitivity",
+        "Adjust how far the stick needs to be moved to reach its max value.",
         {
+            {"50", NULL},
+            {"55", NULL},
+            {"60", NULL},
+            {"65", NULL},
+            {"70", NULL},
+            {"75", NULL},
+            {"80", NULL},
+            {"85", NULL},
+            {"90", NULL},
+            {"95", NULL},
             {"100", NULL},
             {"105", NULL},
             {"110", NULL},
@@ -841,23 +896,14 @@ struct retro_core_option_definition option_defs_us[] = {
             {"140", NULL},
             {"145", NULL},
             {"150", NULL},
-            {"50", NULL},
-            {"55", NULL},
-            {"60", NULL},
-            {"65", NULL},
-            {"70", NULL},
-            {"75", NULL},
-            {"80", NULL},
-            {"85", NULL},
-            {"90", NULL},
-            {"95", NULL},
             {NULL, NULL},
         },
+        "100"
     },
     {
         CORE_NAME "-r-cbutton",
         "Right C Button",
-        "Select Right C Button mapping",
+        "Select Right C Button mapping.",
         {
             {"C1", NULL},
             {"C2", NULL},
@@ -865,106 +911,116 @@ struct retro_core_option_definition option_defs_us[] = {
             {"C4", NULL},
             {NULL, NULL},
         },
+        "C1"
     },
     {
         CORE_NAME "-l-cbutton",
         "Left C Button",
-        "Select Left C Button mapping",
+        "Select Left C Button mapping.",
         {
+            {"C1", NULL},
             {"C2", NULL},
             {"C3", NULL},
             {"C4", NULL},
-            {"C1", NULL},
             {NULL, NULL},
         },
+        "C2"
     },
     {
         CORE_NAME "-d-cbutton",
         "Down C Button",
-        "Select Down C Button mapping",
+        "Select Down C Button mapping.",
         {
-            {"C3", NULL},
-            {"C4", NULL},
             {"C1", NULL},
             {"C2", NULL},
+            {"C3", NULL},
+            {"C4", NULL},
             {NULL, NULL},
         },
+        "C3"
     },
     {
         CORE_NAME "-u-cbutton",
         "Up C Button",
-        "Select Up C Button mapping",
+        "Select Up C Button mapping.",
         {
-            {"C4", NULL},
             {"C1", NULL},
             {"C2", NULL},
             {"C3", NULL},
+            {"C4", NULL},
             {NULL, NULL},
         },
+        "C4"
     },
     {
         CORE_NAME "-alt-map",
         "Independent C-button Controls",
-        "Use a alternate control scheme, useful for some 3rdparty controllers",
+        "Use an alternate control scheme, useful for some 3rdparty controllers.",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-ForceDisableExtraMem",
         "Disable Expansion Pak",
-        "Force disable Expansion Pak (this might improve performance for some games at cost of fidelity and will break games that require it)",
+        "Force disable Expansion Pak (might improve performance for some games while reducing emulation accuracy, will break games that require it).",
         {
             {"False", NULL},
             {"True", NULL},
             {NULL, NULL},
         },
+        "False"
     },
     {
         CORE_NAME "-pak1",
         "Player 1 Pak",
-        "Select Payer 1 Controller Pak",
+        "Select Payer 1 Controller Pak.",
         {
+            {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
-            {"none", NULL},
             {NULL, NULL},
         },
+        "memory"
     },
     {
         CORE_NAME "-pak2",
         "Player 2 Pak",
-        "Select Payer 2 Controller Pak",
+        "Select Payer 2 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
             {NULL, NULL},
         },
+        "none"
     },
     {
         CORE_NAME "-pak3",
         "Player 3 Pak",
-        "Select Payer 3 Controller Pak",
+        "Select Payer 3 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
             {NULL, NULL},
         },
+        "none"
     },
     {
         CORE_NAME "-pak4",
         "Player 4 Pak",
-        "Select Payer 4 Controller Pak",
+        "Select Payer 4 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
             {NULL, NULL},
         },
+        "none"
     },
     {
         CORE_NAME "-CountPerOp",
@@ -977,6 +1033,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"3", NULL},
             {NULL, NULL},
         },
+        "0"
     },
     {NULL, NULL, NULL, {{0}}, NULL},
 };
