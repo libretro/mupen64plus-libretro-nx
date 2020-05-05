@@ -59,7 +59,6 @@ extern uint32_t EnableShadersStorage;
 extern uint32_t EnableTextureCache;
 extern uint32_t EnableFBEmulation;
 extern uint32_t EnableFrameDuping;
-extern uint32_t EnableNoiseEmulation;
 extern uint32_t EnableLODEmulation;
 extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;

@@ -122,7 +122,6 @@ extern "C" void Config_LoadConfig()
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
-	config.generalEmulation.enableNoise = EnableNoiseEmulation;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;

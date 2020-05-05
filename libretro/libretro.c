@@ -184,7 +184,6 @@ uint32_t EnableShadersStorage = 0;
 uint32_t EnableTextureCache = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
-uint32_t EnableNoiseEmulation = 0;
 uint32_t EnableLODEmulation = 0;
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
@@ -258,9 +257,6 @@ static void setup_variables(void)
 #endif
         { CORE_NAME "-FXAA",
             "(GLN64) FXAA; 0|1" },
-
-        { CORE_NAME "-NoiseEmulation",
-            "(GLN64) Noise Emulation; True|False" },
 
         { CORE_NAME "-EnableFBEmulation",
 #ifdef VC
@@ -824,13 +820,6 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           CountPerScanlineOverride = !strcmp(var.value, "Auto") ? 0 : atoi(var.value);
-       }
-
-       var.key = CORE_NAME "-NoiseEmulation";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          EnableNoiseEmulation = !strcmp(var.value, "False") ? 0 : 1;
        }
 
        var.key = CORE_NAME "-EnableLODEmulation";
