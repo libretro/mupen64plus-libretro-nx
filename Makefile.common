@@ -149,9 +149,6 @@ SOURCES_C += \
 	$(CORE_DIR)/subprojects/minizip/ioapi.c
 COREFLAGS += -I$(CORE_DIR)/subprojects/minizip
 
-# xxHash
-COREFLAGS += -I$(CORE_DIR)/subprojects/xxhash
-
 ifneq (,$(findstring win,$(platform)))
 	SOURCES_C += $(VIDEODIR_GLIDEN64)/src/osal/osal_files_win32.c
 else
