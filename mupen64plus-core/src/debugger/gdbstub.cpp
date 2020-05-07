@@ -894,9 +894,9 @@ static void WriteMemory() {
 
 /// Tell the CPU that it should perform a single step.
 static void Step() {
-    if (command_length > 1) {
+    /*if (command_length > 1) {
         RegWrite(PC_REGISTER, GdbHexToLong(command_buffer + 1));
-    }
+    }*/
     (*DebugStep)();
 }
 
@@ -1101,8 +1101,21 @@ void HandlePacket() {
         case 'T':
             HandleThreadAlive();
             break;
-        //case 'v':
-        //    SendReply("vCont;s;c");
+        case 'v':
+            if(!strcmp((char*)command_buffer, "vCont?"))
+                SendReply("vCont;s;c");
+            else
+            {
+                if(!strcmp((char*)command_buffer, "vCont;s:1"))
+                {
+                    Step();
+                }else if(strstr((char*)command_buffer, "vCont;c"))
+                {
+                    Continue();
+                }
+                return;
+            }
+            
         default:
             SendReply("");
             break;
