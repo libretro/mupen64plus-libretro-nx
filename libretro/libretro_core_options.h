@@ -36,28 +36,6 @@ extern "C"
 #define CORE_NAME "mupen64plus"
 #endif
 
-// Option entries
-#define OPTION_ENTRY_RDP_GLIDEN64 "gliden64"
-#define OPTION_ENTRY_RSP_HLE "hle"
-
-#ifdef HAVE_THR_AL
-#define OPTION_ENTRY_RDP_ANGRYLION "|angrylion"
-#else
-#define OPTION_ENTRY_RDP_ANGRYLION ""
-#endif // HAVE_THR_AL
-
-#ifdef HAVE_PARALLEL_RSP
-#define OPTION_ENTRY_RSP_PARALLEL "|parallel"
-#else
-#define OPTION_ENTRY_RSP_PARALLEL ""
-#endif // HAVE_PARALLEL_RSP
-
-#ifdef HAVE_LLE
-#define OPTION_ENTRY_RSP_CXD4 "|cxd4"
-#else
-#define OPTION_ENTRY_RSP_CXD4 ""
-#endif // HAVE_LLE
-
 struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-cpucore",
@@ -66,17 +44,25 @@ struct retro_core_option_definition option_defs_us[] = {
         {
             {"pure_interpreter", "Pure Interpreter"},
             {"cached_interpreter", "IR Interpreter"},
+#ifdef DYNAREC
             {"dynamic_recompiler", "Dynarec"},
+#endif
             {NULL, NULL},
         },
+#ifdef DYNAREC
         "dynamic_recompiler"
+#else
+        "cached_interpreter"
+#endif
     },
     {
         CORE_NAME "-rdp-plugin",
         "RDP Plugin",
         "Select a RDP Plugin, use Angrylion (if available) for best compability, GLideN64 for Performance",
         {
+#ifdef HAVE_THR_AL
             {"angrylion", "Angrylion"},
+#endif
             {"gliden64", "GLideN64"},
             {NULL, NULL},
         },
@@ -87,8 +73,12 @@ struct retro_core_option_definition option_defs_us[] = {
         "RSP Plugin",
         "Select a RSP Plugin, use HLE for best performance, paraLLEl for best LLE Performance and CXD4 as LLE fallback",
         {
+#ifdef HAVE_LLE
             {"cxd4", NULL},
+#endif
+#ifdef HAVE_PARALLEL_RSP
             {"parallel", NULL},
+#endif
             {"hle", NULL},
             {NULL, NULL},
         },
@@ -156,6 +146,7 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "standard"
     },
+#ifndef HAVE_OPENGLES2
     {
         CORE_NAME "-MultiSampling",
         "MSAA level",
@@ -170,6 +161,7 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "0"
     },
+#endif
     {
         CORE_NAME "-FXAA",
         "FXAA",
@@ -182,17 +174,6 @@ struct retro_core_option_definition option_defs_us[] = {
         "0"
     },
     {
-        CORE_NAME "-NoiseEmulation",
-        "Noise Emulation",
-        "(GLN64) Enable Color Noise Emulation (example: SM64 Teleport).",
-        {
-            {"False", NULL},
-            {"True", NULL},
-            {NULL, NULL},
-        },
-        "True"
-    },
-    {
         CORE_NAME "-EnableFBEmulation",
         "Framebuffer Emulation",
         "(GLN64) Frame and|or depth buffer emulation. Disabling it can shorthen input lag for particular games but also break some special effects.",
@@ -201,8 +182,13 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
+#ifdef VC
         "True"
+#else
+        "False"
+#endif
     },
+
     {
         CORE_NAME "-EnableLODEmulation",
         "LOD Emulation",
@@ -224,7 +210,11 @@ struct retro_core_option_definition option_defs_us[] = {
             {"Sync", NULL},
             {NULL, NULL},
         },
+#ifndef HAVE_OPENGLES
         "Async"
+#else
+        "Off"
+#endif
     },
     {
         CORE_NAME "-EnableCopyDepthToRDRAM",
@@ -293,7 +283,11 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
+#ifdef HAVE_OPENGLES
+        "True"
+#else
         "False"
+#endif
     },
     {
         CORE_NAME "-EnableFragmentDepthWrite",
@@ -304,8 +298,13 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
+#ifdef HAVE_OPENGLES
+        "False
+#else
         "True"
+#endif
     },
+#if !defined(VC) && !defined(HAVE_OPENGLES)
     {
         CORE_NAME "-EnableN64DepthCompare",
         "N64 Depth Compare",
@@ -328,6 +327,7 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "True"
     },
+#endif
     {
         CORE_NAME "-EnableTextureCache",
         "Cache Textures",
@@ -600,7 +600,13 @@ struct retro_core_option_definition option_defs_us[] = {
             {"8000", NULL},
             {NULL, NULL},
         },
+#if defined(VC)
+        "1500"
+#elif defined(HAVE_LIBNX)
+        "4000"
+#else
         "8000"
+#endif
     },
     {
         CORE_NAME "-txFilterMode",
@@ -707,6 +713,7 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "False"
     },
+#ifdef HAVE_THR_AL
     {
         CORE_NAME "-angrylion-vioverlay",
         "VI Overlay",
@@ -820,6 +827,7 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "disabled"
     },
+#endif
     {
         CORE_NAME "-FrameDuping",
         "Frame Duplication",
@@ -829,7 +837,11 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
+#ifdef HAVE_LIBNX
+        "True"
+#else
         "False"
+#endif
     },
     {
         CORE_NAME "-Framerate",
