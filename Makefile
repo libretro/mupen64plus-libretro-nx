@@ -1,4 +1,5 @@
 DEBUG = 0
+CORE_DEBUG ?= 0
 FORCE_GLES ?= 0
 FORCE_GLES3 ?= 0
 LLE ?= 0
@@ -540,6 +541,11 @@ endif
 
 # Use -fcommon
 CPUOPTS += -fcommon
+
+ifeq ($(CORE_DEBUG), 1)
+   COREFLAGS += -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
+   LDFLAGS += -mconsole -lws2_32 -lfmt /mingw32/lib/binutils/libopcodes.a /mingw32/lib/binutils/libbfd.a -lintl -lz /mingw32/lib/binutils/libiberty.a
+endif
 
 # set C/C++ standard to use
 CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS -Wno-discarded-qualifiers

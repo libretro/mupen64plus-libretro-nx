@@ -20,8 +20,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <SDL.h>
-
+#include <semaphore.h>
 #include "api/callbacks.h"
 #include "api/debugger.h"
 #include "dbg_breakpoints.h"
@@ -35,7 +34,7 @@ int g_DebuggerActive = 0;    // whether the debugger is enabled or not
 m64p_dbg_runstate g_dbg_runstate;
 
 // Holds the number of pending steps the debugger needs to perform.
-static SDL_sem *sem_pending_steps;
+static sem_t *sem_pending_steps;
 
 uint32_t previousPC;
 
@@ -59,12 +58,14 @@ void init_debugger()
 
     init_host_disassembler();
 
-    sem_pending_steps = SDL_CreateSemaphore(0);
+    sem_pending_steps = (sem_t*)malloc(sizeof(sem_t));
+    sem_init(sem_pending_steps, 0, 0);
 }
 
 void destroy_debugger()
 {
-    SDL_DestroySemaphore(sem_pending_steps);
+    sem_destroy(sem_pending_steps);
+    free(sem_pending_steps);
     sem_pending_steps = NULL;
     g_DebuggerActive = 0;
 }
@@ -95,7 +96,7 @@ void update_debugger(uint32_t pc)
     }
     if (g_dbg_runstate == M64P_DBG_RUNSTATE_PAUSED) {
         // The emulation thread is blocked until a step call via the API.
-        SDL_SemWait(sem_pending_steps);
+        sem_wait(sem_pending_steps);
     }
 
     previousPC = pc;
@@ -103,7 +104,7 @@ void update_debugger(uint32_t pc)
 
 void debugger_step()
 {
-    SDL_SemPost(sem_pending_steps);
+    sem_post(sem_pending_steps);
 }
 
 #endif
