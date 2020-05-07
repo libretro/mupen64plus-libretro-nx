@@ -112,43 +112,45 @@ constexpr char target_xml[] =
 <!DOCTYPE target SYSTEM "gdb-target.dtd">
 <target version="1.0">
 	<architecture>mips:4300</architecture>
-	<feature name="org.gnu.gdb.mips.cpu">
-		<reg name="r0" bitsize="64" regnum="0"/>
-		<reg name="r1" bitsize="64"/>
-		<reg name="r2" bitsize="64"/>
-		<reg name="r3" bitsize="64"/>
-		<reg name="r4" bitsize="64"/>
-		<reg name="r5" bitsize="64"/>
-		<reg name="r6" bitsize="64"/>
-		<reg name="r7" bitsize="64"/>
-		<reg name="r8" bitsize="64"/>
-		<reg name="r9" bitsize="64"/>
-		<reg name="r10" bitsize="64"/>
-		<reg name="r11" bitsize="64"/>
-		<reg name="r12" bitsize="64"/>
-		<reg name="r13" bitsize="64"/>
-		<reg name="r14" bitsize="64"/>
-		<reg name="r15" bitsize="64"/>
-		<reg name="r16" bitsize="64"/>
-		<reg name="r17" bitsize="64"/>
-		<reg name="r18" bitsize="64"/>
-		<reg name="r19" bitsize="64"/>
-		<reg name="r20" bitsize="64"/>
-		<reg name="r21" bitsize="64"/>
-		<reg name="r22" bitsize="64"/>
-		<reg name="r23" bitsize="64"/>
-		<reg name="r24" bitsize="64"/>
-		<reg name="r25" bitsize="64"/>
-		<reg name="r26" bitsize="64"/>
-		<reg name="r27" bitsize="64"/>
-		<reg name="r28" bitsize="64"/>
-		<reg name="r29" bitsize="64"/>
-		<reg name="r30" bitsize="64"/>
-		<reg name="r31" bitsize="64"/>
-		<reg name="lo" bitsize="64" regnum="33"/>
-		<reg name="hi" bitsize="64" regnum="34"/>
-		<reg name="pc" bitsize="64" regnum="37"/>
+	<feature name="org.gnu.gdb.mips.cpu" idatitle="General registers">
+	  <reg name="zero" bitsize="64" type="data_ptr" regnum="0"/>
+	  <reg name="at" bitsize="64" type="data_ptr"/>
+	  <reg name="v0" bitsize="64" type="data_ptr"/>
+	  <reg name="v1" bitsize="64" type="data_ptr"/>
+	  <reg name="a0" bitsize="64" type="data_ptr"/>
+	  <reg name="a1" bitsize="64" type="data_ptr"/>
+	  <reg name="a2" bitsize="64" type="data_ptr"/>
+	  <reg name="a3" bitsize="64" type="data_ptr"/>
+	  <reg name="t0" bitsize="64" type="data_ptr"/>
+	  <reg name="t1" bitsize="64" type="data_ptr"/>
+	  <reg name="t2" bitsize="64" type="data_ptr"/>
+	  <reg name="t3" bitsize="64" type="data_ptr"/>
+	  <reg name="t4" bitsize="64" type="data_ptr"/>
+	  <reg name="t5" bitsize="64" type="data_ptr"/>
+	  <reg name="t6" bitsize="64" type="data_ptr"/>
+	  <reg name="t7" bitsize="64" type="data_ptr"/>
+	  <reg name="s0" bitsize="64" type="data_ptr"/>
+	  <reg name="s1" bitsize="64" type="data_ptr"/>
+	  <reg name="s2" bitsize="64" type="data_ptr"/>
+	  <reg name="s3" bitsize="64" type="data_ptr"/>
+	  <reg name="s4" bitsize="64" type="data_ptr"/>
+	  <reg name="s5" bitsize="64" type="data_ptr"/>
+	  <reg name="s6" bitsize="64" type="data_ptr"/>
+	  <reg name="s7" bitsize="64" type="data_ptr"/>
+	  <reg name="t8" bitsize="64" type="data_ptr"/>
+	  <reg name="t9" bitsize="64" type="data_ptr"/>
+	  <reg name="k0" bitsize="64" type="data_ptr"/>
+	  <reg name="k1" bitsize="64" type="data_ptr"/>
+	  <reg name="gp" bitsize="64" type="data_ptr"/>
+	  <reg name="sp" bitsize="64" type="stack_ptr"/>
+	  <reg name="s8" bitsize="64" type="data_ptr"/>
+	  <reg name="ra" bitsize="64" type="data_ptr"/>
+
+	  <reg name="lo" bitsize="64" regnum="33"/>
+	  <reg name="hi" bitsize="64" regnum="34"/>
+	  <reg name="pc" bitsize="64" regnum="37" type="code_ptr"/>
 	</feature>
+
 	<feature name="org.gnu.gdb.mips.fpu">
 		<reg name="f0" bitsize="64" type="ieee_double" regnum="38"/>
 		<reg name="f1" bitsize="64" type="ieee_double"/>
