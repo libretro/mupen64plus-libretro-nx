@@ -40,7 +40,7 @@
 
 /* we must define PACKAGE so that bfd.h (which is included from dis-asm.h) doesn't throw an error */
 #define PACKAGE "mupen64plus-core"
-#include <dis-asm.h>
+#include <binutils/dis-asm.h>
 #include <stdarg.h>
 
 static int  lines_recompiled;

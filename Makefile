@@ -1,4 +1,5 @@
 DEBUG = 0
+CORE_DEBUG ?= 0
 FORCE_GLES ?= 0
 FORCE_GLES3 ?= 0
 LLE ?= 0
@@ -461,14 +462,10 @@ else
       CC = i686-w64-mingw32-gcc
       CXX = i686-w64-mingw32-g++
       WITH_DYNAREC = x86
-      COREFLAGS += -DWIN32
+      COREFLAGS += -DWIN32 -Wl,--enable-stdcall-fixup
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
 
-   HAVE_PARALLEL_RSP = 1
-   HAVE_PARALLEL_RDP = 1
-   HAVE_THR_AL = 1
-   LLE = 1
    COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
 endif
@@ -508,6 +505,11 @@ endif
 
 # Use -fcommon
 CPUOPTS += -fcommon
+
+ifeq ($(CORE_DEBUG), 1)
+   COREFLAGS += -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
+   LDFLAGS += -mconsole -lws2_32 -lfmt /mingw32/lib/binutils/libopcodes.a /mingw32/lib/binutils/libbfd.a -lintl -lz /mingw32/lib/binutils/libiberty.a
+endif
 
 # set C/C++ standard to use
 CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS
