@@ -152,10 +152,10 @@ void cp0_update_count(struct r4300_core* r4300)
    if (r4300->delay_slot)
      CoreCompareCallback();
 #endif
-/*#ifdef DBG
+#ifdef DBG
    if (g_DebuggerActive && !r4300->delay_slot) update_debugger(*r4300_pc(r4300));
 #endif
-*/
+
 }
 
 static void exception_epilog(struct r4300_core* r4300)
