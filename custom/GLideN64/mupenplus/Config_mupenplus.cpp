@@ -93,7 +93,17 @@ void LoadCustomSettings(bool internal)
 					else if (!strcmp(l.name, "frameBufferEmulation\\fbInfoDisabled"))
 						config.frameBufferEmulation.fbInfoDisabled = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\N64DepthCompare"))
-						config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
+					{
+						// We only allow N64DepthCompare if its actually on in the settings
+						// I know this is a bit counter productive
+						// Maybe needs a "Auto" mode in the future, since it soon has a "fast" mode too.
+						// Currently its often not supported anyway or causes crippling issues otherwise
+						if(EnableN64DepthCompare)
+						{
+							// Set to config val, ignoring the actual pre-set, see above.
+							config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
+						}
+					}
 					else if (!strcmp(l.name, "frameBufferEmulation\\bufferSwapMode"))
 						config.frameBufferEmulation.bufferSwapMode = atoi(l.value);
 					else if (!strcmp(l.name, "texture\\bilinearMode"))
