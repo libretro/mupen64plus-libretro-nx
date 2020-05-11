@@ -725,17 +725,17 @@ void GraphicsDrawer::_updateStates(DrawingState _drawingState) const
 	}
 }
 
-void GraphicsDrawer::_prepareDrawTriangle()
+void GraphicsDrawer::_prepareDrawTriangle(DrawingState _drawingState)
 {
 	m_texrectDrawer.draw();
 
 	if ((m_modifyVertices & MODIFY_XY) != 0)
 		gSP.changed &= ~CHANGED_VIEWPORT;
 
-	if (gSP.changed || gDP.changed)
-		_updateStates(DrawingState::Triangle);
+	m_drawingState = _drawingState;
 
-	m_drawingState = DrawingState::Triangle;
+	if (gSP.changed || gDP.changed)
+		_updateStates(_drawingState);
 
 	bool bFlatColors = false;
 	if (!RSP.LLE && (gSP.geometryMode & G_LIGHTING) == 0) {
@@ -762,7 +762,7 @@ void GraphicsDrawer::drawTriangles()
 		return;
 	}
 
-	_prepareDrawTriangle();
+	_prepareDrawTriangle(DrawingState::Triangle);
 
 	Context::DrawTriangleParameters triParams;
 	triParams.mode = drawmode::TRIANGLES;
@@ -813,7 +813,8 @@ void GraphicsDrawer::drawScreenSpaceTriangle(u32 _numVtx, graphics::DrawModePara
 	m_modifyVertices = MODIFY_ALL;
 
 	gSP.changed &= ~CHANGED_GEOMETRYMODE; // Don't update cull mode
-	_prepareDrawTriangle();
+	_prepareDrawTriangle(DrawingState::ScreenSpaceTriangle);
+	gfxContext.enable(enable::CULL_FACE, false);
 
 	Context::DrawTriangleParameters triParams;
 	triParams.mode = _mode;
@@ -844,7 +845,7 @@ void GraphicsDrawer::drawDMATriangles(u32 _numVtx)
 {
 	if (_numVtx == 0 || !_canDraw())
 		return;
-	_prepareDrawTriangle();
+	_prepareDrawTriangle(DrawingState::Triangle);
 
 
 	Context::DrawTriangleParameters triParams;
@@ -1339,10 +1340,19 @@ void GraphicsDrawer::drawTexturedRect(const TexturedRectParams & _params)
 				}
 			}
 
-			texST[t].s0 *= cache.current[t]->scaleS;
-			texST[t].t0 *= cache.current[t]->scaleT;
-			texST[t].s1 *= cache.current[t]->scaleS;
-			texST[t].t1 *= cache.current[t]->scaleT;
+			if (gDP.otherMode.textureFilter != G_TF_POINT && gDP.otherMode.cycleType != G_CYC_COPY) {
+				texST[t].s0 -= 0.5f;
+				texST[t].t0 -= 0.5f;
+				texST[t].s1 -= 0.5f;
+				texST[t].t1 -= 0.5f;
+			}
+
+			texST[t].s0 *= cache.current[t]->hdRatioS;
+			texST[t].t0 *= cache.current[t]->hdRatioT;
+			texST[t].s1 *= cache.current[t]->hdRatioS;
+			texST[t].t1 *= cache.current[t]->hdRatioT;
+
+
 		}
 	}
 
