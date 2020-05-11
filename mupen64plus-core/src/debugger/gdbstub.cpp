@@ -50,9 +50,12 @@ static void debugger_update(unsigned int pc);
 static void debugger_vi(void);
 }
 
-#define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
-#define LOG_DEBUG(...) GDBStub::FormatMsg(M64MSG_VERBOSE, __VA_ARGS__)
-#define LOG_INFO(...) GDBStub::FormatMsg(M64MSG_INFO, __VA_ARGS__)
+#define LOG_ERROR(...)
+//#define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
+#define LOG_DEBUG(...)
+//#define LOG_DEBUG(...) GDBStub::FormatMsg(M64MSG_VERBOSE, __VA_ARGS__)
+#define LOG_INFO(...)
+//#define LOG_INFO(...) GDBStub::FormatMsg(M64MSG_INFO, __VA_ARGS__)
 
 namespace GDBStub {
 namespace {
