@@ -15,8 +15,7 @@
 #include <DisplayWindow.h>
 
 #include <libretro_private.h>
-#include "../../../../../custom/GLideN64/mupenplus/GLideN64_mupenplus.h"
-
+#include <mupen64plus-next_common.h>
 using namespace opengl;
 
 #ifdef __cplusplus
@@ -62,7 +61,7 @@ void DisplayWindowMupen64plus::_setAttributes()
 
 bool DisplayWindowMupen64plus::_start()
 {
-	FunctionWrapper::setThreadedMode(false);
+	FunctionWrapper::setThreadedMode(EnableThreadedRenderer);
 	
 	_setAttributes();
 
@@ -82,14 +81,14 @@ bool DisplayWindowMupen64plus::_start()
 
 void DisplayWindowMupen64plus::_stop()
 {
+    FunctionWrapper::CoreVideo_Quit();
 }
 
 void DisplayWindowMupen64plus::_swapBuffers()
 {
 	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
 	FunctionWrapper::WaitForSwapBuffersQueued();
-
-	libretro_swap_buffer = true;
+	FunctionWrapper::CoreVideo_GL_SwapBuffers();
 }
 
 void DisplayWindowMupen64plus::_saveScreenshot()

@@ -27,6 +27,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdbool.h>
+#include <libretro.h>
 
 #include "api/m64p_common.h"
 #include "api/m64p_plugin.h"
@@ -58,8 +59,23 @@ uint32_t get_retro_screen_height();
 
 extern enum rdp_plugin_type current_rdp_type;
 extern enum rsp_plugin_type current_rsp_type;
+extern retro_environment_t environ_cb;
 extern bool libretro_swap_buffer;
 
+// Savestate globals
+extern bool retro_savestate_complete;
+extern int  retro_savestate_result;
+
+// 64DD globals
+extern char* retro_dd_path_img;
+extern char* retro_dd_path_rom;
+
+// Threaded GL Callback
+extern void gln64_thr_gl_invoke_command_loop();
+extern bool threaded_gl_safe_shutdown;
+
+// Core options
+// GLN64
 extern uint32_t bilinearMode;
 extern uint32_t EnableHybridFilter;
 extern uint32_t EnableDitheringPattern;
@@ -96,6 +112,7 @@ extern uint32_t EnableTxCacheCompression;
 extern uint32_t ForceDisableExtraMem;
 extern uint32_t EnableNativeResFactor;
 extern uint32_t EnableN64DepthCompare;
+extern uint32_t EnableThreadedRenderer;
 
 // Overscan Options
 extern uint32_t EnableOverscan;

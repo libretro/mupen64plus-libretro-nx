@@ -136,6 +136,17 @@ struct retro_core_option_definition option_defs_us[] = {
         "4:3"
     },
     {
+        CORE_NAME "-ThreadedRenderer",
+        "Threaded Renderer",
+        "(GLN64) Use the Threaded Renderer, improves performance but increases input lag.",
+        {
+            {"True", "Enabled"},
+            {"False", "Disabled"},
+            {NULL, NULL},
+        },
+        "False"
+    },
+    {
         CORE_NAME "-BilinearMode",
         "Bilinear filtering mode",
         "(GLN64) Select a Bilinear filtering method, 3point is the original system specific way.",

@@ -17,12 +17,13 @@ namespace opengl {
 
 	class FunctionWrapper
 	{
+    public:
+		static void commandLoop();
 	private:
 		static void executeCommand(std::shared_ptr<OpenGlCommand> _command);
 
 		static void executePriorityCommand(std::shared_ptr<OpenGlCommand> _command);
 
-		static void commandLoop();
 
 		static BlockingReaderWriterQueue<std::shared_ptr<OpenGlCommand>> m_commandQueue;
 		static BlockingReaderWriterQueue<std::shared_ptr<OpenGlCommand>> m_commandQueueHighPriority;

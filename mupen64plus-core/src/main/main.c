@@ -84,9 +84,6 @@
 #include <file/file_path.h>
 #include <libretro_memory.h>
 #include <mupen64plus-next_common.h>
-extern retro_environment_t environ_cb;
-extern char* retro_dd_path_img;
-extern char* retro_dd_path_rom;
 #endif // __LIBRETRO__
 
 #ifdef DBG
@@ -202,7 +199,10 @@ static void main_check_inputs(void)
 #ifdef WITH_LIRC
     lircCheckInput();
 #endif
-    poll_cb();
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        poll_cb();
+    }
 }
 
 /*********************************************************************************************************
@@ -1327,7 +1327,12 @@ m64p_error main_run(void)
      * Jump back to frontend for deinit
      */
     extern cothread_t retro_thread;
-    co_switch(retro_thread);
+
+    // For GLN64 Threaded GL we just sanely return, exit sync is handled elsewhere
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        co_switch(retro_thread);
+    }
 
     return M64ERR_SUCCESS;
 

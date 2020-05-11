@@ -8,7 +8,11 @@
 #define LOG_VERBOSE 4
 #define LOG_APIFUNC 5
 
-#define LOG_LEVEL LOG_WARNING
+#define LOG_LEVEL LOG_NONE
+
+#include "Types.h"
+#include <cstdio>
+#include <string>
 
 #if LOG_LEVEL > 0
 
