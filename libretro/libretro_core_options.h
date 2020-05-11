@@ -239,7 +239,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"True", NULL},
             {NULL, NULL},
         },
-#ifdef VC
+#ifndef VC
         "True"
 #else
         "False"
