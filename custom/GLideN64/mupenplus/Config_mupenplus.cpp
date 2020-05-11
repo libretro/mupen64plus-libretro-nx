@@ -1,3 +1,4 @@
+#include <mupen64plus-next_common.h>
 #include "GLideN64_mupenplus.h"
 #include "GLideN64_libretro.h"
 #include <assert.h>
@@ -69,6 +70,14 @@ void LoadCustomSettings(bool internal)
 				if (found) {
 					if (!strcmp(l.name, "video\\multisampling"))
 						config.video.multisampling = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableDitheringPattern"))
+						config.generalEmulation.enableDitheringPattern = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableHiresNoiseDithering"))
+						config.generalEmulation.enableHiresNoiseDithering = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\enableDitheringQuantization"))
+						config.generalEmulation.enableDitheringQuantization = atoi(l.value);
+					else if (!strcmp(l.name, "generalEmulation\\rdramImageDitheringMode"))
+						config.generalEmulation.rdramImageDitheringMode = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\aspect"))
 						config.frameBufferEmulation.aspect = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\nativeResFactor"))
@@ -120,6 +129,10 @@ extern "C" void Config_LoadConfig()
 	config.frameBufferEmulation.N64DepthCompare = EnableN64DepthCompare;
 
 	config.texture.bilinearMode = bilinearMode;
+	config.generalEmulation.enableHybridFilter = EnableHybridFilter;
+	config.generalEmulation.enableDitheringPattern = EnableDitheringPattern;
+	config.generalEmulation.enableDitheringQuantization = EnableDitheringQuantization;
+	config.generalEmulation.rdramImageDitheringMode = RDRAMImageDitheringMode;
 	config.generalEmulation.enableHWLighting = EnableHWLighting;
 	config.generalEmulation.enableLegacyBlending = enableLegacyBlending;
 	config.generalEmulation.enableLOD = EnableLODEmulation;
