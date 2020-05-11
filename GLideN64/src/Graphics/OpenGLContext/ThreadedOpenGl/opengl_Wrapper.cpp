@@ -4,6 +4,16 @@
 #include <memory>
 #include <set>
 
+extern "C" {
+	extern void context_reset();
+	bool threaded_gl_safe_shutdown = false;
+
+	void gln64_thr_gl_invoke_command_loop()
+	{
+		opengl::FunctionWrapper::commandLoop();
+	}
+}
+
 namespace opengl {
 
 	bool FunctionWrapper::m_threaded_wrapper = false;
@@ -63,6 +73,8 @@ namespace opengl {
 	void FunctionWrapper::commandLoop()
 	{
 		bool timeToShutdown = false;
+		threaded_gl_safe_shutdown = false;
+        
 		while (!timeToShutdown) {
 			std::shared_ptr<OpenGlCommand> command;
 
@@ -76,7 +88,16 @@ namespace opengl {
 					timeToShutdown = command->isTimeToShutdown();
 				}
 			}
+			if(!retro_savestate_complete)
+			{				
+				// Yield to frontend
+				co_switch(retro_thread);
+			}
 		}
+		
+		// Return
+		threaded_gl_safe_shutdown = true;
+		co_switch(retro_thread);
 	}
 
 #if defined(GL_DEBUG) && defined(GL_PROFILE)
@@ -125,8 +146,7 @@ namespace opengl {
 		if (_threaded == 1) {
 			m_threaded_wrapper = true;
 			m_shutdown = false;
-			m_commandExecutionThread = std::thread(&FunctionWrapper::commandLoop);
-
+			//m_commandExecutionThread = std::thread(&FunctionWrapper::commandLoop);
 		}
 		else {
 			m_threaded_wrapper = false;
@@ -1418,7 +1438,6 @@ namespace opengl {
 #endif
 
 #ifdef MUPENPLUSAPI
-
 	m64p_error FunctionWrapper::CoreVideo_Init()
 	{
 		m64p_error returnValue;
@@ -1443,7 +1462,7 @@ namespace opengl {
 #ifndef GL_DEBUG
 		if (m_threaded_wrapper) {
 			m_condition.notify_all();
-			m_commandExecutionThread.join();
+			//m_commandExecutionThread.join();
 		}
 #endif
 	}
@@ -1484,7 +1503,6 @@ namespace opengl {
 			executeCommand(CoreVideoGLSwapBuffersCommand::get([]{ReduceSwapBuffersQueued();}));
 		else
 			CoreVideoGLSwapBuffersCommand::get([]{ReduceSwapBuffersQueued();})->performCommandSingleThreaded();
-
 	}
 #else
 	bool FunctionWrapper::windowsStart()
@@ -1512,7 +1530,7 @@ namespace opengl {
 #ifndef GL_DEBUG
 		if (m_threaded_wrapper) {
 			m_condition.notify_all();
-			m_commandExecutionThread.join();
+			//m_commandExecutionThread.join();
 		}
 #endif
 	}
