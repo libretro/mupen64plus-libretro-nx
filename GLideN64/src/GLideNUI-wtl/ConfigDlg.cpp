@@ -70,7 +70,7 @@ LRESULT CConfigDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		dc.CreateCompatibleDC(NULL);
 		dc.SelectFont(dlgItem.GetFont());
 		SIZE size;
-		dc.GetTextExtent(RomName.c_str(), RomName.length(), &size);
+		dc.GetTextExtent(RomName.c_str(), static_cast<int>(RomName.length()), &size);
 
 		RECT Rect;
 		dlgItem.GetWindowRect(&Rect);
@@ -326,7 +326,7 @@ void CConfigDlg::Init(bool reInit, bool blockCustomSettings) {
 	m_blockReInit = true;
 	bool CustomSettings = m_EmulationTab != NULL && CButton(m_EmulationTab->GetDlgItem(IDC_CHK_USE_PER_GAME)).GetCheck() == BST_CHECKED;
 
-	if (reInit && m_romName != NULL && CustomSettings && CButton(m_EmulationTab->GetDlgItem(IDC_GAME_PROFILE)).GetCheck() == BST_CHECKED) {
+	if (reInit && m_romName != NULL && CustomSettings && CButton(GetDlgItem(IDC_GAME_PROFILE)).GetCheck() == BST_CHECKED) {
 		loadCustomRomSettings(m_strIniPath.c_str(), m_romName);
 	} else if (reInit) {
 		loadSettings(m_strIniPath.c_str());
