@@ -1,20 +1,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *   Mupen64plus-Next - libretro.c                                       *
- *   Copyright (C) 2020 M4xw <m4x@m4xw.net                               *
- *                                                                    *
+ *   Mupen64plus-Next - libretro.c                                         *
+ *   Copyright (C) 2020 M4xw <m4x@m4xw.net>                                *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                 *
- *                                                                    *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                         *
- *                                                                    *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                        *
- *   Free Software Foundation, Inc.,                                     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -34,7 +34,7 @@
 #ifdef HAVE_LIBNX
 #include <switch.h>
 #endif
-
+#include <pthread.h>
 #include <glsm/glsmsym.h>
 
 #include "api/m64p_frontend.h"
@@ -142,6 +142,8 @@ float retro_screen_aspect = 4.0 / 3.0;
 
 char* retro_dd_path_img;
 char* retro_dd_path_rom;
+bool retro_savestate_complete = false;
+int  retro_savestate_result = 0;
 
 uint32_t bilinearMode = 0;
 uint32_t EnableHybridFilter = 0;
@@ -169,16 +171,13 @@ uint32_t EnableTextureCache = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableLODEmulation = 0;
-uint32_t EnableFullspeed = 0;
-uint32_t CountPerOp = 0;
-uint32_t CountPerScanlineOverride = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 uint32_t EnableEnhancedTextureStorage;
 uint32_t EnableEnhancedHighResStorage;
 uint32_t EnableTxCacheCompression = 0;
-uint32_t ForceDisableExtraMem = 0;
 uint32_t EnableNativeResFactor = 0;
 uint32_t EnableN64DepthCompare = 0;
+uint32_t EnableThreadedRenderer = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -188,9 +187,17 @@ uint32_t OverscanLeft = 0;
 uint32_t OverscanRight = 0;
 uint32_t OverscanBottom = 0;
 
+uint32_t EnableFullspeed = 0;
+uint32_t CountPerOp = 0;
+uint32_t CountPerScanlineOverride = 0;
+uint32_t ForceDisableExtraMem = 0;
+
 extern struct device g_dev;
 extern unsigned int r4300_emumode;
 extern struct cheat_ctx g_cheat_ctx;
+
+static bool emuThreadRunning = false;
+static pthread_t emuThread;
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -231,12 +238,21 @@ static void setup_variables(void)
 
     libretro_set_core_options(environ_cb);
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+    //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, false);
 }
 
+static void n64StateCallback(void *Context, m64p_core_param param_type, int new_value)
+{
+    if(param_type == M64CORE_STATE_LOADCOMPLETE || param_type == M64CORE_STATE_SAVECOMPLETE)
+    {
+        retro_savestate_complete = true;
+        retro_savestate_result = new_value;
+    }
+}
 
 static bool emu_step_load_data()
 {
-    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", "Core", n64DebugCallback, 0, 0);
+    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
     if(ret && log_cb)
         log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
 
@@ -281,12 +297,20 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void EmuThreadFunction(void)
+static void* EmuThreadFunction(void* param)
 {
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
+
+    // Runs until CMD_STOP
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+        // Unset
+        emuThreadRunning = false;
+    }
 }
 
 void reinit_gfx_plugin(void)
@@ -449,16 +473,23 @@ void retro_init(void)
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
-    initializing = true;
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        initializing = true;
 
-    retro_thread = co_active();
-    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+        retro_thread = co_active();
+        game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+    }
 }
 
 void retro_deinit(void)
-{
-    CoreDoCommand(M64CMD_STOP, 0, NULL);
-    co_switch(game_thread); /* Let the core thread finish */
+{    
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        CoreDoCommand(M64CMD_STOP, 0, NULL);
+        co_switch(game_thread); /* Let the core thread finish */
+    }
+
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -607,6 +638,13 @@ static void update_variables(bool startup)
              plugin_connect_rsp_api(RSP_PLUGIN_HLE);
 #endif 
           }
+       }
+
+       var.key = CORE_NAME "-ThreadedRenderer";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableThreadedRenderer = !strcmp(var.value, "True") ? 1 : 0;
        }
 
        var.key = CORE_NAME "-BilinearMode";
@@ -1232,7 +1270,7 @@ static void format_saved_memory(void)
     format_mempak(saved_memory.mempack + 3 * MEMPAK_SIZE);
 }
 
-static void context_reset(void)
+void context_reset(void)
 {
     static bool first_init = true;
 
@@ -1288,11 +1326,21 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
 
+    // Init savestate job var
+    retro_savestate_complete = true;
+
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables(true);
     initial_boot = false;
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       initializing = true;
+       retro_thread = co_active();
+       game_thread = co_create(65536 * sizeof(void*) * 16, gln64_thr_gl_invoke_command_loop);
+    }
 
     init_audio_libretro(audio_buffer_size);
 
@@ -1335,7 +1383,26 @@ bool retro_load_game(const struct retro_game_info *game)
 void retro_unload_game(void)
 {
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       CoreDoCommand(M64CMD_STOP, 0, NULL);
+
+       // Run one more frame to unlock it
+       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+       while(!threaded_gl_safe_shutdown)
+       {
+          co_switch(game_thread);
+       }
+       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    
+       pthread_join(emuThread, NULL);
+    }
+
     emu_initialized = false;
+
+    // Reset savestate job var
+    retro_savestate_complete = false;
 }
 
 void retro_run (void)
@@ -1350,6 +1417,15 @@ void retro_run (void)
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
+       if(EnableThreadedRenderer)
+       {
+          if(!emuThreadRunning)
+          {
+             pthread_create(&emuThread, NULL, &EmuThreadFunction, NULL);
+             emuThreadRunning = true;
+          }
+       }
+       
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     }
 
@@ -1378,7 +1454,12 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
-        
+
+    // Poll needs to happen here on threaded gl
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       poll_cb();
+    }
 }
 
 void retro_reset (void)
@@ -1418,11 +1499,17 @@ bool retro_serialize(void *data, size_t size)
     if (initializing)
         return false;
 
-    int success = savestates_save_m64p(&g_dev, data);
-    if (success)
-        return true;
+    retro_savestate_complete = false;
+    retro_savestate_result = 0;
 
-    return false;
+    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+
+    while(!retro_savestate_complete)
+    {
+        retro_run();
+    }
+    
+    return !!retro_savestate_result;
 }
 
 bool retro_unserialize(const void * data, size_t size)
@@ -1430,11 +1517,17 @@ bool retro_unserialize(const void * data, size_t size)
     if (initializing)
         return false;
 
-    int success = savestates_load_m64p(&g_dev, data);
-    if (success)
-        return true;
+    retro_savestate_complete = false;
+    retro_savestate_result = 0;
+    
+    savestates_set_job(savestates_job_load, savestates_type_m64p, data);
 
-    return false;
+    while(!retro_savestate_complete)
+    {
+        retro_run();
+    }
+    
+    return true;
 }
 
 //Needed to be able to detach controllers for Lylat Wars multiplayer
@@ -1515,7 +1608,10 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
 
 void retro_return(void)
 {
-    co_switch(retro_thread);
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+       co_switch(retro_thread);
+    }
 }
 
 uint32_t get_retro_screen_width()

@@ -7,17 +7,6 @@
 using namespace graphics;
 using namespace opengl;
 
-#ifdef __LIBRETRO__
-#include <glsm/glsm_caps.h>
-// TODO: Fix macro mess
-#undef glDisable
-#undef glEnable
-extern "C" void rglEnable(GLenum cap);
-extern "C" void rglDisable(GLenum cap);
-#define glDisable(T) rglDisable(S##T)
-#define glEnable(T)  rglEnable(S##T)
-#endif // __LIBRETRO__
-
 /*---------------CachedEnable-------------*/
 
 CachedEnable::CachedEnable(Parameter _parameter)
