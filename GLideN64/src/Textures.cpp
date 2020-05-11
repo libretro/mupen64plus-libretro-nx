@@ -21,7 +21,7 @@
 #include "Graphics/Context.h"
 #include "Graphics/Parameters.h"
 #include "DisplayWindow.h"
-#include <GLideN64/GLideN64_libretro.h>
+#include <mupen64plus-next_common.h>
 
 using namespace std;
 using namespace graphics;

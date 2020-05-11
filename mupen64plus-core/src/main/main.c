@@ -82,8 +82,8 @@
 
 #ifdef __LIBRETRO__
 #include <file/file_path.h>
-#include "../../../libretro/libretro_memory.h"
-#include "../../../custom/GLideN64/GLideN64_libretro.h"
+#include <libretro_memory.h>
+#include <mupen64plus-next_common.h>
 extern retro_environment_t environ_cb;
 extern char* retro_dd_path_img;
 extern char* retro_dd_path_rom;

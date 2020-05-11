@@ -24,6 +24,8 @@
 
 #include "libretro.h"
 #include "libretro_private.h"
+#include "libretro_core_options.h"
+
 #include "GLideN64_libretro.h"
 #include "mupen64plus-next_common.h"
 
@@ -92,28 +94,6 @@ struct rgba
 extern struct rgba prescale[PRESCALE_WIDTH * PRESCALE_HEIGHT];
 #endif // HAVE_THR_AL
 
-// Option entries
-#define OPTION_ENTRY_RDP_GLIDEN64 "gliden64"
-#define OPTION_ENTRY_RSP_HLE "hle"
-
-#ifdef HAVE_THR_AL
-#define OPTION_ENTRY_RDP_ANGRYLION "|angrylion"
-#else
-#define OPTION_ENTRY_RDP_ANGRYLION ""
-#endif // HAVE_THR_AL
-
-#ifdef HAVE_PARALLEL_RSP
-#define OPTION_ENTRY_RSP_PARALLEL "|parallel"
-#else
-#define OPTION_ENTRY_RSP_PARALLEL ""
-#endif // HAVE_PARALLEL_RSP
-
-#ifdef HAVE_LLE
-#define OPTION_ENTRY_RSP_CXD4 "|cxd4"
-#else
-#define OPTION_ENTRY_RSP_CXD4 ""
-#endif // HAVE_LLE
-
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -164,6 +144,10 @@ char* retro_dd_path_img;
 char* retro_dd_path_rom;
 
 uint32_t bilinearMode = 0;
+uint32_t EnableHybridFilter = 0;
+uint32_t EnableDitheringPattern = 0;
+uint32_t RDRAMImageDitheringMode = 0;
+uint32_t EnableDitheringQuantization = 0;
 uint32_t EnableHWLighting = 0;
 uint32_t CorrectTexrectCoords = 0;
 uint32_t enableNativeResTexrects = 0;
@@ -232,161 +216,6 @@ extern m64p_rom_header ROM_HEADER;
 
 static void setup_variables(void)
 {
-    struct retro_variable variables[] = {
-        { CORE_NAME "-cpucore",
-#ifdef DYNAREC
-            "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
-#else
-            "CPU Core; cached_interpreter|pure_interpreter" },
-#endif
-        { CORE_NAME "-rdp-plugin",
-            "RDP Mode; " OPTION_ENTRY_RDP_GLIDEN64 OPTION_ENTRY_RDP_ANGRYLION },
-        { CORE_NAME "-rsp-plugin",
-            "RSP Mode; " OPTION_ENTRY_RSP_HLE OPTION_ENTRY_RSP_PARALLEL OPTION_ENTRY_RSP_CXD4 },
-        { CORE_NAME "-43screensize",
-            "(GLN64) 4:3 Resolution; 640x480|320x240|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
-        { CORE_NAME "-169screensize",
-            "(GLN64) 16:9 Resolution; 960x540|640x360|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
-        { CORE_NAME "-aspect",
-            "(GLN64) Aspect Ratio; 4:3|16:9|16:9 adjusted" },
-        { CORE_NAME "-BilinearMode",
-            "(GLN64) Bilinear filtering mode; standard|3point" },
-#ifndef HAVE_OPENGLES2
-        { CORE_NAME "-MultiSampling",
-            "(GLN64) MSAA level; 0|2|4|8|16" },
-#endif
-        { CORE_NAME "-FXAA",
-            "(GLN64) FXAA; 0|1" },
-
-        { CORE_NAME "-EnableFBEmulation",
-#ifdef VC
-            "(GLN64) Framebuffer Emulation; False|True" },
-#else
-            "(GLN64) Framebuffer Emulation; True|False" },
-#endif
-
-        { CORE_NAME "-EnableLODEmulation",
-            "(GLN64) LOD Emulation; True|False" },
-        { CORE_NAME "-EnableCopyColorToRDRAM",
-#ifndef HAVE_OPENGLES
-            "(GLN64) Color buffer to RDRAM; Async|Sync|Off" },
-#else
-            "(GLN64) Color buffer to RDRAM; Off|Async|Sync" },
-#endif
-        { CORE_NAME "-EnableCopyDepthToRDRAM",
-            "(GLN64) Depth buffer to RDRAM; Software|FromMem|Off" },
-        { CORE_NAME "-BackgroundMode",
-            "(GLN64) Background Mode; OnePiece|Stripped" },
-        { CORE_NAME "-EnableHWLighting",
-            "(GLN64) Hardware per-pixel lighting; False|True" },
-        { CORE_NAME "-CorrectTexrectCoords",
-            "(GLN64) Continuous texrect coords; Off|Auto|Force" },
-        { CORE_NAME "-EnableNativeResTexrects",
-            "(GLN64) Native res. 2D texrects; Disabled|Optimized|Unoptimized" },
-#if defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableLegacyBlending",
-            "(GLN64) Less accurate blending mode; True|False" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "(GLN64) GPU shader depth write; False|True" },
-#else
-        { CORE_NAME "-EnableLegacyBlending",
-            "(GLN64) Less accurate blending mode; False|True" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "(GLN64) GPU shader depth write; True|False" },
-#endif
-#if !defined(VC) && !defined(HAVE_OPENGLES)
-        // Not supported on all GPU's
-        { CORE_NAME "-EnableN64DepthCompare",
-            "(GLN64) N64 Depth Compare; False|True" },
-        { CORE_NAME "-EnableShadersStorage",
-            "(GLN64) Cache GPU Shaders; True|False" },
-#endif // !defined(VC) && !defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableTextureCache",
-            "(GLN64) Cache Textures; True|False" },
-        { CORE_NAME "-EnableOverscan",
-            "(GLN64) Overscan; Enabled|Disabled" },
-        { CORE_NAME "-OverscanTop",
-            "(GLN64) Overscan Offset (Top); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanLeft",
-            "(GLN64) Overscan Offset (Left); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanRight",
-            "(GLN64) Overscan Offset (Right); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanBottom",
-            "(GLN64) Overscan Offset (Bottom); " GLN64_OVERSCAN_SCALING },
-
-        { CORE_NAME "-MaxTxCacheSize",
-#if defined(VC)
-            "(GLN64) Max texture cache size; 1500|8000|4000" },
-#elif defined(HAVE_LIBNX)
-            "(GLN64) Max texture cache size; 4000|1500|8000" },
-#else
-            "(GLN64) Max texture cache size; 8000|4000|1500" },
-#endif
-        { CORE_NAME "-txFilterMode",
-            "(GLN64) Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
-        { CORE_NAME "-txEnhancementMode",
-            "(GLN64) Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
-        { CORE_NAME "-txFilterIgnoreBG",
-            "(GLN64) Filter background textures; True|False" },
-        { CORE_NAME "-txHiresEnable",
-            "(GLN64) Use High-Res textures; False|True" },
-        { CORE_NAME "-txCacheCompression",
-            "(GLN64) Use High-Res Texture Cache Compression; True|False" },
-        { CORE_NAME "-txHiresFullAlphaChannel",
-            "(GLN64) Use High-Res Full Alpha Channel; False|True" },
-        { CORE_NAME "-EnableEnhancedTextureStorage",
-            "(GLN64) Use enhanced Texture Storage; False|True" },
-        { CORE_NAME "-EnableEnhancedHighResStorage",
-            "(GLN64) Use enhanced Hi-Res Storage; False|True" },
-#ifdef HAVE_THR_AL
-        { CORE_NAME "-angrylion-vioverlay",
-            "(AL) VI Overlay; Filtered|AA+Blur|AA+Dedither|AA only|Unfiltered|Depth|Coverage" },
-        { CORE_NAME "-angrylion-sync",
-            "(AL) Thread sync level; Low|Medium|High" },
-        { CORE_NAME "-angrylion-multithread",
-            "(AL) Multi-threading; all threads|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63" },
-        { CORE_NAME "-angrylion-overscan",
-            "(AL) Hide overscan; disabled|enabled" },
-#endif // HAVE_THR_AL
-        { CORE_NAME "-FrameDuping",
-#ifdef HAVE_LIBNX
-            "Frame Duplication; True|False" },
-#else
-            "Frame Duplication; False|True" },
-#endif
-        { CORE_NAME "-Framerate",
-            "Framerate; Original|Fullspeed" },
-        { CORE_NAME "-virefresh",
-            "VI Refresh (Overclock); Auto|1500|2200" },
-        { CORE_NAME "-astick-deadzone",
-           "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-        { CORE_NAME "-astick-sensitivity",
-           "Analog Sensitivity (percent); 100|105|110|115|120|125|130|135|140|145|150|50|55|60|65|70|75|80|85|90|95"},
-        { CORE_NAME "-r-cbutton",
-           "Right C Button; C1|C2|C3|C4"},
-        { CORE_NAME "-l-cbutton",
-           "Left C Button; C2|C3|C4|C1"},
-        { CORE_NAME "-d-cbutton",
-           "Down C Button; C3|C4|C1|C2"},
-        { CORE_NAME "-u-cbutton",
-           "Up C Button; C4|C1|C2|C3"},
-        { CORE_NAME "-alt-map",
-           "Independent C-button Controls; False|True" },
-        { CORE_NAME "-ForceDisableExtraMem",
-           "Disable Expansion Pak; False|True"},
-        { CORE_NAME "-pak1",
-           "Player 1 Pak; memory|rumble|none"},
-        { CORE_NAME "-pak2",
-           "Player 2 Pak; none|memory|rumble"},
-        { CORE_NAME "-pak3",
-           "Player 3 Pak; none|memory|rumble"},
-        { CORE_NAME "-pak4",
-           "Player 4 Pak; none|memory|rumble"},
-        { CORE_NAME "-CountPerOp",
-            "Count Per Op; 0|1|2|3" },
-        { NULL, NULL },
-    };
-
     static const struct retro_controller_description port[] = {
         { "Controller", RETRO_DEVICE_JOYPAD },
         { "RetroPad", RETRO_DEVICE_JOYPAD },
@@ -400,7 +229,7 @@ static void setup_variables(void)
         { 0, 0 }
     };
 
-    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+    libretro_set_core_options(environ_cb);
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
@@ -787,6 +616,41 @@ static void update_variables(bool startup)
           bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
        }
 
+       var.key = CORE_NAME "-HybridFilter";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableHybridFilter = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-DitheringPattern";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableDitheringPattern = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-DitheringQuantization";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableDitheringQuantization = !strcmp(var.value, "False") ? 0 : 1;
+       }
+       
+       var.key = CORE_NAME "-RDRAMImageDitheringMode";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "BlueNoise"))
+             RDRAMImageDitheringMode = 2; // bdmBlueNoise
+          else if (!strcmp(var.value, "MagicSquare"))
+             RDRAMImageDitheringMode = 1; // bdmMagicSquare
+          else if (!strcmp(var.value, "Bayer"))
+             RDRAMImageDitheringMode = 1; // bdmBayer
+          else
+             RDRAMImageDitheringMode = 0; // bdmDisable
+       }
+       
        var.key = CORE_NAME "-FXAA";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -840,14 +704,21 @@ static void update_variables(bool startup)
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          EnableN64DepthCompare = !strcmp(var.value, "False") ? 0 : 1;
+          if (!strcmp(var.value, "Compatible"))
+             EnableN64DepthCompare = 2; // dcCompatible
+          else if (!strcmp(var.value, "True"))
+             EnableN64DepthCompare = 1; // dcFast
+          else
+             EnableN64DepthCompare = 0; // dcDisable
        }
 
        var.key = CORE_NAME "-EnableCopyColorToRDRAM";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          if (!strcmp(var.value, "Async"))
+          if (!strcmp(var.value, "TripleBuffer"))
+             EnableCopyColorToRDRAM = 3;
+          else if (!strcmp(var.value, "Async"))
              EnableCopyColorToRDRAM = 2;
           else if (!strcmp(var.value, "Sync"))
              EnableCopyColorToRDRAM = 1;
