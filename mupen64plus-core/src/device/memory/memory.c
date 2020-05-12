@@ -41,6 +41,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #if defined(_WIN32) || defined(HAVE_LIBNX)
 #include <malloc.h>
@@ -61,6 +62,9 @@ void read_with_bp_checks(void* opaque, uint32_t address, uint32_t* value)
 
     /* only check bp if active */
     if (r4300->mem->bp_checks[region] & BP_CHECK_READ) {
+        //printf("Reading %p 0x%x\n", address, value);
+        //fflush(stdout);
+
         check_breakpoints_on_mem_access(*r4300_pc(r4300)-0x4, address, 4,
                 M64P_BKP_FLAG_ENABLED | M64P_BKP_FLAG_READ);
     }
@@ -75,6 +79,9 @@ void write_with_bp_checks(void* opaque, uint32_t address, uint32_t value, uint32
 
     /* only check bp if active */
     if (r4300->mem->bp_checks[region] & BP_CHECK_WRITE) {
+        //printf("Writing %p 0x%x\n", address, value);
+        //fflush(stdout);
+
         check_breakpoints_on_mem_access(*r4300_pc(r4300)-0x4, address, 4,
                 M64P_BKP_FLAG_ENABLED | M64P_BKP_FLAG_WRITE);
     }
@@ -84,6 +91,9 @@ void write_with_bp_checks(void* opaque, uint32_t address, uint32_t value, uint32
 
 void activate_memory_break_read(struct memory* mem, uint32_t address)
 {
+    printf("activate_memory_break_read 0x%x\n", address);
+    fflush(stdout);
+
     uint16_t region = address >> 16;
     struct mem_handler* dbg_handler = &mem->dbg_handler;
     struct mem_handler* handler = &mem->handlers[region];
@@ -111,6 +121,9 @@ void deactivate_memory_break_read(struct memory* mem, uint32_t address)
 
 void activate_memory_break_write(struct memory* mem, uint32_t address)
 {
+    printf("activate_memory_break_write 0x%x\n", address);
+    fflush(stdout);
+    
     uint16_t region = address >> 16;
     struct mem_handler* dbg_handler = &mem->dbg_handler;
     struct mem_handler* handler = &mem->handlers[region];
