@@ -50,12 +50,12 @@ static void debugger_update(unsigned int pc);
 static void debugger_vi(void);
 }
 
-#define LOG_ERROR(...)
-//#define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
-#define LOG_DEBUG(...)
-//#define LOG_DEBUG(...) GDBStub::FormatMsg(M64MSG_VERBOSE, __VA_ARGS__)
-#define LOG_INFO(...)
-//#define LOG_INFO(...) GDBStub::FormatMsg(M64MSG_INFO, __VA_ARGS__)
+//#define LOG_ERROR(...)
+#define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
+//#define LOG_DEBUG(...)
+#define LOG_DEBUG(...) GDBStub::FormatMsg(M64MSG_VERBOSE, __VA_ARGS__)
+//#define LOG_INFO(...)
+#define LOG_INFO(...) GDBStub::FormatMsg(M64MSG_INFO, __VA_ARGS__)
 
 namespace GDBStub {
 namespace {
@@ -908,6 +908,26 @@ static void Continue() {
     (*DebugSetRunState)(M64P_DBG_RUNSTATE_RUNNING);
 }
 
+u32 func_osVirtualToPhysical(VAddr vaddr) {
+    if (vaddr >= 0x80000000U) {
+        if (vaddr < 0xA0000000U) {
+            return vaddr & 0x1FFFFFFF;
+        }
+    }
+
+    if (vaddr >= 0xA0000000U) {
+        if (vaddr < 0xC0000000U) {
+            return vaddr & 0x1FFFFFFF;
+        }
+    }
+
+    VAddr probedAddr = virtual_to_physical_address(&g_dev.r4300, vaddr, 0);
+    if(probedAddr)
+        return probedAddr;
+    else
+        return vaddr;
+}
+
 /**
  * Commit breakpoint to list of breakpoints.
  *
@@ -917,7 +937,17 @@ static void Continue() {
  */
 static bool CommitBreakpoint(BreakpointType type, VAddr addr, u64 len) {
     BreakpointMap& p = GetBreakpointMap(type);
-
+    
+    switch (type) {
+    case BreakpointType::Read:
+    case BreakpointType::Write:
+    case BreakpointType::Access:
+        addr = func_osVirtualToPhysical(addr);
+    case BreakpointType::Execute:
+    default:
+        break;
+    }
+    
     Breakpoint breakpoint;
     breakpoint.active = true;
     breakpoint.addr = addr;
@@ -1025,7 +1055,17 @@ static void RemoveBreakpoint() {
     auto start_offset = command_buffer + 3;
     auto addr_pos = std::find(start_offset, command_buffer + command_length, ',');
     VAddr addr = HexToLong(start_offset, static_cast<u64>(addr_pos - start_offset));
-
+    
+    switch (type) {
+    case BreakpointType::Read:
+    case BreakpointType::Write:
+    case BreakpointType::Access:
+        addr = func_osVirtualToPhysical(addr);
+    case BreakpointType::Execute:
+    default:
+        break;
+    }
+    
     RemoveBreakpoint(type, addr);
     SendReply("OK");
 }
