@@ -1246,6 +1246,47 @@ enum retro_mod
                                             * default when calling SET_VARIABLES/SET_CORE_OPTIONS.
                                             */
 
+#define RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER 56
+                                           /* unsigned * --
+                                            *
+                                            * Allows an implementation to ask frontend preferred hardware
+                                            * context to use. Core should use this information to deal
+                                            * with what specific context to request with SET_HW_RENDER.
+                                            *
+                                            * 'data' points to an unsigned variable
+                                            */
+
+#define RETRO_ENVIRONMENT_GET_DISK_CONTROL_INTERFACE_VERSION 57
+                                           /* unsigned * --
+                                            * Unsigned value is the API version number of the disk control
+                                            * interface supported by the frontend. If callback return false,
+                                            * API version is assumed to be 0.
+                                            *
+                                            * In legacy code, the disk control interface is defined by passing
+                                            * a struct of type retro_disk_control_callback to
+                                            * RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE.
+                                            * This may be still be done regardless of the disk control
+                                            * interface version.
+                                            *
+                                            * If version is >= 1 however, the disk control interface may
+                                            * instead be defined by passing a struct of type
+                                            * retro_disk_control_ext_callback to
+                                            * RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE.
+                                            * This allows the core to provide additional information about
+                                            * disk images to the frontend and/or enables extra
+                                            * disk control functionality by the frontend.
+                                            */
+
+#define RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE 58
+                                           /* const struct retro_disk_control_ext_callback * --
+                                            * Sets an interface which frontend can use to eject and insert
+                                            * disk images, and also obtain information about individual
+                                            * disk image files registered by the core.
+                                            * This is used for games which consist of multiple images and
+                                            * must be manually swapped out by the user (e.g. PSX, floppy disk
+                                            * based systems).
+                                            */
+
 /* VFS functionality */
 
 /* File paths:

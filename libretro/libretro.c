@@ -1436,6 +1436,16 @@ bool retro_load_game(const struct retro_game_info *game)
 
     init_audio_libretro(audio_buffer_size);
 
+    // get and use current driver
+    unsigned preferred;
+    if (!environ_cb(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &preferred))
+        preferred = RETRO_HW_CONTEXT_DUMMY;
+    if (preferred == RETRO_HW_CONTEXT_OPENGL || preferred == RETRO_HW_CONTEXT_OPENGL_CORE)
+       params.context_type       = preferred;
+    // fallback to gl if no preferred was found (could be glcore, or could try both)
+    if (preferred == RETRO_HW_CONTEXT_DUMMY)
+       params.context_type       = RETRO_HW_CONTEXT_OPENGL;
+
     params.context_reset         = context_reset;
     params.context_destroy       = context_destroy;
     params.environ_cb            = environ_cb;

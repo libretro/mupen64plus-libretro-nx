@@ -3309,7 +3309,19 @@ static bool glsm_state_ctx_init(glsm_ctx_params_t *params)
       hw_render.version_minor   = params->minor;
 #endif // defined(CORE) && !defined(HAVE_LIBNX)
 #endif
-
+   /* ugly workaround, fix me */
+   if (params->context_type == RETRO_HW_CONTEXT_OPENGL)
+   {
+      hw_render.context_type    = RETRO_HW_CONTEXT_OPENGL;
+      hw_render.version_major   = 0;
+      hw_render.version_minor   = 0;
+   }
+   else if (params->context_type == RETRO_HW_CONTEXT_OPENGL_CORE)
+   {
+      hw_render.context_type    = RETRO_HW_CONTEXT_OPENGL_CORE;
+      hw_render.version_major   = 3;
+      hw_render.version_minor   = 3;
+   }
    hw_render.context_reset      = params->context_reset;
    hw_render.context_destroy    = params->context_destroy;
    hw_render.stencil            = params->stencil;
