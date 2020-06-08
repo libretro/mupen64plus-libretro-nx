@@ -110,6 +110,7 @@ extern uint32_t EnableEnhancedTextureStorage;
 extern uint32_t EnableEnhancedHighResStorage;
 extern uint32_t EnableTxCacheCompression;
 extern uint32_t ForceDisableExtraMem;
+extern uint32_t IgnoreTLBExceptions;
 extern uint32_t EnableNativeResFactor;
 extern uint32_t EnableN64DepthCompare;
 extern uint32_t EnableThreadedRenderer;
