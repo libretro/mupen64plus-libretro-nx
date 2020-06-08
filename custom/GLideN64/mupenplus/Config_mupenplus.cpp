@@ -161,13 +161,13 @@ extern "C" void Config_LoadConfig()
 #else
 	config.generalEmulation.enableFragmentDepthWrite = EnableFragmentDepthWrite;
 #endif
-
 #ifdef VC
 	config.generalEmulation.enableShadersStorage = 0;
 #else
 	config.generalEmulation.enableShadersStorage = EnableShadersStorage;
 #endif
 
+	config.frameBufferEmulation.copyAuxToRDRAM = EnableCopyAuxToRDRAM;
 	config.textureFilter.txSaveCache = EnableTextureCache;
 	
 	config.textureFilter.txFilterMode = txFilterMode;

@@ -257,6 +257,17 @@ struct retro_core_option_definition option_defs_us[] = {
 #endif // VC
     },
     {
+        CORE_NAME "-EnableCopyAuxToRDRAM",
+        "Copy auxiliary buffers to RDRAM",
+        "(GLN64) Copy auxiliary buffers to RDRAM (fixes some Game artifacts like Paper Mario Intro) .",
+        {
+            {"False", NULL},
+            {"True", NULL},
+            {NULL, NULL},
+        },
+        "False",
+    },
+    {
         CORE_NAME "-EnableCopyColorToRDRAM",
         "Color buffer to RDRAM",
         "(GLN64) Color buffer copy to RDRAM (Off will trade compatibility for Performance).",
