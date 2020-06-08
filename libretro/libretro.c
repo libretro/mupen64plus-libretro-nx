@@ -192,6 +192,7 @@ uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
 uint32_t CountPerScanlineOverride = 0;
 uint32_t ForceDisableExtraMem = 0;
+uint32_t IgnoreTLBExceptions = 0;
 
 extern struct device g_dev;
 extern unsigned int r4300_emumode;
@@ -1152,6 +1153,18 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           ForceDisableExtraMem = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-IgnoreTLBExceptions";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "False"))
+             IgnoreTLBExceptions = 0;
+          else if (!strcmp(var.value, "OnlyNotEnabled"))
+             IgnoreTLBExceptions = 1;
+          else if (!strcmp(var.value, "AlwaysIgnoreTLB"))
+             IgnoreTLBExceptions = 2;
        }
     }
 

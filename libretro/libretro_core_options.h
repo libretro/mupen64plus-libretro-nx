@@ -1057,6 +1057,18 @@ struct retro_core_option_definition option_defs_us[] = {
         "False"
     },
     {
+        CORE_NAME "-IgnoreTLBExceptions",
+        "Ignore emulated TLB Exceptions",
+        "(HACK) Ignore emulated TLB Exceptions, this might fix some broken romhacks and works around the OoT dynarec freeze. This option might be removed in the future.",
+        {
+            {"False", "Don't Ignore"},
+            {"OnlyNotEnabled", "Ignore TLB Exceptions if not using TLB"},
+            {"AlwaysIgnoreTLB", "Always Ignore TLB Exceptions"},
+            {NULL, NULL},
+        },
+        "False"
+    },
+    {
         CORE_NAME "-pak1",
         "Player 1 Pak",
         "Select Payer 1 Controller Pak.",
