@@ -113,6 +113,7 @@ extern uint32_t ForceDisableExtraMem;
 extern uint32_t EnableNativeResFactor;
 extern uint32_t EnableN64DepthCompare;
 extern uint32_t EnableThreadedRenderer;
+extern uint32_t EnableCopyAuxToRDRAM;
 
 // Overscan Options
 extern uint32_t EnableOverscan;
