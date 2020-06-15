@@ -989,6 +989,13 @@ static void update_variables(bool startup)
           }
        }
 
+       var.key = CORE_NAME "-EnableNativeResFactor";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+         EnableNativeResFactor = atoi(var.value);
+       }
+
        var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1001,7 +1008,8 @@ static void update_variables(bool startup)
           if((retro_screen_width == 320 && retro_screen_height == 240) ||
              (retro_screen_width == 640 && retro_screen_height == 360))
           {
-            EnableNativeResFactor = 1; // Force factor == 1
+             // Force factor to 1 for low resolutions, unless set manually
+             EnableNativeResFactor = !EnableNativeResFactor ? 1 : EnableNativeResFactor;
           }
        }
 
