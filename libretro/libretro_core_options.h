@@ -136,6 +136,24 @@ struct retro_core_option_definition option_defs_us[] = {
         "4:3"
     },
     {
+        CORE_NAME "-EnableNativeResFactor",
+        "Native Resolution Factor",
+        "(GLN64) Render at N times the native resolution.",
+        {
+            {"0", "Disabled"},
+            {"1", "1x"},
+            {"2", "2x"},
+            {"3", "3x"},
+            {"4", "4x"},
+            {"5", "5x"},
+            {"6", "6x"},
+            {"7", "7x"},
+            {"8", "8x"},
+            {NULL, NULL},
+        },
+        "0"
+    },
+    {
         CORE_NAME "-ThreadedRenderer",
         "Threaded Renderer",
         "(GLN64) Use the Threaded Renderer, improves performance but increases input lag.",
