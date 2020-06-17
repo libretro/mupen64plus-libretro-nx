@@ -100,7 +100,6 @@ void VI_UpdateSize()
 
 extern uint32_t retro_screen_width;
 extern uint32_t retro_screen_height;
-extern uint32_t EnableNativeResFactor;
 extern "C" {
     uint32_t last_vi_width = retro_screen_width;
     uint32_t last_vi_height = retro_screen_height;
