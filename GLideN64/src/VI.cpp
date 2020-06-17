@@ -121,7 +121,6 @@ void VI_UpdateScreen()
 	    printf("VI_UpdateScreen Origin: %08x, Old origin: %08x, width: %d, height: %d\n", *REG.VI_ORIGIN, VI.lastOrigin, VI.width, VI.height);
         last_vi_width = retro_screen_width = VI.width;
         last_vi_height = retro_screen_height = VI.height;
-        //wnd.setWindowSize(last_vi_width, last_vi_height);
     }
 
 	perf.increaseVICount();

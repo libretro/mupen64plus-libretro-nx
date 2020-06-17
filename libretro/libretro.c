@@ -450,8 +450,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
     info->geometry.base_width   = retro_screen_width;
     info->geometry.base_height  = retro_screen_height;
-    info->geometry.max_width    = retro_screen_width;
-    info->geometry.max_height   = retro_screen_height;
+    info->geometry.max_width    = max_retro_screen_width;
+    info->geometry.max_height   = max_retro_screen_height;
     info->geometry.aspect_ratio = ((float)retro_screen_width) / ((float)retro_screen_height);
 #ifdef HAVE_PARALLEL_RDP
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
