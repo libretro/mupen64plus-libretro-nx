@@ -417,10 +417,11 @@ static bool emu_step_load_data()
 
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_OPEN\n");
 
-    if(CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data))
+    ret = CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data);
+    if (ret)
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load ROM\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load ROM (err=%i)\n", ret);
         goto load_fail;
     }
 
@@ -429,10 +430,11 @@ static bool emu_step_load_data()
 
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_GET_HEADER\n");
 
-    if(CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(ROM_HEADER), &ROM_HEADER))
+    ret = CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(ROM_HEADER), &ROM_HEADER);
+    if (ret)
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to query ROM header information\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to query ROM header information (err=%i)\n", ret);
         goto load_fail;
     }
 
@@ -441,6 +443,7 @@ static bool emu_step_load_data()
 load_fail:
     free(game_data);
     game_data = NULL;
+    CoreShutdown();
     //stop = 1;
 
     return false;
@@ -632,8 +635,10 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-    CoreDoCommand(M64CMD_STOP, 0, NULL);
-    co_switch(game_thread); /* Let the core thread finish */
+    m64p_error ret = CoreShutdown();
+    if(ret && log_cb)
+        log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to shutdown core (err=%i)\n", ret);
+
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -1474,6 +1479,8 @@ bool retro_load_game(const struct retro_game_info *game)
 
 void retro_unload_game(void)
 {
+    CoreDoCommand(M64CMD_STOP, 0, NULL);
+    co_switch(game_thread); /* Let the core thread finish */
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
     emu_initialized = false;
 }
