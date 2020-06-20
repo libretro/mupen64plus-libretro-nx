@@ -435,7 +435,11 @@ void rglTexImage3D(	GLenum target,
  	const GLvoid * data);
 void rglTexImage2DMultisample( 	GLenum target,
   	GLsizei samples,
+#if defined(OSX)
+  	GLint internalformat,
+#else
   	GLenum internalformat,
+#endif
   	GLsizei width,
   	GLsizei height,
   	GLboolean fixedsamplelocations);
