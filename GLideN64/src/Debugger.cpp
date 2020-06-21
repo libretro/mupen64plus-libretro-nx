@@ -261,6 +261,8 @@ void Debugger::_fillTriInfo(TriInfo & _info)
 	_info.prim_color = gDP.primColor;
 	_info.primDepthZ = gDP.primDepth.z;
 	_info.primDepthDeltaZ = gDP.primDepth.deltaZ;
+	_info.fogMultiplier = gSP.fog.multiplierf;
+	_info.fogOffset = gSP.fog.offsetf;
 	_info.K4 = gDP.convert.k4;
 	_info.K5 = gDP.convert.k5;
 	_info.viewport = gSP.viewport;
@@ -460,6 +462,7 @@ void Debugger::_drawTriangleFrame()
 void Debugger::_drawTextureCache()
 {
 	DisplayWindow & wnd = dwnd();
+	TextureCache & cache = textureCache();
 
 	const s32 hOffset = (wnd.getScreenWidth() - wnd.getWidth()) / 2;
 	const s32 vOffset = (wnd.getScreenHeight() - wnd.getHeight()) / 2 + wnd.getHeightOffset();
@@ -567,12 +570,12 @@ void Debugger::_drawTextureCache()
 
 			rect[0].s0 = 0;
 			rect[0].t0 = 0;
-			rect[1].s0 = 1;
+			rect[1].s0 = (*infoIter)->texture->width;
 			rect[1].t0 = 0;
 			rect[2].s0 = 0;
-			rect[2].t0 = 1;
-			rect[3].s0 = 1;
-			rect[3].t0 = 1;
+			rect[2].t0 = (*infoIter)->texture->height;
+			rect[3].s0 = rect[1].s0;
+			rect[3].t0 = rect[2].t0;
 
 			if (r == m_selectedTexPos[m_tmu].row && c == m_selectedTexPos[m_tmu].col) {
 				memcpy(rectSelected, rect, sizeof(rect));
@@ -584,13 +587,17 @@ void Debugger::_drawTextureCache()
 			texParams.textureUnitIndex = textureIndices::Tex[0];
 			texParams.minFilter = textureParameters::FILTER_NEAREST;
 			texParams.magFilter = textureParameters::FILTER_NEAREST;
+			texParams.wrapS = textureParameters::WRAP_CLAMP_TO_EDGE;
+			texParams.wrapT = textureParameters::WRAP_CLAMP_TO_EDGE;
 			gfxContext.setTextureParameters(texParams);
 
+			cache.current[0] = const_cast<CachedTexture*>((*infoIter)->texture);
 			Context::DrawRectParameters rectParams;
 			rectParams.mode = drawmode::TRIANGLE_STRIP;
 			rectParams.verticesCount = 4;
 			rectParams.vertices = rect;
 			rectParams.combiner = currentCombiner();
+			currentCombiner()->update(false);
 			gfxContext.drawRects(rectParams);
 
 			X += rectWidth;
@@ -629,8 +636,6 @@ void Debugger::_drawFrameBuffer(FrameBuffer * _pBuffer)
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	drawer.clearColorBuffer(clearColor);
 
-	TextureParam filter = textureParameters::FILTER_LINEAR;
-
 	GraphicsDrawer::BlitOrCopyRectParams blitParams;
 	blitParams.srcX0 = srcCoord[0];
 	blitParams.srcY0 = srcCoord[3];
@@ -644,10 +649,14 @@ void Debugger::_drawFrameBuffer(FrameBuffer * _pBuffer)
 	blitParams.dstY1 = dstCoord[3];
 	blitParams.dstWidth = wnd.getScreenWidth();
 	blitParams.dstHeight = wnd.getScreenHeight() + wnd.getHeightOffset();
-	blitParams.filter = filter;
+	blitParams.filter = config.generalEmulation.enableHybridFilter > 0 ?
+		textureParameters::FILTER_LINEAR :
+		textureParameters::FILTER_NEAREST;
 	blitParams.mask = blitMask::COLOR_BUFFER;
 	blitParams.tex[0] = pBufferTexture;
-	blitParams.combiner = CombinerInfo::get().getTexrectCopyProgram();
+	const bool downscale = blitParams.srcWidth >= blitParams.dstWidth && blitParams.srcHeight >= blitParams.dstHeight;
+	blitParams.combiner = downscale ? CombinerInfo::get().getTexrectDownscaleCopyProgram() :
+		CombinerInfo::get().getTexrectUpscaleCopyProgram();
 	blitParams.readBuffer = readBuffer;
 
 	drawer.blitOrCopyTexturedRect(blitParams);
@@ -748,7 +757,7 @@ void Debugger::_drawTex(f32 _ulx, f32 _uly, f32 _yShift)
 	}
 	const CachedTexture * texture = m_triSel->tex_info[tex]->texture;
 	const gDPLoadTileInfo & texLoadInfo = m_triSel->tex_info[tex]->texLoadInfo;
-	OUTPUT1("CRC: 0x%08x", texture->crc);
+	OUTPUT1("CRC: 0x%llx", texture->crc);
 	OUTPUT1("tex_size: %s", ImageSizeText[texture->size]);
 	OUTPUT1("tex_format: %s", ImageFormatText[texture->format]);
 	OUTPUT1("width: %d", texture->width);
@@ -982,7 +991,23 @@ void Debugger::_drawVertexCoords(f32 _ulx, f32 _uly, f32 _yShift)
 			OUTPUT2("v[%d].r: %.2f", j, v.r);
 			OUTPUT2("v[%d].g: %.2f", j, v.g);
 			OUTPUT2("v[%d].b: %.2f", j, v.b);
-			OUTPUT2("v[%d].a: %.2f", j, v.a);
+			if (RSP.LLE) {
+				OUTPUT2("v[%d].a: %.2f", j, v.a);
+			}
+			else {
+				if ((m_triSel->geometryMode & G_FOG) == 0) {
+					OUTPUT2("v[%d].a: %.2f", j, v.a);
+				}
+				else {
+					f32 f = v.z / v.w * m_triSel->fogMultiplier + m_triSel->fogOffset;
+					if (f < 0.0f)
+						f = 0.0f;
+					if (f > 1.0f)
+						f = 1.0f;
+					OUTPUT2("v[%d].a: %.2f", j, f);
+				}
+			}
+
 		}
 		return;
 	}
@@ -1007,7 +1032,8 @@ void Debugger::_drawTexture(f32 _ulx, f32 _uly, f32 _lrx, f32 _lry, f32 _yShift)
 	OUTPUT0("TEXTURE (page 0)");
 	if (m_pCurTexInfo == nullptr)
 		return;
-	const CachedTexture * texture = m_pCurTexInfo->texture;
+	const CachedTexture * pTexture = m_pCurTexInfo->texture;
+	textureCache().current[0] = const_cast<CachedTexture *>(pTexture);
 	const gDPLoadTileInfo & texLoadInfo = m_pCurTexInfo->texLoadInfo;
 
 	COL_TEXT();
@@ -1015,17 +1041,17 @@ void Debugger::_drawTexture(f32 _ulx, f32 _uly, f32 _lrx, f32 _lry, f32 _yShift)
 	OUTPUT1("scale_s: %f", m_pCurTexInfo->scales);
 	OUTPUT1("scale_t: %f", m_pCurTexInfo->scalet);
 	OUTPUT1("load: %s", LoadType[texLoadInfo.loadType&1]);
-	OUTPUT1("t_mem: %04x", texture->tMem);
+	OUTPUT1("t_mem: %04x", pTexture->tMem);
+	OUTPUT1("framebuffer: %s", FrameBufferType[(u32)pTexture->frameBufferTexture]);
+	OUTPUT1("crc: %llx", pTexture->crc);
 	//	OUTPUT1("texrecting: %d", cache[_debugger.tex_sel].texrecting);
-	OUTPUT1("tex_size: %s", ImageSizeText[texture->size]);
-	OUTPUT1("tex_format: %s", ImageFormatText[texture->format]);
-	OUTPUT1("width: %d", texture->width);
-	OUTPUT1("height: %d", texture->height);
-	OUTPUT1("palette: %d", texture->palette);
-	OUTPUT1("line: %d", texture->line);
-	OUTPUT1("lod: %d", texture->max_level);
-	OUTPUT1("framebuffer: %s", FrameBufferType[(u32)texture->frameBufferTexture]);
-	OUTPUT1("crc: %08x", texture->crc);
+	OUTPUT1("tex_size: %s", ImageSizeText[pTexture->size]);
+	OUTPUT1("tex_format: %s", ImageFormatText[pTexture->format]);
+	OUTPUT1("width: %d", pTexture->width);
+	OUTPUT1("height: %d", pTexture->height);
+	OUTPUT1("palette: %d", pTexture->palette);
+	OUTPUT1("line: %d", pTexture->line);
+	OUTPUT1("lod: %d", pTexture->max_level);
 
 	const f32 Z = 0.0f;
 	const f32 W = 1.0f;
@@ -1052,14 +1078,14 @@ void Debugger::_drawTexture(f32 _ulx, f32 _uly, f32 _lrx, f32 _lry, f32 _yShift)
 		height = fabsf(_lry - uly);
 	}
 
-	if (texture->width <= texture->height) {
-		f32 tex_aspect = f32(texture->width) / f32(texture->height);
+	if (pTexture->width <= pTexture->height) {
+		f32 tex_aspect = f32(pTexture->width) / f32(pTexture->height);
 		f32 scale = tex_aspect / winAspect;
 		f32 diff = 0.5f * width * (1.0f - scale);
 		ulx += diff;
 		_lrx -= diff;
 	} else {
-		f32 tex_aspect = f32(texture->height) / f32(texture->width);
+		f32 tex_aspect = f32(pTexture->height) / f32(pTexture->width);
 		f32 scale = tex_aspect / winAspect;
 		f32 diff = 0.5f * height * (1.0f - scale);
 		uly -= diff;
@@ -1084,16 +1110,16 @@ void Debugger::_drawTexture(f32 _ulx, f32 _uly, f32 _lrx, f32 _lry, f32 _yShift)
 	rect[3].z = Z;
 	rect[3].w = W;
 
-	f32 s0 = 0, t0 = 0, s1 = 1, t1 = 1;
+	f32 s0 = 0, t0 = 0, s1 = f32(pTexture->width), t1 = f32(pTexture->height);
 
 	rect[0].s0 = s0;
-	rect[0].t0 = t0;
+	rect[0].t0 = t1;
 	rect[1].s0 = s1;
-	rect[1].t0 = t0;
+	rect[1].t0 = t1;
 	rect[2].s0 = s0;
-	rect[2].t0 = t1;
+	rect[2].t0 = t0;
 	rect[3].s0 = s1;
-	rect[3].t0 = t1;
+	rect[3].t0 = t0;
 
 	_setTextureCombiner();
 	Context::TexParameters texParams;
@@ -1102,6 +1128,9 @@ void Debugger::_drawTexture(f32 _ulx, f32 _uly, f32 _lrx, f32 _lry, f32 _yShift)
 	texParams.textureUnitIndex = textureIndices::Tex[0];
 	texParams.minFilter = textureParameters::FILTER_NEAREST;
 	texParams.magFilter = textureParameters::FILTER_NEAREST;
+	texParams.wrapS = textureParameters::WRAP_CLAMP_TO_EDGE;
+	texParams.wrapT = textureParameters::WRAP_CLAMP_TO_EDGE;
+
 	gfxContext.setTextureParameters(texParams);
 
 	Context::DrawRectParameters rectParams;

@@ -63,7 +63,7 @@ std::vector<SpecialMicrocodeInfo> specialMicrocodes =
 	{ Turbo3D,		false,	true,	false,	0x2bdcfc8a }, // Dark Rift, Turbo3D
 	{ F3DSETA,		false,	true,	true,	0x2edee7be }, // RSP SW Version: 2.0D, 04-01-96
 	{ F3DGOLDEN,	true,	true,	false,	0x302bca09 }, // RSP SW Version: 2.0G, 09-30-96 GoldenEye
-	{ F3D,			false,	true,	false,	0x4AED6B3B }, // Vivid Dolls [ALECK64]
+	{ F3D,			false,	false,	false,	0x4AED6B3B }, // Vivid Dolls [ALECK64]
 	{ F3D,			true,	true,	true,	0x54c558ba }, // RSP SW Version: 2.0D, 04-01-96 Pilot Wings, Blast Corps
 	{ ZSortBOSS,	false,	false,	false,	0x553538cc }, // World Driver Championship
 	{ F3D,			false,	false,	true,	0x55be9bad }, // RSP SW Version: 2.0D, 04-01-96, Mischief Makers, Mortal Combat Trilogy, J.League Live
@@ -195,6 +195,7 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 		RDP_Init();
 
 		G_TRI1 = G_TRI2 = G_TRIX = G_QUAD = -1; // For correct work of gSPFlushTriangles()
+		gSP.clipRatio = 1U;
 
 		switch (m_pCurrent->type) {
 			case F3D:
@@ -204,10 +205,12 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case F3DEX:
 				F3DEX_Init();
 				m_hwlSupported = true;
+				gSP.clipRatio = m_pCurrent->Rej ? 2U : 1U;
 			break;
 			case F3DEX2:
 				F3DEX2_Init();
 				m_hwlSupported = true;
+				gSP.clipRatio = 2U;
 			break;
 			case L3D:
 				L3D_Init();
@@ -216,10 +219,12 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case L3DEX:
 				L3DEX_Init();
 				m_hwlSupported = false;
+				gSP.clipRatio = m_pCurrent->Rej ? 2U : 1U;
 			break;
 			case L3DEX2:
 				L3DEX2_Init();
 				m_hwlSupported = false;
+				gSP.clipRatio = 2U;
 			break;
 			case S2DEX_1_03:
 				S2DEX_1_03_Init();
@@ -280,10 +285,12 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case F3DZEX2OOT:
 				F3DZEX2_Init();
 				m_hwlSupported = true;
+				gSP.clipRatio = 2U;
 			break;
 			case F3DZEX2MM:
 				F3DZEX2_Init();
 				m_hwlSupported = false;
+				gSP.clipRatio = 2U;
 			break;
 			case F3DTEXA:
 				F3DTEXA_Init();
@@ -296,6 +303,7 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case F3DEX2ACCLAIM:
 				F3DEX2ACCLAIM_Init();
 				m_hwlSupported = false;
+				gSP.clipRatio = 2U;
 			break;
 			case F5Rogue:
 				F5Rogue_Init();
@@ -304,6 +312,7 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 			case F3DFLX2:
 				F3DFLX2_Init();
 				m_hwlSupported = true;
+				gSP.clipRatio = 2U;
 			break;
 			case ZSortBOSS:
 				ZSortBOSS_Init();
@@ -397,6 +406,9 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 			} else if (strncmp(&uc_str[4], "Gfx", 3) == 0) {
 				current.NoN = (strstr( uc_str + 4, ".NoN") != nullptr);
 				current.Rej = (strstr(uc_str + 4, ".Rej") != nullptr);
+				if (current.Rej)
+					// For the Z direction, a reject box can be done with the far plane, but not with the near plane.
+					current.NoN = true;
 
 				if (strncmp( &uc_str[14], "F3D", 3 ) == 0) {
 					if (uc_str[28] == '1' || strncmp(&uc_str[28], "0.95", 4) == 0 || strncmp(&uc_str[28], "0.96", 4) == 0)

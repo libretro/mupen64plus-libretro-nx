@@ -1,20 +1,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *   Mupen64plus-Next - libretro.c                                       *
- *   Copyright (C) 2020 M4xw <m4x@m4xw.net                               *
- *                                                                    *
+ *   Mupen64plus-Next - libretro.c                                         *
+ *   Copyright (C) 2020 M4xw <m4x@m4xw.net>                                *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                 *
- *                                                                    *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                         *
- *                                                                    *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                        *
- *   Free Software Foundation, Inc.,                                     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,6 +24,8 @@
 
 #include "libretro.h"
 #include "libretro_private.h"
+#include "libretro_core_options.h"
+
 #include "GLideN64_libretro.h"
 #include "mupen64plus-next_common.h"
 
@@ -32,7 +34,7 @@
 #ifdef HAVE_LIBNX
 #include <switch.h>
 #endif
-
+#include <pthread.h>
 #include <glsm/glsmsym.h>
 
 #include "api/m64p_frontend.h"
@@ -92,28 +94,6 @@ struct rgba
 extern struct rgba prescale[PRESCALE_WIDTH * PRESCALE_HEIGHT];
 #endif // HAVE_THR_AL
 
-// Option entries
-#define OPTION_ENTRY_RDP_GLIDEN64 "gliden64"
-#define OPTION_ENTRY_RSP_HLE "hle"
-
-#ifdef HAVE_THR_AL
-#define OPTION_ENTRY_RDP_ANGRYLION "|angrylion"
-#else
-#define OPTION_ENTRY_RDP_ANGRYLION ""
-#endif // HAVE_THR_AL
-
-#ifdef HAVE_PARALLEL_RSP
-#define OPTION_ENTRY_RSP_PARALLEL "|parallel"
-#else
-#define OPTION_ENTRY_RSP_PARALLEL ""
-#endif // HAVE_PARALLEL_RSP
-
-#ifdef HAVE_LLE
-#define OPTION_ENTRY_RSP_CXD4 "|cxd4"
-#else
-#define OPTION_ENTRY_RSP_CXD4 ""
-#endif // HAVE_LLE
-
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -162,8 +142,14 @@ float retro_screen_aspect = 4.0 / 3.0;
 
 char* retro_dd_path_img;
 char* retro_dd_path_rom;
+bool retro_savestate_complete = false;
+int  retro_savestate_result = 0;
 
 uint32_t bilinearMode = 0;
+uint32_t EnableHybridFilter = 0;
+uint32_t EnableDitheringPattern = 0;
+uint32_t RDRAMImageDitheringMode = 0;
+uint32_t EnableDitheringQuantization = 0;
 uint32_t EnableHWLighting = 0;
 uint32_t CorrectTexrectCoords = 0;
 uint32_t enableNativeResTexrects = 0;
@@ -184,18 +170,15 @@ uint32_t EnableShadersStorage = 0;
 uint32_t EnableTextureCache = 0;
 uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
-uint32_t EnableNoiseEmulation = 0;
 uint32_t EnableLODEmulation = 0;
-uint32_t EnableFullspeed = 0;
-uint32_t CountPerOp = 0;
-uint32_t CountPerScanlineOverride = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
 uint32_t EnableEnhancedTextureStorage;
 uint32_t EnableEnhancedHighResStorage;
 uint32_t EnableTxCacheCompression = 0;
-uint32_t ForceDisableExtraMem = 0;
 uint32_t EnableNativeResFactor = 0;
 uint32_t EnableN64DepthCompare = 0;
+uint32_t EnableThreadedRenderer = 0;
+uint32_t EnableCopyAuxToRDRAM = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -205,9 +188,18 @@ uint32_t OverscanLeft = 0;
 uint32_t OverscanRight = 0;
 uint32_t OverscanBottom = 0;
 
+uint32_t EnableFullspeed = 0;
+uint32_t CountPerOp = 0;
+uint32_t CountPerScanlineOverride = 0;
+uint32_t ForceDisableExtraMem = 0;
+uint32_t IgnoreTLBExceptions = 0;
+
 extern struct device g_dev;
 extern unsigned int r4300_emumode;
 extern struct cheat_ctx g_cheat_ctx;
+
+static bool emuThreadRunning = false;
+static pthread_t emuThread;
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -233,164 +225,6 @@ extern m64p_rom_header ROM_HEADER;
 
 static void setup_variables(void)
 {
-    struct retro_variable variables[] = {
-        { CORE_NAME "-cpucore",
-#ifdef DYNAREC
-            "CPU Core; dynamic_recompiler|cached_interpreter|pure_interpreter" },
-#else
-            "CPU Core; cached_interpreter|pure_interpreter" },
-#endif
-        { CORE_NAME "-rdp-plugin",
-            "RDP Mode; " OPTION_ENTRY_RDP_GLIDEN64 OPTION_ENTRY_RDP_ANGRYLION },
-        { CORE_NAME "-rsp-plugin",
-            "RSP Mode; " OPTION_ENTRY_RSP_HLE OPTION_ENTRY_RSP_PARALLEL OPTION_ENTRY_RSP_CXD4 },
-        { CORE_NAME "-43screensize",
-            "(GLN64) 4:3 Resolution; 640x480|320x240|960x720|1280x960|1440x1080|1600x1200|1920x1440|2240x1680|2560x1920|2880x2160|3200x2400|3520x2640|3840x2880" },
-        { CORE_NAME "-169screensize",
-            "(GLN64) 16:9 Resolution; 960x540|640x360|1280x720|1920x1080|2560x1440|3840x2160|4096x2160|7680x4320" },
-        { CORE_NAME "-aspect",
-            "(GLN64) Aspect Ratio; 4:3|16:9|16:9 adjusted" },
-        { CORE_NAME "-BilinearMode",
-            "(GLN64) Bilinear filtering mode; standard|3point" },
-#ifndef HAVE_OPENGLES2
-        { CORE_NAME "-MultiSampling",
-            "(GLN64) MSAA level; 0|2|4|8|16" },
-#endif
-        { CORE_NAME "-FXAA",
-            "(GLN64) FXAA; 0|1" },
-
-        { CORE_NAME "-NoiseEmulation",
-            "(GLN64) Noise Emulation; True|False" },
-
-        { CORE_NAME "-EnableFBEmulation",
-#ifdef VC
-            "(GLN64) Framebuffer Emulation; False|True" },
-#else
-            "(GLN64) Framebuffer Emulation; True|False" },
-#endif
-
-        { CORE_NAME "-EnableLODEmulation",
-            "(GLN64) LOD Emulation; True|False" },
-        { CORE_NAME "-EnableCopyColorToRDRAM",
-#ifndef HAVE_OPENGLES
-            "(GLN64) Color buffer to RDRAM; Async|Sync|Off" },
-#else
-            "(GLN64) Color buffer to RDRAM; Off|Async|Sync" },
-#endif
-        { CORE_NAME "-EnableCopyDepthToRDRAM",
-            "(GLN64) Depth buffer to RDRAM; Software|FromMem|Off" },
-        { CORE_NAME "-BackgroundMode",
-            "(GLN64) Background Mode; OnePiece|Stripped" },
-        { CORE_NAME "-EnableHWLighting",
-            "(GLN64) Hardware per-pixel lighting; False|True" },
-        { CORE_NAME "-CorrectTexrectCoords",
-            "(GLN64) Continuous texrect coords; Off|Auto|Force" },
-        { CORE_NAME "-EnableNativeResTexrects",
-            "(GLN64) Native res. 2D texrects; Disabled|Optimized|Unoptimized" },
-#if defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableLegacyBlending",
-            "(GLN64) Less accurate blending mode; True|False" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "(GLN64) GPU shader depth write; False|True" },
-#else
-        { CORE_NAME "-EnableLegacyBlending",
-            "(GLN64) Less accurate blending mode; False|True" },
-        { CORE_NAME "-EnableFragmentDepthWrite",
-            "(GLN64) GPU shader depth write; True|False" },
-#endif
-#if !defined(VC) && !defined(HAVE_OPENGLES)
-        // Not supported on all GPU's
-        { CORE_NAME "-EnableN64DepthCompare",
-            "(GLN64) N64 Depth Compare; False|True" },
-        { CORE_NAME "-EnableShadersStorage",
-            "(GLN64) Cache GPU Shaders; True|False" },
-#endif // !defined(VC) && !defined(HAVE_OPENGLES)
-        { CORE_NAME "-EnableTextureCache",
-            "(GLN64) Cache Textures; True|False" },
-        { CORE_NAME "-EnableOverscan",
-            "(GLN64) Overscan; Enabled|Disabled" },
-        { CORE_NAME "-OverscanTop",
-            "(GLN64) Overscan Offset (Top); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanLeft",
-            "(GLN64) Overscan Offset (Left); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanRight",
-            "(GLN64) Overscan Offset (Right); " GLN64_OVERSCAN_SCALING },
-        { CORE_NAME "-OverscanBottom",
-            "(GLN64) Overscan Offset (Bottom); " GLN64_OVERSCAN_SCALING },
-
-        { CORE_NAME "-MaxTxCacheSize",
-#if defined(VC)
-            "(GLN64) Max texture cache size; 1500|8000|4000" },
-#elif defined(HAVE_LIBNX)
-            "(GLN64) Max texture cache size; 4000|1500|8000" },
-#else
-            "(GLN64) Max texture cache size; 8000|4000|1500" },
-#endif
-        { CORE_NAME "-txFilterMode",
-            "(GLN64) Texture filter; None|Smooth filtering 1|Smooth filtering 2|Smooth filtering 3|Smooth filtering 4|Sharp filtering 1|Sharp filtering 2" },
-        { CORE_NAME "-txEnhancementMode",
-            "(GLN64) Texture Enhancement; None|As Is|X2|X2SAI|HQ2X|HQ2XS|LQ2X|LQ2XS|HQ4X|2xBRZ|3xBRZ|4xBRZ|5xBRZ|6xBRZ" },
-        { CORE_NAME "-txFilterIgnoreBG",
-            "(GLN64) Filter background textures; True|False" },
-        { CORE_NAME "-txHiresEnable",
-            "(GLN64) Use High-Res textures; False|True" },
-        { CORE_NAME "-txCacheCompression",
-            "(GLN64) Use High-Res Texture Cache Compression; True|False" },
-        { CORE_NAME "-txHiresFullAlphaChannel",
-            "(GLN64) Use High-Res Full Alpha Channel; False|True" },
-        { CORE_NAME "-EnableEnhancedTextureStorage",
-            "(GLN64) Use enhanced Texture Storage; False|True" },
-        { CORE_NAME "-EnableEnhancedHighResStorage",
-            "(GLN64) Use enhanced Hi-Res Storage; False|True" },
-#ifdef HAVE_THR_AL
-        { CORE_NAME "-angrylion-vioverlay",
-            "(AL) VI Overlay; Filtered|AA+Blur|AA+Dedither|AA only|Unfiltered|Depth|Coverage" },
-        { CORE_NAME "-angrylion-sync",
-            "(AL) Thread sync level; Low|Medium|High" },
-        { CORE_NAME "-angrylion-multithread",
-            "(AL) Multi-threading; all threads|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63" },
-        { CORE_NAME "-angrylion-overscan",
-            "(AL) Hide overscan; disabled|enabled" },
-#endif // HAVE_THR_AL
-        { CORE_NAME "-FrameDuping",
-#ifdef HAVE_LIBNX
-            "Frame Duplication; True|False" },
-#else
-            "Frame Duplication; False|True" },
-#endif
-        { CORE_NAME "-Framerate",
-            "Framerate; Original|Fullspeed" },
-        { CORE_NAME "-virefresh",
-            "VI Refresh (Overclock); Auto|1500|2200" },
-        { CORE_NAME "-astick-deadzone",
-           "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-        { CORE_NAME "-astick-sensitivity",
-           "Analog Sensitivity (percent); 100|105|110|115|120|125|130|135|140|145|150|50|55|60|65|70|75|80|85|90|95"},
-        { CORE_NAME "-r-cbutton",
-           "Right C Button; C1|C2|C3|C4"},
-        { CORE_NAME "-l-cbutton",
-           "Left C Button; C2|C3|C4|C1"},
-        { CORE_NAME "-d-cbutton",
-           "Down C Button; C3|C4|C1|C2"},
-        { CORE_NAME "-u-cbutton",
-           "Up C Button; C4|C1|C2|C3"},
-        { CORE_NAME "-alt-map",
-           "Independent C-button Controls; False|True" },
-        { CORE_NAME "-ForceDisableExtraMem",
-           "Disable Expansion Pak; False|True"},
-        { CORE_NAME "-pak1",
-           "Player 1 Pak; memory|rumble|none"},
-        { CORE_NAME "-pak2",
-           "Player 2 Pak; none|memory|rumble"},
-        { CORE_NAME "-pak3",
-           "Player 3 Pak; none|memory|rumble"},
-        { CORE_NAME "-pak4",
-           "Player 4 Pak; none|memory|rumble"},
-        { CORE_NAME "-CountPerOp",
-            "Count Per Op; 0|1|2|3" },
-        { NULL, NULL },
-    };
-
     static const struct retro_controller_description port[] = {
         { "Controller", RETRO_DEVICE_JOYPAD },
         { "RetroPad", RETRO_DEVICE_JOYPAD },
@@ -404,14 +238,23 @@ static void setup_variables(void)
         { 0, 0 }
     };
 
-    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+    libretro_set_core_options(environ_cb);
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+    //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, false);
 }
 
+static void n64StateCallback(void *Context, m64p_core_param param_type, int new_value)
+{
+    if(param_type == M64CORE_STATE_LOADCOMPLETE || param_type == M64CORE_STATE_SAVECOMPLETE)
+    {
+        retro_savestate_complete = true;
+        retro_savestate_result = new_value;
+    }
+}
 
 static bool emu_step_load_data()
 {
-    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", "Core", n64DebugCallback, 0, 0);
+    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
     if(ret && log_cb)
         log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
 
@@ -456,12 +299,20 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void EmuThreadFunction(void)
+static void* EmuThreadFunction(void* param)
 {
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
+
+    // Runs until CMD_STOP
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+        // Unset
+        emuThreadRunning = false;
+    }
 }
 
 void reinit_gfx_plugin(void)
@@ -562,7 +413,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #ifndef GIT_VERSION
 #define GIT_VERSION " git"
 #endif
-    info->library_version = "2.0.5" GIT_VERSION;
+    info->library_version = "2.1" GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1";
     info->need_fullpath = false;
     info->block_extract = false;
@@ -624,16 +475,23 @@ void retro_init(void)
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
-    initializing = true;
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        initializing = true;
 
-    retro_thread = co_active();
-    game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+        retro_thread = co_active();
+        game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+    }
 }
 
 void retro_deinit(void)
-{
-    CoreDoCommand(M64CMD_STOP, 0, NULL);
-    co_switch(game_thread); /* Let the core thread finish */
+{    
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+        CoreDoCommand(M64CMD_STOP, 0, NULL);
+        co_switch(game_thread); /* Let the core thread finish */
+    }
+
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -784,6 +642,13 @@ static void update_variables(bool startup)
           }
        }
 
+       var.key = CORE_NAME "-ThreadedRenderer";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableThreadedRenderer = !strcmp(var.value, "True") ? 1 : 0;
+       }
+
        var.key = CORE_NAME "-BilinearMode";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -791,6 +656,41 @@ static void update_variables(bool startup)
           bilinearMode = !strcmp(var.value, "3point") ? 0 : 1;
        }
 
+       var.key = CORE_NAME "-HybridFilter";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableHybridFilter = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-DitheringPattern";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableDitheringPattern = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-DitheringQuantization";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableDitheringQuantization = !strcmp(var.value, "False") ? 0 : 1;
+       }
+       
+       var.key = CORE_NAME "-RDRAMImageDitheringMode";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "BlueNoise"))
+             RDRAMImageDitheringMode = 2; // bdmBlueNoise
+          else if (!strcmp(var.value, "MagicSquare"))
+             RDRAMImageDitheringMode = 1; // bdmMagicSquare
+          else if (!strcmp(var.value, "Bayer"))
+             RDRAMImageDitheringMode = 1; // bdmBayer
+          else
+             RDRAMImageDitheringMode = 0; // bdmDisable
+       }
+       
        var.key = CORE_NAME "-FXAA";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -826,13 +726,6 @@ static void update_variables(bool startup)
           CountPerScanlineOverride = !strcmp(var.value, "Auto") ? 0 : atoi(var.value);
        }
 
-       var.key = CORE_NAME "-NoiseEmulation";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          EnableNoiseEmulation = !strcmp(var.value, "False") ? 0 : 1;
-       }
-
        var.key = CORE_NAME "-EnableLODEmulation";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -851,14 +744,21 @@ static void update_variables(bool startup)
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          EnableN64DepthCompare = !strcmp(var.value, "False") ? 0 : 1;
+          if (!strcmp(var.value, "Compatible"))
+             EnableN64DepthCompare = 2; // dcCompatible
+          else if (!strcmp(var.value, "True"))
+             EnableN64DepthCompare = 1; // dcFast
+          else
+             EnableN64DepthCompare = 0; // dcDisable
        }
 
        var.key = CORE_NAME "-EnableCopyColorToRDRAM";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          if (!strcmp(var.value, "Async"))
+          if (!strcmp(var.value, "TripleBuffer"))
+             EnableCopyColorToRDRAM = 3;
+          else if (!strcmp(var.value, "Async"))
              EnableCopyColorToRDRAM = 2;
           else if (!strcmp(var.value, "Sync"))
              EnableCopyColorToRDRAM = 1;
@@ -1054,6 +954,13 @@ static void update_variables(bool startup)
           EnableEnhancedHighResStorage = !strcmp(var.value, "False") ? 0 : 1;
        }
 
+       var.key = CORE_NAME "-EnableCopyAuxToRDRAM";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableCopyAuxToRDRAM = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
        var.key = CORE_NAME "-cpucore";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1247,6 +1154,18 @@ static void update_variables(bool startup)
        {
           ForceDisableExtraMem = !strcmp(var.value, "False") ? 0 : 1;
        }
+
+       var.key = CORE_NAME "-IgnoreTLBExceptions";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "False"))
+             IgnoreTLBExceptions = 0;
+          else if (!strcmp(var.value, "OnlyNotEnabled"))
+             IgnoreTLBExceptions = 1;
+          else if (!strcmp(var.value, "AlwaysIgnoreTLB"))
+             IgnoreTLBExceptions = 2;
+       }
     }
 
 #ifdef HAVE_THR_AL
@@ -1372,7 +1291,7 @@ static void format_saved_memory(void)
     format_mempak(saved_memory.mempack + 3 * MEMPAK_SIZE);
 }
 
-static void context_reset(void)
+void context_reset(void)
 {
     static bool first_init = true;
 
@@ -1428,11 +1347,21 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
 
+    // Init savestate job var
+    retro_savestate_complete = true;
+
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables(true);
     initial_boot = false;
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       initializing = true;
+       retro_thread = co_active();
+       game_thread = co_create(65536 * sizeof(void*) * 16, gln64_thr_gl_invoke_command_loop);
+    }
 
     init_audio_libretro(audio_buffer_size);
 
@@ -1475,7 +1404,26 @@ bool retro_load_game(const struct retro_game_info *game)
 void retro_unload_game(void)
 {
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       CoreDoCommand(M64CMD_STOP, 0, NULL);
+
+       // Run one more frame to unlock it
+       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+       while(!threaded_gl_safe_shutdown)
+       {
+          co_switch(game_thread);
+       }
+       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+    
+       pthread_join(emuThread, NULL);
+    }
+
     emu_initialized = false;
+
+    // Reset savestate job var
+    retro_savestate_complete = false;
 }
 
 void retro_run (void)
@@ -1490,6 +1438,15 @@ void retro_run (void)
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
+       if(EnableThreadedRenderer)
+       {
+          if(!emuThreadRunning)
+          {
+             pthread_create(&emuThread, NULL, &EmuThreadFunction, NULL);
+             emuThreadRunning = true;
+          }
+       }
+       
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     }
 
@@ -1518,7 +1475,12 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
-        
+
+    // Poll needs to happen here on threaded gl
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       poll_cb();
+    }
 }
 
 void retro_reset (void)
@@ -1558,11 +1520,17 @@ bool retro_serialize(void *data, size_t size)
     if (initializing)
         return false;
 
-    int success = savestates_save_m64p(&g_dev, data);
-    if (success)
-        return true;
+    retro_savestate_complete = false;
+    retro_savestate_result = 0;
 
-    return false;
+    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+
+    while(!retro_savestate_complete)
+    {
+        retro_run();
+    }
+    
+    return !!retro_savestate_result;
 }
 
 bool retro_unserialize(const void * data, size_t size)
@@ -1570,11 +1538,17 @@ bool retro_unserialize(const void * data, size_t size)
     if (initializing)
         return false;
 
-    int success = savestates_load_m64p(&g_dev, data);
-    if (success)
-        return true;
+    retro_savestate_complete = false;
+    retro_savestate_result = 0;
+    
+    savestates_set_job(savestates_job_load, savestates_type_m64p, data);
 
-    return false;
+    while(!retro_savestate_complete)
+    {
+        retro_run();
+    }
+    
+    return true;
 }
 
 //Needed to be able to detach controllers for Lylat Wars multiplayer
@@ -1655,7 +1629,10 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
 
 void retro_return(void)
 {
-    co_switch(retro_thread);
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+    {
+       co_switch(retro_thread);
+    }
 }
 
 uint32_t get_retro_screen_width()

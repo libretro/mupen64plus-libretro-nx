@@ -208,6 +208,9 @@ extern PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC ptrEGLImageTargetRenderbuff
 extern "C" void initGLFunctions();
 
 #ifndef NO_GL_WRAP
+#ifdef __LIBRETRO__
+#include <glsm/glsm_caps.h>
+#endif // __LIBRETRO__
 #define glGetError(...) opengl::FunctionWrapper::wrGetError(__VA_ARGS__)
 #define glBlendFunc(...) opengl::FunctionWrapper::wrBlendFunc(__VA_ARGS__)
 #define glPixelStorei(...) opengl::FunctionWrapper::wrPixelStorei(__VA_ARGS__)
@@ -215,8 +218,8 @@ extern "C" void initGLFunctions();
 #define glCullFace(...) opengl::FunctionWrapper::wrCullFace(__VA_ARGS__)
 #define glDepthFunc(...) opengl::FunctionWrapper::wrDepthFunc(__VA_ARGS__)
 #define glDepthMask(...) opengl::FunctionWrapper::wrDepthMask(__VA_ARGS__)
-#define glDisable(...) opengl::FunctionWrapper::wrDisable(__VA_ARGS__)
-#define glEnable(...) opengl::FunctionWrapper::wrEnable(__VA_ARGS__)
+#define glDisable(T) opengl::FunctionWrapper::wrDisable(S##T)
+#define glEnable(T) opengl::FunctionWrapper::wrEnable(S##T)
 #define glPolygonOffset(...) opengl::FunctionWrapper::wrPolygonOffset(__VA_ARGS__)
 #define glScissor(...) opengl::FunctionWrapper::wrScissor(__VA_ARGS__)
 #define glViewport(...) opengl::FunctionWrapper::wrViewport(__VA_ARGS__)

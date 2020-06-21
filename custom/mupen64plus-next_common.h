@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Mupen64plus-Next - mupen64plus-next_common.h                          *
- *   Copyright (C) 2020 M4xw <m4x@m4xw.net                                 *
+ *   Copyright (C) 2020 M4xw <m4x@m4xw.net>                                *
  *   Copyright (C) 2020 Daniel De Matteis                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,6 +27,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdbool.h>
+#include <libretro.h>
 
 #include "api/m64p_common.h"
 #include "api/m64p_plugin.h"
@@ -58,7 +59,73 @@ uint32_t get_retro_screen_height();
 
 extern enum rdp_plugin_type current_rdp_type;
 extern enum rsp_plugin_type current_rsp_type;
+extern retro_environment_t environ_cb;
 extern bool libretro_swap_buffer;
+
+// Savestate globals
+extern bool retro_savestate_complete;
+extern int  retro_savestate_result;
+
+// 64DD globals
+extern char* retro_dd_path_img;
+extern char* retro_dd_path_rom;
+
+// Threaded GL Callback
+extern void gln64_thr_gl_invoke_command_loop();
+extern bool threaded_gl_safe_shutdown;
+
+// Core options
+// GLN64
+extern uint32_t bilinearMode;
+extern uint32_t EnableHybridFilter;
+extern uint32_t EnableDitheringPattern;
+extern uint32_t EnableDitheringQuantization;
+extern uint32_t RDRAMImageDitheringMode;
+extern uint32_t EnableHWLighting;
+extern uint32_t CorrectTexrectCoords;
+extern uint32_t enableNativeResTexrects;
+extern uint32_t enableLegacyBlending;
+extern uint32_t EnableCopyColorToRDRAM;
+extern uint32_t EnableCopyDepthToRDRAM;
+extern uint32_t AspectRatio;
+extern uint32_t MaxTxCacheSize;
+extern uint32_t txFilterMode;
+extern uint32_t txEnhancementMode;
+extern uint32_t txHiresEnable;
+extern uint32_t txHiresFullAlphaChannel;
+extern uint32_t txFilterIgnoreBG;
+extern uint32_t EnableFXAA;
+extern uint32_t MultiSampling;
+extern uint32_t EnableFragmentDepthWrite;
+extern uint32_t EnableShadersStorage;
+extern uint32_t EnableTextureCache;
+extern uint32_t EnableFBEmulation;
+extern uint32_t EnableFrameDuping;
+extern uint32_t EnableLODEmulation;
+extern uint32_t EnableFullspeed;
+extern uint32_t CountPerOp;
+extern uint32_t CountPerScanlineOverride;
+extern uint32_t BackgroundMode;
+extern uint32_t EnableEnhancedTextureStorage;
+extern uint32_t EnableEnhancedHighResStorage;
+extern uint32_t EnableTxCacheCompression;
+extern uint32_t ForceDisableExtraMem;
+extern uint32_t IgnoreTLBExceptions;
+extern uint32_t EnableNativeResFactor;
+extern uint32_t EnableN64DepthCompare;
+extern uint32_t EnableThreadedRenderer;
+extern uint32_t EnableCopyAuxToRDRAM;
+
+// Overscan Options
+extern uint32_t EnableOverscan;
+extern uint32_t OverscanTop;
+extern uint32_t OverscanLeft;
+extern uint32_t OverscanRight;
+extern uint32_t OverscanBottom;
+
+// Others
+#define RETRO_MEMORY_DD 0x100 + 1
+#define RETRO_GAME_TYPE_DD  1
 
 #ifdef __cplusplus
 }

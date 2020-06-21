@@ -25,7 +25,7 @@
 #include <string.h>
 #include <glsym/glsym.h>
 #include <glsm/glsm.h>
-#include <GLideN64_libretro.h>
+#include <mupen64plus-next_common.h>
 
 #if defined(HAVE_OPENGLES)
 #if !defined(IOS)
