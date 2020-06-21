@@ -304,7 +304,7 @@ else ifneq (,$(findstring osx,$(platform)))
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
-   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X
+   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -fno-stack-check
    GL_LIB := -framework OpenGL
 
    # Target Dynarec
@@ -313,7 +313,7 @@ else ifneq (,$(findstring osx,$(platform)))
    endif
 
    COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
+   ASFLAGS = -f macho64 -d LEADING_UNDERSCORE
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(IOSSDK),)
@@ -538,8 +538,8 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	find -name "*.o" -type f -delete
-	find -name "*.d" -type f -delete
+	find . -name "*.o" -type f -delete
+	find . -name "*.d" -type f -delete
 	rm -f $(TARGET)
 
 .PHONY: clean
