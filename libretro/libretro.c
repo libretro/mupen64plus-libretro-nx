@@ -313,6 +313,8 @@ static void* EmuThreadFunction(void* param)
         // Unset
         emuThreadRunning = false;
     }
+
+    return NULL;
 }
 
 void reinit_gfx_plugin(void)
