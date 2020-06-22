@@ -483,6 +483,9 @@ endif
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
+# Use -fcommon
+CPUOPTS += -fcommon
+
 # set C/C++ standard to use
 CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS
 CXXFLAGS += -std=gnu++11 -D_CRT_SECURE_NO_WARNINGS
