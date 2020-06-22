@@ -1,4 +1,4 @@
-/* Copyright  (C) 2010-2019 The RetroArch team
+/* Copyright  (C) 2010-2020 The RetroArch team
 *
 * ---------------------------------------------------------------------------------------
 * The following license statement only applies to this file (cdrom.c).
@@ -96,6 +96,7 @@ void increment_msf(unsigned char *min, unsigned char *sec, unsigned char *frame)
    *frame = (*frame < 74) ? (*frame + 1) : 0;
 }
 
+#ifdef CDROM_DEBUG
 static void cdrom_print_sense_data(const unsigned char *sense, size_t len)
 {
    unsigned i;
@@ -252,6 +253,7 @@ static void cdrom_print_sense_data(const unsigned char *sense, size_t len)
 
    fflush(stdout);
 }
+#endif
 
 #if defined(_WIN32) && !defined(_XBOX)
 static int cdrom_send_command_win32(const libretro_vfs_implementation_file *stream, CDROM_CMD_Direction dir, void *buf, size_t len, unsigned char *cmd, size_t cmd_len, unsigned char *sense, size_t sense_len)
@@ -519,7 +521,9 @@ retry:
       }
       else
       {
+#ifdef CDROM_DEBUG
          cdrom_print_sense_data(sense, sizeof(sense));
+#endif
 
          /* INQUIRY/TEST/SENSE should never fail, don't retry. */
          /* READ ATIP seems to fail outright on some drives with pressed discs, skip retries. */
@@ -672,7 +676,9 @@ int cdrom_get_sense(libretro_vfs_implementation_file *stream, unsigned char *sen
    if (rv)
       return 1;
 
+#ifdef CDROM_DEBUG
    cdrom_print_sense_data(buf, sizeof(buf));
+#endif
 
    return 0;
 }
@@ -1336,22 +1342,25 @@ struct string_list* cdrom_get_available_drives(void)
 
    for (i = 0; i < (int)dir_list->size; i++)
    {
-      if (strstr(dir_list->elems[i].data, "/dev/sg"))
+      if (string_starts_with(dir_list->elems[i].data, "/dev/sg"))
       {
-         char drive_model[32] = {0};
-         char drive_string[33] = {0};
-         union string_list_elem_attr attr = {0};
-         int dev_index = 0;
-         RFILE *file = filestream_open(dir_list->elems[i].data, RETRO_VFS_FILE_ACCESS_READ, 0);
          libretro_vfs_implementation_file *stream;
-         bool is_cdrom = false;
+         char drive_model[32]             = {0};
+         char drive_string[33]            = {0};
+         union string_list_elem_attr attr = {0};
+         int dev_index                    = 0;
+         RFILE *file                      = filestream_open(
+               dir_list->elems[i].data, RETRO_VFS_FILE_ACCESS_READ, 0);
+         bool is_cdrom                    = false;
 
          found = true;
 
          if (!file)
          {
+#ifdef CDROM_DEBUG
             printf("[CDROM] Could not open %s, please check permissions.\n", dir_list->elems[i].data);
             fflush(stdout);
+#endif
             continue;
          }
 
@@ -1365,7 +1374,7 @@ struct string_list* cdrom_get_available_drives(void)
          sscanf(dir_list->elems[i].data + strlen("/dev/sg"), "%d", &dev_index);
 
          dev_index = '0' + dev_index;
-         attr.i = dev_index;
+         attr.i    = dev_index;
 
          if (!string_is_empty(drive_model))
             strlcat(drive_string, drive_model, sizeof(drive_string));
@@ -1378,22 +1387,25 @@ struct string_list* cdrom_get_available_drives(void)
 
    if (!found)
    {
-      char *buf = NULL;
+      char *buf   = NULL;
       int64_t len = 0;
 
       if (filestream_read_file("/proc/modules", (void**)&buf, &len))
       {
-         struct string_list *mods = string_split(buf, "\n");
+#ifdef CDROM_DEBUG
          bool found = false;
+#endif
+         struct string_list *mods = string_split(buf, "\n");
 
          if (mods)
          {
-
             for (i = 0; i < mods->size; i++)
             {
                if (strcasestr(mods->elems[i].data, "sg "))
                {
+#ifdef CDROM_DEBUG
                   found = true;
+#endif
                   break;
                }
             }
@@ -1401,6 +1413,7 @@ struct string_list* cdrom_get_available_drives(void)
             string_list_free(mods);
          }
 
+#ifdef CDROM_DEBUG
          if (found)
          {
             printf("[CDROM] No sg devices found but kernel module is loaded.\n");
@@ -1411,12 +1424,15 @@ struct string_list* cdrom_get_available_drives(void)
             printf("[CDROM] No sg devices found and sg kernel module is not loaded.\n");
             fflush(stdout);
          }
+#endif
       }
+#ifdef CDROM_DEBUG
       else
       {
          printf("[CDROM] No sg devices found, could not check if sg kernel module is loaded.\n");
          fflush(stdout);
       }
+#endif
    }
 
    string_list_free(dir_list);
@@ -1494,9 +1510,7 @@ bool cdrom_is_media_inserted(libretro_vfs_implementation_file *stream)
 bool cdrom_drive_has_media(const char drive)
 {
    RFILE *file;
-   char cdrom_path_bin[256];
-
-   cdrom_path_bin[0] = '\0';
+   char cdrom_path_bin[256] = {0};
 
    cdrom_device_fillpath(cdrom_path_bin, sizeof(cdrom_path_bin), drive, 1, false);
 
@@ -1690,8 +1704,11 @@ void cdrom_device_fillpath(char *path, size_t len, char drive, unsigned char tra
 #ifdef __linux__
       pos = strlcpy(path, "cdrom://drive", len);
 
-      if (len > pos)
+      if (len > pos + 1)
+      {
          path[pos++] = drive;
+         path[pos] = '\0';
+      }
 
       pos = strlcat(path, ".cue", len);
 #endif
@@ -1702,8 +1719,11 @@ void cdrom_device_fillpath(char *path, size_t len, char drive, unsigned char tra
 #ifdef _WIN32
       pos = strlcpy(path, "cdrom://", len);
 
-      if (len > pos)
+      if (len > pos + 1)
+      {
          path[pos++] = drive;
+         path[pos] = '\0';
+      }
 
       pos += snprintf(path + pos, len - pos, ":/drive-track%02d.bin", track);
 #else

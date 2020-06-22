@@ -4,6 +4,8 @@ The basic steps for updating a core to support core options v1 are as follows:
 
 - Copy `example_default/libretro_core_options.h` to the same directory as `libretro.c/.cpp`
 
+- Copy `example_default/libretro_core_options_intl.h` to the same directory as `libretro.c/.cpp`
+
 - Add `#include "libretro_core_options.h"` to `libretro.c/.cpp`
 
 - Replace any existing calls of `RETRO_ENVIRONMENT_SET_VARIABLES` with `libretro_set_core_options(retro_environment_t environ_cb)`  
@@ -16,13 +18,15 @@ The basic steps for updating a core to support core options v1 are as follows:
 
 To add a translation, simply:
 
-- Copy the contents of `option_defs_us` into a new struct array with the appropriate language suffix
+- Copy the contents of `option_defs_us` *from* `libretro_core_options.h` *to* `libretro_core_options_intl.h` into a new struct array with the appropriate language suffix
 
 - Translate all human-readable strings
 
-- Add the new struct array to the appropriate location in the `option_defs_intl` array
+- Add the new struct array to the appropriate location in the `option_defs_intl` array inside `libretro_core_options.h`
 
-This is most easily understood by considering the example in `example_default/libretro_core_options.h`. Here a French translation has been added (`option_defs_fr`), with comments explaining the appropriate formatting requirements.
+This is most easily understood by considering the example in `example_translation/`. Here a French translation has been added (`option_defs_fr`), with comments explaining the appropriate formatting requirements.
+
+NOTE: Since translations involve the use of UTF-8 characters, `libretro_core_options_intl.h` must include a BOM marker. *This renders translations incompatible with c89 builds*. When performing a c89 build, the flag `HAVE_NO_LANGEXTRA` *must* be defined (e.g. `-DHAVE_NO_LANGEXTRA`). This will disable all translations.
 
 ## Disabling core options on unsupported frontends
 

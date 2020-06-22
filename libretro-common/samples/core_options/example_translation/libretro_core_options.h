@@ -7,6 +7,28 @@
 #include <libretro.h>
 #include <retro_inline.h>
 
+#ifndef HAVE_NO_LANGEXTRA
+#include "libretro_core_options_intl.h"
+#endif
+
+/*
+ ********************************
+ * VERSION: 1.3
+ ********************************
+ *
+ * - 1.3: Move translations to libretro_core_options_intl.h
+ *        - libretro_core_options_intl.h includes BOM and utf-8
+ *          fix for MSVC 2010-2013
+ *        - Added HAVE_NO_LANGEXTRA flag to disable translations
+ *          on platforms/compilers without BOM support
+ * - 1.2: Use core options v1 interface when
+ *        RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION is >= 1
+ *        (previously required RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION == 1)
+ * - 1.1: Support generation of core options v0 retro_core_option_value
+ *        arrays containing options with a single value
+ * - 1.0: First commit
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,83 +89,13 @@ struct retro_core_option_definition option_defs_us[] = {
    { NULL, NULL, NULL, {{0}}, NULL },
 };
 
-/* RETRO_LANGUAGE_JAPANESE */
-
-/* RETRO_LANGUAGE_FRENCH */
-
-struct retro_core_option_definition option_defs_fr[] = {
-   {
-      "mycore_region",                             /* key must match option_defs_us entry */
-      "Région de la console",                      /* translated description */
-      "Spécifiez la région d'origine du système.", /* translated sublabel */
-      {
-         { "auto",   "Auto" },                     /* value must match option_defs_us entry   */
-         { "ntsc-j", "Japon" },                    /* > only value_label should be translated */
-         { "ntsc-u", "Amérique" },
-         { "pal",    "L'Europe" },
-         { NULL, NULL },
-      },
-      NULL                                         /* default_value is taken from option_defs_us -> can set to NULL here */
-   },
-   {
-      "mycore_video_scale",
-      "Échelle vidéo",
-      "Définir le facteur d'échelle vidéo interne.",
-      {
-         { NULL, NULL }, /* If value_labels do not require translation (e.g. numbers), values may be omitted */
-      },
-      NULL
-   },
-   {
-      "mycore_overclock",
-      "Réduire le ralentissement",
-      "Activer l'overclocking du processeur (non sécurisé).",
-      {
-         { NULL, NULL }, /* 'enabled' and 'disabled' values should not be translated */
-      },
-      NULL
-   },
-   { NULL, NULL, NULL, {{0}}, NULL },
-};
-
-/* RETRO_LANGUAGE_SPANISH */
-
-/* RETRO_LANGUAGE_GERMAN */
-
-/* RETRO_LANGUAGE_ITALIAN */
-
-/* RETRO_LANGUAGE_DUTCH */
-
-/* RETRO_LANGUAGE_PORTUGUESE_BRAZIL */
-
-/* RETRO_LANGUAGE_PORTUGUESE_PORTUGAL */
-
-/* RETRO_LANGUAGE_RUSSIAN */
-
-/* RETRO_LANGUAGE_KOREAN */
-
-/* RETRO_LANGUAGE_CHINESE_TRADITIONAL */
-
-/* RETRO_LANGUAGE_CHINESE_SIMPLIFIED */
-
-/* RETRO_LANGUAGE_ESPERANTO */
-
-/* RETRO_LANGUAGE_POLISH */
-
-/* RETRO_LANGUAGE_VIETNAMESE */
-
-/* RETRO_LANGUAGE_ARABIC */
-
-/* RETRO_LANGUAGE_GREEK */
-
-/* RETRO_LANGUAGE_TURKISH */
-
 /*
  ********************************
  * Language Mapping
  ********************************
 */
 
+#ifndef HAVE_NO_LANGEXTRA
 struct retro_core_option_definition *option_defs_intl[RETRO_LANGUAGE_LAST] = {
    option_defs_us, /* RETRO_LANGUAGE_ENGLISH */
    NULL,           /* RETRO_LANGUAGE_JAPANESE */
@@ -164,7 +116,12 @@ struct retro_core_option_definition *option_defs_intl[RETRO_LANGUAGE_LAST] = {
    NULL,           /* RETRO_LANGUAGE_ARABIC */
    NULL,           /* RETRO_LANGUAGE_GREEK */
    NULL,           /* RETRO_LANGUAGE_TURKISH */
+   NULL,           /* RETRO_LANGUAGE_SLOVAK */
+   NULL,           /* RETRO_LANGUAGE_PERSIAN */
+   NULL,           /* RETRO_LANGUAGE_HEBREW */
+   NULL,           /* RETRO_LANGUAGE_ASTURIAN */
 };
+#endif
 
 /*
  ********************************
@@ -187,8 +144,9 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
    if (!environ_cb)
       return;
 
-   if (environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version == 1))
+   if (environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version >= 1))
    {
+#ifndef HAVE_NO_LANGEXTRA
       struct retro_core_options_intl core_options_intl;
       unsigned language = 0;
 
@@ -200,6 +158,9 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
          core_options_intl.local = option_defs_intl[language];
 
       environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL, &core_options_intl);
+#else
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, &option_defs_us);
+#endif
    }
    else
    {
@@ -209,12 +170,11 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
       char **values_buf                = NULL;
 
       /* Determine number of options */
-      while (true)
+      for (;;)
       {
-         if (option_defs_us[num_options].key)
-            num_options++;
-         else
+         if (!option_defs_us[num_options].key)
             break;
+         num_options++;
       }
 
       /* Allocate arrays */
@@ -241,24 +201,22 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
             size_t num_values = 0;
 
             /* Determine number of values */
-            while (true)
+            for (;;)
             {
-               if (values[num_values].value)
-               {
-                  /* Check if this is the default value */
-                  if (default_value)
-                     if (strcmp(values[num_values].value, default_value) == 0)
-                        default_index = num_values;
-
-                  buf_len += strlen(values[num_values].value);
-                  num_values++;
-               }
-               else
+               if (!values[num_values].value)
                   break;
+
+               /* Check if this is the default value */
+               if (default_value)
+                  if (strcmp(values[num_values].value, default_value) == 0)
+                     default_index = num_values;
+
+               buf_len += strlen(values[num_values].value);
+               num_values++;
             }
 
             /* Build values string */
-            if (num_values > 1)
+            if (num_values > 0)
             {
                size_t j;
 
@@ -290,7 +248,7 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
          variables[i].key   = key;
          variables[i].value = values_buf[i];
       }
-      
+
       /* Set variables */
       environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 
