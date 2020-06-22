@@ -250,7 +250,7 @@ void* init_mem_base(void)
         mem_base = NULL;
 #endif
 #else
-    mem_base = malloc(MB_MAX_SIZE);
+    mem_base = malloc(MB_MAX_SIZE_FULL);
 #endif
 
     if (mem_base == NULL) {
