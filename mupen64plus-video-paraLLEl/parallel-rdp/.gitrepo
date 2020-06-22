@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/Themaister/parallel-rdp-standalone.git
+	branch = master
+	commit = 4a3fba8e27f299e06ba3ebacb4de1a159949dbfe
+	parent = 84968b079f47773ed86bdbeef31b00fb59989994
+	method = rebase
+	cmdver = 0.4.0
