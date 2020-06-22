@@ -63,6 +63,9 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifdef HAVE_THR_AL
             {"angrylion", "Angrylion"},
 #endif
+#ifdef HAVE_PARALLEL_RDP
+            {"parallel", "paraLLEl-RDP"},
+#endif
             {"gliden64", "GLideN64"},
             {NULL, NULL},
         },
@@ -801,6 +804,146 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "False"
     },
+#ifdef HAVE_PARALLEL_RDP
+    {
+        CORE_NAME "-parallel-rdp-synchronous",
+        "(paraLLEl-RDP) Synchronous RDP",
+        "Enable full accuracy for CPU accessed frame buffers.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-overscan",
+        "(ParaLLEl-RDP) Crop overscan",
+        "Crop pixels around edge of screen.",
+        {
+            { "0", NULL },
+            { "2", NULL },
+            { "4", NULL },
+            { "6", NULL },
+            { "8", NULL },
+            { "10", NULL },
+            { "12", NULL },
+            { "14", NULL },
+            { "16", NULL },
+            { "18", NULL },
+            { "20", NULL },
+            { "22", NULL },
+            { "24", NULL },
+            { "26", NULL },
+            { "28", NULL },
+            { "30", NULL },
+            { "32", NULL },
+            { "34", NULL },
+            { "36", NULL },
+            { "38", NULL },
+            { "40", NULL },
+            { "42", NULL },
+            { "44", NULL },
+            { "46", NULL },
+            { "48", NULL },
+            { "50", NULL },
+            { "52", NULL },
+            { "54", NULL },
+            { "56", NULL },
+            { "58", NULL },
+            { "60", NULL },
+            { "62", NULL },
+            { "64", NULL },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-divot-filter",
+        "(ParaLLEl-RDP) VI Divot filter",
+        "Allow VI divot filter, cleans up stray black pixels.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+
+    },
+    {
+        CORE_NAME "-parallel-rdp-gamma-dither",
+        "(ParaLLEl-RDP) VI Gamma dither",
+        "Allow VI gamma dither.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+
+    },
+    {
+        CORE_NAME "-parallel-rdp-vi-aa",
+        "(ParaLLEl-RDP) VI anti-aliasing",
+        "Allow VI anti-aliased fetch filter, smooths polygon edges.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+
+    },
+    {
+        CORE_NAME "-parallel-rdp-vi-bilinear",
+        "(ParaLLEl-RDP) VI bilinear",
+        "Allow VI bilinear scaling on scanout.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+
+    },
+    {
+        CORE_NAME "-parallel-rdp-dither-filter",
+        "(ParaLLEl-RDP) VI dither filter",
+        "Allow VI de-dither filter, recovers significant color depth.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-upscaling",
+        "(ParaLLEl-RDP) Upscaling factor (restart)",
+        "Apply internal upscaling factor.",
+        {
+            { "1x", NULL },
+            { "2x", NULL },
+            { "4x", NULL },
+            { "8x", NULL },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-downscaling",
+        "(ParaLLEl-RDP) Downsampling factor",
+        "Downscales output after VI, equivalent to SSAA.",
+        {
+            { "disable", NULL },
+            { "1/2", NULL },
+            { "1/4", NULL },
+            { "1/8", NULL },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-native-texture-lod",
+        "(ParaLLEl-RDP) Native texture LOD",
+        "Use native texture LOD computation when upscaling, effectively a LOD bias.",
+        {
+            { "False", "Disabled" },
+            { "True", "Enabled" },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-native-tex-rect",
+        "(ParaLLEl-RDP) Native resolution TEX_RECT",
+        "TEX_RECT primitives should generally be rendered at native resolution to avoid seams.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+    },
+#endif
 #ifdef HAVE_THR_AL
     {
         CORE_NAME "-angrylion-vioverlay",
