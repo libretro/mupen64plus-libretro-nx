@@ -97,6 +97,9 @@ DEFINE_GFX(gln64);
 #if defined(HAVE_THR_AL)
 DEFINE_GFX(angrylion);
 #endif
+#if defined(HAVE_PARALLEL_RDP)
+DEFINE_GFX(parallel);
+#endif
 
 gfx_plugin_functions gfx;
 GFX_INFO gfx_info;
@@ -393,6 +396,7 @@ void plugin_connect_rdp_api(enum rdp_plugin_type type)
    {
       case RDP_PLUGIN_GLIDEN64:
       case RDP_PLUGIN_ANGRYLION:
+      case RDP_PLUGIN_PARALLEL:
          current_rdp_type = type;
          break;
       case RSP_PLUGIN_NONE:
@@ -424,6 +428,11 @@ void plugin_connect_all()
        case RDP_PLUGIN_ANGRYLION:
 #ifdef HAVE_THR_AL
           gfx = gfx_angrylion;
+#endif
+          break;
+       case RDP_PLUGIN_PARALLEL:
+#ifdef HAVE_PARALLEL_RDP
+          gfx = gfx_parallel;
 #endif
           break;
        case RDP_PLUGIN_GLIDEN64:
