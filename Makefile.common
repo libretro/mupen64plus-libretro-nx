@@ -8,8 +8,8 @@ VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
 VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion
 
 MINIZIP_DIR        = $(CORE_DIR)/subprojects/minizip
-PNG_DIR            = $(ROOT_DIR)/custom/dependencies/libpng
-XXHASH_DIR         = $(CORE_DIR)/subprojects/xxhash
+LIBPNG_DIR         = $(ROOT_DIR)/custom/dependencies/libpng
+XXHASH_DIR         = $(ROOT_DIR)/xxHash
 ZLIB_DIR           = $(ROOT_DIR)/custom/dependencies/libzlib
 
 DYNAREC_USED := 0
@@ -29,7 +29,7 @@ INCFLAGS += \
 	-I$(VIDEODIR_GLIDEN64)/src/inc
 
 MINIZIP_INCFLAGS = -I$(MINIZIP_DIR)
-PNG_INCFLAGS     = -I$(PNG_DIR)
+LIBPNG_INCFLAGS  = -I$(LIBPNG_DIR)
 XXHASH_INCFLAGS  = -I$(XXHASH_DIR)
 ZLIB_INCFLAGS    = -I$(ZLIB_DIR)
 
@@ -114,24 +114,22 @@ MINIZIP_SOURCES_C = \
 	$(MINIZIP_DIR)/unzip.c \
 	$(MINIZIP_DIR)/ioapi.c
 
-PNG_SOURCES_C = \
-	$(PNG_DIR)/png.c \
-	$(PNG_DIR)/pngerror.c \
-	$(PNG_DIR)/pngget.c \
-	$(PNG_DIR)/pngmem.c \
-	$(PNG_DIR)/pngpread.c \
-	$(PNG_DIR)/pngread.c \
-	$(PNG_DIR)/pngrio.c \
-	$(PNG_DIR)/pngrtran.c \
-	$(PNG_DIR)/pngrutil.c \
-	$(PNG_DIR)/pngset.c \
-	$(PNG_DIR)/pngtrans.c \
-	$(PNG_DIR)/pngwio.c \
-	$(PNG_DIR)/pngwrite.c \
-	$(PNG_DIR)/pngwtran.c \
-	$(PNG_DIR)/pngwutil.c
-
-XXHASH_SOURCES_C = $(XXHASH_DIR)/xxhash.c
+LIBPNG_SOURCES_C = \
+	$(LIBPNG_DIR)/png.c \
+	$(LIBPNG_DIR)/pngerror.c \
+	$(LIBPNG_DIR)/pngget.c \
+	$(LIBPNG_DIR)/pngmem.c \
+	$(LIBPNG_DIR)/pngpread.c \
+	$(LIBPNG_DIR)/pngread.c \
+	$(LIBPNG_DIR)/pngrio.c \
+	$(LIBPNG_DIR)/pngrtran.c \
+	$(LIBPNG_DIR)/pngrutil.c \
+	$(LIBPNG_DIR)/pngset.c \
+	$(LIBPNG_DIR)/pngtrans.c \
+	$(LIBPNG_DIR)/pngwio.c \
+	$(LIBPNG_DIR)/pngwrite.c \
+	$(LIBPNG_DIR)/pngwtran.c \
+	$(LIBPNG_DIR)/pngwutil.c
 
 ZLIB_SOURCES_C = \
 	$(ZLIB_DIR)/adler32.c \
@@ -182,7 +180,6 @@ ifeq ($(SYSTEM_XXHASH), 1)
 	LDFLAGS += $(shell pkg-config --libs libxxhash)
 else
 	INCFLAGS += $(XXHASH_INCFLAGS)
-	SOURCES_C += $(XXHASH_SOURCES_C)
 endif
 
 # zlib
