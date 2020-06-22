@@ -1,4 +1,4 @@
-/* Copyright  (C) 2010-2018 The RetroArch team
+/* Copyright  (C) 2010-2020 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
  * The following license statement only applies to this file (rpng.c).
@@ -992,10 +992,12 @@ bool rpng_iterate_image(rpng_t *rpng)
       goto error;
 
 #if 0
+#ifdef RPNG_TEST
    for (i = 0; i < 4; i++)
    {
       fprintf(stderr, "chunktype: %c\n", chunk.type[i]);
    }
+#endif
 #endif
 
    switch (png_chunk_type(&chunk))
@@ -1196,12 +1198,9 @@ bool rpng_start(rpng_t *rpng)
 
 bool rpng_is_valid(rpng_t *rpng)
 {
-   if (!rpng)
-      return false;
-
    /* A valid PNG image must contain an IHDR chunk,
     * one or more IDAT chunks, and an IEND chunk */
-   if (rpng->has_ihdr && rpng->has_idat && rpng->has_iend)
+   if (rpng && rpng->has_ihdr && rpng->has_idat && rpng->has_iend)
       return true;
 
    return false;

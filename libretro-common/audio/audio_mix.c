@@ -1,4 +1,4 @@
-/* Copyright  (C) 2010-2018 The RetroArch team
+/* Copyright  (C) 2010-2020 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
  * The following license statement only applies to this file (audio_mix.c).
@@ -20,7 +20,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <audio/audio_mix.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <memalign.h>
 
 #if defined(__SSE2__)
 #include <emmintrin.h>
@@ -28,10 +31,6 @@
 #include <altivec.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <memalign.h>
 #include <retro_miscellaneous.h>
 #include <audio/audio_mix.h>
 #include <streams/file_stream.h>
@@ -48,7 +47,7 @@ void audio_mix_volume_C(float *out, const float *in, float vol, size_t samples)
 #ifdef __SSE2__
 void audio_mix_volume_SSE2(float *out, const float *in, float vol, size_t samples)
 {
-   size_t i;
+   size_t i, remaining_samples;
    __m128 volume = _mm_set1_ps(vol);
 
    for (i = 0; i + 16 <= samples; i += 16, out += 16, in += 16)
@@ -71,7 +70,10 @@ void audio_mix_volume_SSE2(float *out, const float *in, float vol, size_t sample
          _mm_storeu_ps(out + 4 * j, _mm_add_ps(input[j], additive[j]));
    }
 
-   audio_mix_volume_C(out, in, vol, samples - i);
+   remaining_samples = samples - i;
+
+   for (i = 0; i < remaining_samples; i++)
+      out[i] += in[i] * vol;
 }
 #endif
 
