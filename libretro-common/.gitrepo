@@ -4,7 +4,7 @@
 ; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
 ;
 [subrepo]
-	remote = https://github.com/libretro/libretro-common.git
+	remote = https://github.com/libretro-fork/libretro-common-mupen64plus-nx.git
 	branch = master
 	commit = 991eb8222f895f495848c9d5d6ec79233a2ffad2
 	parent = 951422902c80908763eee7aaefe2a7e94869c34e
