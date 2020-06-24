@@ -46,9 +46,12 @@ extern void n64DebugCallback(void* aContext, int aLevel, const char* aMessage);
 #define DebugCallback n64DebugCallback
 
 static void debugger_init(void);
-static void debugger_update(unsigned int pc);
 static void debugger_vi(void);
+
+void debugger_update(unsigned int pc);
 }
+
+#include <mupen64plus-next_common.h>
 
 //#define LOG_ERROR(...)
 #define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
@@ -862,8 +865,10 @@ static void ReadMemory() {
 
     LOG_DEBUG("gdb: addr: {:016X} len: {:016X}", addr, len);
 
+    IgnoreTLBExceptions = 2;
     for (int i = 0; i < len; i++)
         data[i] = (*DebugMemRead8)((u32)(addr + i));
+    IgnoreTLBExceptions = 0;
 
     MemToGdbHex(reply, data.data(), len);
     reply[len * 2] = '\0';
@@ -889,9 +894,12 @@ static void WriteMemory() {
 
     LOG_DEBUG("gdb: addr: {:016X} len: {:016X}", addr, len);
 
+    IgnoreTLBExceptions = 2;
     GdbHexToMem(data.data(), len_pos + 1, len);
     for (int i = 0; i < len; i++)
         (*DebugMemWrite8)((u32)(addr + i), data[i]);
+    IgnoreTLBExceptions = 0;
+
     SendReply("OK");
 }
 
@@ -1180,11 +1188,13 @@ extern "C" {
     {
         LOG_DEBUG("Debugger initialized.");
     }
-    static void debugger_update(unsigned int pc)
+
+    void debugger_update(unsigned int pc)
     {
         LOG_DEBUG("PC at 0x%08X.", pc);
         GDBStub::HandlePacket();
     }
+    
     static void debugger_vi(void)
     {
         LOG_DEBUG("Vertical int");

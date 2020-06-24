@@ -13,6 +13,7 @@ extern "C" {
 
     void GDBStub_Init(int port);
     void GDBStub_Shutdown();
+    void debugger_update(unsigned int pc);
 
 #ifdef __cplusplus
 } //end extern "C"
