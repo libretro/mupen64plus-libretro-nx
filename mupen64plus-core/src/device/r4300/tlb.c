@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <string.h>
 
+extern retro_log_printf_t log_cb;
+
 void poweron_tlb(struct tlb* tlb)
 {
     /* clear TLB entries */
@@ -145,10 +147,12 @@ uint32_t virtual_to_physical_address(struct r4300_core* r4300, uint32_t address,
 #ifdef NEW_DYNAREC
     if(IgnoreTLBExceptions == 0) {
         /* False, Default Behaviour */
+        log_cb(RETRO_LOG_INFO, "TLB Exception!!! 0x%x PC: 0x%x\n", address, *r4300_pc(r4300));
         debugger_update(*r4300_pc(r4300));
         TLB_refill_exception(r4300, address, w);
     } else if(IgnoreTLBExceptions == 1) {
         /* OnlyNotEnabled */
+        log_cb(RETRO_LOG_INFO, "TLB Exception!!! 0x%x PC: 0x%x\n", address, *r4300_pc(r4300));
         debugger_update(*r4300_pc(r4300));
         if(r4300->emumode == EMUMODE_DYNAREC)
         {
