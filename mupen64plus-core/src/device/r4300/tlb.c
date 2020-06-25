@@ -141,6 +141,7 @@ uint32_t virtual_to_physical_address(struct r4300_core* r4300, uint32_t address,
     //printf("tlb exception !!! @ %x, %x, add:%x\n", address, w, r4300->pc->addr);
     //getchar();
 
+#ifdef NEW_DYNAREC
     if(IgnoreTLBExceptions == 0) {
         /* False, Default Behaviour */
         TLB_refill_exception(r4300, address, w);
@@ -153,8 +154,17 @@ uint32_t virtual_to_physical_address(struct r4300_core* r4300, uint32_t address,
     } else if(IgnoreTLBExceptions == 2)
     {
         /* AlwaysIgnoreTLB */
-        /* Do nothing, primary use-case for GdbStub... */
+        /* Use-case GdbStub... */
     }
+#else
+    if(IgnoreTLBExceptions == 2)
+    {
+        /* AlwaysIgnoreTLB */
+        /* Use-case for Interpreter-only GdbStub... */
+    } else {
+        TLB_refill_exception(r4300, address, w);
+    }
+#endif // NEW_DYNAREC
 
     //return 0x80000000;
     return 0x00000000;
