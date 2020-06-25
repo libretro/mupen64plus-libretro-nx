@@ -149,7 +149,7 @@ constexpr char target_xml[] =
 	  <reg name="k1" bitsize="64" type="data_ptr"/>
 	  <reg name="gp" bitsize="64" type="data_ptr"/>
 	  <reg name="sp" bitsize="64" type="stack_ptr"/>
-	  <reg name="s8" bitsize="64" type="data_ptr"/>
+	  <reg name="fp" bitsize="64" type="data_ptr"/>
 	  <reg name="ra" bitsize="64" type="data_ptr"/>
 
 	  <reg name="lo" bitsize="64" regnum="33"/>
@@ -666,7 +666,7 @@ static void HandleQuery() {
         SendReply("1");
     } else if (strncmp(query, "Supported", strlen("Supported")) == 0) {
         // PacketSize needs to be large enough for target xml
-        std::string buffer = "PacketSize=2000;qXfer:features:read+";
+        std::string buffer = "PacketSize=10000;qXfer:features:read+";
         SendReply(buffer.c_str());
     } else if (strncmp(query, "Xfer:features:read:target.xml:",
                        strlen("Xfer:features:read:target.xml:")) == 0) {
