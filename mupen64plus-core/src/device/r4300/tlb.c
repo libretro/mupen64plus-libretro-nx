@@ -147,8 +147,13 @@ uint32_t virtual_to_physical_address(struct r4300_core* r4300, uint32_t address,
         TLB_refill_exception(r4300, address, w);
     } else if(IgnoreTLBExceptions == 1) {
         /* OnlyNotEnabled */
-        if(using_tlb)
+        if(r4300->emumode == EMUMODE_DYNAREC)
         {
+            if(using_tlb)
+            {
+                TLB_refill_exception(r4300, address, w);
+            }
+        } else {
             TLB_refill_exception(r4300, address, w);
         }
     } else if(IgnoreTLBExceptions == 2)
