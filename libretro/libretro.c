@@ -1696,38 +1696,58 @@ size_t retro_serialize_size (void)
 
 bool retro_serialize(void *data, size_t size)
 {
-    if (initializing)
-        return false;
+   if (initializing)
+      return false;
 
-    retro_savestate_complete = false;
-    retro_savestate_result = 0;
+   retro_savestate_complete = false;
+   retro_savestate_result = 0;
 
-    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+   savestates_set_job(savestates_job_save, savestates_type_m64p, data);
 
-    while(!retro_savestate_complete)
-    {
-        retro_run();
-    }
-    
-    return !!retro_savestate_result;
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   {
+      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+   }
+
+   while (!retro_savestate_complete)
+   {
+      co_switch(game_thread);
+   }
+
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   {
+      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+   }
+
+   return !!retro_savestate_result;
 }
 
-bool retro_unserialize(const void * data, size_t size)
+bool retro_unserialize(const void *data, size_t size)
 {
-    if (initializing)
-        return false;
+   if (initializing)
+      return false;
 
-    retro_savestate_complete = false;
-    retro_savestate_result = 0;
-    
-    savestates_set_job(savestates_job_load, savestates_type_m64p, data);
+   retro_savestate_complete = false;
+   retro_savestate_result = 0;
 
-    while(!retro_savestate_complete)
-    {
-        retro_run();
-    }
-    
-    return true;
+   savestates_set_job(savestates_job_load, savestates_type_m64p, data);
+
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   {
+      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+   }
+
+   while (!retro_savestate_complete)
+   {
+      co_switch(game_thread);
+   }
+
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   {
+      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+   }
+
+   return true;
 }
 
 //Needed to be able to detach controllers for Lylat Wars multiplayer
