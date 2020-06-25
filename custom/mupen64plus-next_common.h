@@ -128,6 +128,20 @@ extern uint32_t OverscanBottom;
 #define RETRO_MEMORY_DD 0x100 + 1
 #define RETRO_GAME_TYPE_DD  1
 
+#if defined(HAVE_PARALLEL_RDP)
+#define FLAVOUR_VERSION "-Vulkan"
+#elif defined(HAVE_OPENGLES2)
+#define FLAVOUR_VERSION "-GLES2"
+#elif defined(HAVE_OPENGLES3)
+#define FLAVOUR_VERSION "-GLES3"
+#else
+#define FLAVOUR_VERSION "-OpenGL"
+#endif
+
+#ifndef GIT_VERSION
+#define GIT_VERSION " git"
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
