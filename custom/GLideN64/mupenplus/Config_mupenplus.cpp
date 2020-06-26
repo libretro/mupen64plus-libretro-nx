@@ -148,14 +148,11 @@ extern "C" void Config_LoadConfig()
 	config.generalEmulation.enableLOD = EnableLODEmulation;
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
-#if defined(GLES2) && !defined(ANDROID)
-	config.frameBufferEmulation.copyToRDRAM = Config::ctDisable;
-#else
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
-#endif
-#ifdef HAVE_OPENGLES
-	config.frameBufferEmulation.bufferSwapMode = Config::bsOnColorImageChange;
-#endif
+
+	// TODO: Make this a Core options or maybe only default to bsOnVerticalInterrupt on Android with Thr Renderer
+	config.frameBufferEmulation.bufferSwapMode = Config::bsOnVerticalInterrupt;
+
 #ifdef HAVE_OPENGLES2
 	config.generalEmulation.enableFragmentDepthWrite = 0;
 #else
