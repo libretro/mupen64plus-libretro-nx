@@ -444,6 +444,7 @@ ifeq ($(HAVE_PARALLEL_RSP), 1)
 	PARALLEL_RSP_ARCH := simd
 	SOURCES_CXX += $(RSPDIR_PARALLEL)/parallel.cpp \
 				   $(RSPDIR_PARALLEL)/rsp_disasm.cpp \
+				   $(RSPDIR_PARALLEL)/jit_allocator.cpp \
 				   $(wildcard $(RSPDIR_PARALLEL)/rsp/*.cpp) \
 				   $(wildcard $(RSPDIR_PARALLEL)/arch/$(PARALLEL_RSP_ARCH)/rsp/*.cpp)
 ifneq ($(DEBUG_JIT),)
