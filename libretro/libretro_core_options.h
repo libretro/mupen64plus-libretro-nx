@@ -36,6 +36,8 @@ extern "C"
 #define CORE_NAME "mupen64plus"
 #endif
 
+#define HAVE_NO_LANGEXTRA
+
 struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-cpucore",
@@ -1319,149 +1321,143 @@ struct retro_core_option_definition *option_defs_intl[RETRO_LANGUAGE_LAST] = {
 
 static INLINE void libretro_set_core_options(retro_environment_t environ_cb)
 {
-    unsigned version = 0;
+   unsigned version = 0;
 
-    if (!environ_cb)
-        return;
+   if (!environ_cb)
+      return;
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version >= 1))
-    {
-        struct retro_core_options_intl core_options_intl;
-        unsigned language = 0;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version >= 1))
+   {
+#ifndef HAVE_NO_LANGEXTRA
+      struct retro_core_options_intl core_options_intl;
+      unsigned language = 0;
 
-        core_options_intl.us = option_defs_us;
-        core_options_intl.local = NULL;
+      core_options_intl.us    = option_defs_us;
+      core_options_intl.local = NULL;
 
-        if (environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &language) &&
-            (language < RETRO_LANGUAGE_LAST) && (language != RETRO_LANGUAGE_ENGLISH))
-            core_options_intl.local = option_defs_intl[language];
+      if (environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &language) &&
+          (language < RETRO_LANGUAGE_LAST) && (language != RETRO_LANGUAGE_ENGLISH))
+         core_options_intl.local = option_defs_intl[language];
 
-        environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL, &core_options_intl);
-    }
-    else
-    {
-        size_t i;
-        size_t option_index = 0;
-        size_t num_options = 0;
-        struct retro_variable *variables = NULL;
-        char **values_buf = NULL;
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL, &core_options_intl);
+#else
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, &option_defs_us);
+#endif
+   }
+   else
+   {
+      size_t i;
+      size_t num_options               = 0;
+      struct retro_variable *variables = NULL;
+      char **values_buf                = NULL;
 
-        /* Determine number of options
-    * > Note: We are going to skip a number of irrelevant
-    *   core options when building the retro_variable array,
-    *   but we'll allocate space for all of them. The difference
-    *   in resource usage is negligible, and this allows us to
-    *   keep the code 'cleaner' */
-        while (true)
-        {
-            if (option_defs_us[num_options].key)
-                num_options++;
-            else
-                break;
-        }
+      /* Determine number of options */
+      for (;;)
+      {
+         if (!option_defs_us[num_options].key)
+            break;
+         num_options++;
+      }
 
-        /* Allocate arrays */
-        variables = (struct retro_variable *)calloc(num_options + 1, sizeof(struct retro_variable));
-        values_buf = (char **)calloc(num_options, sizeof(char *));
+      /* Allocate arrays */
+      variables  = (struct retro_variable *)calloc(num_options + 1, sizeof(struct retro_variable));
+      values_buf = (char **)calloc(num_options, sizeof(char *));
 
-        if (!variables || !values_buf)
-            goto error;
+      if (!variables || !values_buf)
+         goto error;
 
-        /* Copy parameters from option_defs_us array */
-        for (i = 0; i < num_options; i++)
-        {
-            const char *key = option_defs_us[i].key;
-            const char *desc = option_defs_us[i].desc;
-            const char *default_value = option_defs_us[i].default_value;
-            struct retro_core_option_value *values = option_defs_us[i].values;
-            size_t buf_len = 3;
-            size_t default_index = 0;
+      /* Copy parameters from option_defs_us array */
+      for (i = 0; i < num_options; i++)
+      {
+         const char *key                        = option_defs_us[i].key;
+         const char *desc                       = option_defs_us[i].desc;
+         const char *default_value              = option_defs_us[i].default_value;
+         struct retro_core_option_value *values = option_defs_us[i].values;
+         size_t buf_len                         = 3;
+         size_t default_index                   = 0;
 
-            values_buf[i] = NULL;
+         values_buf[i] = NULL;
 
-            if (desc)
+         if (desc)
+         {
+            size_t num_values = 0;
+
+            /* Determine number of values */
+            for (;;)
             {
-                size_t num_values = 0;
+               if (!values[num_values].value)
+                  break;
 
-                /* Determine number of values */
-                while (true)
-                {
-                    if (values[num_values].value)
-                    {
-                        /* Check if this is the default value */
-                        if (default_value)
-                            if (strcmp(values[num_values].value, default_value) == 0)
-                                default_index = num_values;
+               /* Check if this is the default value */
+               if (default_value)
+                  if (strcmp(values[num_values].value, default_value) == 0)
+                     default_index = num_values;
 
-                        buf_len += strlen(values[num_values].value);
-                        num_values++;
-                    }
-                    else
-                        break;
-                }
-
-                /* Build values string */
-                if (num_values > 0)
-                {
-                    size_t j;
-
-                    buf_len += num_values - 1;
-                    buf_len += strlen(desc);
-
-                    values_buf[i] = (char *)calloc(buf_len, sizeof(char));
-                    if (!values_buf[i])
-                        goto error;
-
-                    strcpy(values_buf[i], desc);
-                    strcat(values_buf[i], "; ");
-
-                    /* Default value goes first */
-                    strcat(values_buf[i], values[default_index].value);
-
-                    /* Add remaining values */
-                    for (j = 0; j < num_values; j++)
-                    {
-                        if (j != default_index)
-                        {
-                            strcat(values_buf[i], "|");
-                            strcat(values_buf[i], values[j].value);
-                        }
-                    }
-                }
+               buf_len += strlen(values[num_values].value);
+               num_values++;
             }
 
-            variables[option_index].key = key;
-            variables[option_index].value = values_buf[i];
-            option_index++;
-        }
-
-        /* Set variables */
-        environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
-
-    error:
-
-        /* Clean up */
-        if (values_buf)
-        {
-            for (i = 0; i < num_options; i++)
+            /* Build values string */
+            if (num_values > 0)
             {
-                if (values_buf[i])
-                {
-                    free(values_buf[i]);
-                    values_buf[i] = NULL;
-                }
+               size_t j;
+
+               buf_len += num_values - 1;
+               buf_len += strlen(desc);
+
+               values_buf[i] = (char *)calloc(buf_len, sizeof(char));
+               if (!values_buf[i])
+                  goto error;
+
+               strcpy(values_buf[i], desc);
+               strcat(values_buf[i], "; ");
+
+               /* Default value goes first */
+               strcat(values_buf[i], values[default_index].value);
+
+               /* Add remaining values */
+               for (j = 0; j < num_values; j++)
+               {
+                  if (j != default_index)
+                  {
+                     strcat(values_buf[i], "|");
+                     strcat(values_buf[i], values[j].value);
+                  }
+               }
             }
+         }
 
-            free(values_buf);
-            values_buf = NULL;
-        }
+         variables[i].key   = key;
+         variables[i].value = values_buf[i];
+      }
 
-        if (variables)
-        {
-            free(variables);
-            variables = NULL;
-        }
-    }
+      /* Set variables */
+      environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+
+error:
+
+      /* Clean up */
+      if (values_buf)
+      {
+         for (i = 0; i < num_options; i++)
+         {
+            if (values_buf[i])
+            {
+               free(values_buf[i]);
+               values_buf[i] = NULL;
+            }
+         }
+
+         free(values_buf);
+         values_buf = NULL;
+      }
+
+      if (variables)
+      {
+         free(variables);
+         variables = NULL;
+      }
+   }
 }
 
 #ifdef __cplusplus
