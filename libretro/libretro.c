@@ -110,6 +110,7 @@ retro_input_poll_t poll_cb = NULL;
 retro_input_state_t input_cb = NULL;
 retro_audio_sample_batch_t audio_batch_cb = NULL;
 retro_environment_t environ_cb = NULL;
+retro_environment_t environ_clear_thread_waits_cb = NULL;
 
 struct retro_rumble_interface rumble;
 
@@ -247,7 +248,6 @@ static void setup_variables(void)
 
     libretro_set_core_options(environ_cb);
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
-    //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, false);
 }
 
 static void n64StateCallback(void *Context, m64p_core_param param_type, int new_value)
@@ -425,6 +425,7 @@ void retro_set_environment(retro_environment_t cb)
     };
 
     environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
+    environ_cb(RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB, &environ_clear_thread_waits_cb);
     
     setup_variables();
 }
@@ -592,6 +593,15 @@ static void update_variables(bool startup)
 
     if (startup)
     {
+       bool save_state_in_background = true;
+       //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
+
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+       {
+          unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
+          environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
+       }
+
        var.key = CORE_NAME "-rdp-plugin";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1573,6 +1583,11 @@ bool retro_load_game(const struct retro_game_info *game)
 
 void retro_unload_game(void)
 {
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+    {
+       environ_clear_thread_waits_cb(1, NULL);
+    }
+
     CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
@@ -1588,6 +1603,8 @@ void retro_unload_game(void)
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     
        pthread_join(emuThread, NULL);
+
+       environ_clear_thread_waits_cb(0, NULL);
     }
 
     emu_initialized = false;
@@ -1654,12 +1671,6 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
-
-    // Poll needs to happen here on threaded gl
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
-    {
-       poll_cb();
-    }
 }
 
 void retro_reset (void)
@@ -1706,6 +1717,11 @@ bool retro_serialize(void *data, size_t size)
 
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
    {
+      if(EnableThreadedRenderer)
+      {
+         // Ensure the Audio driver is on (f.e. menu sounds off)
+         environ_clear_thread_waits_cb(1, NULL);
+      }
       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    }
 
@@ -1734,6 +1750,11 @@ bool retro_unserialize(const void *data, size_t size)
 
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
    {
+      if(EnableThreadedRenderer)
+      {
+         // Ensure the Audio driver is on (f.e. menu sounds off)
+         environ_clear_thread_waits_cb(1, NULL);
+      }
       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
    }
 

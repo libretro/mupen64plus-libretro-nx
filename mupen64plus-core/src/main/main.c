@@ -201,6 +201,7 @@ static void main_check_inputs(void)
 #endif
     if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {
+        // Input Polling will be forced to early if Threaded GLideN64
         poll_cb();
     }
 }

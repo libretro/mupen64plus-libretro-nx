@@ -306,7 +306,7 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifndef HAVE_OPENGLES2
         "Async"
 #else
-        "Off"
+        "Sync"
 #endif // HAVE_OPENGLES2
     },
     {
