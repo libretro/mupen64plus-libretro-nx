@@ -1663,7 +1663,7 @@ void retro_run (void)
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
     
-    if(last_vi_height != last_retro_screen_height && last_vi_width != last_retro_screen_width)
+    if(last_vi_height != last_retro_screen_height || last_vi_width != last_retro_screen_width)
     {
        last_retro_screen_height = last_vi_height;
        last_retro_screen_width = last_vi_width;
