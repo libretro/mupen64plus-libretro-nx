@@ -172,8 +172,15 @@ void ContextImpl::clearColorBuffer(f32 _red, f32 _green, f32 _blue, f32 _alpha)
 		m_cachedFunctions->getCachedClearColor()->setClearColor(_red, _green, _blue, _alpha);
 		glClear(GL_COLOR_BUFFER_BIT);
 	} else {
+#if defined(OS_ANDROID)
+		// Using the GLES3 paths causes some background garbage where the Overscan is
+		// TODO: Investigate this
+		m_cachedFunctions->getCachedClearColor()->setClearColor(_red, _green, _blue, _alpha);
+		glClear(GL_COLOR_BUFFER_BIT);
+#else
 		GLfloat values[4] = {_red, _green, _blue, _alpha};
 		glClearBufferfv(GL_COLOR, 0, values);
+#endif // OS_ANDROID
 	}
 
 	enableScissor->enable(true);
