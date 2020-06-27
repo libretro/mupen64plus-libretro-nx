@@ -116,11 +116,14 @@ void VI_UpdateScreen()
 		return;
 
 	DisplayWindow & wnd = dwnd();
-    if(VI.lastOrigin != -1 && (VI.height != last_vi_height || VI.width != last_vi_width))
+
+    uint32_t width = VI.width;
+    uint32_t height = VI.height;
+    if(VI.lastOrigin != -1 && (height != last_vi_height || width != last_vi_width))
     {
 	    printf("VI_UpdateScreen Origin: %08x, Old origin: %08x, width: %d, height: %d\n", *REG.VI_ORIGIN, VI.lastOrigin, VI.width, VI.height);
-        last_vi_width = retro_screen_width = VI.width;
-        last_vi_height = retro_screen_height = VI.height;
+        last_vi_width = retro_screen_width = width;
+        last_vi_height = retro_screen_height = height;
     }
 
 	perf.increaseVICount();
