@@ -1276,7 +1276,7 @@ static void update_variables(bool startup)
         var.value = NULL;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         {
-            if (!strcmp(var.value, "disable"))
+            if (!strcmp(var.value, "False"))
                 parallel_set_downscaling_steps(0);
             else if (!strcmp(var.value, "1/2"))
                 parallel_set_downscaling_steps(1);

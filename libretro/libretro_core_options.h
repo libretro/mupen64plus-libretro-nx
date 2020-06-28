@@ -91,8 +91,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-43screensize",
-        "4:3 Resolution",
-        "(GLN64) Select Render Viewport dimensions (4:3).",
+        "(GLideN64) 4:3 Resolution",
+        "Select Render Viewport dimensions (4:3).",
         {
             {"320x240", NULL},
             {"640x480", NULL},
@@ -113,8 +113,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-169screensize",
-        "16:9 Resolution",
-        "(GLN64) Select Render Viewport dimensions (16:9).",
+        "(GLideN64) 16:9 Resolution",
+        "Select Render Viewport dimensions (16:9).",
         {
             {"640x360", NULL},
             {"960x540", NULL},
@@ -130,8 +130,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-aspect",
-        "Aspect Ratio",
-        "(GLN64) Select the aspect ratio, 16:9 adjusted means essentially Widescreen hacks.",
+        "(GLideN64) Aspect Ratio",
+        "Select the aspect ratio, 16:9 adjusted means essentially Widescreen hacks.",
         {
             {"4:3", NULL},
             {"16:9", NULL},
@@ -142,8 +142,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableNativeResFactor",
-        "Native Resolution Factor",
-        "(GLN64) Render at N times the native resolution.",
+        "(GLideN64) Native Resolution Factor",
+        "Render at N times the native resolution.",
         {
             {"0", "Disabled"},
             {"1", "1x"},
@@ -160,8 +160,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-ThreadedRenderer",
-        "Threaded Renderer",
-        "(GLN64) Use the Threaded Renderer, improves performance but increases input lag.",
+        "(GLideN64) Threaded Renderer",
+        "Use the Threaded Renderer, improves performance but increases input lag.",
         {
             {"True", "Enabled"},
             {"False", "Disabled"},
@@ -171,8 +171,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-BilinearMode",
-        "Bilinear filtering mode",
-        "(GLN64) Select a Bilinear filtering method, 3point is the original system specific way.",
+        "(GLideN64) Bilinear filtering mode",
+        "Select a Bilinear filtering method, 3point is the original system specific way.",
         {
             {"3point", NULL},
             {"standard", NULL},
@@ -182,8 +182,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-HybridFilter",
-        "Hybrid Filter",
-        "(GLN64) Hybrid integer scaling filter, this can be slow with low-end GPUs.",
+        "(GLideN64) Hybrid Filter",
+        "Hybrid integer scaling filter, this can be slow with low-end GPUs.",
         {
             {"True", "Enabled"},
             {"False", "Disabled"},
@@ -193,8 +193,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-DitheringPattern",
-        "Dithering",
-        "(GLN64) Applies dithering pattern to output image.",
+        "(GLideN64) Dithering",
+        "Applies dithering pattern to output image.",
         {
             {"True", "Enabled"},
             {"False", "Disabled"},
@@ -204,8 +204,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-DitheringQuantization",
-        "Dithering Quantization",
-        "(GLN64) Dither with color quantization.",
+        "(GLideN64) Dithering Quantization",
+        "Dither with color quantization.",
         {
             {"True", "Enabled"},
             {"False", "Disabled"},
@@ -215,8 +215,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-RDRAMImageDitheringMode",
-        "Image Dithering Mode",
-        "(GLN64) Dithering mode for image in RDRAM.",
+        "(GLideN64) Image Dithering Mode",
+        "Dithering mode for image in RDRAM.",
         {
             {"False", "Disabled"},
             {"Bayer", NULL},
@@ -229,8 +229,8 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifndef HAVE_OPENGLES2
     {
         CORE_NAME "-MultiSampling",
-        "MSAA level",
-        "(GLN64) Anti-Aliasing level (0 = disabled).",
+        "(GLideN64) MSAA level",
+        "Anti-Aliasing level (0 = disabled).",
         {
             {"0", NULL},
             {"2", NULL},
@@ -244,8 +244,8 @@ struct retro_core_option_definition option_defs_us[] = {
 #endif
     {
         CORE_NAME "-FXAA",
-        "FXAA",
-        "(GLN64) Fast Approximate Anti-Aliasing shader, moderately blur textures (0 = disabled).",
+        "(GLideN64) FXAA",
+        "Fast Approximate Anti-Aliasing shader, moderately blur textures (0 = disabled).",
         {
             {"0", NULL},
             {"1", NULL},
@@ -255,8 +255,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableLODEmulation",
-        "LOD Emulation",
-        "(GLN64) Calculate per-pixel Level Of Details to select texture mip levels and blend them with each other using LOD fraction.",
+        "(GLideN64) LOD Emulation",
+        "Calculate per-pixel Level Of Details to select texture mip levels and blend them with each other using LOD fraction.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -266,8 +266,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableFBEmulation",
-        "Framebuffer Emulation",
-        "(GLN64) Frame/depth buffer emulation. Disabling it can shorten input lag for particular games, but also break some special effects.",
+        "(GLideN64) Framebuffer Emulation",
+        "Frame/depth buffer emulation. Disabling it can shorten input lag for particular games, but also break some special effects.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -281,8 +281,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableCopyAuxToRDRAM",
-        "Copy auxiliary buffers to RDRAM",
-        "(GLN64) Copy auxiliary buffers to RDRAM (fixes some Game artifacts like Paper Mario Intro) .",
+        "(GLideN64) Copy auxiliary buffers to RDRAM",
+        "Copy auxiliary buffers to RDRAM (fixes some Game artifacts like Paper Mario Intro) .",
         {
             {"False", NULL},
             {"True", NULL},
@@ -292,8 +292,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableCopyColorToRDRAM",
-        "Color buffer to RDRAM",
-        "(GLN64) Color buffer copy to RDRAM (Off will trade compatibility for Performance).",
+        "(GLideN64) Color buffer to RDRAM",
+        "Color buffer copy to RDRAM (Off will trade compatibility for Performance).",
         {
             {"Off", NULL},
             {"Sync", NULL},
@@ -311,8 +311,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableCopyDepthToRDRAM",
-        "Depth buffer to RDRAM",
-        "(GLN64) Depth buffer copy to RDRAM (Off will trade compatibility for Performance).",
+        "(GLideN64) Depth buffer to RDRAM",
+        "Depth buffer copy to RDRAM (Off will trade compatibility for Performance).",
         {
             {"Off", NULL},
             {"Software", NULL},
@@ -323,8 +323,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-BackgroundMode",
-        "Background Mode",
-        "(GLN64) Render backgrounds mode (HLE only). One piece (fast), Stripped (precise)",
+        "(GLideN64) Background Mode",
+        "Render backgrounds mode (HLE only). One piece (fast), Stripped (precise)",
         {
             {"Stripped", NULL},
             {"OnePiece", NULL},
@@ -334,8 +334,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableHWLighting",
-        "Hardware per-pixel lighting",
-        "(GLN64) Standard per-vertex lighting when disabled. Slightly different rendering.",
+        "(GLideN64) Hardware per-pixel lighting",
+        "Standard per-vertex lighting when disabled. Slightly different rendering.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -345,8 +345,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-CorrectTexrectCoords",
-        "Continuous texrect coords",
-        "(GLN64) Make texrect coordinates continuous to avoid black lines between them.",
+        "(GLideN64) Continuous texrect coords",
+        "Make texrect coordinates continuous to avoid black lines between them.",
         {
             {"Off", NULL},
             {"Auto", NULL},
@@ -357,8 +357,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableNativeResTexrects",
-        "Native res. 2D texrects",
-        "(GLN64) Render 2D texrects in native resolution to fix misalignment between parts of 2D image (example: Mario Kart driver selection portraits).",
+        "(GLideN64) Native res. 2D texrects",
+        "Render 2D texrects in native resolution to fix misalignment between parts of 2D image (example: Mario Kart driver selection portraits).",
         {
             {"Disabled", NULL},
             {"Unoptimized", NULL},
@@ -369,8 +369,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableLegacyBlending",
-        "Less accurate blending mode",
-        "(GLN64) Do not use shaders to emulate N64 blending modes. Works faster on slow GPU. Can cause glitches.",
+        "(GLideN64) Less accurate blending mode",
+        "Do not use shaders to emulate N64 blending modes. Works faster on slow GPU. Can cause glitches.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -384,8 +384,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableFragmentDepthWrite",
-        "GPU shader depth write",
-        "(GLN64) Enable writing of fragment depth. Some mobile GPUs do not support it, thus it's optional. Leave enabled.",
+        "(GLideN64) GPU shader depth write",
+        "Enable writing of fragment depth. Some mobile GPUs do not support it, thus it's optional. Leave enabled.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -400,8 +400,8 @@ struct retro_core_option_definition option_defs_us[] = {
 #if !defined(VC) && !defined(HAVE_OPENGLES)
     {
         CORE_NAME "-EnableN64DepthCompare",
-        "N64 Depth Compare",
-        "(GLN64) Enable N64 depth compare instead of OpenGL standard one. Experimental, Fast mode will have more glitches.",
+        "(GLideN64) N64 Depth Compare",
+        "Enable N64 depth compare instead of OpenGL standard one. Experimental, Fast mode will have more glitches.",
         {
             {"False", "Off"},
             {"True", "Fast"},
@@ -411,8 +411,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableShadersStorage",
-        "Cache GPU Shaders",
-        "(GLN64) Use persistent storage for compiled shaders.",
+        "(GLideN64) Cache GPU Shaders",
+        "Use persistent storage for compiled shaders.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -423,8 +423,8 @@ struct retro_core_option_definition option_defs_us[] = {
 #endif
     {
         CORE_NAME "-EnableTextureCache",
-        "Cache Textures",
-        "(GLN64) Save texture cache to hard disk.",
+        "(GLideN64) Cache Textures",
+        "Save texture cache to hard disk.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -434,8 +434,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableOverscan",
-        "Overscan",
-        "(GLN64) Crop black borders from the overscan region around the screen.",
+        "(GLideN64) Overscan",
+        "Crop black borders from the overscan region around the screen.",
         {
             {"Disabled", NULL},
             {"Enabled", NULL},
@@ -445,8 +445,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-OverscanTop",
-        "Overscan Offset (Top)",
-        "(GLN64) Overscan Top Offset.",
+        "(GLideN64) Overscan Offset (Top)",
+        "Overscan Top Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -505,8 +505,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-OverscanLeft",
-        "Overscan Offset (Left)",
-        "(GLN64) Overscan Left Offset.",
+        "(GLideN64) Overscan Offset (Left)",
+        "Overscan Left Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -565,8 +565,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-OverscanRight",
-        "Overscan Offset (Right)",
-        "(GLN64) Overscan Right Offset.",
+        "(GLideN64) Overscan Offset (Right)",
+        "Overscan Right Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -625,8 +625,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-OverscanBottom",
-        "Overscan Offset (Bottom)",
-        "(GLN64) Overscan Bottom Offset.",
+        "(GLideN64) Overscan Offset (Bottom)",
+        "Overscan Bottom Offset.",
         {
             {"0", NULL},
             {"1", NULL},
@@ -685,8 +685,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-MaxTxCacheSize",
-        "Max texture cache size",
-        "(GLN64) Set Max texture cache size (in elements). Reduce it if you experience black textures leading to a crash.",
+        "(GLideN64) Max texture cache size",
+        "Set Max texture cache size (in elements). Reduce it if you experience black textures leading to a crash.",
         {
             {"1500", NULL},
             {"4000", NULL},
@@ -703,8 +703,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txFilterMode",
-        "Texture filter",
-        "(GLN64) Select Texture Filtering mode.",
+        "(GLideN64) Texture filter",
+        "Select Texture Filtering mode.",
         {
             {"None", NULL},
             {"Smooth filtering 1", NULL},
@@ -719,8 +719,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txEnhancementMode",
-        "Texture Enhancement",
-        "(GLN64) Various Texture Filters ('As-Is' will just cache).",
+        "(GLideN64) Texture Enhancement",
+        "Various Texture Filters ('As-Is' will just cache).",
         {
             {"None", NULL},
             {"As Is", NULL},
@@ -742,8 +742,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txFilterIgnoreBG",
-        "Don't filter background textures",
-        "(GLN64) Ignore filtering for Background Textures.",
+        "(GLideN64) Don't filter background textures",
+        "Ignore filtering for Background Textures.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -753,8 +753,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txHiresEnable",
-        "Use High-Res textures",
-        "(GLN64) Enable High-Res Texture packs if available.",
+        "(GLideN64) Use High-Res textures",
+        "Enable High-Res Texture packs if available.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -764,8 +764,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txCacheCompression",
-        "Use High-Res Texture Cache Compression",
-        "(GLN64) Compress created texture caches.",
+        "(GLideN64) Use High-Res Texture Cache Compression",
+        "Compress created texture caches.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -775,8 +775,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-txHiresFullAlphaChannel",
-        "Use High-Res Full Alpha Channel",
-        "(GLN64) This should be enabled unless it's a old RICE Texture pack.",
+        "(GLideN64) Use High-Res Full Alpha Channel",
+        "This should be enabled unless it's a old RICE Texture pack.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -786,8 +786,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableEnhancedTextureStorage",
-        "Use enhanced Texture Storage",
-        "(GLN64) Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds.",
+        "(GLideN64) Use enhanced Texture Storage",
+        "Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -797,8 +797,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-EnableEnhancedHighResStorage",
-        "Use enhanced Hi-Res Storage",
-        "(GLN64) Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",
+        "(GLideN64) Use enhanced Hi-Res Storage",
+        "Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",
         {
             {"False", NULL},
             {"True", NULL},
@@ -921,7 +921,7 @@ struct retro_core_option_definition option_defs_us[] = {
         "(ParaLLEl-RDP) Downsampling factor",
         "Downscales output after VI, equivalent to SSAA.",
         {
-            { "disable", NULL },
+            { "False", "Disabled" },
             { "1/2", NULL },
             { "1/4", NULL },
             { "1/8", NULL },
@@ -949,8 +949,8 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifdef HAVE_THR_AL
     {
         CORE_NAME "-angrylion-vioverlay",
-        "VI Overlay",
-        "(AL) Select VI Overlay filtering. 'Filtered' is the original system rendering.",
+        "(Angrylion) VI Overlay",
+        "Select VI Overlay filtering. 'Filtered' is the original system rendering.",
         {
             {"Filtered", NULL},
             {"AA+Blur", NULL},
@@ -965,8 +965,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-angrylion-sync",
-        "Thread sync level",
-        "(AL) Select Sync level (trades accuracy for performance).",
+        "(Angrylion) Thread sync level",
+        "Select Sync level (trades accuracy for performance).",
         {
             {"Low", NULL},
             {"Medium", NULL},
@@ -977,8 +977,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-angrylion-multithread",
-        "Multi-threading",
-        "(AL) Default 'all threads' is prefered to have it match your Physical CPU Core count. '1' should behave as the original angrylion, possibly fixing some bugs.",
+        "(Angrylion) Multi-threading",
+        "Default 'all threads' is prefered to have it match your Physical CPU Core count. '1' should behave as the original angrylion, possibly fixing some bugs.",
         {
             {"all threads", NULL},
             {"1", NULL},
@@ -1051,8 +1051,8 @@ struct retro_core_option_definition option_defs_us[] = {
     },
     {
         CORE_NAME "-angrylion-overscan",
-        "Hide overscan",
-        "(AL) Hide overscan borders.",
+        "(Angrylion) Hide overscan",
+        "Hide overscan borders.",
         {
             {"disabled", NULL},
             {"enabled", NULL},
