@@ -43,6 +43,7 @@
 #include "rom.h"
 #include "util.h"
 
+extern char inifile[];
 #define CHUNKSIZE 1024*128 /* Read files 128KB at a time. */
 
 /* Number of cpu cycles per instruction */
@@ -414,11 +415,11 @@ void romdatabase_open(void)
         return;
 
     /* Open romdatabase. */
-    if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
+    /*if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
     {
         DebugMessage(M64MSG_ERROR, "Unable to open rom database file '%s'.", pathname);
         return;
-    }
+    }*/
 
     g_romdatabase.have_database = 1;
 
@@ -430,11 +431,12 @@ void romdatabase_open(void)
     g_romdatabase.list = NULL;
 
     next_search = &g_romdatabase.list;
-
+    
+    char *lines = strtok(inifile, "\n");
     /* Parse ROM database file */
-    for (lineno = 1; fgets(buffer, 255, fPtr) != NULL; lineno++)
+    while(lines != NULL)
     {
-        char *line = buffer;
+        char *line = lines;
         ini_line l = ini_parse_line(&line);
         switch (l.type)
         {
@@ -674,9 +676,11 @@ void romdatabase_open(void)
         default:
             break;
         }
+        
+        lines = strtok(NULL, "\n");
     }
 
-    fclose(fPtr);
+
     romdatabase_resolve();
 }
 

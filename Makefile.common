@@ -16,6 +16,7 @@ ZLIB_DIR           = $(ROOT_DIR)/custom/dependencies/libzlib
 DYNAREC_USED := 0
 
 INCFLAGS += \
+	-I$(ROOT_DIR)/../angle-bootstraps/Binaries/include \
 	-I$(ROOT_DIR)/custom \
 	-I$(ROOT_DIR)/custom/mupen64plus-core \
 	-I$(ROOT_DIR)/custom/android/include \
@@ -518,10 +519,7 @@ else ifeq ($(GLES),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
 	endif
-else				   
-	ifeq (,$(findstring win,$(platform)))
-		GLFLAGS += -DCORE
-	endif
+else		
 	GLFLAGS += -DHAVE_OPENGL
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_gl.c
 endif
