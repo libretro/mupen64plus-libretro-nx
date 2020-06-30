@@ -388,7 +388,7 @@ else ifneq (,$(findstring android,$(platform)))
    else
       GL_LIB := -lGLESv2
       GLES = 1
-      TARGET := $(TARGET_NAME)_libretro_android.so
+      TARGET := $(TARGET_NAME)_gles2_libretro_android.so
    endif
    CPUFLAGS += -DANDROID -DEGL_EGLEXT_PROTOTYPES
    COREFLAGS += -DOS_LINUX
