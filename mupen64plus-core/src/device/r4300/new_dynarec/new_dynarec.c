@@ -5678,12 +5678,12 @@ static void do_cc(int i,signed char i_regmap[],int *adj,int addr,int taken,int i
     emit_jmp(0);
   }
   else if(*adj==0||invert) {
-	if(!EnableFullspeed) {
-	  emit_addimm_and_set_flags(CLOCK_DIVIDER*(count+2),HOST_CCREG);
-	}
+    if(!EnableFullspeed) {
+      emit_addimm_and_set_flags(CLOCK_DIVIDER*(count+2),HOST_CCREG);
+    }
     else {
       emit_addimm_and_set_flags(OVERCLOCK_FACTOR,HOST_CCREG);
-	}
+    }
     jaddr=(intptr_t)out;
     emit_jns(0);
   }
