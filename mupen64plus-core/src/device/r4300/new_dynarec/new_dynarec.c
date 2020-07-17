@@ -167,6 +167,10 @@ static void nullf() {}
 #define MAX_OUTPUT_BLOCK_SIZE 262144
 #define CLOCK_DIVIDER g_dev.r4300.cp0.count_per_op
 
+/* overclock hack */
+#define OVERCLOCK_FACTOR 4
+extern uint32_t EnableFullspeed;
+
 struct regstat
 {
   signed char regmap_entry[HOST_REGS];
@@ -5674,7 +5678,12 @@ static void do_cc(int i,signed char i_regmap[],int *adj,int addr,int taken,int i
     emit_jmp(0);
   }
   else if(*adj==0||invert) {
-    emit_addimm_and_set_flags(CLOCK_DIVIDER*(count+2),HOST_CCREG);
+	if(!EnableFullspeed) {
+	  emit_addimm_and_set_flags(CLOCK_DIVIDER*(count+2),HOST_CCREG);
+	}
+    else {
+      emit_addimm_and_set_flags(OVERCLOCK_FACTOR,HOST_CCREG);
+	}
     jaddr=(intptr_t)out;
     emit_jns(0);
   }
