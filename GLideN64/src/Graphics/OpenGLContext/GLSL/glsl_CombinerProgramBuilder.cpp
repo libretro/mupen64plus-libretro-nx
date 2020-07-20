@@ -298,7 +298,7 @@ public:
 			"OUT lowp float vNumLights;							\n"
 			"OUT lowp vec4 vShadeColor;							\n"
 		;
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective OUT lowp vec4 vShadeColorNoperspective;\n";
 		else
 			m_part += "OUT lowp vec4 vShadeColorNoperspective;				\n";
@@ -370,7 +370,7 @@ public:
 			"OUT lowp float vNumLights;										\n"
 			"OUT lowp vec4 vShadeColor;										\n"
 		;
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective OUT lowp vec4 vShadeColorNoperspective;\n";
 		else
 			m_part += "OUT lowp vec4 vShadeColorNoperspective;				\n";
@@ -423,7 +423,7 @@ public:
 			"OUT highp vec2 vTexCoord1;							\n"
 			"OUT lowp vec4 vShadeColor;							\n"
 		;
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective OUT lowp vec4 vShadeColorNoperspective;\n";
 		else
 			m_part += "OUT lowp vec4 vShadeColorNoperspective;				\n";
@@ -450,7 +450,7 @@ public:
 			"													\n"
 			"OUT lowp vec4 vShadeColor;							\n"
 			;
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective OUT lowp vec4 vShadeColorNoperspective;\n";
 		else
 			m_part += "OUT lowp vec4 vShadeColorNoperspective;				\n";
@@ -911,7 +911,7 @@ public:
 			;
 		}
 
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective IN lowp vec4 vShadeColorNoperspective;	\n";
 		else
 			m_part += "IN lowp vec4 vShadeColorNoperspective;				\n";
@@ -996,7 +996,7 @@ public:
 				;
 		}
 
-		if (!_glinfo.isGLESX || _glinfo.noPerspective)
+		if ((!_glinfo.isGLESX && !_glinfo.isGLES2) || (!_glinfo.isGLES2 && _glinfo.noPerspective))
 			m_part += "noperspective IN lowp vec4 vShadeColorNoperspective;	\n";
 		else
 			m_part += "IN lowp vec4 vShadeColorNoperspective;				\n";
