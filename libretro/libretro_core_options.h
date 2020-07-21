@@ -796,6 +796,17 @@ struct retro_core_option_definition option_defs_us[] = {
         "False"
     },
     {
+        CORE_NAME "-EnableHiResAltCRC",
+        "Use alternative method for High-Res Checksums",
+        "(GLN64) Use a alternative method for High-Res paletted textures CRC calculations.",
+        {
+            {"False", NULL},
+            {"True", NULL},
+            {NULL, NULL},
+        },
+        "False"
+    },
+    {
         CORE_NAME "-EnableEnhancedHighResStorage",
         "Use enhanced Hi-Res Storage",
         "(GLN64) Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",

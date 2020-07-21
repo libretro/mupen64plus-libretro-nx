@@ -180,8 +180,9 @@ uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableLODEmulation = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
-uint32_t EnableEnhancedTextureStorage;
-uint32_t EnableEnhancedHighResStorage;
+uint32_t EnableEnhancedTextureStorage = 0;
+uint32_t EnableHiResAltCRC = 0;
+uint32_t EnableEnhancedHighResStorage = 0;
 uint32_t EnableTxCacheCompression = 0;
 uint32_t EnableNativeResFactor = 0;
 uint32_t EnableN64DepthCompare = 0;
@@ -989,6 +990,13 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           EnableEnhancedHighResStorage = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-EnableHiResAltCRC";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableHiResAltCRC = !strcmp(var.value, "False") ? 0 : 1;
        }
 
        var.key = CORE_NAME "-EnableCopyAuxToRDRAM";

@@ -108,6 +108,7 @@ extern uint32_t CountPerOp;
 extern uint32_t CountPerScanlineOverride;
 extern uint32_t BackgroundMode;
 extern uint32_t EnableEnhancedTextureStorage;
+extern uint32_t EnableHiResAltCRC;
 extern uint32_t EnableEnhancedHighResStorage;
 extern uint32_t EnableTxCacheCompression;
 extern uint32_t ForceDisableExtraMem;
