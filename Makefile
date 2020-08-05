@@ -203,6 +203,9 @@ else ifneq (,$(findstring odroid64,$(platform)))
    else ifneq (,$(findstring N2,$(BOARD)))
       # ODROID-N2
       CPUFLAGS += -mcpu=cortex-a73.cortex-a53
+      GLES = 0
+      GLES3= 1
+      GL_LIB := -lGLESv3
    endif
 
    COREFLAGS += -DOS_LINUX
@@ -249,16 +252,18 @@ else ifneq (,$(findstring AMLG,$(platform)))
          CPUFLAGS += -mtune=cortex-a53
       endif
       GLES3 = 1
+      GL_LIB := -lGLESv3
    else ifneq (,$(findstring AMLGX,$(platform)))
       CPUFLAGS += -mtune=cortex-a53
       ifneq (,$(findstring AMLGXM,$(platform)))
          GLES3 = 1
+         GL_LIB := -lGLESv3
       else
          GLES = 1
+         GL_LIB := -lGLESv2
       endif
    endif
-
-   GL_LIB := -lGLESv2
+  
    HAVE_NEON = 1
    WITH_DYNAREC=arm
    COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
