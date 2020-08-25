@@ -9,7 +9,7 @@
 #include "config-texture.h"
 #include "config-osd.h"
 #include "config-debug.h"
-#include "util.h"
+#include "util/util.h"
 #include "InputDialog.h"
 #include "Language.h"
 
@@ -226,7 +226,7 @@ void CConfigDlg::SaveSettings() {
 		saveCustomRomSettings(m_strIniPath.c_str(), m_romName);
     else
         writeSettings(m_strIniPath.c_str());
-    
+	Init(true);
 }
 
 LRESULT CConfigDlg::OnRestoreDefaults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
