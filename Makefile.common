@@ -5,7 +5,7 @@ LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 RSPDIR_PARALLEL    = $(ROOT_DIR)/mupen64plus-rsp-paraLLEl
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
-VIDEODIR_GLIDE     = $(ROOT_DIR)/GLide
+VIDEODIR_GLIDE     = $(ROOT_DIR)/Glide
 VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion
 VIDEODIR_PARALLEL  = $(ROOT_DIR)/mupen64plus-video-paraLLEl
 
