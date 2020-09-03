@@ -101,6 +101,14 @@ static struct retro_hw_render_callback hw_render;
 static struct retro_hw_render_context_negotiation_interface_vulkan hw_context_negotiation;
 #endif
 
+#if defined(HAVE_GLIDE64)
+bool frame_dupe = true;
+uint32_t gfx_plugin_accuracy = 0;
+float polygonOffsetFactor = 0.0f;
+float polygonOffsetUnits = 0.0f;
+uint32_t screen_aspectmodehint = 0;
+#endif // HAVE_GLIDE64
+
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -592,7 +600,7 @@ void update_controllers()
     }
 }
 
-static void update_variables(bool startup)
+void update_variables(bool startup)
 {
     struct retro_variable var;
     static const char *screen_size_key = CORE_NAME "-43screensize";
@@ -615,6 +623,10 @@ static void update_variables(bool startup)
           if (!strcmp(var.value, "gliden64"))
           {
             plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
+          }
+          else if (!strcmp(var.value, "glide64"))
+          {
+             plugin_connect_rdp_api(RDP_PLUGIN_GLIDE);
           }
           else if (!strcmp(var.value, "angrylion"))
           {
@@ -691,6 +703,13 @@ static void update_variables(bool startup)
        {
           EnableThreadedRenderer = !strcmp(var.value, "True") ? 1 : 0;
        }
+
+#ifdef HAVE_GLIDE64
+       if(current_rdp_type == RDP_PLUGIN_GLIDE)
+       {
+          EnableThreadedRenderer = false;
+       }
+#endif // HAVE_THR_AL
 
        var.key = CORE_NAME "-BilinearMode";
        var.value = NULL;
@@ -1450,7 +1469,7 @@ void context_reset(void)
 {
     static bool first_init = true;
 
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
     {
        log_cb(RETRO_LOG_DEBUG, CORE_NAME ": context_reset()\n");
        glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
@@ -1466,7 +1485,7 @@ void context_reset(void)
 
 static void context_destroy(void)
 {
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
     {
        glsm_ctl(GLSM_CTL_STATE_CONTEXT_DESTROY, NULL);
     }
@@ -1562,7 +1581,7 @@ bool retro_load_game(const struct retro_game_info *game)
     params.stencil               = false;
 
     params.framebuffer_lock      = context_framebuffer_lock;
-    if (current_rdp_type == RDP_PLUGIN_GLIDEN64 && !glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
+    if ((current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE) && !glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
     {
         if (log_cb)
             log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
@@ -1584,7 +1603,7 @@ bool retro_load_game(const struct retro_game_info *game)
     if (!emu_step_load_data())
         return false;
 
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_PARALLEL)
+    if((current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE) || current_rdp_type == RDP_PLUGIN_PARALLEL)
     {
        first_context_reset = true;
     }
@@ -1644,7 +1663,7 @@ void retro_run (void)
        update_controllers();
     }
 
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
     {
        if(EnableThreadedRenderer)
        {
@@ -1660,14 +1679,14 @@ void retro_run (void)
 
     co_switch(game_thread);
 
-    if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
     {
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
     
     if (libretro_swap_buffer)
     {
-       if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
        {
           video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
        }
@@ -1736,7 +1755,7 @@ bool retro_serialize(void *data, size_t size)
 
    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
 
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
    {
       if(EnableThreadedRenderer)
       {
@@ -1751,7 +1770,7 @@ bool retro_serialize(void *data, size_t size)
       co_switch(game_thread);
    }
 
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
    {
       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    }
@@ -1769,7 +1788,7 @@ bool retro_unserialize(const void *data, size_t size)
 
    savestates_set_job(savestates_job_load, savestates_type_m64p, data);
 
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
    {
       if(EnableThreadedRenderer)
       {
@@ -1784,7 +1803,7 @@ bool retro_unserialize(const void *data, size_t size)
       co_switch(game_thread);
    }
 
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+   if (current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_GLIDE)
    {
       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    }

@@ -38,11 +38,17 @@ typedef double GLdouble;
 
 #define GL_LUMINANCE 0x1909
 #include <GL/glext.h>
-#include <stdexcept>
-#include <sstream>
-#include "Log.h"
 
 #define IS_GL_FUNCTION_VALID(proc_name) ptr##proc_name != nullptr
+
+#ifdef __cplusplus
+#include <stdexcept>
+#include <sstream>
+
+#include "Log.h"
+
+extern "C" {
+#endif // __cplusplus
 
 #if !defined(EGL) && !defined(OS_IOS)
 typedef void (APIENTRYP PFNGLPOLYGONOFFSETPROC) (GLfloat factor, GLfloat units);
@@ -68,10 +74,12 @@ extern PFNGLPOLYGONOFFSETPROC ptrPolygonOffset;
 extern PFNGLSCISSORPROC ptrScissor;
 extern PFNGLVIEWPORTPROC ptrViewport;
 extern PFNGLBINDTEXTUREPROC ptrBindTexture;
-extern PFNGLTEXIMAGE2DPROC ptrTexImage2D;
-extern PFNGLTEXPARAMETERIPROC ptrTexParameteri;
+extern "C" {
+    extern PFNGLTEXIMAGE2DPROC ptrTexImage2D;
+    extern PFNGLTEXPARAMETERIPROC ptrTexParameteri;
+    extern PFNGLGETSTRINGPROC ptrGetString;
+}
 extern PFNGLGETINTEGERVPROC ptrGetIntegerv;
-extern PFNGLGETSTRINGPROC ptrGetString;
 extern PFNGLREADPIXELSPROC ptrReadPixels;
 extern PFNGLTEXSUBIMAGE2DPROC ptrTexSubImage2D;
 extern PFNGLDRAWARRAYSPROC ptrDrawArrays;
@@ -206,7 +214,11 @@ extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC ptrEGLImageTargetTexture2DOES;
 typedef void (APIENTRYP PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC) (GLenum target, void* image);
 extern PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC ptrEGLImageTargetRenderbufferStorageOES;
 
-extern "C" void initGLFunctions();
+void initGLFunctions();
+
+#ifdef __cplusplus
+}
+#endif
 
 #ifndef NO_GL_WRAP
 #ifdef __LIBRETRO__
@@ -354,6 +366,8 @@ extern "C" void initGLFunctions();
 
 #define GL_TEXTURE_EXTERNAL_OES 0x8D65
 
+#ifdef __cplusplus
 #include "Graphics/OpenGLContext/ThreadedOpenGl/opengl_Wrapper.h"
+#endif // __cplusplus
 
 #endif // GLFUNCTIONS_H

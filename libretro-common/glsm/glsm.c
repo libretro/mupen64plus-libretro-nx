@@ -2037,10 +2037,28 @@ void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
 const GLubyte* rglGetStringi(GLenum name, GLuint index)
 {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetString.\n");
+   log_cb(RETRO_LOG_INFO, "glGetStringi.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
    return glGetStringi(name, index);
+#else
+   return NULL;
+#endif
+}
+
+/*
+ *
+ * Core in:
+ * OpenGL    : 2.0
+ * OpenGLES  : 3.0
+ */
+const GLubyte* rglGetString(GLenum name)
+{
+#ifdef GLSM_DEBUG
+   log_cb(RETRO_LOG_INFO, "glGetString.\n");
+#endif
+#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
+   return glGetString(name);
 #else
    return NULL;
 #endif

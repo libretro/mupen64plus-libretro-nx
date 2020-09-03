@@ -2,6 +2,7 @@ DEBUG = 0
 FORCE_GLES ?= 0
 FORCE_GLES3 ?= 0
 LLE ?= 0
+HAVE_GLIDE        ?= 0
 HAVE_PARALLEL_RSP ?= 0
 HAVE_PARALLEL_RDP ?= 0
 
@@ -190,6 +191,7 @@ else ifeq ($(platform), libnx)
    COREFLAGS += -DOS_LINUX -DEGL
    GLES = 0
    WITH_DYNAREC = aarch64
+   HAVE_GLIDE = 1
    STATIC_LINKING = 1
 
 # 64 bit ODROIDs

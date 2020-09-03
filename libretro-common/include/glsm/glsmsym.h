@@ -176,6 +176,7 @@ RETRO_BEGIN_DECLS
 #define glUniform1fv                rglUniform1fv
 #define glValidateProgram           rglValidateProgram
 #define glGetStringi                rglGetStringi
+#define glGetString                 rglGetString
 #define glTexBuffer                 rglTexBuffer
 #define glClearBufferfv             rglClearBufferfv
 #define glClearBufferfi             rglClearBufferfi
@@ -190,6 +191,7 @@ RETRO_BEGIN_DECLS
 
 void rglReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid * data);
 const GLubyte* rglGetStringi(GLenum name, GLuint index);
+const GLubyte* rglGetString(GLenum name);
 void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer);
 void rglClearBufferfv( 	GLenum buffer,
   	GLint drawBuffer,

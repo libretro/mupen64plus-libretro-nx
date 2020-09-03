@@ -5,6 +5,7 @@ LIBRETRO_COMM_DIR  = $(ROOT_DIR)/libretro-common
 RSPDIR_PARALLEL    = $(ROOT_DIR)/mupen64plus-rsp-paraLLEl
 AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
+VIDEODIR_GLIDE     = $(ROOT_DIR)/GLide
 VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion
 VIDEODIR_PARALLEL  = $(ROOT_DIR)/mupen64plus-video-paraLLEl
 
@@ -399,6 +400,46 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxTexCache.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxUtil.cpp \
 	$(VIDEODIR_GLIDEN64)/src/RSP_LoadMatrix.cpp
+
+ifeq ($(HAVE_GLIDE), 1)
+	CFLAGS   += -DHAVE_GLIDE64
+	CXXFLAGS += -DHAVE_GLIDE64
+	SOURCES_C += $(LIBRETRO_DIR)/libretro-crc.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glide64_3dmath.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/Framebuffer_glide64.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/Glide64_Ini.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glidemain.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glide64_util.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/Glide64_UCode.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glide64_gSP.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glide64_gDP.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/Combine.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/TexCache.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/MiClWr.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/TexLoad.c \
+				 $(VIDEODIR_GLIDE)/src/Glide64/glide64_rdp.c
+
+	# Glitch64
+	SOURCES_C += $(VIDEODIR_GLIDE)/src/Glitch64/glitch64_combiner.c \
+				 $(VIDEODIR_GLIDE)/src/Glitch64/geometry.c \
+				 $(VIDEODIR_GLIDE)/src/Glitch64/glitchmain.c \
+				 $(VIDEODIR_GLIDE)/src/Glitch64/glitch64_textures.c
+    
+	SOURCES_C += $(VIDEODIR_GLIDE)/Graphics/RSP/gSP_funcs_C.c \
+				 $(VIDEODIR_GLIDE)/Graphics/RSP/gSP_state.c \
+				 $(VIDEODIR_GLIDE)/Graphics/RDP/gDP_funcs_C.c \
+				 $(VIDEODIR_GLIDE)/Graphics/RDP/gDP_state.c \
+				 $(VIDEODIR_GLIDE)/Graphics/RDP/RDP_state.c \
+				 $(VIDEODIR_GLIDE)/Graphics/RSP/RSP_state.c \
+				 $(VIDEODIR_GLIDE)/Graphics/3dmaths.c \
+				 $(VIDEODIR_GLIDE)/Graphics/HLE/Microcode/Fast3D.c \
+				 $(VIDEODIR_GLIDE)/Graphics/plugins.c
+
+	SOURCES_CXX += $(VIDEODIR_GLIDE)/Graphics/RSP/gSP_funcs.cpp \
+				   $(VIDEODIR_GLIDE)/Graphics/RDP/gDP_funcs.cpp
+
+    INCFLAGS += -I$(VIDEODIR_GLIDE)/src/Glide64
+endif
 
 ifeq ($(HAVE_THR_AL), 1)
 CFLAGS      += -DHAVE_THR_AL

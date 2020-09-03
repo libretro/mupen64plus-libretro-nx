@@ -68,6 +68,9 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifdef HAVE_PARALLEL_RDP
             {"parallel", "paraLLEl-RDP"},
 #endif
+#ifdef HAVE_GLIDE64
+            {"glide64", "Glide64"},
+#endif
             {"gliden64", "GLideN64"},
             {NULL, NULL},
         },
