@@ -3,11 +3,57 @@
 
 #define GL_GLEXT_PROTOTYPES
 #include <boolean.h>
+
+#ifdef EGL
+#include <GL/glcorearb.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#elif defined(OS_MAC_OS_X)
+#include <OpenGL/OpenGL.h>
+#include <stddef.h>
+#include <OpenGL/gl3.h>
+
+#elif defined(OS_IOS)
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+// Add missing type defintions for iOS
+typedef double GLclampd;
+typedef double GLdouble;
+// These will get redefined by other GL headers.
+#undef GL_DRAW_FRAMEBUFFER_BINDING
+#undef GL_COPY_READ_BUFFER_BINDING
+#undef GL_COPY_WRITE_BUFFER_BINDING
+#include <GL/glcorearb.h>
+#else
+#include <GL/gl.h>
+#include <GL/glcorearb.h>
+#endif
+
+#define GL_LUMINANCE 0x1909
+#include <GL/glext.h>
+
+#if !defined(EGL) && !defined(OS_IOS)
+typedef void (APIENTRYP PFNGLPOLYGONOFFSETPROC) (GLfloat factor, GLfloat units);
+typedef void (APIENTRYP PFNGLBINDTEXTUREPROC) (GLenum target, GLuint texture);
+typedef void (APIENTRYP PFNGLTEXSUBIMAGE2DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
+typedef void (APIENTRYP PFNGLDRAWARRAYSPROC) (GLenum mode, GLint first, GLsizei count);
+typedef void (APIENTRYP PFNGLDRAWELEMENTSPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices);
+typedef void (APIENTRYP PFNGLDELETETEXTURESPROC) (GLsizei n, const GLuint *textures);
+typedef void (APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
+typedef void (APIENTRYP PFNGLCOPYTEXIMAGE2DPROC) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+#endif
+
 #include <glsm/glsm.h>
 #include <glsm/glsmsym.h>
-typedef void (APIENTRYP PFNGLTEXPARAMETERIPROC) (GLenum target, GLenum pname, GLint param);
-typedef void (APIENTRYP PFNGLTEXIMAGE2DPROC) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
-typedef const GLubyte *(APIENTRYP PFNGLGETSTRINGPROC) (GLenum name);
+
+#ifndef MAX
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#endif // !MAX
+#ifndef MIN
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif // !MIN
+
+// Defined in GLideN64's GLFunctions.cpp, initialized via glsm
 extern PFNGLGETSTRINGPROC ptrGetString;
 extern PFNGLTEXIMAGE2DPROC ptrTexImage2D;
 extern PFNGLTEXPARAMETERIPROC ptrTexParameteri;

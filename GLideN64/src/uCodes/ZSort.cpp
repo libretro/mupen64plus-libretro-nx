@@ -27,6 +27,8 @@
 #define	ZH_SHQUAD	3
 #define	ZH_TXQUAD	4
 
+// Gliden conflict
+#define zSortRdp gliden64_zSortRdp
 struct ZSORTRDP
 {
 	f32 view_scale[2];

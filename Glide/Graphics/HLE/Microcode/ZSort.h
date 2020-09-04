@@ -27,6 +27,8 @@ extern "C" {
 
 typedef float M44[4][4];
 
+// GLideN64 Conflict
+#define ZSORTRDP glide64_ZSORTRDP
 typedef struct
 {
    float view_scale[2];
