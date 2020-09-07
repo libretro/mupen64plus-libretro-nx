@@ -13,29 +13,9 @@ stages:
   - build-shared
   - build-static
   - test
-  
-libretro-rebase-upstream-auto:
-  image: $CI_SERVER_HOST:4567/libretro/infrastructure/libretro-build-amd64-ubuntu:latest
-  stage: build-prepare
-  only: [chat]
-  before_script:
-    - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
-  script:
-    - git config user.name $GIT_ACCESS_USER
-    - git config user.email $GIT_ACCESS_EMAIL
-    - git fetch origin
-    - git reset --hard
-    - git clean -fd
-    - git checkout $CI_COMMIT_REF_NAME
-    - git reset --hard origin/$CI_COMMIT_REF_NAME
-    - git remote set-url origin "https://$GIT_ACCESS_USER:$GIT_ACCESS_TOKEN@${url_host}"
-    - git remote add upstream "https://github.com/libretro/mupen64plus-libretro-nx.git"
-    - git fetch upstream
-    - git rebase upstream/develop
-    - git push origin ${CI_BUILD_REF_NAME} --force || true
 
 libretro-build-linux-x64:
-  image: $CI_SERVER_HOST:4567/libretro/infrastructure/libretro-build-amd64-ubuntu:latest
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
   stage: build-shared
   script:
     - make -j10 HAVE_PARALLEL_RDP=1 HAVE_PARALLEL_RSP=1 HAVE_THR_AL=1 LLE=1
@@ -46,7 +26,7 @@ libretro-build-linux-x64:
   dependencies: []
 
 libretro-build-windows-x64:
-  image: $CI_SERVER_HOST:4567/libretro/infrastructure/libretro-build-amd64-ubuntu:latest
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
   stage: build-shared
   script:
     - make -j10 platform=win64 MSYSTEM=MINGW64
@@ -57,7 +37,7 @@ libretro-build-windows-x64:
   dependencies: []
 
 libretro-build-libnx-aarch64:
-  image: $CI_SERVER_HOST:4567/libretro/infrastructure/libretro-build-libnx-devkitpro:latest
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-libnx-devkitpro:latest
   stage: build-static
   script:
     - make -j10 platform=libnx
