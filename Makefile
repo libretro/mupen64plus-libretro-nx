@@ -153,16 +153,22 @@ else ifneq (,$(findstring rpi,$(platform)))
       EGL_LIB := -lbrcmEGL
       INCFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vcos -I/opt/vc/include/interface/vcos/pthreads
    endif
-   WITH_DYNAREC=arm
    ifneq (,$(findstring rpi2,$(platform)))
-      CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-      HAVE_NEON = 1
+      CPUFLAGS += -mcpu=cortex-a7
+      ARM_CPUFLAGS = -mfpu=neon-vfpv4
    else ifneq (,$(findstring rpi3,$(platform)))
-      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
-      HAVE_NEON = 1
+      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53
+      ARM_CPUFLAGS = -mfpu=neon-fp-armv8
    else ifneq (,$(findstring rpi4,$(platform)))
-      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
+      ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+   endif
+   ifeq ($(ARCH), aarch64)
+      WITH_DYNAREC=aarch64
+   else
+      WITH_DYNAREC=arm
       HAVE_NEON = 1
+      CPUFLAGS += $(ARM_CPUFLAGS) -mfloat-abi=hard
    endif
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
