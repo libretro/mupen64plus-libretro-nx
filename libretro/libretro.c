@@ -1028,9 +1028,9 @@ static void update_variables(bool startup)
           } else if (!strcmp(var.value, "16:9")) {
              AspectRatio = 2;
              retro_screen_aspect = 16.0 / 9.0;
-          } else if (!strcmp(var.value, "21:9 adjusted")) {
+          } else if (!strcmp(var.value, "64:27 adjusted")) {
              AspectRatio = 4;
-             retro_screen_aspect = 21.0 / 9.0;
+             retro_screen_aspect = 64.0 / 27.0;
           } else {
              AspectRatio = 1;
              retro_screen_aspect = 4.0 / 3.0;
@@ -1049,7 +1049,7 @@ static void update_variables(bool startup)
           var.key = CORE_NAME "-43screensize";
           break;
        case 4:
-          var.key = CORE_NAME "-219screensize";
+          var.key = CORE_NAME "-6427screensize";
           break;
        default:
           var.key = CORE_NAME "-169screensize";

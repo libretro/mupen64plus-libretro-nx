@@ -96,7 +96,7 @@ struct Config
 		a43 = 1,
 		a169 = 2,
 		aAdjust = 3,
-		a219 = 4,
+		a6427 = 4,
 		aTotal = 5
 	};
 

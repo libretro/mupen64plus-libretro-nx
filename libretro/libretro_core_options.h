@@ -129,9 +129,9 @@ struct retro_core_option_definition option_defs_us[] = {
         "960x540"
     },
     {
-        CORE_NAME "-219screensize",
-        "21:9 Resolution",
-        "(GLN64) Select Render Viewport dimensions (21:9).",
+        CORE_NAME "-6427screensize",
+        "64:27 Resolution",
+        "(GLN64) Select Render Viewport dimensions (64:27). This aspect ration is commonly labeled as 21:9.",
         {
             {"854x360", NULL},
             {"1280x540", NULL},
@@ -140,6 +140,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"2560x1080", NULL},
             {"3414x1440", NULL},
             {"5120x2160", NULL},
+            {"57680x3240", NULL},
             {"10240x4320", NULL},
             {NULL, NULL},
         },
@@ -148,12 +149,12 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-aspect",
         "Aspect Ratio",
-        "(GLN64) Select the aspect ratio, 16:9 adjusted means essentially Widescreen hacks.",
+        "(GLN64) Select the aspect ratio. '16:9 adjusted' and '64:27 adjusted' means essentially Widescreen hacks.",
         {
             {"4:3", NULL},
             {"16:9", NULL},
             {"16:9 adjusted", NULL},
-            {"21:9 adjusted", NULL},
+            {"64:27 adjusted", NULL},
             {NULL, NULL},
         },
         "4:3"
