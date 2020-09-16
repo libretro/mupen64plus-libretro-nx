@@ -1044,7 +1044,17 @@ static void update_variables(bool startup)
          EnableNativeResFactor = atoi(var.value);
        }
 
-       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : ( AspectRatio == 4 ? CORE_NAME "-219screensize" : CORE_NAME "-169screensize") );
+       switch (AspectRatio) {
+       case 1:
+          var.key = CORE_NAME "-43screensize";
+          break;
+       case 4:
+          var.key = CORE_NAME "-219screensize";
+          break;
+       default:
+          var.key = CORE_NAME "-169screensize";
+          break;
+       }
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
