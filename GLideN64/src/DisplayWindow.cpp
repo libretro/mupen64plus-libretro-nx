@@ -165,6 +165,7 @@ void DisplayWindow::_setBufferSize()
 		}
 		break;
 	case Config::aAdjust: // adjust
+	case Config::a219:
 		m_width = m_screenWidth;
 		m_height = m_screenHeight;
 		if (m_screenWidth * 3 / 4 > m_screenHeight) {

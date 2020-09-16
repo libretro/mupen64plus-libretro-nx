@@ -1028,6 +1028,9 @@ static void update_variables(bool startup)
           } else if (!strcmp(var.value, "16:9")) {
              AspectRatio = 2;
              retro_screen_aspect = 16.0 / 9.0;
+          } else if (!strcmp(var.value, "21:9 adjusted")) {
+             AspectRatio = 4;
+             retro_screen_aspect = 21.0 / 9.0;
           } else {
              AspectRatio = 1;
              retro_screen_aspect = 4.0 / 3.0;
@@ -1041,7 +1044,7 @@ static void update_variables(bool startup)
          EnableNativeResFactor = atoi(var.value);
        }
 
-       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
+       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : ( AspectRatio == 4 ? CORE_NAME "-219screensize" : CORE_NAME "-169screensize") );
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
