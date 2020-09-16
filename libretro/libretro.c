@@ -591,6 +591,7 @@ void update_controllers()
 static void update_variables(bool startup)
 {
     struct retro_variable var;
+    const char *screen_size_key = NULL;
 
     if (startup)
     {
@@ -1025,15 +1026,19 @@ static void update_variables(bool startup)
           if (!strcmp(var.value, "16:9 adjusted")) {
              AspectRatio = 3;
              retro_screen_aspect = 16.0 / 9.0;
+             screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
              AspectRatio = 2;
              retro_screen_aspect = 16.0 / 9.0;
+             screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "64:27 adjusted")) {
-             AspectRatio = 4;
+             AspectRatio = 3;
              retro_screen_aspect = 64.0 / 27.0;
+             screen_size_key = CORE_NAME "-6427screensize";
           } else {
              AspectRatio = 1;
              retro_screen_aspect = 4.0 / 3.0;
+             screen_size_key = CORE_NAME "-43screensize";
           }
        }
 
@@ -1044,17 +1049,7 @@ static void update_variables(bool startup)
          EnableNativeResFactor = atoi(var.value);
        }
 
-       switch (AspectRatio) {
-       case 1:
-          var.key = CORE_NAME "-43screensize";
-          break;
-       case 4:
-          var.key = CORE_NAME "-6427screensize";
-          break;
-       default:
-          var.key = CORE_NAME "-169screensize";
-          break;
-       }
+       var.key = screen_size_key;
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {

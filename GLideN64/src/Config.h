@@ -96,8 +96,7 @@ struct Config
 		a43 = 1,
 		a169 = 2,
 		aAdjust = 3,
-		a6427 = 4,
-		aTotal = 5
+		aTotal = 4
 	};
 
 	enum CopyToRDRAM {
