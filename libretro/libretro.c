@@ -1023,18 +1023,13 @@ static void update_variables(bool startup)
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          if (!strcmp(var.value, "16:9 adjusted")) {
+          if (!strcmp(var.value, "Widescreen adjusted")) {
              AspectRatio = 3;
-             retro_screen_aspect = 16.0 / 9.0;
-             screen_size_key = CORE_NAME "-169screensize";
+             screen_size_key = CORE_NAME "-widescreensize";
           } else if (!strcmp(var.value, "16:9")) {
              AspectRatio = 2;
              retro_screen_aspect = 16.0 / 9.0;
-             screen_size_key = CORE_NAME "-169screensize";
-          } else if (!strcmp(var.value, "64:27 adjusted")) {
-             AspectRatio = 3;
-             retro_screen_aspect = 64.0 / 27.0;
-             screen_size_key = CORE_NAME "-6427screensize";
+             screen_size_key = CORE_NAME "-widescreensize";
           } else {
              AspectRatio = 1;
              retro_screen_aspect = 4.0 / 3.0;
@@ -1054,6 +1049,10 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
+          if (AspectRatio == 3) // "Widescreen adjusted"
+          {
+             retro_screen_aspect = (float)retro_screen_width / (float)retro_screen_height;
+          }
 
           // Sanity check... not optimal since we will render at a higher res, but otherwise
           // GLideN64 might blit a bigger image onto a smaller framebuffer
