@@ -1253,7 +1253,7 @@ StaticRasterizationState Renderer::normalize_static_state(StaticRasterizationSta
 		return state;
 	}
 
-	if ((state.flags & RASTERIZATION_MULTI_CYCLE_BIT) == 0)
+	if ((state.flags & (RASTERIZATION_MULTI_CYCLE_BIT | RASTERIZATION_USES_PIPELINED_TEXEL1_BIT)) == 0)
 		state.flags &= ~(RASTERIZATION_BILERP_1_BIT | RASTERIZATION_CONVERT_ONE_BIT);
 
 	normalize_combiner(state.combiner[0]);

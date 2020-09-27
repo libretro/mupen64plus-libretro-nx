@@ -23,6 +23,7 @@
 #include "video_interface.hpp"
 #include "rdp_renderer.hpp"
 #include "luts.hpp"
+#include <cmath>
 
 #ifndef PARALLEL_RDP_SHADER_DIR
 #include "shaders/slangmosh.hpp"
@@ -565,14 +566,14 @@ Vulkan::ImageHandle VideoInterface::scale_stage(Vulkan::CommandBuffer &cmd, Vulk
 	bool fetch_bug = need_fetch_bug_emulation(regs, scaling_factor);
 	bool serrate = (regs.status & VI_CONTROL_SERRATE_BIT) != 0 && !options.upscale_deinterlacing;
 
-	unsigned crop_pixels_x = options.crop_overscan_pixels * scaling_factor;
-	unsigned crop_pixels_y = crop_pixels_x * (serrate ? 2 : 1);
-
 	Vulkan::ImageCreateInfo rt_info = Vulkan::ImageCreateInfo::render_target(
 			VI_SCANOUT_WIDTH * scaling_factor,
 			((regs.is_pal ? VI_V_RES_PAL: VI_V_RES_NTSC) >> int(!serrate)) * scaling_factor,
 			VK_FORMAT_R8G8B8A8_UNORM);
 
+	// Rescale crop pixels to preserve aspect ratio.
+	auto crop_pixels_y = options.crop_overscan_pixels * scaling_factor * (serrate ? 2 : 1);
+	auto crop_pixels_x = unsigned(std::round(float(crop_pixels_y) * (float(rt_info.width) / float(rt_info.height))));
 	rt_info.width -= 2 * crop_pixels_x;
 	rt_info.height -= 2 * crop_pixels_y;
 
