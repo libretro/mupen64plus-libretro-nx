@@ -397,7 +397,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
                 return false;
             }
             
-            printf("Loading %s...\n", info[0].path);
+            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
             load_file(info[1].path, (void**)&info[1].data, &info[1].size);
             return retro_load_game(&info[1]);
         default:
