@@ -1508,6 +1508,61 @@ static bool retro_init_vulkan(void)
 #endif
 }
 
+bool try_init_gl_context(uint32_t preferred)
+{
+    glsm_ctx_params_t params     = {0};
+
+    params.context_type          = preferred;
+    params.context_reset         = context_reset;
+    params.context_destroy       = context_destroy;
+    params.environ_cb            = environ_cb;
+    params.stencil               = false;
+    params.framebuffer_lock      = context_framebuffer_lock;
+
+    if (!glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
+        return false;
+
+    return true;
+}
+
+bool retro_init_gl()
+{
+    uint32_t preferred;
+    bool gl_context_found = false;
+
+    // get and use current driver
+    if (!environ_cb(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &preferred))
+        preferred = RETRO_HW_CONTEXT_DUMMY;
+
+    if (preferred == RETRO_HW_CONTEXT_OPENGL
+#if defined(CORE) && !defined(HAVE_LIBNX)
+        || preferred == RETRO_HW_CONTEXT_OPENGL_CORE
+#endif // defined(CORE) && !defined(HAVE_LIBNX)
+    )
+    {
+        gl_context_found = try_init_gl_context(preferred);
+    }
+
+    // fallbacks to gl if no preferred was found
+#if defined(CORE) && !defined(HAVE_LIBNX)
+    if (!gl_context_found)
+        gl_context_found = try_init_gl_context(RETRO_HW_CONTEXT_OPENGL_CORE);
+#endif // defined(CORE) && !defined(HAVE_LIBNX)
+
+    if (!gl_context_found)
+        gl_context_found = try_init_gl_context(RETRO_HW_CONTEXT_OPENGL);
+
+    if (!gl_context_found)
+    {
+        if (log_cb)
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
+
+        return false;
+    }
+
+    return true;
+}
+
 bool retro_load_game(const struct retro_game_info *game)
 {
     char* gamePath;
@@ -1535,7 +1590,6 @@ bool retro_load_game(const struct retro_game_info *game)
     retro_savestate_complete = true;
     load_game_successful = false;
 
-    glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables(true);
@@ -1549,17 +1603,10 @@ bool retro_load_game(const struct retro_game_info *game)
 
     init_audio_libretro(audio_buffer_size);
 
-    params.context_reset         = context_reset;
-    params.context_destroy       = context_destroy;
-    params.environ_cb            = environ_cb;
-    params.stencil               = false;
-
-    params.framebuffer_lock      = context_framebuffer_lock;
-    if (current_rdp_type == RDP_PLUGIN_GLIDEN64 && !glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
+    if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
-        if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": libretro frontend doesn't have OpenGL support\n");
-        return false;
+        if (!retro_init_gl())
+            return false;
     }
 
 #ifdef HAVE_PARALLEL_RDP
