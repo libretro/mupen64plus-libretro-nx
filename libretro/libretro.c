@@ -131,12 +131,12 @@ static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
 
 static bool     emu_initialized     = false;
-static unsigned initial_boot        = true;
 static unsigned audio_buffer_size   = 2048;
 
-static unsigned retro_filtering     = 0;
-static bool     first_context_reset = false;
-static bool     initializing        = true;
+static unsigned retro_filtering      = 0;
+static bool     first_context_reset  = false;
+static bool     initializing         = true;
+static bool     load_game_successful = false;
 
 bool libretro_swap_buffer;
 
@@ -510,11 +510,15 @@ void retro_init(void)
 }
 
 void retro_deinit(void)
-{    
-    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+{
+    // Prevent yield to game_thread on unsuccessful context request
+    if(load_game_successful)
     {
-        CoreDoCommand(M64CMD_STOP, 0, NULL);
-        co_switch(game_thread); /* Let the core thread finish */
+       if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
+       {
+           CoreDoCommand(M64CMD_STOP, 0, NULL);
+           co_switch(game_thread); /* Let the core thread finish */
+       }
     }
 
     deinit_audio_libretro();
@@ -1527,14 +1531,14 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
 
-    // Init savestate job var
+    // Init default vals
     retro_savestate_complete = true;
+    load_game_successful = false;
 
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables(true);
-    initial_boot = false;
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
     {
@@ -1585,6 +1589,8 @@ bool retro_load_game(const struct retro_game_info *game)
        /* Additional check for vioverlay not set at start */
        update_variables(false);
     }
+    
+    load_game_successful = true;
 
     return true;
 }
