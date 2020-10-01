@@ -23,6 +23,11 @@ using namespace glsl;
 
 #define SHADER_STORAGE_FOLDER_NAME "shaders"
 
+extern "C" {
+	// TODO: Maybe add to common header, check for dupe declarations
+	extern struct retro_hw_render_callback hw_render;
+}
+
 static
 std::string getStorageFileName(const opengl::GLInfo & _glinfo, const char * _fileExtension)
 {
@@ -62,7 +67,16 @@ std::string getStorageFileName(const opengl::GLInfo & _glinfo, const char * _fil
 	if(_glinfo.isGLESX) {
 		strOpenGLType = "GLES";
 	} else {
-		strOpenGLType = "OpenGL";
+		// Distinction between GL and GL Core to avoid shader cache issues
+		switch(hw_render.context_type)
+		{
+			case RETRO_HW_CONTEXT_OPENGL_CORE:
+				strOpenGLType = "OpenGL_CORE";
+				break;
+			default:
+				strOpenGLType = "OpenGL";
+				break;
+		}
 	}
 
 	path << "/GLideN64." << std::hex << static_cast<u32>(std::hash<std::string>()(RSP.romname))
