@@ -715,9 +715,9 @@ static void load_dd_rom(uint8_t* rom, size_t* rom_size)
     char* pathname = (char*)malloc(2048);
     strncpy(pathname, sys_pathname, 2048 - 1);
     if (pathname[(strlen(pathname)-1)] != '/' && pathname[(strlen(pathname)-1)] != '\\')
-        strcat(pathname, path_default_slash());
+        strcat(pathname, PATH_DEFAULT_SLASH());
     strcat(pathname, "Mupen64plus");
-    strcat(pathname, path_default_slash());
+    strcat(pathname, PATH_DEFAULT_SLASH());
     strcat(pathname, "IPL.n64");
 
     if(retro_dd_path_img)
