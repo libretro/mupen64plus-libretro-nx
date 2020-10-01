@@ -1,9 +1,12 @@
-variables:
-  STATIC_RETROARCH_BRANCH: master
+.core-defs:
+  variables:
+    CORENAME: mupen64plus_next
 
 include:
-  template: Jobs/Code-Quality.gitlab-ci.yml
-  
+  - template: Jobs/Code-Quality.gitlab-ci.yml
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/libnx-static.yml'
+
 code_quality:
   artifacts:
     paths: [gl-code-quality-report.json]
@@ -37,21 +40,6 @@ libretro-build-windows-x64:
   dependencies: []
 
 libretro-build-libnx-aarch64:
-  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-libnx-devkitpro:latest
-  stage: build-static
-  script:
-    - make -j10 platform=libnx
-    - wget -O retroarch-precompiled.zip "https://$CI_SERVER_HOST/libretro/RetroArch/-/jobs/artifacts/$STATIC_RETROARCH_BRANCH/download?job=build-static-retroarch-libnx-aarch64"
-    - unzip retroarch-precompiled.zip
-    - rm -f retroarch-precompiled.zip
-    - mv mupen64plus_next_libretro_libnx.a retroarch-precompiled/libretro_libnx.a
-    - cd retroarch-precompiled/
-    - make -f Makefile.libnx -j10
-    - mv retroarch_switch.nro ../mupen64plus_next_libretro_libnx.nro
-    - mv retroarch_switch.elf ../mupen64plus_next_libretro_libnx.elf
-    - cd ../
-  artifacts:
-    paths:
-    - mupen64plus_next_libretro_libnx.nro
-    - mupen64plus_next_libretro_libnx.elf
-    expire_in: 1 month
+  extends:
+    - .core-defs
+    - .libretro-libnx-static-retroarch-master
