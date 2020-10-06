@@ -1,6 +1,13 @@
 .core-defs:
   variables:
+    JNI_PATH: libretro
     CORENAME: mupen64plus_next
+
+.core-defs-gles3:
+  extends: .core-defs
+  variables:
+    CORENAME: mupen64plus_next_gles3
+    GLES3: 1
 
 include:
   - template: Jobs/Code-Quality.gitlab-ci.yml
@@ -10,6 +17,8 @@ include:
     file: '/windows-x64-mingw.yml'
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/android-jni.yml'
 
 code_quality:
   artifacts:
@@ -21,6 +30,7 @@ stages:
   - build-static
   - test
 
+# Desktop
 libretro-build-linux-x64:
   variables:
     HAVE_PARALLEL_RDP: 1
@@ -36,7 +46,29 @@ libretro-build-windows-x64-mingw:
     - .core-defs
     - .libretro-windows-x64-mingw-make-default
 
+# Static
 libretro-build-libnx-aarch64:
   extends:
     - .core-defs
     - .libretro-libnx-static-retroarch-master
+
+# Android
+android-armeabi-v7a:
+  extends:
+    - .core-defs
+    - .libretro-android-jni-armeabi-v7a
+
+android-arm64-v8a:
+  extends:
+    - .core-defs
+    - .libretro-android-jni-arm64-v8a
+
+android-armeabi-v7a-gles3:
+  extends:
+    - .core-defs-gles3
+    - .libretro-android-jni-armeabi-v7a
+
+android-arm64-v8a-gles3:
+  extends:
+    - .core-defs-gles3
+    - .libretro-android-jni-arm64-v8a
