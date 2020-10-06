@@ -8,6 +8,8 @@ include:
     file: '/libnx-static.yml'
   - project: 'libretro-infrastructure/ci-templates'
     file: '/windows-x64-mingw.yml'
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-x64.yml'
 
 code_quality:
   artifacts:
@@ -20,17 +22,16 @@ stages:
   - test
 
 libretro-build-linux-x64:
-  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
-  stage: build-shared
-  script:
-    - make -j10 HAVE_PARALLEL_RDP=1 HAVE_PARALLEL_RSP=1 HAVE_THR_AL=1 LLE=1
-  artifacts:
-    paths:
-    - mupen64plus_next_libretro.so
-    expire_in: 1 month
-  dependencies: []
+  variables:
+    HAVE_PARALLEL_RDP: 1
+    HAVE_PARALLEL_RSP: 1
+    HAVE_THR_AL: 1
+    LLE: 1
+  extends:
+    - .core-defs
+    - .libretro-linux-x64-make-default
 
-libretro-windows-x64-mingw:
+libretro-build-windows-x64-mingw:
   extends:
     - .core-defs
     - .libretro-windows-x64-mingw-make-default
