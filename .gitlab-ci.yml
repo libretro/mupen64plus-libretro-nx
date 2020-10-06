@@ -6,6 +6,8 @@ include:
   - template: Jobs/Code-Quality.gitlab-ci.yml
   - project: 'libretro-infrastructure/ci-templates'
     file: '/libnx-static.yml'
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/windows-x64-mingw.yml'
 
 code_quality:
   artifacts:
@@ -28,16 +30,10 @@ libretro-build-linux-x64:
     expire_in: 1 month
   dependencies: []
 
-libretro-build-windows-x64:
-  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
-  stage: build-shared
-  script:
-    - make -j10 platform=win64 MSYSTEM=MINGW64
-  artifacts:
-    paths:
-    - mupen64plus_next_libretro.dll
-    expire_in: 1 month
-  dependencies: []
+libretro-windows-x64-mingw:
+  extends:
+    - .core-defs
+    - .libretro-windows-x64-mingw-make-default
 
 libretro-build-libnx-aarch64:
   extends:
