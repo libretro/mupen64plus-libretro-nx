@@ -139,7 +139,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-aspect",
         "Aspect Ratio",
-        "(GLN64) Select the aspect ratio. 'adjusted' means, essentially, Widescreen hacks.",
+        "(GLN64) Select the aspect ratio. 'adjusted' means essentially Widescreen hacks.",
         {
             {"4:3", NULL},
             {"16:9", NULL},
