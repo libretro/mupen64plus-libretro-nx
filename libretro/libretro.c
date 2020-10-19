@@ -1025,7 +1025,7 @@ static void update_variables(bool startup)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
              AspectRatio = 3;
-             /// `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
+             // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
              screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
              AspectRatio = 2;
