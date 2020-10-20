@@ -112,7 +112,7 @@ struct retro_core_option_definition option_defs_us[] = {
         "640x480"
     },
     {
-        CORE_NAME "-169screensize",
+        CORE_NAME "-169screensize", // Keeping this key name for compatibility with existing config files.
         "Wide Resolution",
         "(GLN64) Select Render Viewport dimensions for wider resolutions.",
         {
