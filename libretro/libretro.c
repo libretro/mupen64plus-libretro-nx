@@ -591,7 +591,7 @@ void update_controllers()
 static void update_variables(bool startup)
 {
     struct retro_variable var;
-    const char *screen_size_key = NULL;
+    static const char *screen_size_key = CORE_NAME "-43screensize";
 
     if (startup)
     {
