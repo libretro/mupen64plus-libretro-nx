@@ -5133,7 +5133,12 @@ public:
 
 	void commandToExecute() override
 	{
+#ifdef __LIBRETRO__
+		*m_returnValue = m64p_error::M64ERR_SUCCESS;
+		glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
+#else
 		*m_returnValue = ::CoreVideo_SetVideoModeWithRate(m_screenWidth, m_screenHeight, m_refreshRate, m_bitsPerPixel, m_mode, m_flags);
+#endif
 
 		initGLFunctions();
 	}
