@@ -10,7 +10,6 @@ m64p_error PluginAPI::PluginStartup(m64p_dynlib_handle _CoreLibHandle)
 {
 	return M64ERR_SUCCESS;
 }
-#endif // M64P_GLIDENUI
 
 m64p_error PluginAPI::PluginShutdown()
 {
