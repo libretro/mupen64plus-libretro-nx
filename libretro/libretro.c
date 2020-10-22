@@ -1024,11 +1024,11 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
-             AspectRatio = 3; // Config::Aspect::aAdjust
+             AspectRatio = 3; // Aspect::aAdjust
              // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
              screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
-             AspectRatio = 0; // Config::Aspect::aStretch
+             AspectRatio = 0; // Aspect::aStretch
              screen_size_key = CORE_NAME "-169screensize";
           } else {
              AspectRatio = 1; // Aspect::a43
