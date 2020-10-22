@@ -1024,12 +1024,11 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
-             AspectRatio = 3;
+             AspectRatio = 3; // Adjust the image.
              // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
              screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
-             AspectRatio = 2;
-             retro_screen_aspect = 16.0 / 9.0;
+             AspectRatio = 0; // Stretch the image to the selected resolution.
              screen_size_key = CORE_NAME "-169screensize";
           } else {
              AspectRatio = 1;
@@ -1050,7 +1049,7 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
-          if (AspectRatio == 3) // "adjusted" aspect option
+          if (AspectRatio != 1) // Calculate the correct aspect ratio when using a ratio different than 4:3.
           {
              retro_screen_aspect = (float)retro_screen_width / (float)retro_screen_height;
           }

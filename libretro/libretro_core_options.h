@@ -141,9 +141,9 @@ struct retro_core_option_definition option_defs_us[] = {
         "Aspect Ratio",
         "(GLN64) Select the aspect ratio. 'adjusted' means essentially Widescreen hacks.",
         {
-            {"4:3", NULL},
-            {"16:9", NULL},
-            {"16:9 adjusted", NULL}, // Calculates the aspect ratio based on the selected "16:9 resolution".
+            {"4:3", "Original (4:3)"},
+            {"16:9", "Wide (Stretched)"},
+            {"16:9 adjusted", "Wide (Adjusted)"}, // Calculates the aspect ratio based on the selected "16:9 resolution".
             {NULL, NULL},
         },
         "4:3"
