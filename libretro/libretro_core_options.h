@@ -112,18 +112,26 @@ struct retro_core_option_definition option_defs_us[] = {
         "640x480"
     },
     {
-        CORE_NAME "-169screensize",
-        "16:9 Resolution",
-        "(GLN64) Select Render Viewport dimensions (16:9).",
+        CORE_NAME "-169screensize", // Keep this key for compatibility with existing config files. // TODO: revisit-later
+        "Wide Resolution",
+        "(GLN64) Select Render Viewport dimensions for wider resolutions.",
         {
-            {"640x360", NULL},
-            {"960x540", NULL},
-            {"1280x720", NULL},
-            {"1920x1080", NULL},
-            {"2560x1440", NULL},
-            {"3840x2160", NULL},
-            {"4096x2160", NULL},
-            {"7680x4320", NULL},
+            {"640x360",    "640x360 (16:9)"},
+            {"960x540",    "960x540 (16:9)"},
+            {"1280x720",   "1280x720 (16:9)"},
+            {"1706x720",   "1706x720 (64:27)"},
+            {"1366x768",   "1366x768 (16:9)"},
+            {"1920x810",   "1920x810 (64:27)"},
+            {"1920x1080",  "1920x1080 (16:9)"},
+            {"2560x1080",  "2560x1080 (64:27)"},
+            {"2560x1440",  "2560x1440 (16:9)"},
+            {"3414x1440",  "3414x1440 (64:27)"},
+            {"3840x2160",  "3840x2160 (16:9)"},
+            {"4096x2160",  "4096x2160 (17:9)"},
+            {"5120x2160",  "5120x2160 (64:27)"},
+            {"7680x3240",  "7680x3240 (64:27)"},
+            {"7680x4320",  "7680x4320 (16:9)"},
+            {"10240x4320", "10240x4320 (64:27)"},
             {NULL, NULL},
         },
         "960x540"
@@ -131,11 +139,11 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-aspect",
         "Aspect Ratio",
-        "(GLN64) Select the aspect ratio, 16:9 adjusted means essentially Widescreen hacks.",
+        "(GLN64) Select the aspect ratio. 'adjusted' means essentially Widescreen hacks.",
         {
-            {"4:3", NULL},
-            {"16:9", NULL},
-            {"16:9 adjusted", NULL},
+            {"4:3", "Original (4:3)"},
+            {"16:9", "Wide (Stretched)"},
+            {"16:9 adjusted", "Wide (Adjusted)"}, // Calculates the aspect ratio based on the selected "16:9 resolution".
             {NULL, NULL},
         },
         "4:3"

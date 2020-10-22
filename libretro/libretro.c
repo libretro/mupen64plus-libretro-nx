@@ -595,6 +595,7 @@ void update_controllers()
 static void update_variables(bool startup)
 {
     struct retro_variable var;
+    static const char *screen_size_key = CORE_NAME "-43screensize";
 
     if (startup)
     {
@@ -1027,14 +1028,16 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
-             AspectRatio = 3;
-             retro_screen_aspect = 16.0 / 9.0;
+             AspectRatio = 3; // Aspect::aAdjust
+             // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
+             screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
-             AspectRatio = 2;
-             retro_screen_aspect = 16.0 / 9.0;
+             AspectRatio = 0; // Aspect::aStretch
+             screen_size_key = CORE_NAME "-169screensize";
           } else {
-             AspectRatio = 1;
+             AspectRatio = 1; // Aspect::a43
              retro_screen_aspect = 4.0 / 3.0;
+             screen_size_key = CORE_NAME "-43screensize";
           }
        }
 
@@ -1045,11 +1048,15 @@ static void update_variables(bool startup)
          EnableNativeResFactor = atoi(var.value);
        }
 
-       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
+       var.key = screen_size_key;
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
+          if (AspectRatio != 1) // Calculate the correct aspect ratio when using a ratio different than 4:3.
+          {
+             retro_screen_aspect = (float)retro_screen_width / (float)retro_screen_height;
+          }
 
           // Sanity check... not optimal since we will render at a higher res, but otherwise
           // GLideN64 might blit a bigger image onto a smaller framebuffer
@@ -1070,7 +1077,7 @@ static void update_variables(bool startup)
           retro_screen_width = 640;
           retro_screen_height = 480;
           retro_screen_aspect = 4.0 / 3.0;
-          AspectRatio = 1;
+          AspectRatio = 1; // Aspect::a43
        }
 #endif // HAVE_THR_AL
 
