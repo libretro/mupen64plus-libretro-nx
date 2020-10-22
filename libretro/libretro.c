@@ -1024,14 +1024,14 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
-             AspectRatio = 3; // Adjust the image.
+             AspectRatio = 3; // Config::Aspect::aAdjust
              // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
              screen_size_key = CORE_NAME "-169screensize";
           } else if (!strcmp(var.value, "16:9")) {
-             AspectRatio = 0; // Stretch the image to the selected resolution.
+             AspectRatio = 0; // Config::Aspect::aStretch
              screen_size_key = CORE_NAME "-169screensize";
           } else {
-             AspectRatio = 1;
+             AspectRatio = 1; // Aspect::a43
              retro_screen_aspect = 4.0 / 3.0;
              screen_size_key = CORE_NAME "-43screensize";
           }
@@ -1073,7 +1073,7 @@ static void update_variables(bool startup)
           retro_screen_width = 640;
           retro_screen_height = 480;
           retro_screen_aspect = 4.0 / 3.0;
-          AspectRatio = 1;
+          AspectRatio = 1; // Aspect::a43
        }
 #endif // HAVE_THR_AL
 
