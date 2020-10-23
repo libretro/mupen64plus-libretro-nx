@@ -35,7 +35,7 @@ A special thanks to:
 - The Mupen64Plus Team, especially Gillou68310
 - gonetz and those that have worked on GLideN64, especially fzurita
 - The Authors of cxd4 and angrylion-rdp-plus (ata4)
-- themaister for parallel-rsp
+- themaister for parallel-rsp and parallel-rdp (including the Vulkan integration)
 - Everyone in the libretro Team
 
 
