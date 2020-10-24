@@ -1253,7 +1253,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-pak1",
         "Player 1 Pak",
-        "Select Payer 1 Controller Pak.",
+        "Select Player 1 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
@@ -1265,7 +1265,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-pak2",
         "Player 2 Pak",
-        "Select Payer 2 Controller Pak.",
+        "Select Player 2 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
@@ -1277,7 +1277,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-pak3",
         "Player 3 Pak",
-        "Select Payer 3 Controller Pak.",
+        "Select Player 3 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
@@ -1289,7 +1289,7 @@ struct retro_core_option_definition option_defs_us[] = {
     {
         CORE_NAME "-pak4",
         "Player 4 Pak",
-        "Select Payer 4 Controller Pak.",
+        "Select Player 4 Controller Pak.",
         {
             {"none", NULL},
             {"memory", NULL},
