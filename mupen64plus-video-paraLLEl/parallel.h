@@ -25,7 +25,8 @@ void parallel_set_vi_scale(bool enable);
 void parallel_set_dither_filter(bool enable);
 void parallel_set_interlacing(bool enable);
 
-void parallel_set_upscaling(unsigned factor);
+void parallel_set_upscaling(unsigned factor, bool super_sampled_read_back);
+void parallel_set_super_sampled_read_back_dither(bool enable);
 void parallel_set_downscaling_steps(unsigned steps);
 void parallel_set_native_texture_lod(bool enable);
 void parallel_set_native_tex_rect(bool enable);

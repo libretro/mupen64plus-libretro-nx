@@ -196,9 +196,15 @@ void parallel_profile_video_refresh_end(void)
 	RDP::profile_refresh_end();
 }
 
-void parallel_set_upscaling(unsigned factor)
+void parallel_set_upscaling(unsigned factor, bool super_sampled_read_back)
 {
 	RDP::upscaling = factor;
+	RDP::super_sampled_read_back = super_sampled_read_back;
+}
+
+void parallel_set_super_sampled_read_back_dither(bool enable)
+{
+	RDP::super_sampled_dither = enable;
 }
 
 void parallel_set_downscaling_steps(unsigned steps)

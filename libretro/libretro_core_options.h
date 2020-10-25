@@ -936,6 +936,24 @@ struct retro_core_option_definition option_defs_us[] = {
         }
     },
     {
+        CORE_NAME "-parallel-rdp-super-sampled-read-back",
+        "(ParaLLEl-RDP) SSAA framebuffer effects (restart)",
+        "Super sample framebuffer effects. May introduce artifacts.",
+        {
+            { "False", "Disabled" },
+            { "True", "Enabled" },
+        }
+    },
+    {
+        CORE_NAME "-parallel-rdp-super-sampled-read-back-dither",
+        "(ParaLLEl-RDP) Dither SSAA framebuffer effects (restart)",
+        "Dither super sampled framebuffer effects.",
+        {
+            { "True", "Enabled" },
+            { "False", "Disabled" },
+        }
+    },
+    {
         CORE_NAME "-parallel-rdp-downscaling",
         "(ParaLLEl-RDP) Downsampling factor",
         "Downscales output after VI, equivalent to SSAA.",

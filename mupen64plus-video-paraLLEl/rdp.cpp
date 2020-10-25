@@ -1,4 +1,5 @@
 #include "rdp.hpp"
+#include "timeline_trace_file.hpp"
 #include "Gfx #1.3.h"
 #include "parallel.h"
 #include "z64.h"
@@ -19,6 +20,7 @@ static int cmd_ptr;
 static uint32_t cmd_data[0x00040000 >> 2];
 static uint64_t pending_timeline_value, timeline_value;
 
+static unique_ptr<Util::TimelineTraceFile> timeline_trace_file;
 static unique_ptr<CommandProcessor> frontend;
 static unique_ptr<Device> device;
 static unique_ptr<Context> context;
@@ -32,7 +34,9 @@ unsigned upscaling = 1;
 unsigned downscaling_steps = 0;
 bool native_texture_lod = false;
 bool native_tex_rect = true;
-bool synchronous = true, divot_filter = true, gamma_dither = true, vi_aa = true, vi_scale = true, dither_filter = true, interlacing = true;
+bool synchronous = true, divot_filter = true, gamma_dither = true;
+bool vi_aa = true, vi_scale = true, dither_filter = true;
+bool interlacing = true, super_sampled_read_back = false, super_sampled_dither = true;
 
 static const unsigned cmd_len_lut[64] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 4, 6, 12, 14, 12, 14, 20, 22,
@@ -238,6 +242,11 @@ bool init()
 			break;
 	}
 
+	if (upscaling > 1 && super_sampled_read_back)
+		flags |= COMMAND_PROCESSOR_FLAG_SUPER_SAMPLED_READ_BACK_BIT;
+	if (super_sampled_dither)
+		flags |= COMMAND_PROCESSOR_FLAG_SUPER_SAMPLED_DITHER_BIT;
+
 	log_cb(RETRO_LOG_INFO, "paraLLEl-RDP: Using RDRAM size of %u bytes.\n", rdram_size);
 	frontend.reset(new CommandProcessor(*device, reinterpret_cast<void *>(aligned_rdram),
 				offset, rdram_size, rdram_size / 2, flags));
@@ -270,6 +279,7 @@ void deinit()
 	frontend.reset();
 	device.reset();
 	context.reset();
+	timeline_trace_file.reset();
 }
 
 static void complete_frame_error()
@@ -433,6 +443,13 @@ bool parallel_create_device(struct retro_vulkan_context *frontend_context, VkIns
 		return false;
 
 	::RDP::context.reset(new Vulkan::Context);
+
+	if (const char *env = getenv("PARALLEL_RDP_TIMELINE_TRACE"))
+	{
+		::RDP::timeline_trace_file.reset(new Util::TimelineTraceFile(env));
+		::RDP::context->set_timeline_trace_file(::RDP::timeline_trace_file.get());
+	}
+
 	if (!::RDP::context->init_device_from_instance(
 				instance, gpu, surface, required_device_extensions, num_required_device_extensions,
 				required_device_layers, num_required_device_layers, required_features, Vulkan::CONTEXT_CREATION_DISABLE_BINDLESS_BIT))

@@ -1284,12 +1284,32 @@ static void update_variables(bool startup)
         else
             parallel_set_dither_filter(true);
 
-        var.key = CORE_NAME "-parallel-rdp-upscaling";
+        {
+            unsigned upscaling;
+            bool super_sampled;
+            var.key = CORE_NAME "-parallel-rdp-upscaling";
+            var.value = NULL;
+            if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+                upscaling = strtol(var.value, NULL, 0);
+            else
+                upscaling = 1;
+
+            var.key = CORE_NAME "-parallel-rdp-super-sampled-read-back";
+            var.value = NULL;
+            if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+                super_sampled = !strcmp(var.value, "True");
+            else
+                super_sampled = false;
+
+            parallel_set_upscaling(upscaling, super_sampled);
+        }
+
+        var.key = CORE_NAME "-parallel-rdp-super-sampled-read-back-dither";
         var.value = NULL;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-            parallel_set_upscaling(strtol(var.value, NULL, 0));
+            parallel_set_super_sampled_read_back_dither(!strcmp(var.value, "True"));
         else
-            parallel_set_upscaling(1);
+            parallel_set_super_sampled_read_back_dither(true);
 
         var.key = CORE_NAME "-parallel-rdp-downscaling";
         var.value = NULL;
