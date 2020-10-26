@@ -368,6 +368,8 @@ void complete_frame()
 	opts.vi.dither_filter = dither_filter;
 	opts.vi.divot_filter = divot_filter;
 	opts.vi.gamma_dither = gamma_dither;
+	opts.blend_previous_frame = interlacing;
+	opts.upscale_deinterlacing = !interlacing;
 	opts.downscale_steps = downscaling_steps;
 	opts.crop_overscan_pixels = overscan;
 	auto image = frontend->scanout(opts);
