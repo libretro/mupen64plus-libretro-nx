@@ -181,6 +181,8 @@ void CommandProcessor::init_renderer()
 
 	RendererOptions opts;
 	opts.upscaling_factor = factor;
+	opts.super_sampled_readback = (flags & COMMAND_PROCESSOR_FLAG_SUPER_SAMPLED_READ_BACK_BIT) != 0;
+	opts.super_sampled_readback_dither = (flags & COMMAND_PROCESSOR_FLAG_SUPER_SAMPLED_DITHER_BIT) != 0;
 
 	is_supported = renderer.init_renderer(opts);
 

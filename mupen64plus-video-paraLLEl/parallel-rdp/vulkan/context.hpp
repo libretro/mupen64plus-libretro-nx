@@ -27,6 +27,11 @@
 #include <memory>
 #include <functional>
 
+namespace Util
+{
+class TimelineTraceFile;
+}
+
 namespace Vulkan
 {
 struct DeviceFeatures
@@ -35,7 +40,6 @@ struct DeviceFeatures
 	bool supports_external = false;
 	bool supports_dedicated = false;
 	bool supports_image_format_list = false;
-	bool supports_debug_marker = false;
 	bool supports_debug_utils = false;
 	bool supports_mirror_clamp_to_edge = false;
 	bool supports_google_display_timing = false;
@@ -57,6 +61,7 @@ struct DeviceFeatures
 	bool supports_draw_parameters = false;
 	bool supports_driver_properties = false;
 	bool supports_calibrated_timestamps = false;
+	bool supports_memory_budget = false;
 	VkPhysicalDeviceSubgroupProperties subgroup_properties = {};
 	VkPhysicalDevice8BitStorageFeaturesKHR storage_8bit_features = {};
 	VkPhysicalDevice16BitStorageFeaturesKHR storage_16bit_features = {};
@@ -64,7 +69,6 @@ struct DeviceFeatures
 	VkPhysicalDeviceFeatures enabled_features = {};
 	VkPhysicalDeviceExternalMemoryHostPropertiesEXT host_memory_properties = {};
 	VkPhysicalDeviceMultiviewFeaturesKHR multiview_features = {};
-	VkPhysicalDeviceImagelessFramebufferFeaturesKHR imageless_features = {};
 	VkPhysicalDeviceSubgroupSizeControlFeaturesEXT subgroup_size_control_features = {};
 	VkPhysicalDeviceSubgroupSizeControlPropertiesEXT subgroup_size_control_properties = {};
 	VkPhysicalDeviceComputeShaderDerivativesFeaturesNV compute_shader_derivative_features = {};
@@ -79,6 +83,7 @@ struct DeviceFeatures
 	VkPhysicalDevicePerformanceQueryFeaturesKHR performance_query_features = {};
 	VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR sampler_ycbcr_conversion_features = {};
 	VkPhysicalDeviceDriverPropertiesKHR driver_properties = {};
+	VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_priority_features = {};
 };
 
 enum VendorID
@@ -209,11 +214,22 @@ public:
 		return device_table;
 	}
 
+	void set_timeline_trace_file(Util::TimelineTraceFile *trace)
+	{
+		timeline_trace_file = trace;
+	}
+
+	Util::TimelineTraceFile *get_timeline_trace_file() const
+	{
+		return timeline_trace_file;
+	}
+
 private:
 	VkDevice device = VK_NULL_HANDLE;
 	VkInstance instance = VK_NULL_HANDLE;
 	VkPhysicalDevice gpu = VK_NULL_HANDLE;
 	VolkDeviceTable device_table = {};
+	Util::TimelineTraceFile *timeline_trace_file = nullptr;
 
 	VkPhysicalDeviceProperties gpu_props = {};
 	VkPhysicalDeviceMemoryProperties mem_props = {};
@@ -238,7 +254,6 @@ private:
 	DeviceFeatures ext;
 
 #ifdef VULKAN_DEBUG
-	VkDebugReportCallbackEXT debug_callback = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 #endif
 	std::function<void (const char *)> message_callback;

@@ -15,7 +15,7 @@
 #endif
 
 /* VOLK_GENERATE_VERSION_DEFINE */
-#define VOLK_HEADER_VERSION 135
+#define VOLK_HEADER_VERSION 153
 /* VOLK_GENERATE_VERSION_DEFINE */
 
 #ifndef VK_NO_PROTOTYPES
@@ -49,6 +49,11 @@
 #	else
 #		include <vulkan/vulkan.h>
 #	endif
+#endif
+
+/* Disable VK_NVX_image_view_handle because SDK 140 introduced a change that can't be used with prior versions */
+#if VK_HEADER_VERSION < 140
+#	undef VK_NVX_image_view_handle
 #endif
 
 #ifdef __cplusplus
@@ -320,6 +325,20 @@ struct VolkDeviceTable
 	PFN_vkRegisterDeviceEventEXT vkRegisterDeviceEventEXT;
 	PFN_vkRegisterDisplayEventEXT vkRegisterDisplayEventEXT;
 #endif /* defined(VK_EXT_display_control) */
+#if defined(VK_EXT_extended_dynamic_state)
+	PFN_vkCmdBindVertexBuffers2EXT vkCmdBindVertexBuffers2EXT;
+	PFN_vkCmdSetCullModeEXT vkCmdSetCullModeEXT;
+	PFN_vkCmdSetDepthBoundsTestEnableEXT vkCmdSetDepthBoundsTestEnableEXT;
+	PFN_vkCmdSetDepthCompareOpEXT vkCmdSetDepthCompareOpEXT;
+	PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
+	PFN_vkCmdSetDepthWriteEnableEXT vkCmdSetDepthWriteEnableEXT;
+	PFN_vkCmdSetFrontFaceEXT vkCmdSetFrontFaceEXT;
+	PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
+	PFN_vkCmdSetScissorWithCountEXT vkCmdSetScissorWithCountEXT;
+	PFN_vkCmdSetStencilOpEXT vkCmdSetStencilOpEXT;
+	PFN_vkCmdSetStencilTestEnableEXT vkCmdSetStencilTestEnableEXT;
+	PFN_vkCmdSetViewportWithCountEXT vkCmdSetViewportWithCountEXT;
+#endif /* defined(VK_EXT_extended_dynamic_state) */
 #if defined(VK_EXT_external_memory_host)
 	PFN_vkGetMemoryHostPointerPropertiesEXT vkGetMemoryHostPointerPropertiesEXT;
 #endif /* defined(VK_EXT_external_memory_host) */
@@ -339,6 +358,12 @@ struct VolkDeviceTable
 #if defined(VK_EXT_line_rasterization)
 	PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #endif /* defined(VK_EXT_line_rasterization) */
+#if defined(VK_EXT_private_data)
+	PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
+	PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
+	PFN_vkGetPrivateDataEXT vkGetPrivateDataEXT;
+	PFN_vkSetPrivateDataEXT vkSetPrivateDataEXT;
+#endif /* defined(VK_EXT_private_data) */
 #if defined(VK_EXT_sample_locations)
 	PFN_vkCmdSetSampleLocationsEXT vkCmdSetSampleLocationsEXT;
 #endif /* defined(VK_EXT_sample_locations) */
@@ -501,6 +526,7 @@ struct VolkDeviceTable
 	PFN_vkWaitSemaphoresKHR vkWaitSemaphoresKHR;
 #endif /* defined(VK_KHR_timeline_semaphore) */
 #if defined(VK_NVX_image_view_handle)
+	PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 	PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
 #endif /* defined(VK_NVX_image_view_handle) */
 #if defined(VK_NV_clip_space_w_scaling)
@@ -551,9 +577,9 @@ struct VolkDeviceTable
 #if (defined(VK_EXT_full_screen_exclusive) && defined(VK_KHR_device_group)) || (defined(VK_EXT_full_screen_exclusive) && defined(VK_VERSION_1_1))
 	PFN_vkGetDeviceGroupSurfacePresentModes2EXT vkGetDeviceGroupSurfacePresentModes2EXT;
 #endif /* (defined(VK_EXT_full_screen_exclusive) && defined(VK_KHR_device_group)) || (defined(VK_EXT_full_screen_exclusive) && defined(VK_VERSION_1_1)) */
-#if (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1))
+#if (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) || (defined(VK_KHR_push_descriptor) && defined(VK_KHR_descriptor_update_template))
 	PFN_vkCmdPushDescriptorSetWithTemplateKHR vkCmdPushDescriptorSetWithTemplateKHR;
-#endif /* (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) */
+#endif /* (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) || (defined(VK_KHR_push_descriptor) && defined(VK_KHR_descriptor_update_template)) */
 #if (defined(VK_KHR_device_group) && defined(VK_KHR_surface)) || (defined(VK_KHR_swapchain) && defined(VK_VERSION_1_1))
 	PFN_vkGetDeviceGroupPresentCapabilitiesKHR vkGetDeviceGroupPresentCapabilitiesKHR;
 	PFN_vkGetDeviceGroupSurfacePresentModesKHR vkGetDeviceGroupSurfacePresentModesKHR;
@@ -809,6 +835,10 @@ extern PFN_vkSubmitDebugUtilsMessageEXT vkSubmitDebugUtilsMessageEXT;
 #if defined(VK_EXT_direct_mode_display)
 extern PFN_vkReleaseDisplayEXT vkReleaseDisplayEXT;
 #endif /* defined(VK_EXT_direct_mode_display) */
+#if defined(VK_EXT_directfb_surface)
+extern PFN_vkCreateDirectFBSurfaceEXT vkCreateDirectFBSurfaceEXT;
+extern PFN_vkGetPhysicalDeviceDirectFBPresentationSupportEXT vkGetPhysicalDeviceDirectFBPresentationSupportEXT;
+#endif /* defined(VK_EXT_directfb_surface) */
 #if defined(VK_EXT_discard_rectangles)
 extern PFN_vkCmdSetDiscardRectangleEXT vkCmdSetDiscardRectangleEXT;
 #endif /* defined(VK_EXT_discard_rectangles) */
@@ -821,6 +851,20 @@ extern PFN_vkRegisterDisplayEventEXT vkRegisterDisplayEventEXT;
 #if defined(VK_EXT_display_surface_counter)
 extern PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT vkGetPhysicalDeviceSurfaceCapabilities2EXT;
 #endif /* defined(VK_EXT_display_surface_counter) */
+#if defined(VK_EXT_extended_dynamic_state)
+extern PFN_vkCmdBindVertexBuffers2EXT vkCmdBindVertexBuffers2EXT;
+extern PFN_vkCmdSetCullModeEXT vkCmdSetCullModeEXT;
+extern PFN_vkCmdSetDepthBoundsTestEnableEXT vkCmdSetDepthBoundsTestEnableEXT;
+extern PFN_vkCmdSetDepthCompareOpEXT vkCmdSetDepthCompareOpEXT;
+extern PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
+extern PFN_vkCmdSetDepthWriteEnableEXT vkCmdSetDepthWriteEnableEXT;
+extern PFN_vkCmdSetFrontFaceEXT vkCmdSetFrontFaceEXT;
+extern PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
+extern PFN_vkCmdSetScissorWithCountEXT vkCmdSetScissorWithCountEXT;
+extern PFN_vkCmdSetStencilOpEXT vkCmdSetStencilOpEXT;
+extern PFN_vkCmdSetStencilTestEnableEXT vkCmdSetStencilTestEnableEXT;
+extern PFN_vkCmdSetViewportWithCountEXT vkCmdSetViewportWithCountEXT;
+#endif /* defined(VK_EXT_extended_dynamic_state) */
 #if defined(VK_EXT_external_memory_host)
 extern PFN_vkGetMemoryHostPointerPropertiesEXT vkGetMemoryHostPointerPropertiesEXT;
 #endif /* defined(VK_EXT_external_memory_host) */
@@ -847,6 +891,12 @@ extern PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #if defined(VK_EXT_metal_surface)
 extern PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif /* defined(VK_EXT_metal_surface) */
+#if defined(VK_EXT_private_data)
+extern PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
+extern PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
+extern PFN_vkGetPrivateDataEXT vkGetPrivateDataEXT;
+extern PFN_vkSetPrivateDataEXT vkSetPrivateDataEXT;
+#endif /* defined(VK_EXT_private_data) */
 #if defined(VK_EXT_sample_locations)
 extern PFN_vkCmdSetSampleLocationsEXT vkCmdSetSampleLocationsEXT;
 extern PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT vkGetPhysicalDeviceMultisamplePropertiesEXT;
@@ -1096,6 +1146,7 @@ extern PFN_vkCreateMacOSSurfaceMVK vkCreateMacOSSurfaceMVK;
 extern PFN_vkCreateViSurfaceNN vkCreateViSurfaceNN;
 #endif /* defined(VK_NN_vi_surface) */
 #if defined(VK_NVX_image_view_handle)
+extern PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 extern PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
 #endif /* defined(VK_NVX_image_view_handle) */
 #if defined(VK_NV_clip_space_w_scaling)
@@ -1155,9 +1206,9 @@ extern PFN_vkCmdSetViewportShadingRatePaletteNV vkCmdSetViewportShadingRatePalet
 #if (defined(VK_EXT_full_screen_exclusive) && defined(VK_KHR_device_group)) || (defined(VK_EXT_full_screen_exclusive) && defined(VK_VERSION_1_1))
 extern PFN_vkGetDeviceGroupSurfacePresentModes2EXT vkGetDeviceGroupSurfacePresentModes2EXT;
 #endif /* (defined(VK_EXT_full_screen_exclusive) && defined(VK_KHR_device_group)) || (defined(VK_EXT_full_screen_exclusive) && defined(VK_VERSION_1_1)) */
-#if (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1))
+#if (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) || (defined(VK_KHR_push_descriptor) && defined(VK_KHR_descriptor_update_template))
 extern PFN_vkCmdPushDescriptorSetWithTemplateKHR vkCmdPushDescriptorSetWithTemplateKHR;
-#endif /* (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) */
+#endif /* (defined(VK_KHR_descriptor_update_template) && defined(VK_KHR_push_descriptor)) || (defined(VK_KHR_push_descriptor) && defined(VK_VERSION_1_1)) || (defined(VK_KHR_push_descriptor) && defined(VK_KHR_descriptor_update_template)) */
 #if (defined(VK_KHR_device_group) && defined(VK_KHR_surface)) || (defined(VK_KHR_swapchain) && defined(VK_VERSION_1_1))
 extern PFN_vkGetDeviceGroupPresentCapabilitiesKHR vkGetDeviceGroupPresentCapabilitiesKHR;
 extern PFN_vkGetDeviceGroupSurfacePresentModesKHR vkGetDeviceGroupSurfacePresentModesKHR;

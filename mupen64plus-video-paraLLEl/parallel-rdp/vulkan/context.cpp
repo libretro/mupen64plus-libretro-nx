@@ -177,11 +177,8 @@ void Context::destroy()
 		device_table.vkDeviceWaitIdle(device);
 
 #ifdef VULKAN_DEBUG
-	if (debug_callback)
-		vkDestroyDebugReportCallbackEXT(instance, debug_callback, nullptr);
 	if (debug_messenger)
 		vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
-	debug_callback = VK_NULL_HANDLE;
 	debug_messenger = VK_NULL_HANDLE;
 #endif
 
@@ -227,6 +224,17 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_messenger_cb(
 		void *pUserData)
 {
 	auto *context = static_cast<Context *>(pUserData);
+
+	if (messageType == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+	{
+		// Using LINEAR filter with COMPARE. Spec bug, should not trigger validation.
+		if (uint32_t(pCallbackData->messageIdNumber) == 0xf2fea78eu)
+			return VK_FALSE;
+		if (uint32_t(pCallbackData->messageIdNumber) == 0xd2c86c0cu)
+			return VK_FALSE;
+		if (uint32_t(pCallbackData->messageIdNumber) == 0x2aba6354u)
+			return VK_FALSE;
+	}
 
 	switch (messageSeverity)
 	{
@@ -279,42 +287,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_messenger_cb(
 			auto *name = pCallbackData->pObjects[i].pObjectName;
 			LOGI("  Object #%u: %s\n", i, name ? name : "N/A");
 		}
-	}
-
-	return VK_FALSE;
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_cb(VkDebugReportFlagsEXT flags,
-                                                      VkDebugReportObjectTypeEXT, uint64_t,
-                                                      size_t, int32_t messageCode, const char *pLayerPrefix,
-                                                      const char *pMessage, void *pUserData)
-{
-	auto *context = static_cast<Context *>(pUserData);
-
-	// False positives about lack of srcAccessMask/dstAccessMask.
-	if (strcmp(pLayerPrefix, "DS") == 0 && messageCode == 10)
-		return VK_FALSE;
-
-	// Demote to a warning, it's a false positive almost all the time for Granite.
-	if (strcmp(pLayerPrefix, "DS") == 0 && messageCode == 6)
-		flags = VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-
-	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-	{
-		LOGE("[Vulkan]: Error: %s: %s\n", pLayerPrefix, pMessage);
-		context->notify_validation_error(pMessage);
-	}
-	else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-	{
-		LOGW("[Vulkan]: Warning: %s: %s\n", pLayerPrefix, pMessage);
-	}
-	else if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-	{
-		//LOGW("[Vulkan]: Performance warning: %s: %s\n", pLayerPrefix, pMessage);
-	}
-	else
-	{
-		LOGI("[Vulkan]: Information: %s: %s\n", pLayerPrefix, pMessage);
 	}
 
 	return VK_FALSE;
@@ -396,8 +368,7 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 		return layer_itr != end(queried_layers);
 	};
 
-	if (!ext.supports_debug_utils && has_extension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
-		instance_exts.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	VkValidationFeaturesEXT validation_features = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
 
 	if (getenv("GRANITE_VULKAN_NO_VALIDATION"))
 		force_no_validation = true;
@@ -406,11 +377,25 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 	{
 		instance_layers.push_back("VK_LAYER_KHRONOS_validation");
 		LOGI("Enabling VK_LAYER_KHRONOS_validation.\n");
-	}
-	else if (!force_no_validation && has_layer("VK_LAYER_LUNARG_standard_validation"))
-	{
-		instance_layers.push_back("VK_LAYER_LUNARG_standard_validation");
-		LOGI("Enabling VK_LAYER_LUNARG_standard_validation.\n");
+
+		uint32_t layer_ext_count = 0;
+		vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &layer_ext_count, nullptr);
+		std::vector<VkExtensionProperties> layer_exts(layer_ext_count);
+		vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &layer_ext_count, layer_exts.data());
+
+		if (find_if(begin(layer_exts), end(layer_exts), [](const VkExtensionProperties &e) {
+			return strcmp(e.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME) == 0;
+		}) != end(layer_exts))
+		{
+			instance_exts.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
+			static const VkValidationFeatureEnableEXT validation_sync_features[1] = {
+				VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+			};
+			LOGI("Enabling VK_EXT_validation_features for synchronization validation.\n");
+			validation_features.enabledValidationFeatureCount = 1;
+			validation_features.pEnabledValidationFeatures = validation_sync_features;
+			info.pNext = &validation_features;
+		}
 	}
 #endif
 
@@ -443,15 +428,6 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 		debug_info.pUserData = this;
 
 		vkCreateDebugUtilsMessengerEXT(instance, &debug_info, nullptr, &debug_messenger);
-	}
-	else if (has_extension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
-	{
-		VkDebugReportCallbackCreateInfoEXT debug_info = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
-		debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
-		                   VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-		debug_info.pfnCallback = vulkan_debug_cb;
-		debug_info.pUserData = this;
-		vkCreateDebugReportCallbackEXT(instance, &debug_info, nullptr, &debug_callback);
 	}
 #endif
 
@@ -698,12 +674,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		enabled_extensions.push_back(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
 	}
 
-	if (has_extension(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-	{
-		ext.supports_debug_marker = true;
-		enabled_extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-	}
-
 	if (has_extension(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME))
 	{
 		ext.supports_mirror_clamp_to_edge = true;
@@ -820,7 +790,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 	ext.storage_16bit_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR };
 	ext.float16_int8_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR };
 	ext.multiview_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR };
-	ext.imageless_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGELESS_FRAMEBUFFER_FEATURES_KHR };
 	ext.subgroup_size_control_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT };
 	ext.compute_shader_derivative_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_NV };
 	ext.host_query_reset_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT };
@@ -831,6 +800,7 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 	ext.descriptor_indexing_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT };
 	ext.performance_query_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PERFORMANCE_QUERY_FEATURES_KHR };
 	ext.sampler_ycbcr_conversion_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR };
+	ext.memory_priority_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT };
 	void **ppNext = &features.pNext;
 
 	bool has_pdf2 = ext.supports_physical_device_properties2 ||
@@ -950,14 +920,18 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 			ppNext = &ext.sampler_ycbcr_conversion_features.pNext;
 		}
 
-#if 0
-		if (has_extension(VK_KHR_IMAGELESS_FRAMEBUFFER_EXTENSION_NAME))
+		if (has_extension(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME))
 		{
-			enabled_extensions.push_back(VK_KHR_IMAGELESS_FRAMEBUFFER_EXTENSION_NAME);
-			*ppNext = &ext.imageless_features;
-			ppNext = &ext.imageless_features.pNext;
+			enabled_extensions.push_back(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
+			*ppNext = &ext.memory_priority_features;
+			ppNext = &ext.memory_priority_features.pNext;
 		}
-#endif
+
+		if (has_extension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))
+		{
+			enabled_extensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+			ext.supports_memory_budget = true;
+		}
 	}
 
 	if (ext.supports_vulkan_11_device && ext.supports_vulkan_11_instance)
@@ -998,6 +972,8 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 			enabled_features.shaderInt16 = VK_TRUE;
 		if (features.features.shaderInt64)
 			enabled_features.shaderInt64 = VK_TRUE;
+		if (features.features.shaderStorageImageWriteWithoutFormat)
+			enabled_features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
 
 		if (features.features.shaderSampledImageArrayDynamicIndexing)
 			enabled_features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;

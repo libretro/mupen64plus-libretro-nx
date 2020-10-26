@@ -54,6 +54,8 @@ bool Renderer::init_renderer(const RendererOptions &options)
 {
 	if (options.upscaling_factor == 0)
 		return false;
+	if (options.upscaling_factor == 1 && options.super_sampled_readback)
+		return false;
 
 	caps.max_width = options.upscaling_factor * Limits::MaxWidth;
 	caps.max_height = options.upscaling_factor * Limits::MaxHeight;
@@ -224,6 +226,12 @@ bool Renderer::init_caps()
 			(features.subgroup_properties.supportedStages & VK_SHADER_STAGE_COMPUTE_BIT) != 0 &&
 			can_support_minimum_subgroup_size(32) && subgroup_size <= 64;
 
+	caps.subgroup_depth_blend =
+			caps.super_sample_readback &&
+			allow_subgroup &&
+			(features.subgroup_properties.supportedOperations & required) == required &&
+			(features.subgroup_properties.supportedStages & VK_SHADER_STAGE_COMPUTE_BIT) != 0;
+
 	return true;
 }
 
@@ -239,6 +247,8 @@ int Renderer::resolve_shader_define(const char *name, const char *define) const
 	{
 		if (strcmp(name, "tile_binning_combined") == 0)
 			return int(caps.subgroup_tile_binning);
+		else if (strcmp(name, "depth_blend") == 0 || strcmp(name, "ubershader") == 0)
+			return int(caps.subgroup_depth_blend);
 		else
 			return 0;
 	}
@@ -529,6 +539,8 @@ bool Renderer::init_internal_upscaling_factor(const RendererOptions &options)
 	}
 
 	caps.upscaling = factor;
+	caps.super_sample_readback = options.super_sampled_readback;
+	caps.super_sample_readback_dither = options.super_sampled_readback_dither;
 
 	if (factor == 1)
 	{
@@ -548,6 +560,14 @@ bool Renderer::init_internal_upscaling_factor(const RendererOptions &options)
 	device->set_name(*upscaling_reference_rdram, "reference-rdram");
 
 	info.size = rdram_size * factor * factor;
+	// If we're super-sampling we'll need to carry forward a u8 writemask per unscaled pixel.
+	// The resolve pass will conditionally write a resolved pixel to avoid potential race conditions.
+	// We allocate 2 bits per pixel (color / depth write).
+	// The SSAA resolve shader will convert this to a VRAM write mask if we also need to handle incoherent
+	// RDRAM.
+	if (caps.super_sample_readback)
+		info.size += 2 * Limits::MaxWidth * Limits::MaxHeight / 8;
+
 	upscaling_multisampled_rdram = device->create_buffer(info);
 	device->set_name(*upscaling_multisampled_rdram, "multisampled-rdram");
 
@@ -1812,58 +1832,130 @@ void Renderer::submit_tile_binning_combined(Vulkan::CommandBuffer &cmd, bool ups
 void Renderer::submit_update_upscaled_domain_external(Vulkan::CommandBuffer &cmd,
                                                       unsigned addr, unsigned length, unsigned pixel_size_log2)
 {
-	submit_update_upscaled_domain(cmd, ResolveStage::Pre, addr, addr, length, pixel_size_log2);
+	submit_update_upscaled_domain(cmd, ResolveStage::Pre, addr, addr, length, 1, pixel_size_log2);
 }
 
 void Renderer::submit_update_upscaled_domain(Vulkan::CommandBuffer &cmd, ResolveStage stage,
                                              unsigned addr, unsigned depth_addr,
-                                             unsigned num_pixels, unsigned pixel_size_log2)
+                                             unsigned width, unsigned height,
+                                             unsigned pixel_size_log2)
 {
 #ifdef PARALLEL_RDP_SHADER_DIR
 	if (stage == ResolveStage::Pre)
 		cmd.set_program("rdp://update_upscaled_domain_pre.comp");
-	else
+	else if (stage == ResolveStage::Post)
 		cmd.set_program("rdp://update_upscaled_domain_post.comp");
+	else
+		cmd.set_program("rdp://update_upscaled_domain_resolve.comp");
 #else
 	if (stage == ResolveStage::Pre)
 		cmd.set_program(shader_bank->update_upscaled_domain_pre);
-	else
+	else if (stage == ResolveStage::Post)
 		cmd.set_program(shader_bank->update_upscaled_domain_post);
+	else
+		cmd.set_program(shader_bank->update_upscaled_domain_resolve);
 #endif
 
-	cmd.set_storage_buffer(0, 0, *rdram, rdram_offset, rdram_size);
+	unsigned num_pixels = width * height;
+
+	if (stage != ResolveStage::SSAAResolve)
+	{
+		// Ensure that we always process entire words, thus we avoid having to do weird swizzles,
+		// and memory access patterns are linear with gl_GlobalInvocationID.x.
+		addr &= ~3u;
+		depth_addr &= ~3u;
+		unsigned align_pixels = 4u >> pixel_size_log2;
+		num_pixels = (num_pixels + align_pixels - 1u) & ~(align_pixels - 1u);
+	}
+
+	cmd.set_storage_buffer(0, 0, *rdram, rdram_offset,
+	                       (stage == ResolveStage::SSAAResolve && !is_host_coherent ? 2 : 1) * rdram_size);
 	cmd.set_storage_buffer(0, 1, *hidden_rdram);
 	cmd.set_storage_buffer(0, 2, *upscaling_reference_rdram);
 	cmd.set_storage_buffer(0, 3, *upscaling_multisampled_rdram);
 	cmd.set_storage_buffer(0, 4, *upscaling_multisampled_hidden_rdram);
 
-	cmd.set_specialization_constant_mask(0x1f);
+	cmd.set_specialization_constant_mask(0x7f);
 	cmd.set_specialization_constant(0, uint32_t(rdram_size));
 	cmd.set_specialization_constant(1, pixel_size_log2);
 	cmd.set_specialization_constant(2, int(addr == depth_addr));
 	cmd.set_specialization_constant(3, ImplementationConstants::DefaultWorkgroupSize);
 	cmd.set_specialization_constant(4, caps.upscaling * caps.upscaling);
+	if (stage == ResolveStage::SSAAResolve)
+	{
+		cmd.set_specialization_constant(5, uint32_t(caps.super_sample_readback_dither));
+		cmd.set_specialization_constant(6, uint32_t(!is_host_coherent));
+	}
 
-	unsigned num_workgroups =
-			(num_pixels + ImplementationConstants::DefaultWorkgroupSize - 1) /
-			ImplementationConstants::DefaultWorkgroupSize;
+	uint32_t num_workgroups_x, num_workgroups_y;
+
+	if (stage == ResolveStage::SSAAResolve)
+	{
+		num_workgroups_x =
+				(width + ImplementationConstants::DefaultWorkgroupSize - 1) /
+				ImplementationConstants::DefaultWorkgroupSize;
+		num_workgroups_y = height;
+	}
+	else
+	{
+		num_workgroups_x =
+				(num_pixels + ImplementationConstants::DefaultWorkgroupSize - 1) /
+				ImplementationConstants::DefaultWorkgroupSize;
+		num_workgroups_y = 1;
+	}
 
 	struct Push
 	{
 		uint32_t pixels;
 		uint32_t fb_addr, fb_depth_addr;
+		uint32_t width, height;
 	} push = {};
 	push.pixels = num_pixels;
 	push.fb_addr = addr >> pixel_size_log2;
 	push.fb_depth_addr = depth_addr >> 1;
+	push.width = width;
+	push.height = height;
 
 	cmd.push_constants(&push, 0, sizeof(push));
+
+	Vulkan::QueryPoolHandle start_ts, end_ts;
+	if (caps.timestamp >= 2 && stage == ResolveStage::SSAAResolve)
+		start_ts = cmd.write_timestamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	cmd.dispatch(num_workgroups_x, num_workgroups_y, 1);
+	if (caps.timestamp >= 2 && stage == ResolveStage::SSAAResolve)
+	{
+		end_ts = cmd.write_timestamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+		device->register_time_interval("RDP GPU", std::move(start_ts), std::move(end_ts), "ssaa-resolve");
+	}
+}
+
+void Renderer::submit_clear_super_sample_write_mask(Vulkan::CommandBuffer &cmd, unsigned width, unsigned height)
+{
+	// Pack 4x4 block of pixel's writemasks in one u32. Allows for one depth_blend workgroup to target a single u32
+	// in all cases, which is nice :)
+	unsigned blocks_x = (width + 3) / 4;
+	unsigned blocks_y = (height + 3) / 4;
+	unsigned num_words = blocks_x * blocks_y;
+	unsigned num_workgroups = (num_words + ImplementationConstants::DefaultWorkgroupSize - 1) /
+	                          ImplementationConstants::DefaultWorkgroupSize;
+
+#ifdef PARALLEL_RDP_SHADER_DIR
+	cmd.set_program("rdp://clear_super_sampled_write_mask.comp");
+#else
+	cmd.set_program(shader_bank->clear_super_sampled_write_mask);
+#endif
+
+	cmd.set_storage_buffer(0, 0, *upscaling_multisampled_rdram, rdram_size * caps.upscaling * caps.upscaling,
+	                       2 * Limits::MaxWidth * Limits::MaxHeight / 8);
+
+	cmd.set_specialization_constant_mask(1);
+	cmd.set_specialization_constant(0, ImplementationConstants::DefaultWorkgroupSize);
 	cmd.dispatch(num_workgroups, 1, 1);
+	cmd.set_specialization_constant_mask(0);
 }
 
 void Renderer::submit_update_upscaled_domain(Vulkan::CommandBuffer &cmd, ResolveStage stage)
 {
-	unsigned num_pixels = fb.width * fb.deduced_height;
 	unsigned pixel_size_log2;
 
 	switch (fb.fmt)
@@ -1882,10 +1974,11 @@ void Renderer::submit_update_upscaled_domain(Vulkan::CommandBuffer &cmd, Resolve
 		break;
 	}
 
-	submit_update_upscaled_domain(cmd, stage, fb.addr, fb.depth_addr, num_pixels, pixel_size_log2);
+	submit_update_upscaled_domain(cmd, stage, fb.addr, fb.depth_addr,
+	                              fb.width, fb.deduced_height, pixel_size_log2);
 }
 
-void Renderer::submit_depth_blend(Vulkan::CommandBuffer &cmd, Vulkan::Buffer &tmem, bool upscaled)
+void Renderer::submit_depth_blend(Vulkan::CommandBuffer &cmd, Vulkan::Buffer &tmem, bool upscaled, bool force_write_mask)
 {
 	cmd.begin_region("render-pass");
 	auto &instance = buffer_instances[buffer_instance];
@@ -1898,7 +1991,7 @@ void Renderer::submit_depth_blend(Vulkan::CommandBuffer &cmd, Vulkan::Buffer &tm
 	cmd.set_specialization_constant(4, ImplementationConstants::TileHeight);
 	cmd.set_specialization_constant(5, Limits::MaxPrimitives);
 	cmd.set_specialization_constant(6, upscaled ? caps.max_width : Limits::MaxWidth);
-	cmd.set_specialization_constant(7, uint32_t(!is_host_coherent && !upscaled) |
+	cmd.set_specialization_constant(7, uint32_t(force_write_mask || (!is_host_coherent && !upscaled)) |
 	                                   ((upscaled ? trailing_zeroes(caps.upscaling) : 0u) << 1u));
 
 	if (upscaled)
@@ -1988,6 +2081,7 @@ void Renderer::submit_depth_blend(Vulkan::CommandBuffer &cmd, Vulkan::Buffer &tm
 		cmd.set_program("rdp://ubershader.comp", {
 				{ "DEBUG_ENABLE", debug_channel ? 1 : 0 },
 				{ "SMALL_TYPES", caps.supports_small_integer_arithmetic ? 1 : 0 },
+				{ "SUBGROUP", caps.subgroup_depth_blend ? 1 : 0 },
 		});
 #else
 		cmd.set_program(shader_bank->ubershader);
@@ -1999,6 +2093,7 @@ void Renderer::submit_depth_blend(Vulkan::CommandBuffer &cmd, Vulkan::Buffer &tm
 		cmd.set_program("rdp://depth_blend.comp", {
 				{ "DEBUG_ENABLE", debug_channel ? 1 : 0 },
 				{ "SMALL_TYPES", caps.supports_small_integer_arithmetic ? 1 : 0 },
+				{ "SUBGROUP", caps.subgroup_depth_blend ? 1 : 0 },
 		});
 #else
 		cmd.set_program(shader_bank->depth_blend);
@@ -2061,7 +2156,7 @@ void Renderer::submit_render_pass(Vulkan::CommandBuffer &cmd)
 	}
 
 	if (need_render_pass)
-		submit_depth_blend(cmd, need_tmem_upload ? *tmem_instances : *tmem, false);
+		submit_depth_blend(cmd, need_tmem_upload ? *tmem_instances : *tmem, false, false);
 
 	if (!caps.ubershader)
 		clear_indirect_buffer(cmd);
@@ -2095,8 +2190,16 @@ void Renderer::submit_render_pass_upscaled(Vulkan::CommandBuffer &cmd)
 		start_ts = cmd.write_timestamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	bool need_tmem_upload = !stream.tmem_upload_infos.empty();
+
 	submit_span_setup_jobs(cmd, true);
 	submit_tile_binning_combined(cmd, true);
+	if (caps.super_sample_readback)
+	{
+		submit_update_upscaled_domain(cmd, ResolveStage::Pre);
+		submit_clear_super_sample_write_mask(cmd, fb.width, fb.deduced_height);
+		if (need_tmem_upload)
+			update_tmem_instances(cmd);
+	}
 
 	cmd.barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
 	            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
@@ -2113,9 +2216,20 @@ void Renderer::submit_render_pass_upscaled(Vulkan::CommandBuffer &cmd)
 		            VK_ACCESS_SHADER_READ_BIT);
 	}
 
-	submit_depth_blend(cmd, need_tmem_upload ? *tmem_instances : *tmem, true);
+	submit_depth_blend(cmd, need_tmem_upload ? *tmem_instances : *tmem, true, caps.super_sample_readback);
 	if (!caps.ubershader)
 		clear_indirect_buffer(cmd);
+
+	if (caps.super_sample_readback)
+	{
+		cmd.begin_region("ssaa-resolve");
+		cmd.barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+		            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+
+		submit_update_upscaled_domain(cmd, ResolveStage::SSAAResolve);
+		cmd.end_region();
+	}
 
 	if (caps.timestamp >= 1)
 	{
@@ -2144,6 +2258,7 @@ void Renderer::maintain_queues()
 	// If we have no pending submissions, the GPU is idle and there is no reason not to submit.
 	// If we haven't submitted anything in a while (1.0 ms), it's probably fine to submit again.
 	if (pending_render_passes >= ImplementationConstants::MaxPendingRenderPassesBeforeFlush ||
+	    (caps.super_sample_readback && pending_render_passes_upscaled >= ImplementationConstants::MaxPendingRenderPassesBeforeFlush) ||
 	    pending_primitives >= Limits::MaxPrimitives ||
 	    pending_primitives_upscaled >= Limits::MaxPrimitives ||
 	    active_submissions.load(std::memory_order_relaxed) == 0 ||
@@ -2186,7 +2301,8 @@ void Renderer::enqueue_fence_wait(Vulkan::Fence fence)
 
 void Renderer::submit_to_queue()
 {
-	bool pending_host_visible_render_passes = pending_render_passes != 0;
+	bool pending_host_visible_render_passes =
+			(caps.super_sample_readback ? pending_render_passes_upscaled : pending_render_passes) != 0;
 	bool pending_upscaled_passes = pending_render_passes_upscaled != 0;
 	pending_render_passes = 0;
 	pending_render_passes_upscaled = 0;
@@ -2658,7 +2774,7 @@ void Renderer::resolve_coherency_host_to_gpu(Vulkan::CommandBuffer &cmd)
 		            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 
-	// If we cannot map the device memory, use the copy queue.
+	// If we cannot map the device memory, copy. We're latency sensitive, so don't use DMA queue.
 	if (!buffer_copies.empty())
 	{
 		cmd.barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
@@ -2676,7 +2792,7 @@ void Renderer::resolve_coherency_host_to_gpu(Vulkan::CommandBuffer &cmd)
 #endif
 
 		cmd.barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-		             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+		            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 
 	if (caps.timestamp)
@@ -2733,18 +2849,29 @@ void Renderer::flush_queues()
 		resolve_coherency_host_to_gpu(*stream.cmd);
 	instance.upload(*device, stream, *stream.cmd);
 
-	stream.cmd->begin_region("render-pass-1x");
-	submit_render_pass(*stream.cmd);
-	stream.cmd->end_region();
-	pending_render_passes++;
+	// If we have super-sampled readback, then this is meaningless.
+	bool has_single_sampled_render_pass = !caps.super_sample_readback;
+
+	if (has_single_sampled_render_pass)
+	{
+		stream.cmd->begin_region("render-pass-1x");
+		submit_render_pass(*stream.cmd);
+		stream.cmd->end_region();
+		pending_render_passes++;
+	}
 
 	if (render_pass_is_upscaled())
 	{
-		maintain_queues();
-		ensure_command_buffer();
-		// We're going to keep reading the same data structures, so make sure
-		// we signal fence after upscaled render pass is submitted.
-		sync_indices_needs_flush |= 1u << buffer_instance;
+		if (has_single_sampled_render_pass)
+		{
+			maintain_queues();
+			ensure_command_buffer();
+
+			// We're going to keep reading the same data structures, so make sure
+			// we signal fence after upscaled render pass is submitted.
+			sync_indices_needs_flush |= 1u << buffer_instance;
+		}
+
 		submit_render_pass_upscaled(*stream.cmd);
 		pending_render_passes_upscaled++;
 		pending_primitives_upscaled += uint32_t(stream.triangle_setup.size());
@@ -2758,17 +2885,25 @@ void Renderer::flush_queues()
 
 bool Renderer::render_pass_is_upscaled() const
 {
+	if (caps.super_sample_readback)
+		return true;
+
 	bool need_render_pass = fb.width != 0 && fb.deduced_height != 0 && !stream.span_info_jobs.empty();
-	return caps.upscaling > 1 && need_render_pass && should_render_upscaled();
+	return need_render_pass && should_render_upscaled();
 }
 
 bool Renderer::should_render_upscaled() const
 {
-	// A heuristic. There is no point to render upscaled for purely off-screen passes.
-	// We should ideally only upscale the final pass which hits screen.
-	// From a heuristic point-of-view we expect only 16-bit/32-bit frame buffers to be relevant,
-	// and only frame buffers with at least 256 pixels.
-	return (fb.fmt == FBFormat::RGBA5551 || fb.fmt == FBFormat::RGBA8888) && fb.width >= 256;
+	if (caps.upscaling > 1)
+	{
+		// A heuristic. There is no point to render upscaled for purely off-screen passes.
+		// We should ideally only upscale the final pass which hits screen.
+		// From a heuristic point-of-view we expect only 16-bit/32-bit frame buffers to be relevant,
+		// and only frame buffers with at least 256 pixels.
+		return (fb.fmt == FBFormat::RGBA5551 || fb.fmt == FBFormat::RGBA8888) && fb.width >= 256;
+	}
+	else
+		return false;
 }
 
 void Renderer::ensure_command_buffer()

@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/Themaister/parallel-rdp-standalone.git
 	branch = master
-	commit = af0e8df6e1b0dd2673a84f2a5d28a883c1945029
-	parent = 8b2bedea064b06ba3be4e0477e92c15304217890
+	commit = 16d7eea1267165f28c0677ff8ff3b68c545386bd
+	parent = 013d96700b7ff94d4d5d77a90cd7836777e314f2
 	method = rebase
 	cmdver = 0.4.1

@@ -23,6 +23,7 @@
 #include "command_buffer.hpp"
 #include "device.hpp"
 #include "format.hpp"
+#include "thread_id.hpp"
 #include <string.h>
 
 //#define FULL_BACKTRACE_CHECKPOINTS
@@ -601,22 +602,11 @@ void CommandBuffer::begin_render_pass(const RenderPassInfo &info, VkSubpassConte
 	}
 
 	VkRenderPassBeginInfo begin_info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-	VkRenderPassAttachmentBeginInfoKHR attachment_info = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO_KHR };
 	begin_info.renderPass = actual_render_pass->get_render_pass();
 	begin_info.framebuffer = framebuffer->get_framebuffer();
 	begin_info.renderArea = scissor;
 	begin_info.clearValueCount = num_clear_values;
 	begin_info.pClearValues = clear_values;
-
-	auto &features = device->get_device_features();
-	bool imageless = features.imageless_features.imagelessFramebuffer == VK_TRUE;
-	VkImageView immediate_views[VULKAN_NUM_ATTACHMENTS + 1];
-	if (imageless)
-	{
-		attachment_info.attachmentCount = Framebuffer::setup_raw_views(immediate_views, info);
-		attachment_info.pAttachments = immediate_views;
-		begin_info.pNext = &attachment_info;
-	}
 
 	table.vkCmdBeginRenderPass(cmd, &begin_info, contents);
 
@@ -751,7 +741,10 @@ VkPipeline CommandBuffer::build_compute_pipeline(Device *device, const DeferredP
 		return VK_NULL_HANDLE;
 	}
 
-	return compile.program->add_pipeline(compile.hash, compute_pipeline);
+	auto returned_pipeline = compile.program->add_pipeline(compile.hash, compute_pipeline);
+	if (returned_pipeline != compute_pipeline)
+		table.vkDestroyPipeline(device->get_device(), compute_pipeline, nullptr);
+	return returned_pipeline;
 }
 
 void CommandBuffer::extract_pipeline_state(DeferredPipelineCompile &compile) const
@@ -990,7 +983,10 @@ VkPipeline CommandBuffer::build_graphics_pipeline(Device *device, const Deferred
 		return VK_NULL_HANDLE;
 	}
 
-	return compile.program->add_pipeline(compile.hash, pipeline);
+	auto returned_pipeline = compile.program->add_pipeline(compile.hash, pipeline);
+	if (returned_pipeline != pipeline)
+		table.vkDestroyPipeline(device->get_device(), pipeline, nullptr);
+	return returned_pipeline;
 }
 
 bool CommandBuffer::flush_compute_pipeline(bool synchronous)
@@ -1216,6 +1212,9 @@ void CommandBuffer::wait_events(unsigned num_events, const VkEvent *events,
 	VK_ASSERT(!framebuffer);
 	VK_ASSERT(!actual_render_pass);
 
+	VK_ASSERT(src_stages != 0);
+	VK_ASSERT(dst_stages != 0);
+
 	if (device->get_workarounds().emulate_event_as_pipeline_barrier)
 	{
 		barrier(src_stages, dst_stages,
@@ -1232,13 +1231,18 @@ void CommandBuffer::wait_events(unsigned num_events, const VkEvent *events,
 
 PipelineEvent CommandBuffer::signal_event(VkPipelineStageFlags stages)
 {
+	auto event = device->begin_signal_event(stages);
+	complete_signal_event(*event);
+	return event;
+}
+
+void CommandBuffer::complete_signal_event(const EventHolder &event)
+{
 	VK_ASSERT(!framebuffer);
 	VK_ASSERT(!actual_render_pass);
-	auto event = device->request_pipeline_event();
+	VK_ASSERT(event.get_stages() != 0);
 	if (!device->get_workarounds().emulate_event_as_pipeline_barrier)
-		table.vkCmdSetEvent(cmd, event->get_event(), stages);
-	event->set_stages(stages);
-	return event;
+		table.vkCmdSetEvent(cmd, event.get_event(), event.get_stages());
 }
 
 void CommandBuffer::set_vertex_attrib(uint32_t attrib, uint32_t binding, VkFormat format, VkDeviceSize offset)
@@ -1325,8 +1329,8 @@ void CommandBuffer::set_program(const std::string &compute, const std::vector<st
 	auto *p = device->get_shader_manager().register_compute(compute);
 	if (p)
 	{
-		unsigned variant = p->register_variant(defines);
-		set_program(p->get_program(variant));
+		auto *variant = p->register_variant(defines);
+		set_program(variant->get_program());
 	}
 	else
 		set_program(nullptr);
@@ -1338,8 +1342,8 @@ void CommandBuffer::set_program(const std::string &vertex, const std::string &fr
 	auto *p = device->get_shader_manager().register_graphics(vertex, fragment);
 	if (p)
 	{
-		unsigned variant = p->register_variant(defines);
-		set_program(p->get_program(variant));
+		auto *variant = p->register_variant(defines);
+		set_program(variant->get_program());
 	}
 	else
 		set_program(nullptr);
@@ -2356,12 +2360,31 @@ void CommandBuffer::set_backtrace_checkpoint()
 #endif
 }
 
-void CommandBuffer::end()
+void CommandBuffer::end_threaded_recording()
 {
 	VK_ASSERT(!debug_channel_buffer);
 
+	if (is_ended)
+		return;
+
+	is_ended = true;
+
+	// We must end a command buffer on the same thread index we started it on.
+	VK_ASSERT(get_current_thread_index() == thread_index);
+
+	if (has_profiling())
+	{
+		auto &query_pool = device->get_performance_query_pool(type);
+		query_pool.end_command_buffer(cmd);
+	}
+
 	if (table.vkEndCommandBuffer(cmd) != VK_SUCCESS)
 		LOGE("Failed to end command buffer.\n");
+}
+
+void CommandBuffer::end()
+{
+	end_threaded_recording();
 
 	if (vbo_block.mapped)
 		device->request_vertex_block_nolock(vbo_block, 0);
@@ -2393,23 +2416,6 @@ void CommandBuffer::begin_region(const char *name, const float *color)
 		if (vkCmdBeginDebugUtilsLabelEXT)
 			vkCmdBeginDebugUtilsLabelEXT(cmd, &info);
 	}
-	else if (device->ext.supports_debug_marker)
-	{
-		VkDebugMarkerMarkerInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT };
-		if (color)
-		{
-			for (unsigned i = 0; i < 4; i++)
-				info.color[i] = color[i];
-		}
-		else
-		{
-			for (unsigned i = 0; i < 4; i++)
-				info.color[i] = 1.0f;
-		}
-
-		info.pMarkerName = name;
-		table.vkCmdDebugMarkerBeginEXT(cmd, &info);
-	}
 }
 
 void CommandBuffer::end_region()
@@ -2419,8 +2425,6 @@ void CommandBuffer::end_region()
 		if (vkCmdEndDebugUtilsLabelEXT)
 			vkCmdEndDebugUtilsLabelEXT(cmd);
 	}
-	else if (device->ext.supports_debug_marker)
-		table.vkCmdDebugMarkerEndEXT(cmd);
 }
 
 void CommandBuffer::enable_profiling()

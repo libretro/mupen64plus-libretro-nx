@@ -63,6 +63,11 @@
 #include "quirks.hpp"
 #include "small_vector.hpp"
 
+namespace Util
+{
+class TimelineTraceFile;
+}
+
 namespace Vulkan
 {
 enum class SwapchainRenderPass
@@ -75,7 +80,7 @@ enum class SwapchainRenderPass
 struct InitialImageBuffer
 {
 	BufferHandle buffer;
-	std::vector<VkBufferImageCopy> blits;
+	Util::SmallVector<VkBufferImageCopy, 32> blits;
 };
 
 struct HandlePool
@@ -104,8 +109,8 @@ public:
 		int32_t s32;
 		float f32;
 	};
-	virtual void message(const std::string &tag, uint32_t x, uint32_t y, uint32_t z,
-	                     uint32_t code, uint32_t word_count, const Word *words) = 0;
+	virtual void message(const std::string &tag, uint32_t code, uint32_t x, uint32_t y, uint32_t z,
+	                     uint32_t word_count, const Word *words) = 0;
 };
 
 class Device
@@ -217,6 +222,7 @@ public:
 	                  Fence *fence = nullptr,
 	                  unsigned semaphore_count = 0,
 	                  Semaphore *semaphore = nullptr);
+	void submit_discard(CommandBufferHandle &cmd);
 	void add_wait_semaphore(CommandBuffer::Type type, Semaphore semaphore, VkPipelineStageFlags stages, bool flush);
 	CommandBuffer::Type get_physical_queue_type(CommandBuffer::Type queue_type) const;
 	void register_time_interval(std::string tid, QueryPoolHandle start_ts, QueryPoolHandle end_ts,
@@ -287,6 +293,11 @@ public:
 #ifndef _WIN32
 	Semaphore request_imported_semaphore(int fd, VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type);
 #endif
+	// A proxy semaphore which lets us grab a semaphore handle before we signal it.
+	// Mostly useful to deal better with render graph implementation.
+	// TODO: When we require timeline semaphores, this could be a bit more elegant, and we could expose timeline directly.
+	// For time being however, we'll support moving the payload over to the proxy object.
+	Semaphore request_proxy_semaphore();
 
 	VkDevice get_device() const
 	{
@@ -307,6 +318,8 @@ public:
 	{
 		return gpu_props;
 	}
+
+	void get_memory_budget(HeapBudget *budget);
 
 	const Sampler &get_stock_sampler(StockSampler sampler) const;
 
@@ -334,9 +347,22 @@ public:
 
 	bool swapchain_touched() const;
 
-	double convert_timestamp_delta(uint64_t start_ticks, uint64_t end_ticks) const;
+	double convert_device_timestamp_delta(uint64_t start_ticks, uint64_t end_ticks) const;
 	// Writes a timestamp on host side, which is calibrated to the GPU timebase.
 	QueryPoolHandle write_calibrated_timestamp();
+
+	// A split version of VkEvent handling which lets us record a wait command before signal is recorded.
+	PipelineEvent begin_signal_event(VkPipelineStageFlags stages);
+
+	// Promotes any read-write cached state to read-only,
+	// which eliminates need to read/write lock.
+	// Can be called at any time as long as there is no
+	// racing access to:
+	// - Command buffer recording which uses pipelines (texture manager is fine).
+	// - request_shader()
+	// - request_program()
+	// Generally, this should be called before you call next_frame_context().
+	void promote_read_write_caches_to_read_only();
 
 private:
 	VkInstance instance = VK_NULL_HANDLE;
@@ -382,16 +408,9 @@ private:
 	void init_bindless();
 	void deinit_timeline_semaphores();
 
-	struct JSONTraceFileDeleter { void operator()(FILE *file); };
-	std::unique_ptr<FILE, JSONTraceFileDeleter> json_trace_file;
-	int64_t json_base_timestamp_value = 0;
-	int64_t json_timestamp_origin = 0;
-	int64_t convert_timestamp_to_absolute_usec(uint64_t ts);
-	uint64_t update_wrapped_base_timestamp(uint64_t ts);
-	void write_json_timestamp_range(unsigned frame_index, const char *tid, const char *name, const char *extra,
-	                                uint64_t start_ts, uint64_t end_ts,
-	                                int64_t &min_us, int64_t &max_us);
-	void write_json_timestamp_range_us(unsigned frame_index, const char *tid, const char *name, int64_t start_us, int64_t end_us);
+	uint64_t update_wrapped_device_timestamp(uint64_t ts);
+	int64_t convert_timestamp_to_absolute_nsec(const QueryPoolResult &handle);
+	Util::TimelineTraceFile *timeline_trace_file = nullptr;
 
 	QueryPoolHandle write_timestamp_nolock(VkCommandBuffer cmd, VkPipelineStageFlagBits stage);
 	QueryPoolHandle write_calibrated_timestamp_nolock();
@@ -408,9 +427,9 @@ private:
 	VkTimeDomainEXT calibrated_time_domain = VK_TIME_DOMAIN_DEVICE_EXT;
 	int64_t calibrated_timestamp_device = 0;
 	int64_t calibrated_timestamp_host = 0;
+	int64_t calibrated_timestamp_device_accum = 0;
 	int64_t last_calibrated_timestamp_host = 0; // To ensure monotonicity after a recalibration.
 	unsigned timestamp_calibration_counter = 0;
-	int64_t get_calibrated_timestamp();
 	Vulkan::QueryPoolHandle frame_context_begin_ts;
 
 	struct Managers
@@ -441,6 +460,7 @@ private:
 		PerFrame(const PerFrame &) = delete;
 
 		void begin();
+		void trim_command_pools();
 
 		Device &device;
 		unsigned frame_index;
@@ -640,6 +660,7 @@ private:
 
 	void flush_frame_nolock();
 	CommandBufferHandle request_command_buffer_nolock(unsigned thread_index, CommandBuffer::Type type, bool profiled);
+	void submit_discard_nolock(CommandBufferHandle &cmd);
 	void submit_nolock(CommandBufferHandle cmd, Fence *fence,
 	                   unsigned semaphore_count, Semaphore *semaphore);
 	void submit_empty_nolock(CommandBuffer::Type type, Fence *fence,
@@ -701,7 +722,7 @@ private:
 		std::unordered_map<VkShaderModule, Shader *> shader_map;
 		std::unordered_map<VkRenderPass, RenderPass *> render_pass_map;
 #ifdef GRANITE_VULKAN_MT
-		Granite::TaskGroup pipeline_group;
+		Granite::TaskGroupHandle pipeline_group;
 #endif
 	} replayer_state;
 
