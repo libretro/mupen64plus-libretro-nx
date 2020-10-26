@@ -1340,6 +1340,13 @@ static void update_variables(bool startup)
             parallel_set_native_tex_rect(!strcmp(var.value, "True"));
         else
             parallel_set_native_tex_rect(true);
+
+        var.key = CORE_NAME "-parallel-rdp-deinterlace-method";
+        var.value = NULL;
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+            parallel_set_interlacing(!strcmp(var.value, "Weave"));
+        else
+            parallel_set_interlacing(false);
     }
 #endif
 

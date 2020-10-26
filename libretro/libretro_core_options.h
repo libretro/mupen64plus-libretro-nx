@@ -982,6 +982,15 @@ struct retro_core_option_definition option_defs_us[] = {
             { "False", "Disabled" },
         }
     },
+    {
+        CORE_NAME "-parallel-rdp-deinterlace-method",
+        "(ParaLLEl-RDP) Deinterlacing method",
+        "Weave should only be used with 1x scaling factor and special CRT shaders.",
+        {
+            { "Bob", NULL },
+            { "Weave", NULL },
+        }
+    },
 #endif
 #ifdef HAVE_THR_AL
     {
