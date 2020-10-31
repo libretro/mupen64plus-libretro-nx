@@ -198,6 +198,7 @@ uint32_t OverscanBottom = 0;
 
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
+uint32_t OverclockFactor = 0;
 uint32_t CountPerScanlineOverride = 0;
 uint32_t ForceDisableExtraMem = 0;
 uint32_t IgnoreTLBExceptions = 0;
@@ -1078,8 +1079,15 @@ static void update_variables(bool startup)
        {
           CountPerOp = atoi(var.value);
        }
-       
-       if(EnableFullspeed)
+
+       var.key = CORE_NAME "-OverclockFactor";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          OverclockFactor = atoi(var.value);
+       }
+
+       if(EnableFullspeed || OverclockFactor)
        {
           CountPerOp = 1; // Force CountPerOp == 1
           if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && !EnableFBEmulation)

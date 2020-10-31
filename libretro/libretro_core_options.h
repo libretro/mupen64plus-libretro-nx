@@ -1294,6 +1294,35 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "0"
     },
+    {
+        CORE_NAME "-OverclockFactor",
+        "Overclock Factor",
+        "Override cycle calculation with reduced count factor (overclock) when set greater than 0. This will lower the cycle count calculation by half per incremented value. This feature may cause instability (differs per game). Enabling overclock will set count per op to 1.",
+        {
+            {"None", NULL},
+            {"1", NULL},
+            {"2", NULL},
+            {"3", NULL},
+            {"4", NULL},
+            {"5", NULL},
+            {"6", NULL},
+            {"7", NULL},
+            {"8", NULL},
+            {"9", NULL},
+            {"10", NULL},
+            {"12", NULL},
+            {"14", NULL},
+            {"16", NULL},
+            {"18", NULL},
+            {"20", NULL},
+            {"25", NULL},
+            {"30", NULL},
+            {"40", NULL},
+            {"50", NULL},
+            {NULL, NULL},
+        },
+        "0"
+    },
     {NULL, NULL, NULL, {{0}}, NULL},
 };
 

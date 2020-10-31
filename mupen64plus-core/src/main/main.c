@@ -1013,6 +1013,7 @@ m64p_error main_run(void)
 {
     size_t i, k;
     unsigned int count_per_op;
+    unsigned int overclock_factor;
     unsigned int disable_extra_mem;
     int si_dma_duration;
     int no_compiled_jump;
@@ -1032,6 +1033,7 @@ m64p_error main_run(void)
     uint32_t flashram_type = MX29L1100_ID;
 
     count_per_op = CountPerOp;
+    overclock_factor = OverclockFactor;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
     if (ForceDisableExtraMem == 1)
@@ -1041,6 +1043,9 @@ m64p_error main_run(void)
 
     if (count_per_op <= 0)
         count_per_op = ROM_PARAMS.countperop;
+
+    if (overclock_factor > 50)
+        overclock_factor = 50;
 
     si_dma_duration = ROM_PARAMS.sidmaduration;
 
@@ -1251,6 +1256,7 @@ m64p_error main_run(void)
                 g_mem_base,
                 r4300_emumode,
                 count_per_op,
+                overclock_factor,
                 no_compiled_jump,
                 randomize_interrupt,
                 &g_dev.ai, &audio_out_backend_libretro,
