@@ -27,13 +27,11 @@
 #include <libretro.h>
 #include <retro_inline.h>
 
+#include <mupen64plus-next_common.h>
+
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#ifndef CORE_NAME
-#define CORE_NAME "mupen64plus"
 #endif
 
 #define HAVE_NO_LANGEXTRA
@@ -66,7 +64,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"angrylion", "Angrylion"},
 #endif
 #ifdef HAVE_PARALLEL_RDP
-            {"parallel", "paraLLEl-RDP"},
+            {"parallel", "ParaLLEl-RDP"},
 #endif
             {"gliden64", "GLideN64"},
             {NULL, NULL},
@@ -828,7 +826,7 @@ struct retro_core_option_definition option_defs_us[] = {
 #ifdef HAVE_PARALLEL_RDP
     {
         CORE_NAME "-parallel-rdp-synchronous",
-        "(paraLLEl-RDP) Synchronous RDP",
+        "(ParaLLEl-RDP) Synchronous RDP",
         "Enable full accuracy for CPU accessed frame buffers.",
         {
             { "True", "Enabled" },

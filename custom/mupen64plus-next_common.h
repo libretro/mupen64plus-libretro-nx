@@ -143,6 +143,11 @@ extern uint32_t OverscanBottom;
 #define GIT_VERSION " git"
 #endif
 
+// Keep it optional (f.e. Raspberry Pi Platforms override it in Makefile)
+#ifndef CORE_NAME
+#define CORE_NAME "mupen64plus"
+#endif
+
 // RetroArch Extensions
 #define RETRO_ENVIRONMENT_RETROARCH_START_BLOCK 0x800000
 #define RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND (2 | RETRO_ENVIRONMENT_RETROARCH_START_BLOCK)
