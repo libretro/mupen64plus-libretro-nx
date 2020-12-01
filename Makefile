@@ -197,6 +197,22 @@ else ifeq ($(platform), libnx)
    WITH_DYNAREC = aarch64
    STATIC_LINKING = 1
 
+# Jetson Xavier NX
+else ifeq ($(platform), jetson-xavier)
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   GL_LIB := -lGL
+   CPUOPTS := -march=armv8.2-a+crc -mtune=cortex-a75 -mcpu=cortex-a75+crc+fp+simd
+   PLATCFLAGS = -O3 -ffast-math -funsafe-math-optimizations
+   CXXFLAGS += -std=gnu++11
+   COREFLAGS += -DOS_LINUX
+   WITH_DYNAREC = aarch64
+   HAVE_PARALLEL_RSP = 1
+   HAVE_PARALLEL_RDP = 1
+   HAVE_THR_AL = 1
+   LLE = 1
+   COREFLAGS += -DHAVE_NEON -ftree-vectorize -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+
 # 64 bit ODROIDs
 else ifneq (,$(findstring odroid64,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
