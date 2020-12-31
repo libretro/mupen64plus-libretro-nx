@@ -467,15 +467,15 @@ else
    GL_LIB := -lopengl32
    
    ifeq ($(MSYSTEM),MINGW64)
-      CC = x86_64-w64-mingw32-gcc
-      CXX = x86_64-w64-mingw32-g++
+      CC ?= x86_64-w64-mingw32-gcc
+      CXX ?= x86_64-w64-mingw32-g++
       WITH_DYNAREC = x86_64
       COREFLAGS += -DWIN64
       ASFLAGS = -f win64 -d WIN64
       PIC = 1
    else ifeq ($(MSYSTEM),MINGW32)
-      CC = i686-w64-mingw32-gcc
-      CXX = i686-w64-mingw32-g++
+      CC ?= i686-w64-mingw32-gcc
+      CXX ?= i686-w64-mingw32-g++
       WITH_DYNAREC = x86
       COREFLAGS += -DWIN32
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
