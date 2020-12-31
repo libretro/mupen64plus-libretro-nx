@@ -63,6 +63,11 @@ android-arm64-v8a:
     - .libretro-android-jni-arm64-v8a
     - .core-defs
 
+android-x86_64:
+  extends:
+    - .libretro-android-jni-x86_64
+    - .core-defs
+
 android-armeabi-v7a-gles3:
   extends:
     - .libretro-android-jni-armeabi-v7a
@@ -71,4 +76,9 @@ android-armeabi-v7a-gles3:
 android-arm64-v8a-gles3:
   extends:
     - .libretro-android-jni-arm64-v8a
+    - .core-defs-gles3
+
+android-x86_64-gles3:
+  extends:
+    - .libretro-android-jni-x86_64
     - .core-defs-gles3
