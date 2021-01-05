@@ -1031,6 +1031,8 @@ m64p_error main_run(void)
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
 
+    randomize_interrupt = 0;
+    
     count_per_op = CountPerOp;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
