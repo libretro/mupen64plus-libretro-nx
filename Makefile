@@ -478,6 +478,7 @@ else
       CXX ?= i686-w64-mingw32-g++
       WITH_DYNAREC = x86
       COREFLAGS += -DWIN32
+      PIC = 1
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
 
