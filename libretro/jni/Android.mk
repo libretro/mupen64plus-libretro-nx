@@ -44,8 +44,6 @@ else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
   HAVE_PARALLEL_RDP = 1
   HAVE_THR_AL = 1
 else ifeq ($(TARGET_ARCH_ABI),x86)
-  # X86 dynarec isn't position independent, so it fails to build on newer ndks.
-  # No warn shared textrel allows it to build, but still won't allow it to run on api 23+.
   WITH_DYNAREC := x86
   STRINGS := i686-linux-android-$(STRINGS)
   COREASMFLAGS := -f elf -d ELF_TYPE -DPIC
