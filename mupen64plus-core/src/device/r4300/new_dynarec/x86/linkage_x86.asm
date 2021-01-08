@@ -52,12 +52,25 @@ section .note.GNU-stack noalloc noexec nowrite progbits
       call  %%getgot
   %%getgot:
       pop  ebx
-      sub ebx, %%getgot
+      add  ebx,_GLOBAL_OFFSET_TABLE_+$$-%%getgot wrt ..gotpc
 %endmacro
 
-%define get_got_address get_GOT
-%define find_local_data(a) ebx + a
-%define find_external_data(a) ebx + a
+%macro get_delta 0
+      call  %%getdelta
+  %%getdelta:
+      pop  ebx
+      sub ebx, %%getdelta
+%endmacro
+
+%ifdef PIC
+    %define get_got_address get_GOT
+    %define find_local_data(a) ebx + a wrt ..gotoff
+    %define find_external_data(a) ebx + a wrt ..got
+%else
+    %define get_got_address get_delta
+    %define find_local_data(a) ebx + a
+    %define find_external_data(a) ebx + a
+%endif
 
 %define g_dev_r4300_cached_interp_invalid_code              (g_dev + offsetof_struct_device_r4300 + offsetof_struct_r4300_core_cached_interp + offsetof_struct_cached_interp_invalid_code)
 %define g_dev_r4300_new_dynarec_hot_state_stop              (g_dev + offsetof_struct_device_r4300 + offsetof_struct_r4300_core_new_dynarec_hot_state + offsetof_struct_new_dynarec_hot_state_stop)
@@ -107,6 +120,10 @@ cextern new_dynarec_check_interrupt
 cextern get_addr_32
 cextern g_dev
 cextern verify_dirty
+
+%ifdef PIC
+cextern _GLOBAL_OFFSET_TABLE_
+%endif
 
 section .bss
 align 4
