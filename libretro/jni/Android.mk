@@ -48,7 +48,8 @@ else ifeq ($(TARGET_ARCH_ABI),x86)
   # No warn shared textrel allows it to build, but still won't allow it to run on api 23+.
   WITH_DYNAREC := x86
   STRINGS := i686-linux-android-$(STRINGS)
-  COREASMFLAGS := -f elf -d ELF_TYPE
+  COREASMFLAGS := -f elf -d ELF_TYPE -DPIC
+  COREFLAGS := -fPIC
 else ifeq ($(TARGET_ARCH_ABI),x86_64)
   WITH_DYNAREC := x86_64
   STRINGS := x86_64-linux-android-$(STRINGS)
@@ -79,10 +80,10 @@ include $(CLEAR_VARS)
 include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
 LOCAL_SRC_FILES        := $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
-LOCAL_ASMFLAGS         := -DPIC $(COREASMFLAGS)
-LOCAL_CPPFLAGS         := -fPIC -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
-LOCAL_CFLAGS           := -fPIC $(CFLAGS) $(COREFLAGS)
-LOCAL_LDFLAGS          := -Wl,-fPIC -Wl,-version-script=$(LIBRETRO_DIR)/link.T
+LOCAL_ASMFLAGS         := $(COREASMFLAGS)
+LOCAL_CPPFLAGS         := -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
+LOCAL_CFLAGS           := $(CFLAGS) $(COREFLAGS)
+LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
 LOCAL_LDLIBS           := -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := 
 LOCAL_CPP_FEATURES     := exceptions
