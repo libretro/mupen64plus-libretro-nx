@@ -38,18 +38,6 @@ ifneq (,$(findstring win,$(platform)))
 	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
 endif
 
-ifeq ($(LLE), 1)
-SOURCES_C += \
-	$(ROOT_DIR)/custom/mupen64plus-rsp-cxd4/module.c \
-	$(CXD4DIR)/su.c \
-	$(CXD4DIR)/vu/add.c \
-	$(CXD4DIR)/vu/divide.c \
-	$(CXD4DIR)/vu/logical.c \
-	$(CXD4DIR)/vu/multiply.c \
-	$(CXD4DIR)/vu/select.c \
-	$(CXD4DIR)/vu/vu.c
-endif
-
 SOURCES_C = \
 	$(CORE_DIR)/src/asm_defines/asm_defines.c \
 	$(CORE_DIR)/src/api/callbacks.c \
