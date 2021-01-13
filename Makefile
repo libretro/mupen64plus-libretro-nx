@@ -163,6 +163,9 @@ else ifneq (,$(findstring rpi,$(platform)))
    else ifneq (,$(findstring rpi4,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
       ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+   else ifneq (,$(findstring rpi4_64,$(platform)))
+      CPUFLAGS += -mcpu=cortex-a72 -mtune=cortex-a72
+      ARM_CPUFLAGS =
    else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=arm1176jzf-s
       ARM_CPUFLAGS = -mfpu=vfp
@@ -218,7 +221,7 @@ else ifneq (,$(findstring odroid64,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
    BOARD ?= $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')
-   GLES = 1
+   GLES = 3
    GL_LIB := -lGLESv2
    WITH_DYNAREC := aarch64
    ifneq (,$(findstring C2,$(BOARD)))
@@ -258,6 +261,9 @@ else ifneq (,$(findstring odroid,$(platform)))
       else
          CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
       endif
+      # ODROIDGOA
+   else ifneq (,$(findstring ODROIDGOA,$(BOARD)))
+      CPUFLAGS += -march=armv8-a+crc -mfpu=neon-fp-armv8 -mcpu=cortex-a35 -mtune=cortex-a35
    else
       # ODROID-U2, -U3, -X & -X2
       CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
