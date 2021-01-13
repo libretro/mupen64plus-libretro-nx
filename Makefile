@@ -163,6 +163,9 @@ else ifneq (,$(findstring rpi,$(platform)))
    else ifneq (,$(findstring rpi4,$(platform)))
       CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
       ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+   else ifneq (,$(findstring rpi4_64,$(platform)))
+      CPUFLAGS += -mcpu=cortex-a72 -mtune=cortex-a72
+      ARM_CPUFLAGS =
    else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=arm1176jzf-s
       ARM_CPUFLAGS = -mfpu=vfp
@@ -258,6 +261,9 @@ else ifneq (,$(findstring odroid,$(platform)))
       else
          CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
       endif
+      # ODROIDGOA
+   else ifneq (,$(findstring ODROIDGOA,$(BOARD)))
+      CPUFLAGS += -march=armv8-a+crc -mfpu=neon-fp-armv8 -mcpu=cortex-a35 -mtune=cortex-a35
    else
       # ODROID-U2, -U3, -X & -X2
       CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
