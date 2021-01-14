@@ -258,6 +258,9 @@ else ifneq (,$(findstring odroid,$(platform)))
       else
          CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
       endif
+      # ODROIDGOA
+   else ifneq (,$(findstring ODROIDGOA,$(BOARD)))
+      CPUFLAGS += -march=armv8-a+crc -mfpu=neon-fp-armv8 -mcpu=cortex-a35 -mtune=cortex-a35
    else
       # ODROID-U2, -U3, -X & -X2
       CPUFLAGS += -mcpu=cortex-a9 -mfpu=neon
