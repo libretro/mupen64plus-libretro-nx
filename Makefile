@@ -282,16 +282,23 @@ else ifneq (,$(findstring AMLG,$(platform)))
          CPUFLAGS += -mtune=cortex-a53
       endif
       GLES3 = 1
-      GL_LIB := -lGLESv3
    else ifneq (,$(findstring AMLGX,$(platform)))
       CPUFLAGS += -mtune=cortex-a53
       ifneq (,$(findstring AMLGXM,$(platform)))
          GLES3 = 1
-         GL_LIB := -lGLESv3
       else
          GLES = 1
-         GL_LIB := -lGLESv2
       endif
+   endif
+
+   ifneq (,$(findstring mesa,$(platform)))
+      COREFLAGS += -DEGL_NO_X11
+   endif
+
+   ifneq (,$(findstring mali,$(platform)))
+      GL_LIB := -lGLESv3
+   else
+      GL_LIB := -lGLESv2
    endif
   
    HAVE_NEON = 1
@@ -328,6 +335,10 @@ else ifneq (,$(findstring RK,$(platform)))
    else ifneq (,$(findstring RK3288,$(platform)))
       CPUFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
       GLES3 = 1
+   endif
+
+   ifneq (,$(findstring mesa,$(platform)))
+      COREFLAGS += -DEGL_NO_X11
    endif
 
    GL_LIB := -lGLESv2
