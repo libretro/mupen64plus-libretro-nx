@@ -136,7 +136,7 @@ public:
 		return srgb_backbuffer_enable;
 	}
 
-	bool init(unsigned num_thread_indices, Util::TimelineTraceFile *file);
+	bool init(unsigned num_thread_indices, const Context::SystemHandles &system_handles);
 	bool init_external_context(std::unique_ptr<Vulkan::Context> context);
 	bool init_external_swapchain(std::vector<Vulkan::ImageHandle> external_images);
 	void deinit_external();
@@ -179,8 +179,6 @@ public:
 	{
 		return timing;
 	}
-
-	static void build_prerotate_matrix_2x2(VkSurfaceTransformFlagBitsKHR pre_rotate, float mat[4]);
 
 private:
 	void update_framebuffer(unsigned width, unsigned height);

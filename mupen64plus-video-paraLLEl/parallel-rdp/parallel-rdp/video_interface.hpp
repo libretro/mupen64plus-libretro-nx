@@ -57,6 +57,14 @@ struct ScanoutOptions
 	} vi;
 };
 
+struct VIScanoutBuffer
+{
+	Vulkan::BufferHandle buffer;
+	Vulkan::Fence fence;
+	unsigned width = 0;
+	unsigned height = 0;
+};
+
 class Renderer;
 
 class VideoInterface : public Vulkan::DebugChannelInterface
