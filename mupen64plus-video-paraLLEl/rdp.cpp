@@ -446,11 +446,13 @@ bool parallel_create_device(struct retro_vulkan_context *frontend_context, VkIns
 
 	::RDP::context.reset(new Vulkan::Context);
 
+#if 0
 	if (const char *env = getenv("PARALLEL_RDP_TIMELINE_TRACE"))
 	{
 		::RDP::timeline_trace_file.reset(new Util::TimelineTraceFile(env));
 		::RDP::context->set_timeline_trace_file(::RDP::timeline_trace_file.get());
 	}
+#endif
 
 	if (!::RDP::context->init_device_from_instance(
 				instance, gpu, surface, required_device_extensions, num_required_device_extensions,
