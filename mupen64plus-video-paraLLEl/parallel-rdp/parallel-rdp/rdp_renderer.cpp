@@ -26,6 +26,7 @@
 #include "bitops.hpp"
 #include "luts.hpp"
 #include "timer.hpp"
+#include <limits>
 #ifdef PARALLEL_RDP_SHADER_DIR
 #include "global_managers.hpp"
 #include "os_filesystem.hpp"
@@ -71,8 +72,8 @@ bool Renderer::init_renderer(const RendererOptions &options)
 #endif
 
 #ifdef PARALLEL_RDP_SHADER_DIR
-	if (!Granite::Global::filesystem()->get_backend("rdp"))
-		Granite::Global::filesystem()->register_protocol("rdp", std::make_unique<Granite::OSFilesystem>(PARALLEL_RDP_SHADER_DIR));
+	if (!GRANITE_FILESYSTEM()->get_backend("rdp"))
+		GRANITE_FILESYSTEM()->register_protocol("rdp", std::make_unique<Granite::OSFilesystem>(PARALLEL_RDP_SHADER_DIR));
 	device->get_shader_manager().add_include_directory("builtin://shaders/inc");
 #endif
 
@@ -696,7 +697,7 @@ void Renderer::set_depth_blend_state(const DepthBlendState &state)
 	stream.depth_blend_state = state;
 }
 
-void Renderer::draw_flat_primitive(const TriangleSetup &setup)
+void Renderer::draw_flat_primitive(TriangleSetup &setup)
 {
 	draw_shaded_primitive(setup, {});
 }
@@ -936,23 +937,34 @@ DerivedSetup Renderer::build_derived_attributes(const AttributeSetup &attr) cons
 
 static constexpr unsigned SUBPIXELS_Y = 4;
 
-static std::pair<int, int> interpolate_x(const TriangleSetup &setup, int y, bool flip, int scaling)
+static int32_t clamp_int32(int64_t v)
 {
-	int yh_interpolation_base = setup.yh & ~(SUBPIXELS_Y - 1);
-	int ym_interpolation_base = setup.ym;
+	if (v < std::numeric_limits<int32_t>::min())
+		return std::numeric_limits<int32_t>::min();
+	else if (v > std::numeric_limits<int32_t>::max())
+		return std::numeric_limits<int32_t>::max();
+	else
+		return int32_t(v);
+}
+
+static std::pair<int32_t, int32_t> interpolate_x(const TriangleSetup &setup, int y, bool flip, int scaling)
+{
+	// Interpolate in 64-bit so we are guaranteed to catch any overflow scenario.
+	int64_t yh_interpolation_base = setup.yh & ~(SUBPIXELS_Y - 1);
+	int64_t ym_interpolation_base = setup.ym;
 	yh_interpolation_base *= scaling;
 	ym_interpolation_base *= scaling;
 
-	int xh = scaling * setup.xh + (y - yh_interpolation_base) * setup.dxhdy;
-	int xm = scaling * setup.xm + (y - yh_interpolation_base) * setup.dxmdy;
-	int xl = scaling * setup.xl + (y - ym_interpolation_base) * setup.dxldy;
+	int64_t xh = scaling * setup.xh + int64_t(y - yh_interpolation_base) * setup.dxhdy;
+	int64_t xm = scaling * setup.xm + int64_t(y - yh_interpolation_base) * setup.dxmdy;
+	int64_t xl = scaling * setup.xl + int64_t(y - ym_interpolation_base) * setup.dxldy;
 	if (y < scaling * setup.ym)
 		xl = xm;
 
-	int xh_shifted = xh >> 15;
-	int xl_shifted = xl >> 15;
+	int64_t xh_shifted = xh >> 15;
+	int64_t xl_shifted = xl >> 15;
 
-	int xleft, xright;
+	int64_t xleft, xright;
 	if (flip)
 	{
 		xleft = xh_shifted;
@@ -964,7 +976,7 @@ static std::pair<int, int> interpolate_x(const TriangleSetup &setup, int y, bool
 		xright = xh_shifted;
 	}
 
-	return { xleft, xright };
+	return { clamp_int32(xleft), clamp_int32(xright) };
 }
 
 unsigned Renderer::compute_conservative_max_num_tiles(const TriangleSetup &setup) const
@@ -999,8 +1011,27 @@ unsigned Renderer::compute_conservative_max_num_tiles(const TriangleSetup &setup
 		mid1 = interpolate_x(setup, ym - 1, flip, scaling);
 	}
 
-	int start_x = std::min(std::min(upper.first, lower.first), std::min(mid.first, mid1.first));
-	int end_x = std::max(std::max(upper.second, lower.second), std::max(mid.second, mid1.second));
+	// Robustness, check if we overflow the X rasterizer precision.
+	// After shifting down, we should have 12 bits signed.
+	// If we detect any overflow here we need to assume X range is scissor rect.
+	// This really should never happen, but it's possible to write tests that intentionally trigger weird
+	// overflow behavior that needs to be specially handled.
+	// There might be freak scenarios where we cannot detect overflow since we're only sampling at 4 scanlines
+	// and we have ~32 overflows happening at once,
+	// So we need to interpolate in 64-bit to make this work.
+
+	auto start_x = std::min(std::min(upper.first, lower.first), std::min(mid.first, mid1.first));
+	auto end_x = std::max(std::max(upper.second, lower.second), std::max(mid.second, mid1.second));
+
+	auto max_range_x = std::max(std::abs(start_x), std::abs(end_x));
+	// Effective X range is [-2048, 2047], but just make it [-2047, 2047] to match binning shader.
+	// If we interpolate X to something outside that range,
+	// we must assume the entire X range will be covered.
+	if (max_range_x > 2047 * scaling)
+	{
+		start_x = 0;
+		end_x = 0x7fffffff;
+	}
 
 	start_x = std::max(start_x, scaling * (int(stream.scissor_state.xlo) >> 2));
 	end_x = std::min(end_x, scaling * ((int(stream.scissor_state.xhi) + 3) >> 2) - 1);
@@ -1350,8 +1381,28 @@ void Renderer::deduce_static_texture_state(unsigned tile, unsigned max_lod_level
 	state.texture_size = uint32_t(siz);
 }
 
-void Renderer::draw_shaded_primitive(const TriangleSetup &setup, const AttributeSetup &attr)
+void Renderer::fixup_triangle_setup(TriangleSetup &setup) const
 {
+	// If YM is lower than the first sub-scanline we rasterize, we will never observe YM at all.
+	// To account for this, fixup here so that YM is out of range.
+	// No known content actually triggers this, but some public tests triggered it.
+	int start_y = setup.yh & ~(SUBPIXELS_Y - 1);
+	if (setup.ym < start_y)
+		setup.ym = std::numeric_limits<int16_t>::max();
+
+	if ((stream.static_raster_state.flags & RASTERIZATION_INTERLACE_FIELD_BIT) != 0)
+	{
+		setup.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_FIELD_BIT) ?
+		               TRIANGLE_SETUP_INTERLACE_FIELD_BIT : 0;
+		setup.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_KEEP_ODD_BIT) ?
+		               TRIANGLE_SETUP_INTERLACE_KEEP_ODD_BIT : 0;
+	}
+}
+
+void Renderer::draw_shaded_primitive(TriangleSetup &setup, const AttributeSetup &attr)
+{
+	fixup_triangle_setup(setup);
+
 	unsigned num_tiles = compute_conservative_max_num_tiles(setup);
 
 #if 0
@@ -1365,18 +1416,7 @@ void Renderer::draw_shaded_primitive(const TriangleSetup &setup, const Attribute
 
 	update_deduced_height(setup);
 	stream.span_info_offsets.add(allocate_span_jobs(setup));
-
-	if ((stream.static_raster_state.flags & RASTERIZATION_INTERLACE_FIELD_BIT) != 0)
-	{
-		auto tmp = setup;
-		tmp.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_FIELD_BIT) ?
-				TRIANGLE_SETUP_INTERLACE_FIELD_BIT : 0;
-		tmp.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_KEEP_ODD_BIT) ?
-				TRIANGLE_SETUP_INTERLACE_KEEP_ODD_BIT : 0;
-		stream.triangle_setup.add(tmp);
-	}
-	else
-		stream.triangle_setup.add(setup);
+	stream.triangle_setup.add(setup);
 
 	if (constants.use_prim_depth)
 	{

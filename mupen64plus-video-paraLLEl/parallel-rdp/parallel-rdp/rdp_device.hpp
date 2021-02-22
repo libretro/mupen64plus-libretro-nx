@@ -152,6 +152,7 @@ public:
 
 	Vulkan::ImageHandle scanout(const ScanoutOptions &opts = {});
 	void scanout_sync(std::vector<RGBA> &colors, unsigned &width, unsigned &height);
+	void scanout_async_buffer(VIScanoutBuffer &buffer, const ScanoutOptions &opts = {});
 
 private:
 	Vulkan::Device &device;
@@ -174,6 +175,8 @@ private:
 	void clear_tmem();
 	void clear_buffer(Vulkan::Buffer &buffer, uint32_t value);
 	void init_renderer();
+
+	Vulkan::ImageHandle scanout(const ScanoutOptions &opts, VkImageLayout target_layout);
 
 #define OP(x) void op_##x(const uint32_t *words)
 	OP(fill_triangle); OP(fill_z_buffer_triangle); OP(texture_triangle); OP(texture_z_buffer_triangle);

@@ -192,7 +192,8 @@ void CommandProcessor::init_renderer()
 	vi.set_renderer(&renderer);
 
 #ifndef PARALLEL_RDP_SHADER_DIR
-	shader_bank.reset(new ShaderBank(device, [&](const char *name, const char *define) -> int {
+	Vulkan::ResourceLayout layout;
+	shader_bank.reset(new ShaderBank(device, layout, [&](const char *name, const char *define) -> int {
 		if (strncmp(name, "vi_", 3) == 0)
 			return vi.resolve_shader_define(name, define);
 		else
@@ -1008,7 +1009,7 @@ void CommandProcessor::wait_for_timeline(uint64_t index)
 	}
 }
 
-Vulkan::ImageHandle CommandProcessor::scanout(const ScanoutOptions &opts)
+Vulkan::ImageHandle CommandProcessor::scanout(const ScanoutOptions &opts, VkImageLayout target_layout)
 {
 	Vulkan::QueryPoolHandle start_ts, end_ts;
 	drain_command_ring();
@@ -1026,8 +1027,13 @@ Vulkan::ImageHandle CommandProcessor::scanout(const ScanoutOptions &opts)
 	}
 	renderer.unlock_command_processing();
 
-	auto scanout = vi.scanout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, opts, renderer.get_scaling_factor());
+	auto scanout = vi.scanout(target_layout, opts, renderer.get_scaling_factor());
 	return scanout;
+}
+
+Vulkan::ImageHandle CommandProcessor::scanout(const ScanoutOptions &opts)
+{
+	return scanout(opts, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void CommandProcessor::drain_command_ring()
@@ -1043,27 +1049,48 @@ void CommandProcessor::drain_command_ring()
 	}
 }
 
-void CommandProcessor::scanout_sync(std::vector<RGBA> &colors, unsigned &width, unsigned &height)
+void CommandProcessor::scanout_async_buffer(VIScanoutBuffer &buffer, const ScanoutOptions &opts)
 {
-	drain_command_ring();
-	renderer.flush_and_signal();
-
-	if (!is_host_coherent)
+	auto handle = scanout(opts, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	if (!handle)
 	{
-		unsigned offset, length;
-		vi.scanout_memory_range(offset, length);
-		renderer.resolve_coherency_external(offset, length);
+		buffer.width = 0;
+		buffer.height = 0;
+		buffer.fence.reset();
+		return;
 	}
 
+	buffer.width = handle->get_width();
+	buffer.height = handle->get_height();
+
+	Vulkan::BufferCreateInfo info = {};
+	info.size = buffer.width * buffer.height * sizeof(uint32_t);
+	info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	info.domain = Vulkan::BufferDomain::CachedHost;
+	if (!buffer.buffer || buffer.buffer->get_create_info().size < info.size)
+		buffer.buffer = device.create_buffer(info);
+
+	auto cmd = device.request_command_buffer();
+	cmd->copy_image_to_buffer(*buffer.buffer, *handle, 0, {}, { buffer.width, buffer.height, 1 }, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 });
+	cmd->barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+	             VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
+
+	buffer.fence.reset();
+	device.submit(cmd, &buffer.fence);
+}
+
+void CommandProcessor::scanout_sync(std::vector<RGBA> &colors, unsigned &width, unsigned &height)
+{
 	ScanoutOptions opts = {};
 	// Downscale down to 1x, always.
 	opts.downscale_steps = 32;
 	opts.blend_previous_frame = true;
 	opts.upscale_deinterlacing = false;
 
-	auto handle = vi.scanout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, opts, renderer.get_scaling_factor());
+	VIScanoutBuffer scanout;
+	scanout_async_buffer(scanout, opts);
 
-	if (!handle)
+	if (!scanout.width || !scanout.height)
 	{
 		width = 0;
 		height = 0;
@@ -1071,28 +1098,14 @@ void CommandProcessor::scanout_sync(std::vector<RGBA> &colors, unsigned &width, 
 		return;
 	}
 
-	width = handle->get_width();
-	height = handle->get_height();
-
-	Vulkan::BufferCreateInfo info = {};
-	info.size = width * height * sizeof(uint32_t);
-	info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	info.domain = Vulkan::BufferDomain::CachedHost;
-	auto readback = device.create_buffer(info);
-
-	auto cmd = device.request_command_buffer();
-	cmd->copy_image_to_buffer(*readback, *handle, 0, {}, { width, height, 1 }, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 });
-	cmd->barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-	             VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
-
-	Vulkan::Fence fence;
-	device.submit(cmd, &fence);
-	fence->wait();
-
+	width = scanout.width;
+	height = scanout.height;
 	colors.resize(width * height);
-	memcpy(colors.data(), device.map_host_buffer(*readback, Vulkan::MEMORY_ACCESS_READ_BIT),
+
+	scanout.fence->wait();
+	memcpy(colors.data(), device.map_host_buffer(*scanout.buffer, Vulkan::MEMORY_ACCESS_READ_BIT),
 	       width * height * sizeof(uint32_t));
-	device.unmap_host_buffer(*readback, Vulkan::MEMORY_ACCESS_READ_BIT);
+	device.unmap_host_buffer(*scanout.buffer, Vulkan::MEMORY_ACCESS_READ_BIT);
 }
 
 void CommandProcessor::FenceExecutor::notify_work_locked(const CoherencyOperation &work)

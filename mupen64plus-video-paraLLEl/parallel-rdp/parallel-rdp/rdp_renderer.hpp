@@ -88,8 +88,9 @@ public:
 
 	bool init_renderer(const RendererOptions &options);
 
-	void draw_flat_primitive(const TriangleSetup &setup);
-	void draw_shaded_primitive(const TriangleSetup &setup, const AttributeSetup &attr);
+	// setup may be mutated to apply various fixups to triangle setup.
+	void draw_flat_primitive(TriangleSetup &setup);
+	void draw_shaded_primitive(TriangleSetup &setup, const AttributeSetup &attr);
 
 	void set_color_framebuffer(uint32_t addr, uint32_t width, FBFormat fmt);
 	void set_depth_framebuffer(uint32_t addr);
@@ -346,6 +347,7 @@ private:
 	void deduce_static_texture_state(unsigned tile, unsigned max_lod_level);
 	void deduce_noise_state();
 	static StaticRasterizationState normalize_static_state(StaticRasterizationState state);
+	void fixup_triangle_setup(TriangleSetup &setup) const;
 
 	struct Caps
 	{
