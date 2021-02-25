@@ -27,11 +27,13 @@
 #include "plugin/plugin.h"
 
 #include "main/main.h"
+#include "main/netplay.h"
 
 #include <stdint.h>
 #include <string.h>
 #include <api/m64p_plugin.h>
 #include <api/callbacks.h>
+#include <mupen64plus-next_common.h>
 
 /* XXX: this is an abuse of the Zilmar Spec normally this value is reserved */
 enum {
@@ -60,15 +62,34 @@ static m64p_error input_plugin_get_input(void* opaque, uint32_t* input_)
     int pak_change_requested = 0;
 
     /* first poll controller */
-    if (input.getKeys) {
-        input.getKeys(cin_compat->control_id, &keys);
+    if (!netplay_is_init())
+    {
+        if (input.getKeys)
+            input.getKeys(cin_compat->control_id, &keys);
+    }
+    else
+    {
+        int netplay_controller = netplay_get_controller(cin_compat->control_id);
+        if (netplay_controller >= 0)
+        {
+            //Here we "trick" the input plugin
+            //by passing it the controller number that is controlling the player during netplay
+            uint8_t plugin = Controls[netplay_controller].Plugin;
+            uint8_t present = Controls[netplay_controller].Present;
+            if (input.getKeys)
+                input.getKeys(netplay_controller, &keys);
+
+            netplay_set_plugin(cin_compat->control_id, Controls[netplay_controller].Plugin);
+            Controls[netplay_controller].Plugin = plugin;
+            Controls[netplay_controller].Present = present;
+            cin_compat->last_input = keys.Value; //disable pak switching for netplay
+        }
     }
 
     /* return an error if controller is not plugged */
     if (!Controls[cin_compat->control_id].Present) {
         return M64ERR_SYSTEM_FAIL;
     }
-
 
     /* has Controls[i].Plugin changed since last call */
     if (cin_compat->last_pak_type != Controls[cin_compat->control_id].Plugin) {
@@ -93,18 +114,25 @@ static m64p_error input_plugin_get_input(void* opaque, uint32_t* input_)
     if (cin_compat->pak_switch_delay > 0 && --cin_compat->pak_switch_delay == 0) {
         cin_compat->main_switch_pak(cin_compat->control_id);
         cin_compat->main_switch_pak = NULL;
+        // If switching to Transfer Pak and if a rom path is set, Switch it
+        if(Controls[cin_compat->control_id].Plugin == PLUGIN_TRANSFER_PAK && retro_transferpak_rom_path)
+        {
+            cin_compat->gb_cart_switch_enabled = 1;
+        }
     }
 
     if (cin_compat->gb_cart_switch_enabled) {
-        /* disconnect current GB cart (if any) immediately after "GB cart switch" button is released */
-        if (is_button_released(keys.Value, cin_compat->last_input, GB_CART_SWITCH_BUTTON)) {
+        // disconnect current GB cart (if any) immediately after "GB cart switch" button is released
+        if (!cin_compat->gb_switch_delay) {
             change_gb_cart(cin_compat->tpk, NULL);
             cin_compat->gb_switch_delay = GB_CART_SWITCH_DELAY;
         }
 
-        /* switch to new GB cart after switch delay has expired */
+        // switch to new GB cart after switch delay has expired
         if (cin_compat->gb_switch_delay > 0 && --cin_compat->gb_switch_delay == 0) {
             main_change_gb_cart(cin_compat->control_id);
+            cin_compat->gb_cart_switch_enabled = 0;
+            cin_compat->gb_switch_delay = 0;
         }
     }
 
@@ -127,6 +155,11 @@ static void input_plugin_rumble_exec(void* opaque, enum rumble_action action)
     int control_id = *(int*)opaque;
 
     if (input.controllerCommand == NULL) {
+        return;
+    }
+
+    //This is for netplay, -1 means there is no local controller controlling this player
+    if (control_id == -1) {
         return;
     }
 
@@ -168,6 +201,11 @@ static void input_plugin_read_controller(void* opaque,
         return;
     }
 
+    //This is for netplay, -1 means there is no local controller controlling this player
+    if (control_id == -1) {
+        return;
+    }
+
     /* UGLY: use negative offsets to get access to non-const tx pointer */
     input.readController(control_id, rx - 1);
 }
@@ -179,6 +217,11 @@ void input_plugin_controller_command(void* opaque,
     int control_id = *(int*)opaque;
 
     if (input.controllerCommand == NULL) {
+        return;
+    }
+
+    //This is for netplay, -1 means there is no local controller controlling this player
+    if (control_id == -1) {
         return;
     }
 

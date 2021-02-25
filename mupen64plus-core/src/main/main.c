@@ -72,11 +72,18 @@
 #include "savestates.h"
 #include "screenshot.h"
 #include "util.h"
+#include "netplay.h"
 
 #include <libretro_private.h>
 #include <libco.h>
 
+#ifdef M64P_NETPLAY
+#undef SDL_GetTicks
+#include <SDL2/SDL.h>
+#endif // M64P_NETPLAY
+
 #ifdef HAVE_LIBNX
+#include <switch.h>
 #include <sys/stat.h>
 #endif
 
@@ -115,6 +122,8 @@ struct cheat_ctx g_cheat_ctx;
  * Initialization and DeInitialization of this variable is done at CoreStartup and CoreShutdown.
  */
 void* g_mem_base = NULL;
+
+uint32_t g_start_address = UINT32_C(0xa4000040);
 
 struct device g_dev;
 
@@ -218,6 +227,9 @@ int main_set_core_defaults(void)
 
 void main_speeddown(int percent)
 {
+    if (netplay_is_init())
+        return;
+
     if (l_SpeedFactor - percent > 10)  /* 10% minimum speed */
     {
         l_SpeedFactor -= percent;
@@ -228,6 +240,9 @@ void main_speeddown(int percent)
 
 void main_speedup(int percent)
 {
+    if (netplay_is_init())
+        return;
+
     if (l_SpeedFactor + percent < 300) /* 300% maximum speed */
     {
         l_SpeedFactor += percent;
@@ -238,6 +253,9 @@ void main_speedup(int percent)
 
 static void main_speedset(int percent)
 {
+    if (netplay_is_init())
+        return;
+
     if (percent < 1 || percent > 1000)
     {
         DebugMessage(M64MSG_WARNING, "Invalid speed setting %i percent", percent);
@@ -253,6 +271,9 @@ static void main_speedset(int percent)
 
 void main_set_fastforward(int enable)
 {
+    if (netplay_is_init())
+        return;
+
     static int ff_state = 0;
     static int SavedSpeedFactor = 100;
 
@@ -276,6 +297,9 @@ void main_set_fastforward(int enable)
 
 static void main_set_speedlimiter(int enable)
 {
+    if (netplay_is_init() && !netplay_lag())
+        return;
+
     l_MainSpeedLimit = enable ? 1 : 0;
 }
 
@@ -287,6 +311,9 @@ static int main_is_paused(void)
 void main_toggle_pause(void)
 {
     if (!g_EmulatorRunning)
+        return;
+
+    if (netplay_is_init())
         return;
 
     if (g_rom_pause)
@@ -341,6 +368,9 @@ void main_state_inc_slot(void)
 
 void main_state_load(const char *filename)
 {
+    if (netplay_is_init())
+        return;
+
     if (filename == NULL) // Save to slot
         savestates_set_job(savestates_job_load, savestates_type_m64p, NULL);
     else
@@ -349,6 +379,9 @@ void main_state_load(const char *filename)
 
 void main_state_save(int format, const char *filename)
 {
+    if (netplay_is_init())
+        return;
+
     if (filename == NULL) // Save to slot
         savestates_set_job(savestates_job_save, savestates_type_m64p, NULL);
     else // Save to file
@@ -590,15 +623,102 @@ void new_frame(void)
     }
 }
 
-#define SAMPLE_COUNT 3
+/*
+#define SAMPLE_COUNT 1
 static void apply_speed_limiter(void)
 {
-    return;
+    static unsigned long totalVIs = 0;
+    static int resetOnce = 0;
+    static int lastSpeedFactor = 100;
+    static unsigned int StartFPSTime = 0;
+    static const double defaultSpeedFactor = 100.0;
+#ifdef HAVE_LIBNX
+    unsigned int CurrentFPSTime = armTicksToNs(armGetSystemTick()) / 1000000;
+#else
+    unsigned int CurrentFPSTime = SDL_GetTicks();
+#endif // HAVE_LIBNX
+    static double sleepTimes[SAMPLE_COUNT];
+    static unsigned int sleepTimesIndex = 0;
+
+    // calculate frame duration based upon ROM setting (50/60hz) and mupen64plus speed adjustment
+    const double VILimitMilliseconds = 1000.0 / g_dev.vi.expected_refresh_rate;
+    const double SpeedFactorMultiple = defaultSpeedFactor/l_SpeedFactor;
+    const double AdjustedLimit = VILimitMilliseconds * SpeedFactorMultiple;
+    
+    //if this is the first time or we are resuming from pause
+    if(StartFPSTime == 0 || !resetOnce || lastSpeedFactor != l_SpeedFactor)
+    {
+       StartFPSTime = CurrentFPSTime;
+       totalVIs = 0;
+       resetOnce = 1;
+    }
+    else
+    {
+        ++totalVIs;
+    }
+
+    lastSpeedFactor = l_SpeedFactor;
+
+#if defined(PROFILE)
+    timed_section_start(TIMED_SECTION_IDLE);
+#endif
+
+#ifdef DBG
+    if(g_DebuggerActive) DebuggerCallback(DEBUG_UI_VI, 0);
+#endif
+
+    double totalElapsedGameTime = AdjustedLimit*totalVIs;
+    double elapsedRealTime = CurrentFPSTime - StartFPSTime;
+    double sleepTime = totalElapsedGameTime - elapsedRealTime;
+
+    //Reset if the sleep needed is an unreasonable value
+    static const double minSleepNeeded = -50;
+    static const double maxSleepNeeded = 50;
+    if(sleepTime < minSleepNeeded || sleepTime > (maxSleepNeeded*SpeedFactorMultiple))
+    {
+       resetOnce = 0;
+    }
+
+    sleepTimes[sleepTimesIndex%SAMPLE_COUNT] = sleepTime;
+    sleepTimesIndex++;
+
+    unsigned int elementsForAverage = sleepTimesIndex > SAMPLE_COUNT ? SAMPLE_COUNT : sleepTimesIndex;
+
+    // compute the average sleepTime
+    double sum = 0;
+    unsigned int index;
+    for(index = 0; index < elementsForAverage; index++)
+    {
+        sum += sleepTimes[index];
+    }
+
+    double averageSleep = sum/elementsForAverage;
+
+    int sleepMs = (int)averageSleep;
+
+    if(sleepMs > 0 && l_MainSpeedLimit)
+    {
+       //DebugMessage(M64MSG_VERBOSE, "    apply_speed_limiter(): Waiting %ims", sleepMs);
+#ifdef HAVE_LIBNX
+       svcSleepThread(sleepMs * 1000000);
+#else
+       SDL_Delay(sleepMs);
+#endif // HAVE_LIBNX
+    }
+
+
+#if defined(PROFILE)
+    timed_section_end(TIMED_SECTION_IDLE);
+#endif
 }
+*/
 
 /* TODO: make a GameShark module and move that there */
 static void gs_apply_cheats(struct cheat_ctx* ctx)
 {
+    if (netplay_is_init())
+        return;
+
     struct r4300_core* r4300 = &g_dev.r4300;
 
     if (g_gs_vi_counter < 60)
@@ -634,8 +754,10 @@ void new_vi(void)
 
     gs_apply_cheats(&g_cheat_ctx);
 
+    // apply_speed_limiter();
     main_check_inputs();
 
+    netplay_check_sync(&g_dev.r4300.cp0);
     retro_return();
 }
 
@@ -681,26 +803,70 @@ void save_storage_file_libretro(void* storage)
 
 static void open_mpk_file(struct file_storage* storage)
 {
-    storage->data = saved_memory.mempack;
-    storage->size = MEMPAK_SIZE * 4;
+    if (!netplay_is_init())
+    {
+        storage->data = saved_memory.mempack;
+        storage->size = MEMPAK_SIZE * 4;
+    }
+    else
+    {
+        // First we save them with what we have
+        storage->data = saved_memory.mempack;
+        storage->size = MEMPAK_SIZE * 4;
+        // If player 1 we send, otherwise we recieve
+        netplay_read_storage("MPK.bin", storage->data, storage->size);
+    }
 }
 
 static void open_fla_file(struct file_storage* storage)
 {
-    storage->data = saved_memory.flashram;
-    storage->size = FLASHRAM_SIZE;
+    if (!netplay_is_init())
+    {
+        storage->data = saved_memory.flashram;
+        storage->size = FLASHRAM_SIZE;
+    }
+    else
+    {
+        // First we save them with what we have
+        storage->data = saved_memory.flashram;
+        storage->size = FLASHRAM_SIZE;
+        // If player 1 we send, otherwise we recieve
+        netplay_read_storage("FLA.bin", storage->data, storage->size);
+    }
 }
 
 static void open_sra_file(struct file_storage* storage)
 {
-    storage->data = saved_memory.sram;
-    storage->size = SRAM_SIZE;
+    if (!netplay_is_init())
+    {
+        storage->data = saved_memory.sram;
+        storage->size = SRAM_SIZE;
+    }
+    else
+    {
+        // First we save them with what we have
+        storage->data = saved_memory.sram;
+        storage->size = SRAM_SIZE;
+        // If player 1 we send, otherwise we recieve
+        netplay_read_storage("SRA.bin", storage->data, storage->size);
+    }
 }
 
 static void open_eep_file(struct file_storage* storage)
 {
-    storage->data = saved_memory.eeprom;
-    storage->size = EEPROM_MAX_SIZE;
+    if (!netplay_is_init())
+    {
+        storage->data = saved_memory.eeprom;
+        storage->size = EEPROM_MAX_SIZE;
+    }
+    else
+    {
+        // First we save them with what we have
+        storage->data = saved_memory.eeprom;
+        storage->size = EEPROM_MAX_SIZE;
+        // If player 1 we send, otherwise we recieve
+        netplay_read_storage("EEP.bin", storage->data, storage->size);
+    }
 }
 
 static void load_dd_rom(uint8_t* rom, size_t* rom_size)
@@ -875,7 +1041,7 @@ static void init_gb_rom(void* opaque, void** storage, const struct storage_backe
 
     /* Ask the core loader for rom filename */
     char* rom_filename = (g_media_loader.get_gb_cart_rom == NULL)
-        ? NULL
+        ? retro_transferpak_rom_path
         : g_media_loader.get_gb_cart_rom(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no cart case */
@@ -885,11 +1051,11 @@ static void init_gb_rom(void* opaque, void** storage, const struct storage_backe
 
     /* Open ROM file */
     if (open_rom_file_storage(&data->rom_fstorage, rom_filename) != file_ok) {
-        DebugMessage(M64MSG_ERROR, "Failed to load ROM file: %s", rom_filename);
+        log_cb(RETRO_LOG_ERROR, "Failed to load ROM file: %s\n", rom_filename);
         goto no_cart;
     }
 
-    DebugMessage(M64MSG_INFO, "GB Loader ROM: %s - %zu",
+    log_cb(RETRO_LOG_INFO, "GB Loader ROM: %s - %zu\n",
             data->rom_fstorage.filename,
             data->rom_fstorage.size);
 
@@ -919,7 +1085,7 @@ static void init_gb_ram(void* opaque, size_t ram_size, void** storage, const str
 
     /* Ask the core loader for ram filename */
     char* ram_filename = (g_media_loader.get_gb_cart_ram == NULL)
-        ? NULL
+        ? retro_transferpak_ram_path
         : g_media_loader.get_gb_cart_ram(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no RAM case
@@ -935,13 +1101,13 @@ static void init_gb_ram(void* opaque, size_t ram_size, void** storage, const str
     int err = open_file_storage(&data->ram_fstorage, ram_size, ram_filename);
     if (err == file_open_error) {
         memset(data->ram_fstorage.data, 0, data->ram_fstorage.size);
-        DebugMessage(M64MSG_INFO, "Providing default RAM content");
+        log_cb(RETRO_LOG_INFO, "Providing default RAM content\n");
     }
     else if (err == file_read_error) {
-        DebugMessage(M64MSG_WARNING, "Size mismatch between expected RAM size and effective file size");
+        log_cb(RETRO_LOG_WARN, "Size mismatch between expected RAM size and effective file size\n");
     }
 
-    DebugMessage(M64MSG_INFO, "GB Loader RAM: %s - %zu",
+    log_cb(RETRO_LOG_INFO, "GB Loader RAM: %s - %zu\n",
             data->ram_fstorage.filename,
             data->ram_fstorage.size);
 
@@ -984,10 +1150,10 @@ void main_change_gb_cart(int control_id)
 
     if (tpk->gb_cart != NULL) {
         const uint8_t* rom_data = gb_cart->irom_storage->data(gb_cart->rom_storage);
-        DebugMessage(M64MSG_INFO, "Inserting GB cart %s into transferpak %u", rom_data + 0x134, control_id);
+        log_cb(RETRO_LOG_INFO, "Inserting GB cart %s into transferpak %u\n", rom_data + 0x134, control_id);
     }
     else {
-        DebugMessage(M64MSG_INFO, "Removing GB cart from transferpak %u", control_id);
+        log_cb(RETRO_LOG_WARN, "Removing GB cart from transferpak %u\n", control_id);
     }
 }
 
@@ -1001,22 +1167,22 @@ extern input_plugin_functions dummy_input;
 extern audio_plugin_functions dummy_audio;
 
 unsigned int r4300_emumode;
-
-uint32_t rdram_size;
-struct file_storage eep;
-struct file_storage fla;
-struct file_storage sra;
-struct file_storage dd_disk;
-size_t dd_rom_size;
+size_t rdram_size;
 
 m64p_error main_run(void)
 {
     size_t i, k;
-    unsigned int count_per_op;
-    unsigned int disable_extra_mem;
-    int si_dma_duration;
-    int no_compiled_jump;
-    int randomize_interrupt;
+    uint32_t count_per_op;
+    uint32_t emumode;
+    uint32_t disable_extra_mem;
+    int32_t si_dma_duration;
+    int32_t no_compiled_jump;
+    int32_t randomize_interrupt;
+    struct file_storage eep;
+    struct file_storage fla;
+    struct file_storage sra;
+    size_t dd_rom_size;
+    struct file_storage dd_disk;
     struct audio_out_backend_interface audio_out_backend_libretro;
 
     int control_ids[GAME_CONTROLLERS_COUNT];
@@ -1030,9 +1196,8 @@ m64p_error main_run(void)
 
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
-
-    randomize_interrupt = 0;
     
+    randomize_interrupt = 0; // We don't want this right now
     count_per_op = CountPerOp;
     disable_extra_mem = ROM_PARAMS.disableextramem;
 
@@ -1045,6 +1210,9 @@ m64p_error main_run(void)
         count_per_op = ROM_PARAMS.countperop;
 
     si_dma_duration = ROM_PARAMS.sidmaduration;
+
+    //During netplay, player 1 is the source of truth for these settings
+    netplay_sync_settings(&count_per_op, &disable_extra_mem, &si_dma_duration, &emumode, &no_compiled_jump);
 
     cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
 
@@ -1122,9 +1290,13 @@ m64p_error main_run(void)
     memset(&l_gb_carts_data, 0, GAME_CONTROLLERS_COUNT*sizeof(*l_gb_carts_data));
     memset(cin_compats, 0, GAME_CONTROLLERS_COUNT*sizeof(*cin_compats));
 
+    netplay_read_registration(cin_compats);
+
     for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
 
-        control_ids[i] = (int)i;
+        //During netplay, we "trick" the input plugin
+        //by replacing the regular control_id with the ID that is controlling the player during netplay
+        control_ids[i] = netplay_is_init() ? netplay_get_controller(i) : (int)i;
 
         /* if input plugin requests RawData let the input plugin do the channel device processing */
         if (Controls[i].RawData) {
@@ -1147,6 +1319,9 @@ m64p_error main_run(void)
             cin_compats[i].cont = &g_dev.controllers[i];
             cin_compats[i].tpk = &g_dev.transferpaks[i];
             cin_compats[i].last_pak_type = Controls[i].Plugin;
+            cin_compats[i].last_input = 0;
+            cin_compats[i].netplay_count = 0;
+            cin_compats[i].event_first = NULL;
 
             l_gb_carts_data[i].control_id = (int)i;
 
@@ -1213,7 +1388,7 @@ m64p_error main_run(void)
                     }
 
                     /* enable GB cart switch */
-                    cin_compats[i].gb_cart_switch_enabled = 1;
+                    // cin_compats[i].gb_cart_switch_enabled = 1;
                 }
                 /* No Pak */
                 else {
@@ -1255,6 +1430,7 @@ m64p_error main_run(void)
                 count_per_op,
                 no_compiled_jump,
                 randomize_interrupt,
+                g_start_address,
                 &g_dev.ai, &audio_out_backend_libretro,
                 si_dma_duration,
                 rdram_size,
@@ -1383,4 +1559,35 @@ void main_stop(void)
     }
 
     stop_device(&g_dev);
+}
+
+m64p_error open_pif(const unsigned char* pifimage, unsigned int size)
+{
+    md5_byte_t pif_ntsc_md5[] = {0x49, 0x21, 0xD5, 0xF2, 0x16, 0x5D, 0xEE, 0x6E, 0x24, 0x96, 0xF4, 0x38, 0x8C, 0x4C, 0x81, 0xDA};
+    md5_byte_t pif_pal_md5[]  = {0x2B, 0x6E, 0xEC, 0x58, 0x6F, 0xAA, 0x43, 0xF3, 0x46, 0x23, 0x33, 0xB8, 0x44, 0x83, 0x45, 0x54};
+
+    uint32_t *dst32 = mem_base_u32(g_mem_base, MM_PIF_MEM);
+    uint32_t *src32 = (uint32_t*) pifimage;
+    md5_state_t state;
+    md5_byte_t digest[16];
+
+    md5_init(&state);
+    md5_append(&state, (const md5_byte_t*)pifimage, size);
+    md5_finish(&state, digest);
+
+    if (memcmp(digest, pif_ntsc_md5, 16) == 0)
+        DebugMessage(M64MSG_INFO, "Using NTSC PIF ROM");
+    else if (memcmp(digest, pif_pal_md5, 16) == 0)
+        DebugMessage(M64MSG_INFO, "Using PAL PIF ROM");
+    else
+    {
+        DebugMessage(M64MSG_ERROR, "Invalid PIF ROM");
+        return M64ERR_INPUT_INVALID;
+    }
+
+    for (int i = 0; i < size; i += 4)
+        *dst32++ = big32(*src32++);
+
+    g_start_address = UINT32_C(0xbfc00000);
+    return M64ERR_SUCCESS;
 }
