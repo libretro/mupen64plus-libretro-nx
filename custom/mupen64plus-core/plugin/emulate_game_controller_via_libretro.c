@@ -405,6 +405,8 @@ EXPORT void CALL inputInitiateControllers(CONTROL_INFO ControlInfo)
           controller[i].control->Plugin = PLUGIN_MEMPAK;
        else if (pad_pak_types[i] == PLUGIN_RAW)
           controller[i].control->Plugin = PLUGIN_RAW;
+       else if (pad_pak_types[i] == PLUGIN_TRANSFER_PAK)
+          controller[i].control->Plugin = PLUGIN_TRANSFER_PAK;
        else
           controller[i].control->Plugin = PLUGIN_NONE;
     }

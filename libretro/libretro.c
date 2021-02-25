@@ -144,10 +144,17 @@ uint32_t screen_pitch = 0;
 
 float retro_screen_aspect = 4.0 / 3.0;
 
-char* retro_dd_path_img;
-char* retro_dd_path_rom;
+// Savestate globals
 bool retro_savestate_complete = false;
 int  retro_savestate_result = 0;
+
+// 64DD globals
+char* retro_dd_path_img = NULL;
+char* retro_dd_path_rom = NULL;
+
+// Other Subsystems
+char* retro_transferpak_rom_path = NULL;
+char* retro_transferpak_ram_path = NULL;
 
 uint32_t bilinearMode = 0;
 uint32_t EnableHybridFilter = 0;
@@ -363,9 +370,38 @@ static void emu_step_initialize(void)
 
 static void* EmuThreadFunction(void* param)
 {
-    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
+    uint32_t netplay_port = 0;
+    uint16_t netplay_player = 1;
 
     initializing = false;
+
+    if (netplay_port)
+    {
+        uint32_t version;
+        if (CoreDoCommand(M64CMD_NETPLAY_GET_VERSION, 0x010000, &version) == M64ERR_SUCCESS)
+        {
+            log_cb(RETRO_LOG_INFO, "Netplay: using core version %u\n", version);
+
+            if (CoreDoCommand(M64CMD_NETPLAY_INIT, netplay_port, "") == M64ERR_SUCCESS)
+                log_cb(RETRO_LOG_INFO, "Netplay: init success\n");
+
+            uint32_t reg_id = 0;
+            while (reg_id == 0)
+            {
+#ifdef __MINGW32__
+                rand_s(&reg_id);
+#else
+                reg_id = rand();
+#endif
+            }
+            reg_id += netplay_player;
+
+            if (CoreDoCommand(M64CMD_NETPLAY_CONTROL_PLAYER, netplay_player, &reg_id) == M64ERR_SUCCESS)
+                log_cb(RETRO_LOG_INFO, "Netplay: registered for player %d\n", netplay_player);
+        }
+    }
+
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     // Runs until CMD_STOP
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
@@ -424,6 +460,10 @@ void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
 bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info)
 {
+    size_t outSize = 0;
+    bool result = false;
+    void* gameBuffer = NULL;
+
     if(retro_dd_path_img)
     {
         free(retro_dd_path_img);
@@ -434,6 +474,18 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     {
         free(retro_dd_path_rom);
         retro_dd_path_rom = NULL;
+    }
+
+    if(retro_transferpak_rom_path)
+    {
+        free(retro_transferpak_rom_path);
+        retro_transferpak_rom_path = NULL;
+    }
+
+    if(retro_transferpak_ram_path)
+    {
+        free(retro_transferpak_ram_path);
+        retro_transferpak_ram_path = NULL;
     }
 
     switch(game_type)
@@ -452,30 +504,87 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             }
             
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            load_file(info[1].path, (void**)&info[1].data, &info[1].size);
-            return retro_load_game(&info[1]);
+            
+            result = load_file(info[1].path, &gameBuffer, &outSize) == file_ok;
+            if(result)
+            {
+               memcpy(&info[1].data, &gameBuffer, sizeof(void*));
+               memcpy(&info[1].size, &outSize, sizeof(size_t));
+               result = result && retro_load_game(&info[1]);
+               
+               if(gameBuffer)
+               {
+                  free(gameBuffer);
+                  gameBuffer = NULL;
+                  // To prevent potential double free // TODO: revisit later
+                  memcpy(&info[1].data, &gameBuffer, sizeof(void*));
+               }
+            }
+            break;
+        case RETRO_GAME_TYPE_TRANSFERPAK:
+            if(num_info == 3)
+            {
+                retro_transferpak_ram_path = strdup(info[0].path);
+                retro_transferpak_rom_path = strdup(info[1].path);
+            } else {
+                return false;
+            }
+            
+            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
+            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[1].path);
+            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[2].path);
+            result = load_file(info[2].path, &gameBuffer, &outSize) == file_ok;
+            if(result)
+            {
+               memcpy(&info[2].data, &gameBuffer, sizeof(void*));
+               memcpy(&info[2].size, &outSize, sizeof(size_t));
+               result = result && retro_load_game(&info[2]);
+               if(gameBuffer)
+               {
+                  free(gameBuffer);
+                  gameBuffer = NULL;
+                  // To prevent potential double free // TODO: revisit later
+                  memcpy(&info[2].data, &gameBuffer, sizeof(void*));
+               }
+            }
+            break;
         default:
             return false;
     }
-    
-	return false;
+
+	 return result;
 }
 
 void retro_set_environment(retro_environment_t cb)
 {
     environ_cb = cb;
 
-    static const struct retro_subsystem_memory_info memory_info[] = {
+    static const struct retro_subsystem_memory_info memory_info_dd[] = {
         { "srm", RETRO_MEMORY_DD },
+        {}
+    };
+
+    static const struct retro_subsystem_memory_info memory_info_transferpak[] = {
+        { "srm", RETRO_MEMORY_TRANSFERPAK },
+        {}
     };
 
     static const struct retro_subsystem_rom_info dd_roms[] = {
-        { "Disk", "ndd", true, false, true, memory_info, 1 },
+        { "Disk", "ndd", true, false, true, memory_info_dd, 1 },
         { "Cartridge", "n64|v64|z64|bin|u1", true, false, true, NULL, 0 },
+        {}
+    };
+
+    static const struct retro_subsystem_rom_info transferpak_roms[] = {
+        { "Gameboy RAM", "ram|sav", true, false, true, NULL, 0 },
+        { "Gameboy ROM", "rom|gb|gbc", true, false, true, NULL, 0 },
+        { "Cartridge", "n64|v64|z64|bin|u1", true, false, true, memory_info_transferpak, 1 },
+        {}
     };
 
     static const struct retro_subsystem_info subsystems[] = {
         { "N64 Disk Drive", "ndd", dd_roms, 2, RETRO_GAME_TYPE_DD },
+        { "N64 Transferpak", "gb", transferpak_roms, 3, RETRO_GAME_TYPE_TRANSFERPAK },
         {}
     };
 
@@ -505,7 +614,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
         parallel_get_geometry(&info->geometry);
 #endif
-    info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
+    info->timing.fps = 60; //vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
 }
 
@@ -591,6 +700,8 @@ void update_controllers()
             p1_pak = PLUGIN_RAW;
         else if (!strcmp(pk1var.value, "memory"))
             p1_pak = PLUGIN_MEMPAK;
+        else if (!strcmp(pk1var.value, "transfer"))
+            p1_pak = PLUGIN_TRANSFER_PAK;
 
         // If controller struct is not initialised yet, set pad_pak_types instead
         // which will be looked at when initialising the controllers.
@@ -608,6 +719,8 @@ void update_controllers()
             p2_pak = PLUGIN_RAW;
         else if (!strcmp(pk2var.value, "memory"))
             p2_pak = PLUGIN_MEMPAK;
+        else if (!strcmp(pk2var.value, "transfer"))
+            p2_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[1].control)
             controller[1].control->Plugin = p2_pak;
@@ -623,6 +736,8 @@ void update_controllers()
             p3_pak = PLUGIN_RAW;
         else if (!strcmp(pk3var.value, "memory"))
             p3_pak = PLUGIN_MEMPAK;
+        else if (!strcmp(pk3var.value, "transfer"))
+            p3_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[2].control)
             controller[2].control->Plugin = p3_pak;
@@ -638,6 +753,8 @@ void update_controllers()
             p4_pak = PLUGIN_RAW;
         else if (!strcmp(pk4var.value, "memory"))
             p4_pak = PLUGIN_MEMPAK;
+        else if (!strcmp(pk4var.value, "transfer"))
+            p4_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[3].control)
             controller[3].control->Plugin = p4_pak;
@@ -1619,6 +1736,45 @@ bool retro_load_game(const struct retro_game_info *game)
             retro_dd_path_img = newPath;
         }
     }
+    
+   if (!retro_transferpak_rom_path)
+   {
+      gamePath = (char *)game->path;
+      newPath = (char *)calloc(1, strlen(gamePath) + 4);
+      strcpy(newPath, gamePath);
+      strcat(newPath, ".gb");
+      FILE *fileTest = fopen(newPath, "r");
+      if (!fileTest)
+      {
+         free(newPath);
+      }
+      else
+      {
+         fclose(fileTest);
+         // Free'd later in Mupen Core
+         retro_transferpak_rom_path = newPath;
+
+         // We have a gb rom!
+         if (!retro_transferpak_ram_path)
+         {
+            gamePath = (char *)game->path;
+            newPath = (char *)calloc(1, strlen(gamePath) + 5);
+            strcpy(newPath, gamePath);
+            strcat(newPath, ".sav");
+            FILE *fileTest = fopen(newPath, "r");
+            if (!fileTest)
+            {
+               free(newPath);
+            }
+            else
+            {
+               fclose(fileTest);
+               // Free'd later in Mupen Core
+               retro_transferpak_ram_path = newPath;
+            }
+         }
+      }
+   }
 
     // Init default vals
     retro_savestate_complete = true;
@@ -1786,6 +1942,7 @@ void *retro_get_memory_data(unsigned type)
     switch (type)
     {
         case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
+        case RETRO_MEMORY_TRANSFERPAK:
         case RETRO_MEMORY_DD:
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
@@ -1796,10 +1953,12 @@ size_t retro_get_memory_size(unsigned type)
 {
     switch (type)
     {
-        case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
+        case RETRO_MEMORY_SYSTEM_RAM:  return RDRAM_MAX_SIZE;
+        case RETRO_MEMORY_TRANSFERPAK:
         case RETRO_MEMORY_DD:
-        case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
+        case RETRO_MEMORY_SAVE_RAM:    return sizeof(saved_memory);
     }
+
     return 0;
 }
 

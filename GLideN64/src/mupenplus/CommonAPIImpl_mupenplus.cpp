@@ -25,7 +25,7 @@ int PluginAPI::InitiateGFX(const GFX_INFO & _gfxInfo)
 		gfx_info_version = _gfxInfo.version;
 	if (gfx_info_version >= 2) {
 		REG.SP_STATUS = _gfxInfo.SP_STATUS_REG;
-		rdram_size = _gfxInfo.RDRAM_SIZE;
+		rdram_size = *_gfxInfo.RDRAM_SIZE;
 	}
 
 	return TRUE;

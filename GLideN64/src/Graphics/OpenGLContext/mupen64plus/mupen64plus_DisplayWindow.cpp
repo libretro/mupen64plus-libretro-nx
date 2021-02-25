@@ -23,6 +23,7 @@ extern "C" {
 #endif
 uint32_t get_retro_screen_width();
 uint32_t get_retro_screen_height();
+#include <main/netplay.h>
 #ifdef __cplusplus
 }
 #endif
@@ -104,7 +105,8 @@ void DisplayWindowMupen64plus::_restart()
 void DisplayWindowMupen64plus::_swapBuffers()
 {
 	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
-	FunctionWrapper::WaitForSwapBuffersQueued();
+	if(!netplay_lag())
+		FunctionWrapper::WaitForSwapBuffersQueued();
 	FunctionWrapper::CoreVideo_GL_SwapBuffers();
 }
 

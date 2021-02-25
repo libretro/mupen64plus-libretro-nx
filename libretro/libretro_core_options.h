@@ -1283,6 +1283,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
+            {"transfer", NULL},
             {NULL, NULL},
         },
         "memory"
@@ -1295,6 +1296,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
+            {"transfer", NULL},
             {NULL, NULL},
         },
         "none"
@@ -1307,6 +1309,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
+            {"transfer", NULL},
             {NULL, NULL},
         },
         "none"
@@ -1319,6 +1322,7 @@ struct retro_core_option_definition option_defs_us[] = {
             {"none", NULL},
             {"memory", NULL},
             {"rumble", NULL},
+            {"transfer", NULL},
             {NULL, NULL},
         },
         "none"

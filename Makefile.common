@@ -97,6 +97,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/plugin/plugin.c \
 	$(CORE_DIR)/src/plugin/dummy_audio.c \
 	$(CORE_DIR)/src/plugin/dummy_input.c
+	#$(CORE_DIR)/src/main/netplay.c
 
 MINIZIP_SOURCES_C = \
 	$(MINIZIP_DIR)/zip.c \
