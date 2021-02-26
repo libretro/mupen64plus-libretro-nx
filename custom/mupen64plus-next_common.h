@@ -124,6 +124,7 @@ extern uint32_t EnableNativeResFactor;
 extern uint32_t EnableN64DepthCompare;
 extern uint32_t EnableThreadedRenderer;
 extern uint32_t EnableCopyAuxToRDRAM;
+extern uint32_t GLideN64IniBehaviour;
 
 // Overscan Options
 extern uint32_t EnableOverscan;

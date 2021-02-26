@@ -823,6 +823,18 @@ struct retro_core_option_definition option_defs_us[] = {
         },
         "False"
     },
+    {
+        CORE_NAME "-GLideN64IniBehaviour",
+        "INI Behaviour",
+        "(GLN64) Specifies INI Settings behaviour. This should really only contain essential options. Changing this can and will break ROM's, if the correct options aren't set manually. Some options may only be set via INI (fbInfoDisabled).",
+        {
+            {"late", "Prioritize INI over Core Options"},
+            {"early", "Prioritize Core Options over INI"},
+            {"disabled", "Disable INI"},
+            {NULL, NULL},
+        },
+        "late"
+    },
 #ifdef HAVE_PARALLEL_RDP
     {
         CORE_NAME "-parallel-rdp-synchronous",

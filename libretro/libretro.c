@@ -191,6 +191,7 @@ uint32_t EnableNativeResFactor = 0;
 uint32_t EnableN64DepthCompare = 0;
 uint32_t EnableThreadedRenderer = 0;
 uint32_t EnableCopyAuxToRDRAM = 0;
+uint32_t GLideN64IniBehaviour = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -1180,6 +1181,18 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           EnableCopyAuxToRDRAM = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-GLideN64IniBehaviour";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "late"))
+             GLideN64IniBehaviour = 0;
+          else if (!strcmp(var.value, "early"))
+             GLideN64IniBehaviour = 1;
+          else if (!strcmp(var.value, "disabled"))
+             GLideN64IniBehaviour = -1;
        }
 
        var.key = CORE_NAME "-cpucore";
