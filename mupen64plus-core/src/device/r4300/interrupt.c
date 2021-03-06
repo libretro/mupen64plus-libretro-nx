@@ -278,10 +278,10 @@ void translate_event_queue(struct cp0* cp0, unsigned int base)
     }
 
     cp0_regs[CP0_COUNT_REG] = base;
-    add_interrupt_event_count(cp0, SPECIAL_INT, ((cp0_regs[CP0_COUNT_REG] & UINT32_C(0x80000000)) ^ UINT32_C(0x80000000)));
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += cp0->count_per_op;
+    cp0_regs[CP0_COUNT_REG] &= 0x1FFFFFFFF;
     *cp0_cycle_count += cp0->count_per_op;
     add_interrupt_event_count(cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
     cp0_regs[CP0_COUNT_REG] -= cp0->count_per_op;
@@ -322,9 +322,6 @@ void load_eventqueue_infos(struct cp0* cp0, const char *buf)
         add_interrupt_event_count(cp0, type, count);
         len += 8;
     }
-
-    remove_event(&cp0->q, SPECIAL_INT);
-    add_interrupt_event_count(cp0, SPECIAL_INT, ((cp0_regs[CP0_COUNT_REG] & UINT32_C(0x80000000)) ^ UINT32_C(0x80000000)));
 }
 
 void init_interrupt(struct cp0* cp0)
@@ -403,7 +400,9 @@ void compare_int_handler(void* opaque)
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += r4300->cp0.count_per_op;
+    cp0_regs[CP0_COUNT_REG] &= 0x1FFFFFFFF;
     *cp0_cycle_count += r4300->cp0.count_per_op;
+
     add_interrupt_event_count(&r4300->cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
     cp0_regs[CP0_COUNT_REG] -= r4300->cp0.count_per_op;
 
@@ -427,7 +426,6 @@ void special_int_handler(void* opaque)
     const uint32_t* cp0_regs = r4300_cp0_regs(cp0);
 
     remove_interrupt_event(cp0);
-    add_interrupt_event_count(cp0, SPECIAL_INT, ((cp0_regs[CP0_COUNT_REG] & UINT32_C(0x80000000)) ^ UINT32_C(0x80000000)));
 }
 
 /* XXX: this should only require r4300 struct not device ? */
