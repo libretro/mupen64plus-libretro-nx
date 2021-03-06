@@ -300,7 +300,7 @@ else ifneq (,$(findstring AMLG,$(platform)))
    else
       GL_LIB := -lGLESv2
    endif
-  
+
    HAVE_NEON = 1
    WITH_DYNAREC=arm
    COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
@@ -409,6 +409,32 @@ else ifneq (,$(findstring ios,$(platform)))
 	endif
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+# tvOS
+else ifneq (,$(findstring tvos,$(platform)))
+   ifeq ($(IOSSDK),)
+      IOSSDK := $(shell xcodebuild -version -sdk appletvos Path)
+   endif
+
+   TARGET := $(TARGET_NAME)_libretro_tvos.dylib
+   DEFINES += -DIOS
+   GLES = 1
+   WITH_DYNAREC=
+   GLES=1
+   GLES3=1
+   FORCE_GLES3=1
+   EGL := 0
+   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+   PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
+   CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
+   HAVE_NEON=0
+   CC         += -mtvos-version-min=9.0
+   CC_AS      += -mtvos-version-min=9.0
+   CXX        += -mtvos-version-min=9.0
+   PLATCFLAGS += -mtvos-version-min=9.0 -Wno-error=implicit-function-declaration
+   CC = clang -arch arm64 -isysroot $(IOSSDK)
+   CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
+   LDFLAGS += -dynamiclib
+   GL_LIB := -framework OpenGLES
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -479,7 +505,7 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T #-static -lmingw32 -lSDL2main -lSDL2 -mwindows -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid  -lsdl2_net -lsdl2 -lws2_32 -lSetupapi -lIPHLPAPI
    GL_LIB := -lopengl32
-   
+
    ifeq ($(MSYSTEM),MINGW64)
       CC ?= x86_64-w64-mingw32-gcc
       CXX ?= x86_64-w64-mingw32-g++
@@ -508,7 +534,7 @@ ifeq ($(STATIC_LINKING), 1)
    ifneq (,$(findstring win,$(platform)))
       TARGET := $(TARGET:.dll=.lib)
    else ifneq ($(platform), $(filter $(platform), osx ios))
-      TARGET := $(TARGET:.dylib=.a)            
+      TARGET := $(TARGET:.dylib=.a)
    else
       TARGET := $(TARGET:.so=.a)
    endif
