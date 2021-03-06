@@ -263,6 +263,10 @@ void remove_event(struct interrupt_queue* q, int type)
     }
 }
 
+
+
+
+
 void translate_event_queue(struct cp0* cp0, unsigned int base)
 {
     struct node* e;
@@ -270,7 +274,6 @@ void translate_event_queue(struct cp0* cp0, unsigned int base)
     int* cp0_cycle_count = r4300_cp0_cycle_count(cp0);
 
     remove_event(&cp0->q, COMPARE_INT);
-    remove_event(&cp0->q, SPECIAL_INT);
 
     for (e = cp0->q.first; e != NULL; e = e->next)
     {
@@ -281,7 +284,7 @@ void translate_event_queue(struct cp0* cp0, unsigned int base)
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += cp0->count_per_op;
-    cp0_regs[CP0_COUNT_REG] &= 0x1FFFFFFFF;
+    cp0_regs[CP0_COUNT_REG] &= 0x7FFFFFFFF;
     *cp0_cycle_count += cp0->count_per_op;
     add_interrupt_event_count(cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
     cp0_regs[CP0_COUNT_REG] -= cp0->count_per_op;
@@ -327,7 +330,6 @@ void load_eventqueue_infos(struct cp0* cp0, const char *buf)
 void init_interrupt(struct cp0* cp0)
 {
     clear_queue(&cp0->q);
-    add_interrupt_event_count(cp0, SPECIAL_INT, 0x80000000);
     add_interrupt_event_count(cp0, COMPARE_INT, 0);
 }
 
@@ -400,7 +402,7 @@ void compare_int_handler(void* opaque)
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += r4300->cp0.count_per_op;
-    cp0_regs[CP0_COUNT_REG] &= 0x1FFFFFFFF;
+    cp0_regs[CP0_COUNT_REG] &= 0x7FFFFFFFF;
     *cp0_cycle_count += r4300->cp0.count_per_op;
 
     add_interrupt_event_count(&r4300->cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
