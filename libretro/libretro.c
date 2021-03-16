@@ -774,12 +774,6 @@ static void update_variables(bool startup)
        bool save_state_in_background = true;
        //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
 
-       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
-       {
-          unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
-          environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
-       }
-
        var.key = CORE_NAME "-rdp-plugin";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -857,6 +851,12 @@ static void update_variables(bool startup)
           }
        }
 
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+       {
+          unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
+          environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
+       }
+       
        var.key = CORE_NAME "-ThreadedRenderer";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
