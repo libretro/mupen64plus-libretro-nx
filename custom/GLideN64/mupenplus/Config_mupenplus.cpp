@@ -110,9 +110,10 @@ void LoadCustomSettings(bool internal)
 						config.texture.bilinearMode = atoi(l.value);
 					else if (!strcmp(l.name, "texture\\maxAnisotropy"))
 						config.texture.maxAnisotropy = atoi(l.value);
-					else if (!strcmp(l.name, "generalEmulation\\enableNativeResTexrects"))
+					else if (!strcmp(l.name, "graphics2D\\enableNativeResTexrects"))
 						config.graphics2D.enableNativeResTexrects = atoi(l.value);
-					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords"))
+					// Inconsistent
+					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords") || !strcmp(l.name, "graphics2D\\correctTexrectCoords"))
 						config.graphics2D.correctTexrectCoords = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\enableLegacyBlending"))
 						config.generalEmulation.enableLegacyBlending = atoi(l.value);
