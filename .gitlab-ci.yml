@@ -22,6 +22,9 @@ include:
   # Windows 32-bit / MinGW
   - project: 'libretro-infrastructure/ci-templates'
     file: '/windows-i686-mingw.yml'
+  # Linux 32-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-i686.yml'
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
@@ -58,6 +61,17 @@ libretro-build-windows-i686-mingw:
     LLE: 1
   extends:
     - .libretro-windows-i686-mingw-make-default
+    - .core-defs
+
+# Linux 32-bit
+libretro-build-linux-i686:
+  variables:
+    HAVE_PARALLEL_RDP: 1
+    HAVE_PARALLEL_RSP: 1
+    HAVE_THR_AL: 1
+    LLE: 1
+  extends:
+    - .libretro-linux-i686-make-default
     - .core-defs
 
 # Linux 64-bit
