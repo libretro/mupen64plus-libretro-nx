@@ -20,6 +20,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifdef __APPLE__
+#include <stdlib.h>
+#endif
+
 #include <semaphore.h>
 #include "api/callbacks.h"
 #include "api/debugger.h"
