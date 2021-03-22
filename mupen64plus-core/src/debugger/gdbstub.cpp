@@ -80,7 +80,7 @@ using VAddr = u64;
 using u128 = std::array<std::uint64_t, 2>;
 static_assert(sizeof(u128) == 16, "u128 must be 128 bits wide");
 
-constexpr int GDB_BUFFER_SIZE = 10000;
+constexpr int GDB_BUFFER_SIZE = 4095;
 
 constexpr char GDB_STUB_START = '$';
 constexpr char GDB_STUB_END = '#';
@@ -118,7 +118,7 @@ constexpr char target_xml[] =
 <!DOCTYPE target SYSTEM "gdb-target.dtd">
 <target version="1.0">
 	<architecture>mips:4300</architecture>
-	<feature name="org.gnu.gdb.mips.cpu" idatitle="General registers">
+    <feature name="org.gnu.gdb.mips.cpu" idatitle="General registers">
 	  <reg name="zero" bitsize="64" type="data_ptr" regnum="0"/>
 	  <reg name="at" bitsize="64" type="data_ptr"/>
 	  <reg name="v0" bitsize="64" type="data_ptr"/>
@@ -151,12 +151,10 @@ constexpr char target_xml[] =
 	  <reg name="sp" bitsize="64" type="stack_ptr"/>
 	  <reg name="fp" bitsize="64" type="data_ptr"/>
 	  <reg name="ra" bitsize="64" type="data_ptr"/>
-
 	  <reg name="lo" bitsize="64" regnum="33"/>
 	  <reg name="hi" bitsize="64" regnum="34"/>
 	  <reg name="pc" bitsize="64" regnum="37" type="code_ptr"/>
 	</feature>
-
 	<feature name="org.gnu.gdb.mips.fpu">
 		<reg name="f0" bitsize="64" type="ieee_double" regnum="38"/>
 		<reg name="f1" bitsize="64" type="ieee_double"/>
@@ -1160,11 +1158,12 @@ void HandlePacket() {
                 if(!strcmp((char*)command_buffer, "vCont;s:1"))
                 {
                     Step();
+                    return;
                 }else if(strstr((char*)command_buffer, "vCont;c"))
                 {
                     Continue();
+                    return;
                 }
-                return;
             }
             
         default:
