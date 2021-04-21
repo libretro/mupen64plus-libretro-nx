@@ -54,7 +54,9 @@ typedef void (APIENTRYP PFNGLDELETETEXTURESPROC) (GLsizei n, const GLuint *textu
 typedef void (APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
 typedef void (APIENTRYP PFNGLCOPYTEXIMAGE2DPROC) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 #endif
-
+#ifdef HAVE_ANGLE
+typedef void (APIENTRYP PFNGLTEXTURESTORAGE2DMULTISAMPLEEXTPROC)(GLuint texture, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+#endif
 extern PFNGLBLENDFUNCPROC ptrBlendFunc;
 extern PFNGLBLENDFUNCSEPARATEPROC ptrBlendFuncSeparate;
 extern PFNGLPIXELSTOREIPROC ptrPixelStorei;
