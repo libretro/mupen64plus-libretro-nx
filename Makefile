@@ -1,6 +1,7 @@
 DEBUG = 0
 FORCE_GLES ?= 0
 FORCE_GLES3 ?= 0
+HAVE_ANGLE?=0
 LLE ?= 0
 HAVE_PARALLEL_RSP ?= 0
 HAVE_PARALLEL_RDP ?= 0
@@ -431,12 +432,17 @@ else ifeq ($(platform), emscripten)
 # Windows
 else
    TARGET := $(TARGET_NAME)_libretro.dll
-   LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32 -Wl,-Map,$(notdir $(TARGET).map)
-   GLES3 = 1
-   GL_LIB = -L$(ROOT_DIR)/../angle-bootstraps/Binaries/lib/UWP -lGLESv2
-   EGL_LIB = -L$(ROOT_DIR)/../angle-bootstraps/Binaries/lib/UWP -lEGL
-   COREFLAGS += -g 
-
+   LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T #-static -lmingw32 -lSDL2main -lSDL2 -mwindows -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid  -lsdl2_net -lsdl2 -lws2_32 -lSetupapi -lIPHLPAPI
+   ifeq ($(HAVE_ANGLE),1)
+      GLES3 = 1
+      INCFLAGS += -I$(ROOT_DIR)/../ANGLE/include
+      GL_LIB = -L$(ROOT_DIR)/../ANGLE -lGLESv2
+      EGL_LIB = -L$(ROOT_DIR)/../ANGLE -lEGL
+      COREFLAGS += -g 
+   else
+      GL_LIB := -lopengl32
+   endif
+   
    ifeq ($(MSYSTEM),MINGW64)
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
@@ -452,7 +458,16 @@ else
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
 
+<<<<<<< HEAD
    NM = $(CC)-nm
+=======
+   ifeq ($(HAVE_ANGLE),0)
+   	HAVE_PARALLEL_RSP = 1
+   	HAVE_PARALLEL_RDP = 1
+   endif
+   HAVE_THR_AL = 1
+   LLE = 1
+>>>>>>> 82c7128 (Adding ANGLE support for the upstream Mupen Libretro Core. Currently primary used for XBox One/Series S/X.)
    COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
 endif
@@ -477,7 +492,15 @@ ifeq ($(LLE), 1)
    COREFLAGS += -DHAVE_LLE
 endif
 
+<<<<<<< HEAD
 COREFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI -DHAVE_ANGLE
+=======
+COREFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
+   ifeq ($(HAVE_ANGLE),1)
+      COREFLAGS += -DHAVE_ANGLE
+
+   endif
+>>>>>>> 82c7128 (Adding ANGLE support for the upstream Mupen Libretro Core. Currently primary used for XBox One/Series S/X.)
 
 ifeq ($(DEBUG), 1)
 	CPUOPTS += -O3 -g
