@@ -38,5 +38,14 @@ A special thanks to:
 - themaister for parallel-rsp and parallel-rdp (including the Vulkan integration)
 - Everyone in the libretro Team
 
+#### How to build with ANGLE
+
+Build:
+make HAVE_ANGLE=1
+
+Requirements:
+Create an folder named "ANGLE" in the parent directory of the mupen source.
+Place libEGL.dll and libGLESv2.dll in that folder.(can be obtained from retroarch itself).
+Copy include folder from ANGLE source into the ANGLE folder.
 
 \- m4xw
