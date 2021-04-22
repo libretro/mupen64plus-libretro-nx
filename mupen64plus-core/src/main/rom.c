@@ -431,10 +431,10 @@ void romdatabase_open(void)
     g_romdatabase.list = NULL;
 
     next_search = &g_romdatabase.list;
-    
-    char *lines = strtok(inifile, "\n");
+
+    char* lines = strtok(inifile, "\n");
     /* Parse ROM database file */
-    while(lines != NULL)
+    while (lines != NULL)
     {
         char *line = lines;
         ini_line l = ini_parse_line(&line);
@@ -676,7 +676,10 @@ void romdatabase_open(void)
         default:
             break;
         }
+<<<<<<< HEAD
         
+=======
+>>>>>>> 6667cfb (Adressed the issues m4xw pointed out by adding the fixes from the angle_testing branche of the official repo:)
         lines = strtok(NULL, "\n");
     }
 
