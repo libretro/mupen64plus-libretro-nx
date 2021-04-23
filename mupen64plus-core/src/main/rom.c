@@ -676,14 +676,11 @@ void romdatabase_open(void)
         default:
             break;
         }
-<<<<<<< HEAD
         
-=======
->>>>>>> 6667cfb (Adressed the issues m4xw pointed out by adding the fixes from the angle_testing branche of the official repo:)
         lines = strtok(NULL, "\n");
     }
-
-
+    
+    
     romdatabase_resolve();
 }
 
