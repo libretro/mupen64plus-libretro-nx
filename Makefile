@@ -368,7 +368,7 @@ else ifneq (,$(findstring osx,$(platform)))
    endif
 
    COREFLAGS += -DOS_MAC_OS_X
-   ASFLAGS = -f elf -d ELF_TYPE
+   ASFLAGS = -f macho64 -d LEADING_UNDERSCORE
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(IOSSDK),)
