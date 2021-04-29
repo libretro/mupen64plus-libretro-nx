@@ -1,7 +1,11 @@
 #pragma once
 #include <memory>
 
+#if defined(IOS) || defined(__APPLE__)
 #include <stdlib.h>
+#else
+#include <malloc.h>
+#endif // IOS || __APPLE__
 
 struct CachedTexture;
 
