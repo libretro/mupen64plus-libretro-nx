@@ -2500,7 +2500,11 @@ void rglProgramBinary(GLuint program,
 
 void rglTexImage2DMultisample( 	GLenum target,
   	GLsizei samples,
+#ifdef __APPLE__
   	GLint internalformat,
+#else
+	GLenum internalformat,
+#endif
   	GLsizei width,
   	GLsizei height,
   	GLboolean fixedsamplelocations)
