@@ -369,6 +369,7 @@ else ifneq (,$(findstring osx,$(platform)))
 
    COREFLAGS += -DOS_MAC_OS_X
    ASFLAGS = -f macho64 -d LEADING_UNDERSCORE
+   HAVE_THR_AL = 1
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(IOSSDK),)
