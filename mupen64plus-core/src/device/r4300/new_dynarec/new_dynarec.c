@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/types.h>
 
 #if defined(__APPLE__)
-#include <sys/types.h> // needed for u_int, u_char, etc
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
