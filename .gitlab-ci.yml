@@ -31,6 +31,9 @@ include:
   # Android    
   - project: 'libretro-infrastructure/ci-templates'
     file: '/android-jni.yml'
+  # iOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/ios-arm64.yml'
   # Nintendo Switch - libnx
   - project: 'libretro-infrastructure/ci-templates'
     file: '/libnx-static.yml'
@@ -127,6 +130,16 @@ android-x86_64-gles2:
 android-x86_64-gles3:
   extends:
     - .libretro-android-jni-x86_64
+    - .core-defs-gles3
+
+ios-arm64-gles3:
+  variables:
+    HAVE_DYNAREC: ""
+    EGL: 0
+    FORCE_GLES3: 1
+    HAVE_NEON: 0
+  extends:
+    - .libretro-ios-arm64-make-default
     - .core-defs-gles3
 
 # Nintendo Switch - libnx
