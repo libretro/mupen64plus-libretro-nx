@@ -56,6 +56,13 @@
 #include <unzip.h>
 #include <zip.h>
 
+#ifdef __LIBRETRO__
+#include <mupen64plus-next_common.h>
+static unsigned char *savestateData = NULL;
+#undef GAME_CONTROLLERS_COUNT
+#define GAME_CONTROLLERS_COUNT 1
+#endif // __LIBRETRO__
+
 enum { GB_CART_FINGERPRINT_SIZE = 0x1c };
 enum { GB_CART_FINGERPRINT_OFFSET = 0x134 };
 
@@ -178,9 +185,9 @@ void savestates_set_job(savestates_job j, savestates_type t, const char *fn)
     if (fn != NULL)
         fname = strdup(fn);
 #else
-    pthread_mutex_lock(&savestates_lock);
+    //pthread_mutex_lock(&savestates_lock);
     fname = (char*)fn;
-    pthread_mutex_unlock(&savestates_lock);
+    //pthread_mutex_unlock(&savestates_lock);
 #endif // __LIBRETRO__
 }
 
@@ -204,22 +211,22 @@ static void savestates_clear_job(void)
 #define PUTDATA(buff, type, value) \
     do { type x = value; PUTARRAY(&x, buff, type, 1); } while(0)
 
+char* queue;
+unsigned char* using_tlb_data;
+unsigned char* data_0001_0200; // 4k for extra state from v1.2
 #ifndef __LIBRETRO__
 int savestates_load_m64p(struct device* dev, char *filepath)
 #else
 int savestates_load_m64p(struct device* dev, const void *data)
 #endif
 {
-    unsigned char header[44];
+    unsigned char header;
     unsigned int version;
     int i;
     uint32_t FCR31;
 
     size_t savestateSize;
-    unsigned char *savestateData, *curr;
-    char queue[1024];
-    unsigned char using_tlb_data[4];
-    unsigned char data_0001_0200[4096]; // 4k for extra state from v1.2
+    unsigned char *curr;
     uint64_t flashram_status;
 
     uint32_t* cp0_regs = r4300_cp0_regs(&dev->r4300.cp0);
@@ -227,7 +234,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifdef USE_SDL
     SDL_LockMutex(savestates_lock);
 #else
-    pthread_mutex_lock(&savestates_lock);
+    //pthread_mutex_lock(&savestates_lock);
 #endif
 
 #ifndef __LIBRETRO__
@@ -264,8 +271,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
         return 0;
     }
 #else
-    memcpy(header, data, 44);
-    curr = header;
+    header = data;
+    curr = data;
     if(strncmp((char *)curr, savestate_magic, 8)!=0)
     {
         main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Savestate is not a valid Mupen64plus savestate.");
@@ -288,7 +295,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifdef USE_SDL
         SDL_UnlockMutex(savestates_lock);
 #else
-        pthread_mutex_unlock(&savestates_lock);
+        //pthread_mutex_unlock(&savestates_lock);
 #endif
         return 0;
     }
@@ -302,7 +309,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifdef USE_SDL
         SDL_UnlockMutex(savestates_lock);
 #else
-        pthread_mutex_unlock(&savestates_lock);
+        //pthread_mutex_unlock(&savestates_lock);
 #endif
         return 0;
     }
@@ -310,25 +317,12 @@ int savestates_load_m64p(struct device* dev, const void *data)
 
     /* Read the rest of the savestate */
     savestateSize = 16788244;
-    savestateData = curr = (unsigned char *)malloc(savestateSize);
-    if (savestateData == NULL)
-    {
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to load state.");
-#ifndef __LIBRETRO__
-        gzclose(f);
-#endif
-#ifdef USE_SDL
-        SDL_UnlockMutex(savestates_lock);
-#else
-        pthread_mutex_unlock(&savestates_lock);
-#endif
-        return 0;
-    }
+
     if (version == 0x00010000) /* original savestate version */
     {
 #ifndef __LIBRETRO__
         if (gzread(f, savestateData, savestateSize) != savestateSize ||
-            (gzread(f, queue, sizeof(queue)) % 4) != 0)
+            (gzread(f, queue, 1024) % 4) != 0)
         {
             main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.0 data from %s", filepath);
             free(savestateData);
@@ -339,16 +333,16 @@ int savestates_load_m64p(struct device* dev, const void *data)
             return 0;
         }
 #else
-        memcpy(savestateData, data + 44, savestateSize);
-        memcpy(queue, data + 44 + savestateSize, sizeof(queue));
+        savestateData = data + 44;
+        queue =  data + 44 + savestateSize;
 #endif
     }
     else if (version == 0x00010100) // saves entire eventqueue plus 4-byte using_tlb flags
     {
 #ifndef __LIBRETRO__
         if (gzread(f, savestateData, savestateSize) != savestateSize ||
-            gzread(f, queue, sizeof(queue)) != sizeof(queue) ||
-            gzread(f, using_tlb_data, sizeof(using_tlb_data)) != sizeof(using_tlb_data))
+            gzread(f, queue, 1024) != 1024 ||
+            gzread(f, using_tlb_data, 4) != 4)
         {
             main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.1 data from %s", filepath);
             free(savestateData);
@@ -359,18 +353,18 @@ int savestates_load_m64p(struct device* dev, const void *data)
             return 0;
         }
 #else
-        memcpy(savestateData, data + 44, savestateSize);
-        memcpy(queue, data + 44 + savestateSize, sizeof(queue));
-        memcpy(using_tlb_data, data + 44 + savestateSize + sizeof(queue), sizeof(using_tlb_data));
+        savestateData = data + 44;
+        queue =  data + 44 + savestateSize;
+        using_tlb_data = data + 44 + savestateSize + 1024;
 #endif
     }
     else // version >= 0x00010200  saves entire eventqueue, 4-byte using_tlb flags and extra state
     {
 #ifndef __LIBRETRO__
         if (gzread(f, savestateData, savestateSize) != (int)savestateSize ||
-            gzread(f, queue, sizeof(queue)) != sizeof(queue) ||
-            gzread(f, using_tlb_data, sizeof(using_tlb_data)) != sizeof(using_tlb_data) ||
-            gzread(f, data_0001_0200, sizeof(data_0001_0200)) != sizeof(data_0001_0200))
+            gzread(f, queue, 1024) != 1024 ||
+            gzread(f, using_tlb_data, 4) != 4 ||
+            gzread(f, data_0001_0200, 4096) != 4096)
         {
             main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Could not read Mupen64Plus savestate 1.2+ data from %s", filepath);
             free(savestateData);
@@ -381,10 +375,10 @@ int savestates_load_m64p(struct device* dev, const void *data)
             return 0;
         }
 #else
-        memcpy(savestateData, data + 44, savestateSize);
-        memcpy(queue, data + 44 + savestateSize, sizeof(queue));
-        memcpy(using_tlb_data, data + 44 + savestateSize + sizeof(queue), sizeof(using_tlb_data));
-        memcpy(data_0001_0200, data + 44 + savestateSize + sizeof(queue) + sizeof(using_tlb_data), sizeof(data_0001_0200));
+        savestateData = data + 44;
+        queue =  data + 44 + savestateSize;
+        using_tlb_data = data + 44 + savestateSize + 1024;
+        data_0001_0200 = data + 44 + savestateSize + 1024 + 4;
 #endif
     }
 
@@ -394,7 +388,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #ifdef USE_SDL
     SDL_UnlockMutex(savestates_lock);
 #else
-    pthread_mutex_unlock(&savestates_lock);
+    //pthread_mutex_unlock(&savestates_lock);
 #endif
 
     // Parse savestate
@@ -512,8 +506,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->dp.dps_regs[DPS_BUFTEST_ADDR_REG] = GETDATA(curr, uint32_t);
     dev->dp.dps_regs[DPS_BUFTEST_DATA_REG] = GETDATA(curr, uint32_t);
 
-    COPYARRAY(dev->rdram.dram, curr, uint32_t, RDRAM_MAX_SIZE/4);
-    COPYARRAY(dev->sp.mem, curr, uint32_t, SP_MEM_SIZE/4);
+    COPYARRAY(dev->rdram.dram, curr, uint64_t, RDRAM_MAX_SIZE/8);
+    COPYARRAY(dev->sp.mem, curr, uint64_t, SP_MEM_SIZE/8);
     COPYARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);
 
     dev->cart.use_flashram = GETDATA(curr, int32_t);
@@ -1017,18 +1011,24 @@ int savestates_load_m64p(struct device* dev, const void *data)
     }
 
     /* reset fb state */
-    poweron_fb(&dev->dp.fb);
+    //poweron_fb(&dev->dp.fb);
 
     dev->sp.rsp_task_locked = 0;
     dev->r4300.cp0.interrupt_unsafe_state = 0;
 
     *r4300_cp0_last_addr(&dev->r4300.cp0) = *r4300_pc(&dev->r4300);
 
+#ifdef __LIBRETRO__
+    if(data == DeferedLoadState && DeferedLoadStateSize)
+    {
+        free(DeferedLoadState);
+        DeferedLoadState = NULL;
+        DeferedLoadStateSize = 0;
+    }
+#else
     free(savestateData);
-
-#ifndef __LIBRETRO__
     main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "State loaded from: %s", namefrompath(filepath));
-#endif
+#endif // __LIBRETRO__
     return 1;
 }
 
@@ -1568,7 +1568,7 @@ static void savestates_save_m64p_work(struct work_struct *work)
 #ifdef USE_SDL
     SDL_LockMutex(savestates_lock);
 #else
-    pthread_mutex_lock(&savestates_lock);
+    //pthread_mutex_lock(&savestates_lock);
 #endif
 
 #ifndef __LIBRETRO__
@@ -1596,9 +1596,9 @@ static void savestates_save_m64p_work(struct work_struct *work)
     gzclose(f);
     main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Saved state to: %s", namefrompath(save->filepath));
 #else
-    memcpy(save->mempointer, save->data, save->size);
+    //memcpy(save->mempointer, save->data, save->size);
 #endif
-    free(save->data);
+    //free(save->data);
 #ifndef __LIBRETRO__
     free(save->filepath);
 #endif
@@ -1607,10 +1607,11 @@ static void savestates_save_m64p_work(struct work_struct *work)
 #ifdef USE_SDL
     SDL_UnlockMutex(savestates_lock);
 #else
-    pthread_mutex_unlock(&savestates_lock);
+    //pthread_mutex_unlock(&savestates_lock);
 #endif
 }
 
+    struct savestate_work *save;
 #ifndef __LIBRETRO__
 int savestates_save_m64p(const struct device* dev, char *filepath)
 #else
@@ -1619,20 +1620,16 @@ int savestates_save_m64p(const struct device* dev, void *data)
 {
     unsigned char outbuf[4];
     int i;
+    char queue[1024];
     uint64_t flashram_status;
 
-    char queue[1024];
-
-    struct savestate_work *save;
     char *curr;
 
     /* OK to cast away const qualifier */
     const uint32_t* cp0_regs = r4300_cp0_regs((struct cp0*)&dev->r4300.cp0);
 
-    save = malloc(sizeof(*save));
     if (!save) {
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to save state.");
-        return 0;
+        save = malloc(sizeof(*save));
     }
 
 #ifndef __LIBRETRO__
@@ -1647,17 +1644,11 @@ int savestates_save_m64p(const struct device* dev, void *data)
     save_eventqueue_infos(&dev->r4300.cp0, queue);
 
     // Allocate memory for the save state data
-    save->size = 16788288 + sizeof(queue) + 4 + 4096;
-    save->data = curr = malloc(save->size);
-    if (save->data == NULL)
-    {
-        free(save->filepath);
-        free(save);
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Insufficient memory to save state.");
-        return 0;
-    }
+    save->size = 16788288 + 1024 + 4 + 4096;
+    
+    curr = data;
 
-    memset(save->data, 0, save->size);
+    //memset(save->data, 0, save->size);
 
     // Write the save state data to memory
     PUTARRAY(savestate_magic, curr, unsigned char, 8);
@@ -1810,8 +1801,8 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, dev->dp.dps_regs[DPS_BUFTEST_ADDR_REG]);
     PUTDATA(curr, uint32_t, dev->dp.dps_regs[DPS_BUFTEST_DATA_REG]);
 
-    PUTARRAY(dev->rdram.dram, curr, uint32_t, RDRAM_MAX_SIZE/4);
-    PUTARRAY(dev->sp.mem, curr, uint32_t, SP_MEM_SIZE/4);
+    PUTARRAY(dev->rdram.dram, curr, uint64_t, RDRAM_MAX_SIZE/8);
+    PUTARRAY(dev->sp.mem, curr, uint64_t, SP_MEM_SIZE/8);
     PUTARRAY(dev->pif.ram, curr, uint8_t, PIF_RAM_SIZE);
 
     PUTDATA(curr, int32_t, dev->cart.use_flashram);
@@ -1868,8 +1859,8 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, 0); /* here there used to be next_vi */
     PUTDATA(curr, uint32_t, dev->vi.field);
 
-    to_little_endian_buffer(queue, 4, sizeof(queue)/4);
-    PUTARRAY(queue, curr, char, sizeof(queue));
+    to_little_endian_buffer(queue, 4, 1024/4);
+    PUTARRAY(queue, curr, char, 1024);
 
 #ifdef NEW_DYNAREC
     PUTDATA(curr, uint32_t, using_tlb);
@@ -2009,8 +2000,8 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, dev->sp.fifo[1].memaddr);
     PUTDATA(curr, uint32_t, dev->sp.fifo[1].dramaddr);
 
-    init_work(&save->work, savestates_save_m64p_work);
-    queue_work(&save->work);
+    //init_work(&save->work, savestates_save_m64p_work);
+    //queue_work(&save->work);
 
     return 1;
 }
@@ -2317,4 +2308,9 @@ void savestates_deinit(void)
     SDL_DestroyMutex(savestates_lock);
 #endif
     savestates_clear_job();
+    if(savestateData)
+    {
+        //free(savestateData);
+        savestateData = NULL;
+    }
 }

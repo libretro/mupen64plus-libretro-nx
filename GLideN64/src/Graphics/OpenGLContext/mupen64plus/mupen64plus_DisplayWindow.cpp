@@ -105,7 +105,7 @@ void DisplayWindowMupen64plus::_restart()
 void DisplayWindowMupen64plus::_swapBuffers()
 {
 	//Don't let the command queue grow too big buy waiting on no more swap buffers being queued
-	if(!netplay_lag())
+	if(!netplay_lag() && retro_savestate_complete)
 		FunctionWrapper::WaitForSwapBuffersQueued();
 	FunctionWrapper::CoreVideo_GL_SwapBuffers();
 }

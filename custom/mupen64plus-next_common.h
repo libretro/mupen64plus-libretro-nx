@@ -133,6 +133,11 @@ extern uint32_t OverscanLeft;
 extern uint32_t OverscanRight;
 extern uint32_t OverscanBottom;
 
+// Misc globals
+extern uint32_t DevicesInitialized;
+extern void*    DeferedLoadState;
+extern size_t   DeferedLoadStateSize;
+
 // Others
 #define RETRO_MEMORY_DD 0x100 + 1
 #define RETRO_GAME_TYPE_DD 1

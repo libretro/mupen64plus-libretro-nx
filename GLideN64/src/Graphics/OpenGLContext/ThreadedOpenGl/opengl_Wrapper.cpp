@@ -90,6 +90,7 @@ namespace opengl {
 			}
 			if(!retro_savestate_complete)
 			{				
+				m_condition.notify_all();
 				// Yield to frontend
 				co_switch(retro_thread);
 			}

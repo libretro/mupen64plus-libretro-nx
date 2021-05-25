@@ -207,6 +207,10 @@ uint32_t CountPerScanlineOverride = 0;
 uint32_t ForceDisableExtraMem = 0;
 uint32_t IgnoreTLBExceptions = 0;
 
+uint32_t DevicesInitialized = 0;
+void*    DeferedLoadState = NULL;
+size_t   DeferedLoadStateSize = 0;
+
 extern struct device g_dev;
 extern unsigned int r4300_emumode;
 extern struct cheat_ctx g_cheat_ctx;
@@ -1732,6 +1736,10 @@ bool retro_load_game(const struct retro_game_info *game)
     char* gamePath;
     char* newPath;
 
+    DevicesInitialized = 0;
+    DeferedLoadState = NULL;
+    DeferedLoadStateSize = 0;
+
     // Workaround for broken subsystem on static platforms
     if(!retro_dd_path_img)
     {
@@ -1849,7 +1857,7 @@ bool retro_load_game(const struct retro_game_info *game)
     }
     
     load_game_successful = true;
-
+    
     return true;
 }
 
@@ -1887,6 +1895,31 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
+    if (libretro_swap_buffer)
+    {
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
+       {
+          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+       }
+#ifdef HAVE_THR_AL
+       else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
+       {
+          video_cb(prescale, retro_screen_width, retro_screen_height, screen_pitch);
+       }
+#endif // HAVE_THR_AL
+#ifdef HAVE_PARALLEL_RDP
+       else if (current_rdp_type == RDP_PLUGIN_PARALLEL)
+       {
+           parallel_profile_video_refresh_begin();
+           video_cb(parallel_frame_is_valid() ? RETRO_HW_FRAME_BUFFER_VALID : NULL,
+                   parallel_frame_width(), parallel_frame_height(), 0);
+           parallel_profile_video_refresh_end();
+       }
+#endif
+    libretro_swap_buffer = false;
+    return;
+    }
+   
     libretro_swap_buffer = false;
     static bool updated = false;
 
@@ -1921,6 +1954,7 @@ void retro_run (void)
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
        {
           video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+          libretro_swap_buffer = false;
        }
 #ifdef HAVE_THR_AL
        else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
@@ -1943,6 +1977,7 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
+    libretro_swap_buffer = false;
 }
 
 void retro_reset (void)
@@ -1988,60 +2023,46 @@ bool retro_serialize(void *data, size_t size)
    retro_savestate_complete = false;
    retro_savestate_result = 0;
 
-   savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+   //savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+   savestates_save_m64p(&g_dev, data);
 
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      if(EnableThreadedRenderer)
-      {
-         // Ensure the Audio driver is on (f.e. menu sounds off)
-         environ_clear_thread_waits_cb(1, NULL);
-      }
-      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-   }
-
-   while (!retro_savestate_complete)
-   {
-      co_switch(game_thread);
-   }
-
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-   }
-
-   return !!retro_savestate_result;
+   return true;
 }
 
 bool retro_unserialize(const void *data, size_t size)
 {
+   if(!DevicesInitialized)
+   {
+      if(DeferedLoadState)
+      {
+         free(DeferedLoadState);
+         DeferedLoadState = NULL;
+         DeferedLoadStateSize = 0;
+      }
+
+      DeferedLoadState = malloc(size);
+      memcpy(DeferedLoadState, data, size);
+      DeferedLoadStateSize = size;
+
+      savestates_load_m64p(&g_dev, data);
+
+      return true;
+   } else {
+      if(DeferedLoadState)
+      {
+         free(DeferedLoadState);
+         DeferedLoadState = NULL;
+         DeferedLoadStateSize = 0;
+      }
+   }
+
    if (initializing)
       return false;
 
    retro_savestate_complete = false;
    retro_savestate_result = 0;
 
-   savestates_set_job(savestates_job_load, savestates_type_m64p, data);
-
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      if(EnableThreadedRenderer)
-      {
-         // Ensure the Audio driver is on (f.e. menu sounds off)
-         environ_clear_thread_waits_cb(1, NULL);
-      }
-      glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-   }
-
-   while (!retro_savestate_complete)
-   {
-      co_switch(game_thread);
-   }
-
-   if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-   }
+   savestates_load_m64p(&g_dev, data);
 
    return true;
 }

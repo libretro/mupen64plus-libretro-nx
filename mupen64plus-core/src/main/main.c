@@ -91,6 +91,8 @@
 #include <file/file_path.h>
 #include <libretro_memory.h>
 #include <mupen64plus-next_common.h>
+
+extern cothread_t retro_thread;
 #endif // __LIBRETRO__
 
 #ifdef DBG
@@ -499,7 +501,7 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
             height = val & 0xffff;
             // then call the video plugin.  if the video plugin supports resizing, it will resize its viewport and call
             // VidExt_ResizeWindow to update the window manager handling our opengl output window
-            gfx.resizeVideoOutput(width, height);
+            //gfx.resizeVideoOutput(width, height);
             return M64ERR_SUCCESS;
         }
         case M64CORE_AUDIO_VOLUME:
@@ -610,6 +612,8 @@ static void video_plugin_render_callback(int bScreenRedrawn)
 
 void new_frame(void)
 {
+    retro_return();
+    
     if (g_FrameCallback != NULL)
         (*g_FrameCallback)(l_CurrentFrame);
 
@@ -758,7 +762,6 @@ void new_vi(void)
     main_check_inputs();
 
     netplay_check_sync(&g_dev.r4300.cp0);
-    retro_return();
 }
 
 static void main_switch_pak(int control_id)
@@ -1447,6 +1450,8 @@ m64p_error main_run(void)
                 dd_rom_size,
                 &dd_disk, dd_idisk);
 
+    DevicesInitialized = 1;
+    
     // Attach rom to plugins
     if (!gfx.romOpen())
     {
@@ -1505,8 +1510,6 @@ m64p_error main_run(void)
      * Actually never returns.
      * Jump back to frontend for deinit
      */
-    extern cothread_t retro_thread;
-
     // For GLN64 Threaded GL we just sanely return, exit sync is handled elsewhere
     if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {

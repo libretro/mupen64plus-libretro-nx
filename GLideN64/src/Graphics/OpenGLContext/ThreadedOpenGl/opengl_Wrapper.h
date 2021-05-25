@@ -54,7 +54,7 @@ namespace opengl {
 		static std::chrono::time_point<std::chrono::high_resolution_clock> m_lastProfilingOutput;
 #endif
 
-		static const int MAX_SWAP = 2;
+		static const int MAX_SWAP = 1;
 
 	public:
 		static void setThreadedMode(u32 _threaded);
