@@ -465,8 +465,7 @@ else
    	HAVE_PARALLEL_RSP = 1
    	HAVE_PARALLEL_RDP = 1
    endif
-   HAVE_THR_AL = 1
-   LLE = 1
+   
    COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
 endif
