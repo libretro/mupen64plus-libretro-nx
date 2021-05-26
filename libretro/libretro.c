@@ -2012,7 +2012,7 @@ size_t retro_get_memory_size(unsigned type)
 
 size_t retro_serialize_size (void)
 {
-    return 16788288 + 1024 + 4 + 4096;
+    return 16788288 + 1024 + 4 + 4096 + 4 + 4;
 }
 
 bool retro_serialize(void *data, size_t size)

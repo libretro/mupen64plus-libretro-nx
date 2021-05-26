@@ -208,8 +208,8 @@ static void savestates_clear_job(void)
     to_little_endian_buffer(buff, sizeof(type), count); \
     buff += count*sizeof(type);
 
-#define PUTDATA(buff, type, value) \
-    do { type x = value; PUTARRAY(&x, buff, type, 1); } while(0)
+#define PUTDATA(buff, type, value) *((type*)buff) = value; \
+                                   buff += sizeof(type);
 
 char* queue;
 unsigned char* using_tlb_data;
@@ -259,26 +259,10 @@ int savestates_load_m64p(struct device* dev, const void *data)
 #endif
         return 0;
     }
-    curr = header;
-
-    if(strncmp((char *)curr, savestate_magic, 8)!=0)
-    {
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "State file: %s is not a valid Mupen64plus savestate.", filepath);
-        gzclose(f);
-#ifdef USE_SDL
-        SDL_UnlockMutex(savestates_lock);
 #endif
-        return 0;
-    }
-#else
     header = data;
     curr = data;
-    if(strncmp((char *)curr, savestate_magic, 8)!=0)
-    {
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Savestate is not a valid Mupen64plus savestate.");
-        return 0;
-    }
-#endif
+
 
     curr += 8;
 
@@ -300,19 +284,6 @@ int savestates_load_m64p(struct device* dev, const void *data)
         return 0;
     }
 
-    if(memcmp((char *)curr, ROM_SETTINGS.MD5, 32))
-    {
-        main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "State ROM MD5 does not match current ROM.");
-#ifndef __LIBRETRO__
-        gzclose(f);
-#endif
-#ifdef USE_SDL
-        SDL_UnlockMutex(savestates_lock);
-#else
-        //pthread_mutex_unlock(&savestates_lock);
-#endif
-        return 0;
-    }
     curr += 32;
 
     /* Read the rest of the savestate */
@@ -460,8 +431,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->vi.regs[VI_X_SCALE_REG] = GETDATA(curr, uint32_t);
     dev->vi.regs[VI_Y_SCALE_REG] = GETDATA(curr, uint32_t);
     dev->vi.delay = GETDATA(curr, uint32_t);
-    gfx.viStatusChanged();
-    gfx.viWidthChanged();
+    //gfx.viStatusChanged();
+    //gfx.viWidthChanged();
 
     dev->ri.regs[RI_MODE_REG]         = GETDATA(curr, uint32_t);
     dev->ri.regs[RI_CONFIG_REG]       = GETDATA(curr, uint32_t);
@@ -482,14 +453,6 @@ int savestates_load_m64p(struct device* dev, const void *data)
     dev->ai.fifo[1].length = GETDATA(curr, uint32_t);
     dev->ai.fifo[0].duration  = GETDATA(curr, uint32_t);
     dev->ai.fifo[0].length = GETDATA(curr, uint32_t);
-    /* best effort initialization of fifo addresses...
-     * You might get a small sound "pop" because address might be wrong.
-     * Proper initialization requires changes to savestate format
-     */
-    dev->ai.fifo[0].address = dev->ai.regs[AI_DRAM_ADDR_REG];
-    dev->ai.fifo[1].address = dev->ai.regs[AI_DRAM_ADDR_REG];
-    dev->ai.samples_format_changed = 1;
-
     dev->dp.dpc_regs[DPC_START_REG]    = GETDATA(curr, uint32_t);
     dev->dp.dpc_regs[DPC_END_REG]      = GETDATA(curr, uint32_t);
     dev->dp.dpc_regs[DPC_CURRENT_REG]  = GETDATA(curr, uint32_t);
@@ -1015,6 +978,10 @@ int savestates_load_m64p(struct device* dev, const void *data)
 
     dev->sp.rsp_task_locked = 0;
     dev->r4300.cp0.interrupt_unsafe_state = 0;
+
+    dev->ai.fifo[0].address = GETDATA(curr, uint32_t);
+    dev->ai.fifo[1].address = GETDATA(curr, uint32_t);
+    //dev->ai.samples_format_changed = 1;
 
     *r4300_cp0_last_addr(&dev->r4300.cp0) = *r4300_pc(&dev->r4300);
 
@@ -1773,7 +1740,6 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t    , dev->ai.fifo[1].length);
     PUTDATA(curr, uint32_t, dev->ai.fifo[0].duration);
     PUTDATA(curr, uint32_t    , dev->ai.fifo[0].length);
-
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_START_REG]);
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_END_REG]);
     PUTDATA(curr, uint32_t, dev->dp.dpc_regs[DPC_CURRENT_REG]);
@@ -2000,6 +1966,9 @@ int savestates_save_m64p(const struct device* dev, void *data)
     PUTDATA(curr, uint32_t, dev->sp.fifo[1].memaddr);
     PUTDATA(curr, uint32_t, dev->sp.fifo[1].dramaddr);
 
+    PUTDATA(curr, uint32_t, dev->ai.fifo[0].address);
+    PUTDATA(curr, uint32_t, dev->ai.fifo[1].address);
+
     //init_work(&save->work, savestates_save_m64p_work);
     //queue_work(&save->work);
 
@@ -2033,9 +2002,13 @@ static int savestates_save_pj64(const struct device* dev,
     PUTARRAY(dev->cart.cart_rom.rom, curr, unsigned int, 0x40/4);
     uint32_t* next_vi = get_event(&dev->r4300.cp0.q, VI_INT);
     if (next_vi != NULL)
+    {
         PUTDATA(curr, uint32_t, *next_vi - cp0_regs[CP0_COUNT_REG]); // vi_timer
+    }
     else
+    {
         PUTDATA(curr, uint32_t, 0 - cp0_regs[CP0_COUNT_REG]);
+    }
     PUTDATA(curr, uint32_t, *r4300_pc((struct r4300_core*)&dev->r4300));
     PUTARRAY(r4300_regs((struct r4300_core*)&dev->r4300), curr, int64_t, 32);
     const cp1_reg* cp1_regs = r4300_cp1_regs((struct cp1*)&dev->r4300.cp1);
