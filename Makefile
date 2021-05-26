@@ -433,7 +433,7 @@ else ifeq ($(platform), emscripten)
 # Windows
 else
    TARGET := $(TARGET_NAME)_libretro.dll
-   LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T #-static -lmingw32 -lSDL2main -lSDL2 -mwindows -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid  -lsdl2_net -lsdl2 -lws2_32 -lSetupapi -lIPHLPAPI
+   LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32 -Wl,-Map,$(notdir $(TARGET).map)
    ifeq ($(HAVE_ANGLE),1)
       GLES3 = 1
       INCFLAGS += -I$(ANGLE_DIR)/include
