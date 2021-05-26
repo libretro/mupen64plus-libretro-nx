@@ -458,6 +458,8 @@ else
       COREFLAGS += -DWIN32
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
+   
+   NM = $(CC)-nm
 
    ifeq ($(HAVE_ANGLE),0)
    	HAVE_PARALLEL_RSP = 1
