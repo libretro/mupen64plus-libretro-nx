@@ -58,6 +58,10 @@
 
 #include "audio_plugin.h"
 
+#ifndef CORE_NAME
+#define CORE_NAME "mupen64plus"
+#endif
+
 #ifndef PRESCALE_WIDTH
 #define PRESCALE_WIDTH  640
 #endif
@@ -127,12 +131,12 @@ static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
 
 static bool     emu_initialized     = false;
+static unsigned initial_boot        = true;
 static unsigned audio_buffer_size   = 2048;
 
-static unsigned retro_filtering      = 0;
-static bool     first_context_reset  = false;
-static bool     initializing         = true;
-static bool     load_game_successful = false;
+static unsigned retro_filtering     = 0;
+static bool     first_context_reset = false;
+static bool     initializing        = true;
 
 bool libretro_swap_buffer;
 
@@ -144,17 +148,10 @@ uint32_t screen_pitch = 0;
 
 float retro_screen_aspect = 4.0 / 3.0;
 
-// Savestate globals
+char* retro_dd_path_img;
+char* retro_dd_path_rom;
 bool retro_savestate_complete = false;
 int  retro_savestate_result = 0;
-
-// 64DD globals
-char* retro_dd_path_img = NULL;
-char* retro_dd_path_rom = NULL;
-
-// Other Subsystems
-char* retro_transferpak_rom_path = NULL;
-char* retro_transferpak_ram_path = NULL;
 
 uint32_t bilinearMode = 0;
 uint32_t EnableHybridFilter = 0;
@@ -183,15 +180,13 @@ uint32_t EnableFBEmulation = 0;
 uint32_t EnableFrameDuping = 0;
 uint32_t EnableLODEmulation = 0;
 uint32_t BackgroundMode = 0; // 0 is bgOnePiece
-uint32_t EnableEnhancedTextureStorage = 0;
-uint32_t EnableHiResAltCRC = 0;
-uint32_t EnableEnhancedHighResStorage = 0;
+uint32_t EnableEnhancedTextureStorage;
+uint32_t EnableEnhancedHighResStorage;
 uint32_t EnableTxCacheCompression = 0;
 uint32_t EnableNativeResFactor = 0;
 uint32_t EnableN64DepthCompare = 0;
 uint32_t EnableThreadedRenderer = 0;
 uint32_t EnableCopyAuxToRDRAM = 0;
-uint32_t GLideN64IniBehaviour = 0;
 
 // Overscan options
 #define GLN64_OVERSCAN_SCALING "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50"
@@ -255,64 +250,6 @@ static void setup_variables(void)
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
-static void set_variable_visibility(void)
-{
-   // For simplicity we create a prepared var per plugin, maybe create a macro for this?
-   struct retro_core_option_display option_display_gliden64;
-   struct retro_core_option_display option_display_angrylion;
-   struct retro_core_option_display option_display_parallel_rdp;
-
-   size_t i;
-   size_t num_options = 0;
-   char **values_buf = NULL;
-   struct retro_variable var;
-
-   // Show/hide options depending on Plugins (Active isn't relevant!)
-   var.key = CORE_NAME "-rdp-plugin";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      option_display_gliden64.visible = !strcmp(var.value, "gliden64");
-      option_display_angrylion.visible = !strcmp(var.value, "angrylion");
-      option_display_parallel_rdp.visible = !strcmp(var.value, "parallel");
-   } else {
-      option_display_gliden64.visible = option_display_angrylion.visible = option_display_parallel_rdp.visible = true;
-   }
-
-   // Determine number of options
-   for (;;)
-   {
-      if (!option_defs_us[num_options].key)
-         break;
-      num_options++;
-   }
-
-   // Copy parameters from option_defs_us array
-   for (i = 0; i < num_options; i++)
-   {
-      const char *key  = option_defs_us[i].key;
-      const char *hint = option_defs_us[i].info;
-      if(hint)
-      {
-         // Quick and dirty, its the only consistent naming
-         // Otherwise GlideN64 Setting keys will need to be broken again..
-         if(!!strstr(hint, "(GLN64)"))
-         {
-            option_display_gliden64.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_gliden64);
-         } else if(!!strstr(hint, "(AL)"))
-         {
-            option_display_angrylion.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_angrylion);
-         } else if(!!strstr(key, "parallel-rdp")) // Maybe unify it later?
-         {
-            option_display_parallel_rdp.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_parallel_rdp);
-         }
-      }
-   } 
-}
-
 static void n64StateCallback(void *Context, m64p_core_param param_type, int new_value)
 {
     if(param_type == M64CORE_STATE_LOADCOMPLETE || param_type == M64CORE_STATE_SAVECOMPLETE)
@@ -371,38 +308,9 @@ static void emu_step_initialize(void)
 
 static void* EmuThreadFunction(void* param)
 {
-    uint32_t netplay_port = 0;
-    uint16_t netplay_player = 1;
+    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     initializing = false;
-
-    if (netplay_port)
-    {
-        uint32_t version;
-        if (CoreDoCommand(M64CMD_NETPLAY_GET_VERSION, 0x010000, &version) == M64ERR_SUCCESS)
-        {
-            log_cb(RETRO_LOG_INFO, "Netplay: using core version %u\n", version);
-
-            if (CoreDoCommand(M64CMD_NETPLAY_INIT, netplay_port, "") == M64ERR_SUCCESS)
-                log_cb(RETRO_LOG_INFO, "Netplay: init success\n");
-
-            uint32_t reg_id = 0;
-            while (reg_id == 0)
-            {
-#ifdef __MINGW32__
-                rand_s(&reg_id);
-#else
-                reg_id = rand();
-#endif
-            }
-            reg_id += netplay_player;
-
-            if (CoreDoCommand(M64CMD_NETPLAY_CONTROL_PLAYER, netplay_player, &reg_id) == M64ERR_SUCCESS)
-                log_cb(RETRO_LOG_INFO, "Netplay: registered for player %d\n", netplay_player);
-        }
-    }
-
-    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_EXECUTE\n");
 
     // Runs until CMD_STOP
     CoreDoCommand(M64CMD_EXECUTE, 0, NULL);
@@ -461,10 +369,6 @@ void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
 bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info)
 {
-    size_t outSize = 0;
-    bool result = false;
-    void* gameBuffer = NULL;
-
     if(retro_dd_path_img)
     {
         free(retro_dd_path_img);
@@ -475,18 +379,6 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     {
         free(retro_dd_path_rom);
         retro_dd_path_rom = NULL;
-    }
-
-    if(retro_transferpak_rom_path)
-    {
-        free(retro_transferpak_rom_path);
-        retro_transferpak_rom_path = NULL;
-    }
-
-    if(retro_transferpak_ram_path)
-    {
-        free(retro_transferpak_ram_path);
-        retro_transferpak_ram_path = NULL;
     }
 
     switch(game_type)
@@ -504,88 +396,31 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
                 return false;
             }
             
-            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            
-            result = load_file(info[1].path, &gameBuffer, &outSize) == file_ok;
-            if(result)
-            {
-               memcpy(&info[1].data, &gameBuffer, sizeof(void*));
-               memcpy(&info[1].size, &outSize, sizeof(size_t));
-               result = result && retro_load_game(&info[1]);
-               
-               if(gameBuffer)
-               {
-                  free(gameBuffer);
-                  gameBuffer = NULL;
-                  // To prevent potential double free // TODO: revisit later
-                  memcpy(&info[1].data, &gameBuffer, sizeof(void*));
-               }
-            }
-            break;
-        case RETRO_GAME_TYPE_TRANSFERPAK:
-            if(num_info == 3)
-            {
-                retro_transferpak_ram_path = strdup(info[0].path);
-                retro_transferpak_rom_path = strdup(info[1].path);
-            } else {
-                return false;
-            }
-            
-            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[1].path);
-            log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[2].path);
-            result = load_file(info[2].path, &gameBuffer, &outSize) == file_ok;
-            if(result)
-            {
-               memcpy(&info[2].data, &gameBuffer, sizeof(void*));
-               memcpy(&info[2].size, &outSize, sizeof(size_t));
-               result = result && retro_load_game(&info[2]);
-               if(gameBuffer)
-               {
-                  free(gameBuffer);
-                  gameBuffer = NULL;
-                  // To prevent potential double free // TODO: revisit later
-                  memcpy(&info[2].data, &gameBuffer, sizeof(void*));
-               }
-            }
-            break;
+            printf("Loading %s...\n", info[0].path);
+            load_file(info[1].path, (void**)&info[1].data, &info[1].size);
+            return retro_load_game(&info[1]);
         default:
             return false;
     }
-
-	 return result;
+    
+	return false;
 }
 
 void retro_set_environment(retro_environment_t cb)
 {
     environ_cb = cb;
 
-    static const struct retro_subsystem_memory_info memory_info_dd[] = {
+    static const struct retro_subsystem_memory_info memory_info[] = {
         { "srm", RETRO_MEMORY_DD },
-        {}
-    };
-
-    static const struct retro_subsystem_memory_info memory_info_transferpak[] = {
-        { "srm", RETRO_MEMORY_TRANSFERPAK },
-        {}
     };
 
     static const struct retro_subsystem_rom_info dd_roms[] = {
-        { "Disk", "ndd", true, false, true, memory_info_dd, 1 },
+        { "Disk", "ndd", true, false, true, memory_info, 1 },
         { "Cartridge", "n64|v64|z64|bin|u1", true, false, true, NULL, 0 },
-        {}
-    };
-
-    static const struct retro_subsystem_rom_info transferpak_roms[] = {
-        { "Gameboy RAM", "ram|sav", true, false, true, NULL, 0 },
-        { "Gameboy ROM", "rom|gb|gbc", true, false, true, NULL, 0 },
-        { "Cartridge", "n64|v64|z64|bin|u1", true, false, true, memory_info_transferpak, 1 },
-        {}
     };
 
     static const struct retro_subsystem_info subsystems[] = {
         { "N64 Disk Drive", "ndd", dd_roms, 2, RETRO_GAME_TYPE_DD },
-        { "N64 Transferpak", "gb", transferpak_roms, 3, RETRO_GAME_TYPE_TRANSFERPAK },
         {}
     };
 
@@ -598,7 +433,7 @@ void retro_set_environment(retro_environment_t cb)
 void retro_get_system_info(struct retro_system_info *info)
 {
     info->library_name = "Mupen64Plus-Next";
-    info->library_version = "2.2" FLAVOUR_VERSION GIT_VERSION;
+    info->library_version = "2.1" FLAVOUR_VERSION GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1";
     info->need_fullpath = false;
     info->block_extract = false;
@@ -634,21 +469,17 @@ void copy_file(char * ininame, char * fileName)
     }
 }
 
-#if defined(HAVE_ANGLE) && defined(__MINGW32__)
-   static LONG CALLBACK VectoredExcepHandler(PEXCEPTION_POINTERS exInfo)
-   {
-      if (exInfo->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
-         return EXCEPTION_CONTINUE_EXECUTION;
-      else
-         return EXCEPTION_CONTINUE_SEARCH;
-   }
-#endif
+static LONG CALLBACK VectoredExcepHandler(PEXCEPTION_POINTERS exInfo)
+{
+    if (exInfo->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
+        return EXCEPTION_CONTINUE_EXECUTION;
+    else
+        return EXCEPTION_CONTINUE_SEARCH;
+}
 
 void retro_init(void)
 {
-#if defined(HAVE_ANGLE) && defined(__MINGW32__)
-      AddVectoredExceptionHandler(1, VectoredExcepHandler);
-#endif
+    AddVectoredExceptionHandler(1, VectoredExcepHandler);
 
     char* sys_pathname;
     wchar_t w_pathname[PATH_SIZE];
@@ -688,15 +519,11 @@ void retro_init(void)
 }
 
 void retro_deinit(void)
-{
-    // Prevent yield to game_thread on unsuccessful context request
-    if(load_game_successful)
+{    
+    if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {
-       if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
-       {
-           CoreDoCommand(M64CMD_STOP, 0, NULL);
-           co_switch(game_thread); /* Let the core thread finish */
-       }
+        CoreDoCommand(M64CMD_STOP, 0, NULL);
+        co_switch(game_thread); /* Let the core thread finish */
     }
 
     deinit_audio_libretro();
@@ -715,8 +542,6 @@ void update_controllers()
             p1_pak = PLUGIN_RAW;
         else if (!strcmp(pk1var.value, "memory"))
             p1_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk1var.value, "transfer"))
-            p1_pak = PLUGIN_TRANSFER_PAK;
 
         // If controller struct is not initialised yet, set pad_pak_types instead
         // which will be looked at when initialising the controllers.
@@ -734,8 +559,6 @@ void update_controllers()
             p2_pak = PLUGIN_RAW;
         else if (!strcmp(pk2var.value, "memory"))
             p2_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk2var.value, "transfer"))
-            p2_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[1].control)
             controller[1].control->Plugin = p2_pak;
@@ -751,8 +574,6 @@ void update_controllers()
             p3_pak = PLUGIN_RAW;
         else if (!strcmp(pk3var.value, "memory"))
             p3_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk3var.value, "transfer"))
-            p3_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[2].control)
             controller[2].control->Plugin = p3_pak;
@@ -768,8 +589,6 @@ void update_controllers()
             p4_pak = PLUGIN_RAW;
         else if (!strcmp(pk4var.value, "memory"))
             p4_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk4var.value, "transfer"))
-            p4_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[3].control)
             controller[3].control->Plugin = p4_pak;
@@ -781,12 +600,17 @@ void update_controllers()
 static void update_variables(bool startup)
 {
     struct retro_variable var;
-    static const char *screen_size_key = CORE_NAME "-43screensize";
 
     if (startup)
     {
        bool save_state_in_background = true;
        //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
+
+       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
+       {
+          unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
+          environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
+       }
 
        var.key = CORE_NAME "-rdp-plugin";
        var.value = NULL;
@@ -865,12 +689,6 @@ static void update_variables(bool startup)
           }
        }
 
-       if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
-       {
-          unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
-          environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
-       }
-       
        var.key = CORE_NAME "-ThreadedRenderer";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1183,30 +1001,11 @@ static void update_variables(bool startup)
           EnableEnhancedHighResStorage = !strcmp(var.value, "False") ? 0 : 1;
        }
 
-       var.key = CORE_NAME "-EnableHiResAltCRC";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          EnableHiResAltCRC = !strcmp(var.value, "False") ? 0 : 1;
-       }
-
        var.key = CORE_NAME "-EnableCopyAuxToRDRAM";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           EnableCopyAuxToRDRAM = !strcmp(var.value, "False") ? 0 : 1;
-       }
-
-       var.key = CORE_NAME "-GLideN64IniBehaviour";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "late"))
-             GLideN64IniBehaviour = 0;
-          else if (!strcmp(var.value, "early"))
-             GLideN64IniBehaviour = 1;
-          else if (!strcmp(var.value, "disabled"))
-             GLideN64IniBehaviour = -1;
        }
 
        var.key = CORE_NAME "-cpucore";
@@ -1226,16 +1025,14 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           if (!strcmp(var.value, "16:9 adjusted")) {
-             AspectRatio = 3; // Aspect::aAdjust
-             // `retro_screen_aspect` is calculated on the fly when retrieving the `-169screensize` setting.
-             screen_size_key = CORE_NAME "-169screensize";
+             AspectRatio = 3;
+             retro_screen_aspect = 16.0 / 9.0;
           } else if (!strcmp(var.value, "16:9")) {
-             AspectRatio = 0; // Aspect::aStretch
-             screen_size_key = CORE_NAME "-169screensize";
+             AspectRatio = 2;
+             retro_screen_aspect = 16.0 / 9.0;
           } else {
-             AspectRatio = 1; // Aspect::a43
+             AspectRatio = 1;
              retro_screen_aspect = 4.0 / 3.0;
-             screen_size_key = CORE_NAME "-43screensize";
           }
        }
 
@@ -1246,15 +1043,11 @@ static void update_variables(bool startup)
          EnableNativeResFactor = atoi(var.value);
        }
 
-       var.key = screen_size_key;
+       var.key = (AspectRatio == 1 ? CORE_NAME "-43screensize" : CORE_NAME "-169screensize");
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
-          if (AspectRatio != 1) // Calculate the correct aspect ratio when using a ratio different than 4:3.
-          {
-             retro_screen_aspect = (float)retro_screen_width / (float)retro_screen_height;
-          }
 
           // Sanity check... not optimal since we will render at a higher res, but otherwise
           // GLideN64 might blit a bigger image onto a smaller framebuffer
@@ -1275,7 +1068,7 @@ static void update_variables(bool startup)
           retro_screen_width = 640;
           retro_screen_height = 480;
           retro_screen_aspect = 4.0 / 3.0;
-          AspectRatio = 1; // Aspect::a43
+          AspectRatio = 1;
        }
 #endif // HAVE_THR_AL
 
@@ -1482,32 +1275,12 @@ static void update_variables(bool startup)
         else
             parallel_set_dither_filter(true);
 
-        {
-            unsigned upscaling;
-            bool super_sampled;
-            var.key = CORE_NAME "-parallel-rdp-upscaling";
-            var.value = NULL;
-            if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-                upscaling = strtol(var.value, NULL, 0);
-            else
-                upscaling = 1;
-
-            var.key = CORE_NAME "-parallel-rdp-super-sampled-read-back";
-            var.value = NULL;
-            if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-                super_sampled = !strcmp(var.value, "True");
-            else
-                super_sampled = false;
-
-            parallel_set_upscaling(upscaling, super_sampled);
-        }
-
-        var.key = CORE_NAME "-parallel-rdp-super-sampled-read-back-dither";
+        var.key = CORE_NAME "-parallel-rdp-upscaling";
         var.value = NULL;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-            parallel_set_super_sampled_read_back_dither(!strcmp(var.value, "True"));
+            parallel_set_upscaling(strtol(var.value, NULL, 0));
         else
-            parallel_set_super_sampled_read_back_dither(true);
+            parallel_set_upscaling(1);
 
         var.key = CORE_NAME "-parallel-rdp-downscaling";
         var.value = NULL;
@@ -1538,13 +1311,6 @@ static void update_variables(bool startup)
             parallel_set_native_tex_rect(!strcmp(var.value, "True"));
         else
             parallel_set_native_tex_rect(true);
-
-        var.key = CORE_NAME "-parallel-rdp-deinterlace-method";
-        var.value = NULL;
-        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-            parallel_set_interlacing(!strcmp(var.value, "Weave"));
-        else
-            parallel_set_interlacing(false);
     }
 #endif
 
@@ -1658,7 +1424,6 @@ static void update_variables(bool startup)
 #endif // HAVE_THR_AL
 
     update_controllers();
-    set_variable_visibility();
 }
 
 static void format_saved_memory(void)
@@ -1763,54 +1528,15 @@ bool retro_load_game(const struct retro_game_info *game)
             retro_dd_path_img = newPath;
         }
     }
-    
-   if (!retro_transferpak_rom_path)
-   {
-      gamePath = (char *)game->path;
-      newPath = (char *)calloc(1, strlen(gamePath) + 4);
-      strcpy(newPath, gamePath);
-      strcat(newPath, ".gb");
-      FILE *fileTest = fopen(newPath, "r");
-      if (!fileTest)
-      {
-         free(newPath);
-      }
-      else
-      {
-         fclose(fileTest);
-         // Free'd later in Mupen Core
-         retro_transferpak_rom_path = newPath;
 
-         // We have a gb rom!
-         if (!retro_transferpak_ram_path)
-         {
-            gamePath = (char *)game->path;
-            newPath = (char *)calloc(1, strlen(gamePath) + 5);
-            strcpy(newPath, gamePath);
-            strcat(newPath, ".sav");
-            FILE *fileTest = fopen(newPath, "r");
-            if (!fileTest)
-            {
-               free(newPath);
-            }
-            else
-            {
-               fclose(fileTest);
-               // Free'd later in Mupen Core
-               retro_transferpak_ram_path = newPath;
-            }
-         }
-      }
-   }
-
-    // Init default vals
+    // Init savestate job var
     retro_savestate_complete = true;
-    load_game_successful = false;
 
     glsm_ctx_params_t params = {0};
     format_saved_memory();
 
     update_variables(true);
+    initial_boot = false;
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
     {
@@ -1861,8 +1587,6 @@ bool retro_load_game(const struct retro_game_info *game)
        /* Additional check for vioverlay not set at start */
        update_variables(false);
     }
-    
-    load_game_successful = true;
 
     return true;
 }
@@ -1969,7 +1693,6 @@ void *retro_get_memory_data(unsigned type)
     switch (type)
     {
         case RETRO_MEMORY_SYSTEM_RAM: return g_dev.rdram.dram;
-        case RETRO_MEMORY_TRANSFERPAK:
         case RETRO_MEMORY_DD:
         case RETRO_MEMORY_SAVE_RAM:   return &saved_memory;
     }
@@ -1980,12 +1703,10 @@ size_t retro_get_memory_size(unsigned type)
 {
     switch (type)
     {
-        case RETRO_MEMORY_SYSTEM_RAM:  return RDRAM_MAX_SIZE;
-        case RETRO_MEMORY_TRANSFERPAK:
+        case RETRO_MEMORY_SYSTEM_RAM: return RDRAM_MAX_SIZE;
         case RETRO_MEMORY_DD:
-        case RETRO_MEMORY_SAVE_RAM:    return sizeof(saved_memory);
+        case RETRO_MEMORY_SAVE_RAM:   return sizeof(saved_memory);
     }
-
     return 0;
 }
 
