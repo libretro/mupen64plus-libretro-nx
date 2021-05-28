@@ -468,18 +468,21 @@ void copy_file(char * ininame, char * fileName)
         fclose(fp);
     }
 }
-
-static LONG CALLBACK VectoredExcepHandler(PEXCEPTION_POINTERS exInfo)
-{
-    if (exInfo->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
-        return EXCEPTION_CONTINUE_EXECUTION;
-    else
-        return EXCEPTION_CONTINUE_SEARCH;
-}
+#if defined(HAVE_ANGLE) && defined(__MINGW32__)
+   static LONG CALLBACK VectoredExcepHandler(PEXCEPTION_POINTERS exInfo)
+   {
+      if (exInfo->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
+         return EXCEPTION_CONTINUE_EXECUTION;
+      else
+         return EXCEPTION_CONTINUE_SEARCH;
+   }
+#endif
 
 void retro_init(void)
 {
-    AddVectoredExceptionHandler(1, VectoredExcepHandler);
+   #if defined(HAVE_ANGLE) && defined(__MINGW32__)
+      AddVectoredExceptionHandler(1, VectoredExcepHandler);
+   #endif
 
     char* sys_pathname;
     wchar_t w_pathname[PATH_SIZE];
