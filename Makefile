@@ -1,6 +1,7 @@
 DEBUG = 0
 FORCE_GLES ?= 0
 FORCE_GLES3 ?= 0
+HAVE_ANGLE ?= 0
 LLE ?= 0
 HAVE_PARALLEL_RSP ?= 0
 HAVE_PARALLEL_RDP ?= 0
@@ -26,6 +27,7 @@ UNAME=$(shell uname -a)
 ROOT_DIR := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
 DEPSDIR	:=	$(CURDIR)/
+ANGLE_DIR ?= $(ROOT_DIR)/../ANGLE
 
 ifeq ($(platform),)
 	platform = unix
@@ -432,11 +434,16 @@ else ifeq ($(platform), emscripten)
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T -lwinmm -lgdi32 -Wl,-Map,$(notdir $(TARGET).map)
-   GLES3 = 1
-   GL_LIB = -L$(ROOT_DIR)/../angle-bootstraps/Binaries/lib/UWP -lGLESv2
-   EGL_LIB = -L$(ROOT_DIR)/../angle-bootstraps/Binaries/lib/UWP -lEGL
-   COREFLAGS += -g 
-
+   ifeq ($(HAVE_ANGLE),1)
+      GLES3 = 1
+      INCFLAGS += -I$(ANGLE_DIR)/include
+      GL_LIB = -L$(ANGLE_DIR) -lGLESv2
+      EGL_LIB = -L$(ANGLE_DIR) -lEGL
+      COREFLAGS += -g 
+   else
+      GL_LIB := -lopengl32
+   endif
+   
    ifeq ($(MSYSTEM),MINGW64)
       CC = x86_64-w64-mingw32-gcc
       CXX = x86_64-w64-mingw32-g++
@@ -451,8 +458,14 @@ else
       COREFLAGS += -DWIN32
       ASFLAGS = -f win32 -d WIN32 -d LEADING_UNDERSCORE
    endif
-
+   
    NM = $(CC)-nm
+
+   ifeq ($(HAVE_ANGLE),0)
+   	HAVE_PARALLEL_RSP = 1
+   	HAVE_PARALLEL_RDP = 1
+   endif
+   
    COREFLAGS += -DOS_WINDOWS -DMINGW
    CXXFLAGS += -fpermissive
 endif
@@ -477,7 +490,11 @@ ifeq ($(LLE), 1)
    COREFLAGS += -DHAVE_LLE
 endif
 
-COREFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI -DHAVE_ANGLE
+COREFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__LIBRETRO__ -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DTXFILTER_LIB -D__VEC4_OPT -DMUPENPLUSAPI
+
+ifeq ($(HAVE_ANGLE),1)
+    COREFLAGS += -DHAVE_ANGLE
+endif
 
 ifeq ($(DEBUG), 1)
 	CPUOPTS += -O3 -g
