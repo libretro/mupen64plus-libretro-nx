@@ -445,7 +445,7 @@ void romdatabase_open(void)
     {
         #ifdef HAVE_ANGLE
             char *line = lines;
-        #elif
+        #else
             char *line = buffer;
         #endif
 
