@@ -468,6 +468,7 @@ void copy_file(char * ininame, char * fileName)
         fclose(fp);
     }
 }
+
 #if defined(HAVE_ANGLE) && defined(__MINGW32__)
    static LONG CALLBACK VectoredExcepHandler(PEXCEPTION_POINTERS exInfo)
    {
