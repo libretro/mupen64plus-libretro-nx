@@ -192,7 +192,11 @@ const char *get_savesrampath(void)
 
 const char *get_dd_disk_save_path(const char* diskname, int save_format)
 {
-    return "";
+    char* newPath = (char*)malloc(PATH_MAX);
+    strcpy(newPath, diskname);
+    strcat(newPath, ".disk_save");
+
+    return newPath;
 }
 
 void main_message(m64p_msg_level level, unsigned int corner, const char *format, ...)
