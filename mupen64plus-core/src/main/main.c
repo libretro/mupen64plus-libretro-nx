@@ -55,6 +55,7 @@
 #include "backends/file_storage.h"
 #include "cheat.h"
 #include "device/device.h"
+#include "device/dd/disk.h"
 #include "device/controllers/paks/biopak.h"
 #include "device/controllers/paks/mempak.h"
 #include "device/controllers/paks/rumblepak.h"
@@ -716,9 +717,6 @@ static void apply_speed_limiter(void)
 /* TODO: make a GameShark module and move that there */
 static void gs_apply_cheats(struct cheat_ctx* ctx)
 {
-    if (netplay_is_init())
-        return;
-
     struct r4300_core* r4300 = &g_dev.r4300;
 
     if (g_gs_vi_counter < 60)
@@ -949,9 +947,10 @@ no_dd:
     *rom_size = 0;
 }
 
-static void load_dd_disk(struct file_storage* dd_disk, const struct storage_backend_interface** dd_idisk)
+extern char* retro_dd_path_img;
+extern char* retro_dd_path_rom;
+static void load_dd_disk(struct dd_disk* dd_disk, const struct storage_backend_interface** dd_idisk)
 {
-    const char* format_desc;
     /* ask the core loader for DD disk filename */
     char* dd_disk_filename = (g_media_loader.get_dd_disk == NULL)
         ? retro_dd_path_img
@@ -965,62 +964,164 @@ static void load_dd_disk(struct file_storage* dd_disk, const struct storage_back
         goto no_disk;
     }
 
-    /* open file */
-    if (open_rom_file_storage(dd_disk, dd_disk_filename) != file_ok) {
-        DebugMessage(M64MSG_ERROR, "Failed to load DD Disk: %s.", dd_disk_filename);
+    /* Get DD Disk size */
+    size_t dd_size = 0;
+    if (get_file_size(dd_disk_filename, &dd_size) != file_ok) {
+        DebugMessage(M64MSG_ERROR, "Can't get DD disk file size");
         goto no_disk;
     }
 
-    /* FIXME: handle byte swapping */
+    struct file_storage* fstorage = malloc(sizeof(struct file_storage));
+    struct file_storage* fstorage_save = malloc(sizeof(struct file_storage));
+    if (fstorage == NULL || fstorage_save == NULL) {
+        DebugMessage(M64MSG_ERROR, "Failed to allocate DD file_storage");
+        if (fstorage != NULL)      { free(fstorage);      fstorage = NULL; }
+        if (fstorage_save != NULL) { free(fstorage_save); fstorage_save = NULL; }
+        goto no_disk;
+    }
 
+    /* Determine disk save format */
+    int save_format = ConfigGetParamInt(g_CoreConfig, "SaveDiskFormat");
+    /* MAME disks only support full disk save */
+    if (dd_size == MAME_FORMAT_DUMP_SIZE && save_format != 0) {
+        DebugMessage(M64MSG_WARNING, "MAME disks only support full disk save format, switching to full disk format !");
+        save_format = 0;
+    }
 
-    switch (dd_disk->size)
+    /* Determine save file name */
+    char* save_filename = get_dd_disk_save_path(namefrompath(dd_disk_filename), save_format);
+    if (save_filename == NULL) {
+        DebugMessage(M64MSG_ERROR, "Failed to get DD save path, DD will be read-only.");
+        save_format = -1;
+    }
+
+    /* Try loading *.{nd,d6}r file first (if SaveDiskFormat == 0) */
+    if (save_format == 0)
     {
-    case MAME_FORMAT_DUMP_SIZE:
-        /* already in a compatible format */
-        *dd_idisk = &g_ifile_storage;
-        format_desc = "MAME";
-        break;
+        if (open_rom_file_storage(fstorage, save_filename) != file_ok) {
+            DebugMessage(M64MSG_ERROR, "Failed to load DD Disk save: %s.", save_filename);
 
-    case SDK_FORMAT_DUMP_SIZE: {
-        /* convert to mame format */
-        uint8_t* buffer = malloc(MAME_FORMAT_DUMP_SIZE);
-        if (buffer == NULL) {
-            DebugMessage(M64MSG_ERROR, "Failed to allocate memory for MAME disk dump");
-            close_file_storage(dd_disk);
-            goto no_disk;
+            /* Try loading regular disk file */
+            if (open_rom_file_storage(fstorage, dd_disk_filename) != file_ok) {
+                DebugMessage(M64MSG_ERROR, "Failed to load DD Disk: %s.", dd_disk_filename);
+                goto free_fstorage;
+            }
         }
-
-        dd_convert_to_mame(buffer, dd_disk->data);
-        free(dd_disk->data);
-        dd_disk->data = buffer;
-        dd_disk->size = MAME_FORMAT_DUMP_SIZE;
-        *dd_idisk = &g_ifile_storage_dd_sdk_dump;
-        format_desc = "SDK";
-        } break;
-
-    default:
-        format_desc = "ERR";
-        DebugMessage(M64MSG_ERROR, "Invalid DD Disk size %u.", (uint32_t) dd_disk->size);
-        close_file_storage(dd_disk);
-        goto no_disk;
     }
-    
-    DebugMessage(M64MSG_INFO, "DD Disk: %s - %u - %s",
-            dd_disk->filename,
-            dd_disk->size,
-            format_desc);
-
-    uint32_t w = *(uint32_t*)dd_disk->data;
-    if (w == DD_REGION_JP || w == DD_REGION_US) {
-        DebugMessage(M64MSG_WARNING, "Loading a saved disk ");
+    else
+    {
+        /* Try loading regular disk file */
+        if (open_rom_file_storage(fstorage, dd_disk_filename) != file_ok) {
+            DebugMessage(M64MSG_ERROR, "Failed to load DD Disk: %s.", dd_disk_filename);
+            goto free_fstorage;
+        }
     }
 
+    /* Force fstorage to point to save_filename, to redirect all writes to save file,
+     * (and to avoid corrupting 64DD dump)
+     * save_filename is now owned by fstorage.
+     * dd_disk_filename is not owned anymore and must be freed individually.
+     */
+    fstorage->filename = save_filename;
+
+    /* Scan disk to deduce disk format and other parameters and expand its size for D64 */
+    unsigned int format = 0;
+    unsigned int development = 0;
+    size_t offset_sys = 0;
+    size_t offset_id = 0;
+    size_t offset_ram = 0;
+    size_t size_ram = 0;
+    uint8_t* new_data = scan_and_expand_disk_format(fstorage->data, fstorage->size, &format, &development, &offset_sys, &offset_id, &offset_ram, &size_ram);
+    if (new_data == NULL) {
+        DebugMessage(M64MSG_ERROR, "Wrong disk format");
+        goto wrong_disk_format;
+    }
+    else {
+        fstorage->data = new_data;
+    }
+
+    /* Load RAM save data (if SaveDiskFormat == 1) */
+    if (save_format == 1)
+    {
+        if (read_from_file(save_filename, &fstorage->data[offset_ram], size_ram) != file_ok)
+        {
+            DebugMessage(M64MSG_ERROR, "Failed to load DD Disk RAM area (*.ram): %s.", save_filename);
+        }
+    }
+
+    switch(save_format)
+    {
+    case 0: /* Full disk */
+        *dd_idisk = &g_istorage_disk_full;
+        fstorage_save->filename = save_filename;
+        fstorage_save->data = fstorage->data;
+        fstorage_save->size = fstorage->size;
+        fstorage_save->first_access = 1;
+        break;
+    case 1: /* RAM only */
+        *dd_idisk = &g_istorage_disk_ram_only;
+        fstorage_save->filename = save_filename;
+        fstorage_save->data = &fstorage->data[offset_ram];
+        fstorage_save->size = size_ram;
+        fstorage_save->first_access = 1;
+        break;
+    default: /* read only */
+        *dd_idisk = &g_istorage_disk_read_only;
+        free(fstorage_save);
+        fstorage_save = NULL;
+    }
+
+    /* Setup dd_disk */
+    dd_disk->storage = fstorage;
+    dd_disk->istorage = &g_ifile_storage_ro;
+    dd_disk->save_storage = fstorage_save;
+    dd_disk->isave_storage = (save_format >= 0) ? &g_ifile_storage : NULL;
+    dd_disk->format = format;
+    dd_disk->development = development;
+    dd_disk->offset_sys = offset_sys;
+    dd_disk->offset_id = offset_id;
+    dd_disk->offset_ram = offset_ram;
+
+    /* Generate LBA conversion table */
+    GenerateLBAToPhysTable(dd_disk);
+
+    DebugMessage(M64MSG_INFO, "DD Disk: %s - %zu - %s",
+            dd_disk_filename,
+            (*dd_idisk)->size(dd_disk),
+            get_disk_format_name(format));
+
+    uint32_t w = *(uint32_t*)(*dd_idisk)->data(dd_disk);
+    if (w == DD_REGION_JP || w == DD_REGION_US || w == DD_REGION_DV) {
+        DebugMessage(M64MSG_WARNING, "Loading a saved disk");
+    }
+
+    free(dd_disk_filename);
     return;
 
+wrong_disk_format:
+    /* no need to close save_storage as it is a child of disk->storage */
+    close_file_storage(fstorage);
+free_fstorage:
+    free(fstorage);
+    free(fstorage_save);
 no_disk:
     free(dd_disk_filename);
     *dd_idisk = NULL;
+}
+
+static void close_dd_disk(struct dd_disk* disk)
+{
+    if (disk->save_storage != NULL) {
+        /* no need to close save_storage as it is a child of disk->storage */
+        free(disk->save_storage);
+        disk->save_storage = NULL;
+    }
+
+    if (disk->storage != NULL) {
+        close_file_storage(disk->storage);
+        free(disk->storage);
+        disk->storage = NULL;
+    }
 }
 
 
@@ -1182,7 +1283,7 @@ m64p_error main_run(void)
     struct file_storage fla;
     struct file_storage sra;
     size_t dd_rom_size;
-    struct file_storage dd_disk;
+    struct dd_disk dd_disk;
     struct audio_out_backend_interface audio_out_backend_libretro;
 
     int control_ids[GAME_CONTROLLERS_COUNT];
@@ -1207,7 +1308,7 @@ m64p_error main_run(void)
     rdram_size = (disable_extra_mem == 0) ? 0x800000 : 0x400000;
 
     if (count_per_op <= 0)
-        count_per_op = ROM_PARAMS.countperop;
+        count_per_op = ROM_SETTINGS.countperop;
 
     si_dma_duration = ROM_PARAMS.sidmaduration;
 
@@ -1438,7 +1539,7 @@ m64p_error main_run(void)
                 vi_clock_from_tv_standard(ROM_PARAMS.systemtype), vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype),
                 NULL, &g_iclock_ctime_plus_delta,
                 g_rom_size,
-                (ROM_SETTINGS.savetype != EEPROM_16KB) ? JDT_EEPROM_4K : JDT_EEPROM_16K,
+                (ROM_SETTINGS.savetype != SAVETYPE_EEPROM_16KB) ? JDT_EEPROM_4K : JDT_EEPROM_16K,
                 &eep, &g_ifile_storage,
                 flashram_type,
                 &fla, &g_ifile_storage,
@@ -1488,7 +1589,7 @@ m64p_error main_run(void)
     close_file_storage(&fla);
     close_file_storage(&eep);
     close_file_storage(&mpk);
-    close_file_storage(&dd_disk);
+    close_dd_disk(&dd_disk);
 #endif
 
     /* Emulation stopped */
@@ -1537,7 +1638,7 @@ on_gfx_open_failure:
     close_file_storage(&fla);
     close_file_storage(&eep);
     close_file_storage(&mpk);
-    close_file_storage(&dd_disk);
+    close_dd_disk(&dd_disk);
 #endif
 
     return M64ERR_PLUGIN_FAIL;
@@ -1585,7 +1686,7 @@ m64p_error open_pif(const unsigned char* pifimage, unsigned int size)
         return M64ERR_INPUT_INVALID;
     }
 
-    for (int i = 0; i < size; i += 4)
+    for (unsigned int i = 0; i < size; i += 4)
         *dst32++ = big32(*src32++);
 
     g_start_address = UINT32_C(0xbfc00000);
