@@ -62,6 +62,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
 	$(CORE_DIR)/src/device/controllers/paks/transferpak.c \
 	$(CORE_DIR)/src/device/dd/dd_controller.c \
+	$(CORE_DIR)/src/device/dd/disk.c \
 	$(CORE_DIR)/src/device/device.c \
 	$(CORE_DIR)/src/device/gb/gb_cart.c \
 	$(CORE_DIR)/src/device/gb/mbc3_rtc.c \

@@ -190,6 +190,11 @@ const char *get_savesrampath(void)
     return "";
 }
 
+const char *get_dd_disk_save_path(const char* diskname, int save_format)
+{
+    return "";
+}
+
 void main_message(m64p_msg_level level, unsigned int corner, const char *format, ...)
 {
     va_list ap;
@@ -981,7 +986,7 @@ static void load_dd_disk(struct dd_disk* dd_disk, const struct storage_backend_i
     }
 
     /* Determine disk save format */
-    int save_format = ConfigGetParamInt(g_CoreConfig, "SaveDiskFormat");
+    int save_format = 0; //ConfigGetParamInt(g_CoreConfig, "SaveDiskFormat");
     /* MAME disks only support full disk save */
     if (dd_size == MAME_FORMAT_DUMP_SIZE && save_format != 0) {
         DebugMessage(M64MSG_WARNING, "MAME disks only support full disk save format, switching to full disk format !");
@@ -1300,7 +1305,7 @@ m64p_error main_run(void)
     
     randomize_interrupt = 0; // We don't want this right now
     count_per_op = CountPerOp;
-    disable_extra_mem = ROM_PARAMS.disableextramem;
+    disable_extra_mem = ROM_SETTINGS.disableextramem;
 
     if (ForceDisableExtraMem == 1)
         disable_extra_mem = 1;
@@ -1310,7 +1315,7 @@ m64p_error main_run(void)
     if (count_per_op <= 0)
         count_per_op = ROM_SETTINGS.countperop;
 
-    si_dma_duration = ROM_PARAMS.sidmaduration;
+    si_dma_duration = ROM_SETTINGS.sidmaduration;
 
     //During netplay, player 1 is the source of truth for these settings
     netplay_sync_settings(&count_per_op, &disable_extra_mem, &si_dma_duration, &emumode, &no_compiled_jump);
@@ -1327,7 +1332,7 @@ m64p_error main_run(void)
 #endif
 
     /* setup backends */
-    extern void set_audio_format_via_libretro(void* user_data, unsigned int frequency, unsigned int bits);
+    extern void set_audio_format_via_libretro(void* user_data, unsigned int frequency);
     extern void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t size);
     audio_out_backend_libretro = (struct audio_out_backend_interface){ set_audio_format_via_libretro, push_audio_samples_via_libretro };
     

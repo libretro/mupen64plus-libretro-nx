@@ -42,9 +42,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(HAVE_LIBNX)
 #include <malloc.h>
 #endif
+
 
 #ifdef DBG
 enum
@@ -245,8 +246,13 @@ void* init_mem_base(void)
 #ifdef _WIN32
     mem_base = _aligned_malloc(MB_MAX_SIZE_FULL, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT);
 #else
+#ifdef HAVE_LIBNX
+    if (!(mem_base = memalign(MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL)))
+        mem_base = NULL;
+#else
     if (posix_memalign(&mem_base, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL) != 0)
         mem_base = NULL;
+#endif // HAVE_LIBNX
 #endif
     if (mem_base == NULL) {
         /* if it failed, try the compressed mem base alloc */
