@@ -14,6 +14,8 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #include <mach-o/dyld.h>
 #endif
 
+#include <retro_miscellaneous.h>
+
 int PluginAPI::InitiateGFX(const GFX_INFO & _gfxInfo)
 {
 	_initiateGFX(_gfxInfo);
@@ -107,9 +109,8 @@ void PluginAPI::FindPluginPath(wchar_t * _strPath)
 		_getWSPath(path, _strPath);
 	}
 #elif defined(OS_MAC_OS_X)
-#define MAXPATHLEN 256
-	char path[MAXPATHLEN];
-	uint32_t pathLen = MAXPATHLEN * 2;
+	char path[PATH_MAX_LENGTH];
+	uint32_t pathLen = PATH_MAX_LENGTH * 2;
 	if (_NSGetExecutablePath(path, &pathLen) == 0) {
 		_getWSPath(path, _strPath);
 	}

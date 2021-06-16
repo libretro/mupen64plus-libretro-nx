@@ -12,7 +12,12 @@
 #include <sys/stat.h>
 #endif
 
+#if defined(OS_MAC_OS_X)
+#include <mach-o/dyld.h>
+#endif
+
 #include <libretro_private.h>
+#include <retro_miscellaneous.h>
 
 extern retro_environment_t environ_cb;
 
@@ -94,9 +99,9 @@ void PluginAPI::FindPluginPath(wchar_t * _strPath)
 		_getWSPath(path, _strPath);
 	}
 #elif defined(OS_MAC_OS_X)
-	char path[MAXPATHLEN];
-	uint32_t pathLen = MAXPATHLEN * 2;
-	if (_NSGetExecutablePath(path, pathLen) == 0) {
+	char path[PATH_MAX_LENGTH];
+	uint32_t pathLen = PATH_MAX_LENGTH * 2;
+	if (_NSGetExecutablePath(path, &pathLen) == 0) {
 		_getWSPath(path, _strPath);
 	}
 #elif defined(ANDROID)

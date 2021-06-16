@@ -22,6 +22,10 @@
 
 #include <SDL.h>
 
+#ifdef __APPLE__
+#include <stdlib.h>
+#endif
+
 #include "api/callbacks.h"
 #include "api/debugger.h"
 #include "dbg_breakpoints.h"
