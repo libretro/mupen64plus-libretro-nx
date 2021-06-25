@@ -17576,7 +17576,7 @@ char inifile[] =
 "[EC2BCB1B7FC7D068BE1F39E79E49A842]\n"
 "GoodName=Xena Warrior Princess - The Talisman of Fate (E) [!]\n"
 "CRC=0A1667C7 293346A6\n"
-"CountPerOp=3\n"
+"CountPerOp=4\n"
 "Players=4\n"
 "SaveType=None\n"
 "Mempak=Yes\n"
