@@ -6208,6 +6208,16 @@ static void ujump_assemble(int i,struct regstat *i_regs)
   #endif
   if(i==(ba[i]-start)>>2) assem_debug("idle loop");
   address_generation(i+1,i_regs,regs[i].regmap_entry);
+
+  //Deal with ROM Hacks
+  if(rt1[i+1]==31)
+  {
+    assert(rs1[i+1]==31);
+    signed char rt=get_reg(branch_regs[i].regmap,31);
+    assert(get_reg(i_regs->regmap,31)==rt);
+    emit_movimm(start+i*4+8,rt); // PC into link register
+  }
+
   #ifdef REG_PREFETCH
   int temp=get_reg(branch_regs[i].regmap,PTEMP);
   if(rt1[i]==31&&temp>=0) 
@@ -6225,10 +6235,9 @@ static void ujump_assemble(int i,struct regstat *i_regs)
   wb_invalidate(regs[i].regmap,branch_regs[i].regmap,regs[i].dirty,regs[i].is32,
                 bc_unneeded,bc_unneeded_upper);
   load_regs(regs[i].regmap,branch_regs[i].regmap,regs[i].was32,CCREG,CCREG);
-  if(rt1[i]==31) {
+  if(rt1[i]==31&&rt1[i+1]!=31) {
     int rt;
     unsigned int return_address;
-    assert(rt1[i+1]!=31);
     assert(rt2[i+1]!=31);
     rt=get_reg(branch_regs[i].regmap,31);
     assem_debug("branch(%d): eax=%d ecx=%d edx=%d ebx=%d ebp=%d esi=%d edi=%d",i,branch_regs[i].regmap[0],branch_regs[i].regmap[1],branch_regs[i].regmap[2],branch_regs[i].regmap[3],branch_regs[i].regmap[5],branch_regs[i].regmap[6],branch_regs[i].regmap[7]);
@@ -7326,6 +7335,7 @@ static void pagespan_assemble(int i,struct regstat *i_regs)
   int s2h=get_reg(i_regs->regmap,rs2[i]|64);
   intptr_t taken=0;
   intptr_t nottaken=0;
+  intptr_t nottaken1=0;
   int unconditional=0;
   assert(!(i==(ba[i]-start)>>2 && source[i+1]==0)); //FIXME: Idle loop
   if(rs1[i]==0)
@@ -7458,12 +7468,11 @@ static void pagespan_assemble(int i,struct regstat *i_regs)
     if(s1h>=0) {
       if(s2h>=0) emit_cmp(s1h,s2h);
       else emit_test(s1h,s1h);
-      nottaken=(intptr_t)out;
+      nottaken1=(intptr_t)out;
       emit_jne(0);
     }
     if(s2l>=0) emit_cmp(s1l,s2l);
     else emit_test(s1l,s1l);
-    if(nottaken) set_jump_target(nottaken,(intptr_t)out);
     nottaken=(intptr_t)out;
     emit_jne(0);
   }
@@ -7507,17 +7516,74 @@ static void pagespan_assemble(int i,struct regstat *i_regs)
   }
   if((opcode[i]&0x3f)==0x16) // BLEZL
   {
-    assert((opcode[i]&0x3f)!=0x16);
+    if(s1h>=0) {
+      emit_test(s1h,s1h);
+      taken=(intptr_t)out;
+      emit_js(0);
+      nottaken1=(intptr_t)out;
+      emit_jne(0);
+    }
+    emit_cmpimm(s1l,1);
+    nottaken=(intptr_t)out;
+    if(s1h>=0) emit_jae(0);
+    else emit_jge(0);
+    if(taken) set_jump_target(taken,(intptr_t)out);
   }
   if((opcode[i]&0x3f)==0x17) // BGTZL
   {
-    assert((opcode[i]&0x3f)!=0x17);
+    if(s1h>=0) {
+      emit_test(s1h,s1h);
+      nottaken1=(intptr_t)out;
+      emit_js(0);
+      taken=(intptr_t)out;
+      emit_jne(0);
+    }
+    emit_cmpimm(s1l,1);
+    nottaken=(intptr_t)out;
+    if(s1h>=0) emit_jb(0);
+    else emit_jl(0);
+    if(taken) set_jump_target(taken,(intptr_t)out);
   }
-  assert(opcode[i]!=1); // BLTZ/BGEZ
+  if((opcode[i]==1)&&(opcode2[i]==0)) // BLTZ
+  {
+    emit_mov2imm_compact(ba[i],alt,start+i*4+8,addr);
+    if(s1h>=0) emit_test(s1h,s1h);
+    else emit_test(s1l,s1l);
+    emit_cmovs_reg(alt,addr);
+  }
+  if((opcode[i]==1)&&(opcode2[i]==1)) // BGEZ
+  {
+    emit_mov2imm_compact(ba[i],addr,start+i*4+8,alt);
+    if(s1h>=0) emit_test(s1h,s1h);
+    else emit_test(s1l,s1l);
+    emit_cmovs_reg(alt,addr);
+  }
+  if((opcode[i]==1)&&(opcode2[i]==2)) // BLTZL
+  {
+    if(s1h>=0) emit_test(s1h,s1h);
+    else emit_test(s1l,s1l);
+    nottaken=(intptr_t)out;
+    emit_jns(0);
+  }
+  if((opcode[i]==1)&&(opcode2[i]==3)) // BGEZL
+  {
+    if(s1h>=0) emit_test(s1h,s1h);
+    else emit_test(s1l,s1l);
+    nottaken=(intptr_t)out;
+    emit_js(0);
+  }
 
-  //FIXME: Check CSREG
   if(opcode[i]==0x11 && opcode2[i]==0x08 ) {
-    assert(0);
+    // Check cop1 unusable
+    if(!cop1_usable) {
+      signed char cs=get_reg(i_regs->regmap,CSREG);
+      assert(cs>=0);
+      emit_testimm(cs,CP0_STATUS_CU1);
+      intptr_t jaddr=(intptr_t)out;
+      emit_jeq(0);
+      add_stub(FP_STUB,jaddr,(intptr_t)out,i,cs,(intptr_t)i_regs,0,0);
+      cop1_usable=1;
+    }
     if((source[i]&0x30000)==0) // BC1F
     {
       emit_mov2imm_compact(ba[i],addr,start+i*4+8,alt);
@@ -7571,6 +7637,7 @@ static void pagespan_assemble(int i,struct regstat *i_regs)
     set_jump_target((intptr_t)branch_addr,(intptr_t)stub);
   if(likely[i]) {
     // Not-taken path
+    if(nottaken1) set_jump_target((intptr_t)nottaken1,(intptr_t)out);
     set_jump_target((intptr_t)nottaken,(intptr_t)out);
     emit_addimm(HOST_CCREG,CLOCK_DIVIDER*(ccadj[i]+2),HOST_CCREG);
     wb_dirtys(regs[i].regmap,regs[i].is32,regs[i].dirty);
@@ -9261,7 +9328,7 @@ int new_recompile_block(int addr)
           if (rt1[i]==31) {
             alloc_reg(&current,i,31);
             dirty_reg(&current,31);
-            assert(rs1[i+1]!=31&&rs2[i+1]!=31);
+            assert(rs2[i+1]!=31);
             #ifdef REG_PREFETCH
             alloc_reg(&current,i,PTEMP);
             #endif
@@ -10343,6 +10410,8 @@ int new_recompile_block(int addr)
                   //DebugMessage(M64MSG_VERBOSE, "Hit %x -> %x, %x %d/%d",start+i*4,ba[i],start+j*4,hr,r);
                   int k;
                   if(regs[i].regmap[hr]==-1&&branch_regs[i].regmap[hr]==-1) {
+                    if(get_reg(regs[i].regmap,f_regmap[hr])>=0) break;
+                    if(get_reg(branch_regs[i].regmap,f_regmap[hr])>=0) break;
                     if(get_reg(regs[i+2].regmap,f_regmap[hr])>=0) break;
                     if(r>63) {
                       if(get_reg(regs[i].regmap,r&63)<0) break;
