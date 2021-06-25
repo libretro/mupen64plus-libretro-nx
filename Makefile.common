@@ -279,7 +279,6 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/gDP.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/GLideN64.cpp                                                         \
     $(VIDEODIR_GLIDEN64)/src/gSP.cpp                                                              \
-    $(VIDEODIR_GLIDEN64)/src/Keys.cpp                                                             \
     $(VIDEODIR_GLIDEN64)/src/N64.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/TextDrawer.cpp                                                       \
     $(VIDEODIR_GLIDEN64)/src/PaletteTexture.cpp                                                   \

@@ -193,7 +193,7 @@ void PluginAPI::RomClosed()
 	dwnd().stop();
 	GBI.destroy();
 #endif
-	osal_keys_quit();
+	//osal_keys_quit();
 }
 
 int PluginAPI::RomOpen()
@@ -212,7 +212,7 @@ int PluginAPI::RomOpen()
 	if (!dwnd().start())
 		return 0;
 #endif
-	osal_keys_init();
+	//osal_keys_init();
 
 	m_bRomOpen = true;
 
