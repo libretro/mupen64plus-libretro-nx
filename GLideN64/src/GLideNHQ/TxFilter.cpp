@@ -129,6 +129,9 @@ TxFilter::TxFilter(int maxwidth,
 	if (ident && wcscmp(ident, wst("DEFAULT")) != 0)
 		_ident.assign(ident);
 
+	/* replace ':' in ROM name with '-' */
+	removeColon(_ident);
+
 	if (TxMemBuf::getInstance()->init(_maxwidth, _maxheight)) {
 		if (!_tex1)
 			_tex1 = TxMemBuf::getInstance()->get(0);
@@ -503,7 +506,8 @@ TxFilter::hirestex(uint64 g64crc, uint64 r_crc64, uint16 *palette, GHQTexInfo *i
 
 			return 1; /* yep, got it */
 		}
-		if (_txHiResCache->get((r_crc64 & 0xffffffff), info)) {
+		if (_txHiResCache->get((r_crc64 >> 32), info) ||
+			_txHiResCache->get((r_crc64 & 0xffffffff), info)) {
 			DBG_INFO(80, wst("hires hit: %d x %d gfmt:%x\n"), info->width, info->height, info->format);
 
 			/* for true CI textures, we use the passed in palette to convert to

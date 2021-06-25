@@ -18,6 +18,80 @@ Config config;
 m64p_handle g_configVideoGeneral = nullptr;
 m64p_handle g_configVideoGliden64 = nullptr;
 
+static
+const char* _hotkeyDescription(u32 _idx)
+{
+	switch (_idx)
+	{
+	case Config::HotKey::hkTexDump:
+		return "Hotkey: toggle textures dump";
+	case Config::HotKey::hkHdTexReload:
+		return "Hotkey: reload HD textures";
+	case Config::HotKey::hkHdTexToggle:
+		return "Hotkey: toggle HD textures";
+	case Config::HotKey::hkTexCoordBounds:
+		return "Hotkey: toggle texcoords bounds";
+	case Config::HotKey::hkNativeResTexrects:
+		return "Hotkey: toggle 2D texrects in native resolution";
+	case Config::HotKey::hkVsync:
+		return "Hotkey: toggle VSync";
+	case Config::HotKey::hkFBEmulation:
+		return "Hotkey: toggle frame buffer emulation";
+	case Config::HotKey::hkN64DepthCompare:
+		return "Hotkey: toggle N64 depth compare";
+	case Config::HotKey::hkOsdVis:
+		return "Hotkey: toggle OSD VI/S";
+	case Config::HotKey::hkOsdFps:
+		return "Hotkey: toggle OSD FPS";
+	case Config::HotKey::hkOsdPercent:
+		return "Hotkey: toggle OSD percent";
+	case Config::HotKey::hkOsdInternalResolution:
+		return "Hotkey: toggle OSD internal resolution";
+	case Config::HotKey::hkOsdRenderingResolution:
+		return "Hotkey: toggle OSD rendering resolution";
+	case Config::HotKey::hkForceGammaCorrection:
+		return "Hotkey: toggle force gamma correction";
+	}
+	return "Unknown hotkey";
+}
+
+//static const unsigned char HID_TO_ASCII[256] = {
+//	0,  0,  0,  0, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76,
+//	77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 49, 50,
+//	51, 52, 53, 54, 55, 56, 57, 48,  0,  0,  0, 32, 45, 43, 91, 93,
+//	92, 59, 34,  0, 44,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+//};
+
+static
+u8 ASCIItoHID(const char * pStr) {
+	static const unsigned char ASCII_TO_HID[128] = {
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	 44,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	 39, 30, 31, 32, 33, 34, 35, 36, 37, 38,  0,  0,  0,  0,  0,  0,
+	  0,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+	 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,  0,  0,  0,  0,  0,
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+	};
+
+	if (strlen(pStr) != 1 || pStr[0] < 0)
+		return 0;
+	return ASCII_TO_HID[pStr[0]];
+}
+
 bool Config_SetDefault()
 {
 	if (ConfigOpenSection("Video-General", &g_configVideoGeneral) != M64ERR_SUCCESS) {
@@ -79,6 +153,10 @@ bool Config_SetDefault()
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableHWLighting", config.generalEmulation.enableHWLighting, "Enable hardware per-pixel lighting.");
 	assert(res == M64ERR_SUCCESS);
+	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableCoverage", config.generalEmulation.enableCoverage, "Enable pixel coverage calculation. Used for better blending emulation and wire-frame mode. Needs fast GPU.");
+	assert(res == M64ERR_SUCCESS);
+	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableClipping", config.generalEmulation.enableClipping, "Enable software vertices clipping. Brings various benefits.");
+	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableShadersStorage", config.generalEmulation.enableShadersStorage, "Use persistent storage for compiled shaders.");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableLegacyBlending", config.generalEmulation.enableLegacyBlending, "Do not use shaders to emulate N64 blending modes. Works faster on slow GPU. Can cause glitches.");
@@ -90,8 +168,6 @@ bool Config_SetDefault()
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableCustomSettings", config.generalEmulation.enableCustomSettings, "Use GLideN64 per-game settings.");
 	assert(res == M64ERR_SUCCESS);
 #if defined(OS_ANDROID) || defined(OS_IOS)
-	res = ConfigSetDefaultBool(g_configVideoGliden64, "EnableBlitScreenWorkaround", config.generalEmulation.enableBlitScreenWorkaround, "Enable to render everything upside down");
-	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "ForcePolygonOffset", config.generalEmulation.forcePolygonOffset, "If true, use polygon offset values specified below");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultFloat(g_configVideoGliden64, "PolygonOffsetFactor", config.generalEmulation.polygonOffsetFactor, "Specifies a scale factor that is used to create a variable depth offset for each polygon");
@@ -105,6 +181,8 @@ bool Config_SetDefault()
 	res = ConfigSetDefaultInt(g_configVideoGliden64, "EnableNativeResTexrects", config.graphics2D.enableNativeResTexrects, "Render 2D texrects in native resolution to fix misalignment between parts of 2D image. (0=Off, 1=Optimized, 2=Unoptimized)");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultInt(g_configVideoGliden64, "BackgroundsMode", config.graphics2D.bgMode, "Render backgrounds mode (HLE only). (0=One piece (fast), 1=Stripped (precise))");
+	assert(res == M64ERR_SUCCESS);
+	res = ConfigSetDefaultInt(g_configVideoGliden64, "EnableTexCoordBounds", config.graphics2D.enableTexCoordBounds, "Bound texture rectangle texture coordinates to the values they take in native resolutions. It prevents garbage due to fetching out of texture bounds, but can result in hard edges. (0=Off, 1=On)");
 	assert(res == M64ERR_SUCCESS);
 
 	//#Frame Buffer Settings:"
@@ -167,10 +245,6 @@ bool Config_SetDefault()
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txHresAltCRC", config.textureFilter.txHresAltCRC, "Use alternative method of paletted textures CRC calculation.");
 	assert(res == M64ERR_SUCCESS);
-	res = ConfigSetDefaultBool(g_configVideoGliden64, "txDump", config.textureFilter.txDump, "Press 'd' to start dump of N64 textures.");
-	assert(res == M64ERR_SUCCESS);
-	res = ConfigSetDefaultBool(g_configVideoGliden64, "txReloadHiresTex", config.textureFilter.txReloadHiresTex, "Press 'r' to reload HD textures.");
-	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txCacheCompression", config.textureFilter.txCacheCompression, "Zip textures cache.");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txForce16bpp", config.textureFilter.txForce16bpp, "Force use 16bit texture formats for HD textures.");
@@ -217,9 +291,17 @@ bool Config_SetDefault()
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "ShowRenderingResolution", config.onScreenDisplay.renderingResolution, "Show rendering resolution.");
 	assert(res == M64ERR_SUCCESS);
+	res = ConfigSetDefaultBool(g_configVideoGliden64, "ShowStatistics", config.onScreenDisplay.percent, "Show statistics for drawn elements.");
+	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultInt(g_configVideoGliden64, "CountersPos", config.onScreenDisplay.pos,
 		"Counters position (1=top left, 2=top center, 4=top right, 8=bottom left, 16=bottom center, 32=bottom right)");
 	assert(res == M64ERR_SUCCESS);
+
+	//#Hotkey settings
+	for (u32 idx = 0; idx < Config::HotKey::hkTotal; ++idx) {
+		res = ConfigSetDefaultString(g_configVideoGliden64, Config::hotkeyIniName(idx), "", _hotkeyDescription(idx));
+		assert(res == M64ERR_SUCCESS);
+	}
 
 #ifdef DEBUG_DUMP
 	//#Debug settings
@@ -290,6 +372,10 @@ void Config_LoadCustomConfig()
 	if (result == M64ERR_SUCCESS) config.generalEmulation.enableLOD = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "generalEmulation\\enableHWLighting", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.generalEmulation.enableHWLighting = atoi(value);
+	result = ConfigExternalGetParameter(fileHandle, sectionName, "generalEmulation\\enableCoverage", value, sizeof(value));
+	if (result == M64ERR_SUCCESS) config.generalEmulation.enableCoverage = atoi(value);
+	result = ConfigExternalGetParameter(fileHandle, sectionName, "generalEmulation\\enableClipping", value, sizeof(value));
+	if (result == M64ERR_SUCCESS) config.generalEmulation.enableClipping = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "generalEmulation\\enableShadersStorage", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.generalEmulation.enableShadersStorage = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "generalEmulation\\enableLegacyBlending", value, sizeof(value));
@@ -303,6 +389,8 @@ void Config_LoadCustomConfig()
 	if (result == M64ERR_SUCCESS) config.graphics2D.enableNativeResTexrects = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "graphics2D\\bgMode", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.graphics2D.bgMode = atoi(value);
+	result = ConfigExternalGetParameter(fileHandle, sectionName, "graphics2D\\enableTexCoordBounds", value, sizeof(value));
+	if (result == M64ERR_SUCCESS) config.graphics2D.enableTexCoordBounds = atoi(value);
 
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "frameBufferEmulation\\enable", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.frameBufferEmulation.enable = atoi(value);
@@ -370,10 +458,6 @@ void Config_LoadCustomConfig()
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txHresAltCRC", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txHresAltCRC = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txDump", value, sizeof(value));
-	if (result == M64ERR_SUCCESS) config.textureFilter.txDump = atoi(value);
-	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txReloadHiresTex", value, sizeof(value));
-	if (result == M64ERR_SUCCESS) config.textureFilter.txReloadHiresTex = atoi(value);
-	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txForce16bpp", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txForce16bpp = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txCacheCompression", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txCacheCompression = atoi(value);
@@ -417,13 +501,14 @@ void Config_LoadConfig()
 
 	config.generalEmulation.enableLOD = ConfigGetParamBool(g_configVideoGliden64, "EnableLOD");
 	config.generalEmulation.enableHWLighting = ConfigGetParamBool(g_configVideoGliden64, "EnableHWLighting");
+	config.generalEmulation.enableCoverage = ConfigGetParamBool(g_configVideoGliden64, "EnableCoverage");
+	config.generalEmulation.enableClipping = ConfigGetParamBool(g_configVideoGliden64, "enableClipping");
 	config.generalEmulation.enableShadersStorage = ConfigGetParamBool(g_configVideoGliden64, "EnableShadersStorage");
 	config.generalEmulation.enableLegacyBlending = ConfigGetParamBool(g_configVideoGliden64, "EnableLegacyBlending");
 	config.generalEmulation.enableHybridFilter = ConfigGetParamBool(g_configVideoGliden64, "EnableHybridFilter");
 	config.generalEmulation.enableFragmentDepthWrite = ConfigGetParamBool(g_configVideoGliden64, "EnableFragmentDepthWrite");
 	config.generalEmulation.enableCustomSettings = ConfigGetParamBool(g_configVideoGliden64, "EnableCustomSettings");
 #if defined(OS_ANDROID) || defined(OS_IOS)
-	config.generalEmulation.enableBlitScreenWorkaround = ConfigGetParamBool(g_configVideoGliden64, "EnableBlitScreenWorkaround");
 	config.generalEmulation.forcePolygonOffset = ConfigGetParamBool(g_configVideoGliden64, "ForcePolygonOffset");
 	config.generalEmulation.polygonOffsetFactor = ConfigGetParamFloat(g_configVideoGliden64, "PolygonOffsetFactor");
 	config.generalEmulation.polygonOffsetUnits = ConfigGetParamFloat(g_configVideoGliden64, "PolygonOffsetUnits");
@@ -432,6 +517,7 @@ void Config_LoadConfig()
 	config.graphics2D.correctTexrectCoords = ConfigGetParamInt(g_configVideoGliden64, "CorrectTexrectCoords");
 	config.graphics2D.enableNativeResTexrects = ConfigGetParamInt(g_configVideoGliden64, "EnableNativeResTexrects");
 	config.graphics2D.bgMode = ConfigGetParamInt(g_configVideoGliden64, "BackgroundsMode");
+	config.graphics2D.enableTexCoordBounds = ConfigGetParamInt(g_configVideoGliden64, "EnableTexCoordBounds");
 	//#Frame Buffer Settings:"
 	config.frameBufferEmulation.enable = ConfigGetParamBool(g_configVideoGliden64, "EnableFBEmulation");
 	config.frameBufferEmulation.copyAuxToRDRAM = ConfigGetParamBool(g_configVideoGliden64, "EnableCopyAuxiliaryToRDRAM");
@@ -464,8 +550,6 @@ void Config_LoadConfig()
 	config.textureFilter.txHiresEnable = ConfigGetParamBool(g_configVideoGliden64, "txHiresEnable");
 	config.textureFilter.txHiresFullAlphaChannel = ConfigGetParamBool(g_configVideoGliden64, "txHiresFullAlphaChannel");
 	config.textureFilter.txHresAltCRC = ConfigGetParamBool(g_configVideoGliden64, "txHresAltCRC");
-	config.textureFilter.txDump = ConfigGetParamBool(g_configVideoGliden64, "txDump");
-	config.textureFilter.txReloadHiresTex = ConfigGetParamBool(g_configVideoGliden64, "txReloadHiresTex");
 	config.textureFilter.txForce16bpp = ConfigGetParamBool(g_configVideoGliden64, "txForce16bpp");
 	config.textureFilter.txCacheCompression = ConfigGetParamBool(g_configVideoGliden64, "txCacheCompression");
 	config.textureFilter.txSaveCache = ConfigGetParamBool(g_configVideoGliden64, "txSaveCache");
@@ -506,7 +590,13 @@ void Config_LoadConfig()
 	config.onScreenDisplay.percent = ConfigGetParamBool(g_configVideoGliden64, "ShowPercent");
 	config.onScreenDisplay.internalResolution = ConfigGetParamBool(g_configVideoGliden64, "ShowInternalResolution");
 	config.onScreenDisplay.renderingResolution = ConfigGetParamBool(g_configVideoGliden64, "ShowRenderingResolution");
+	config.onScreenDisplay.statistics = ConfigGetParamBool(g_configVideoGliden64, "ShowStatistics");
 	config.onScreenDisplay.pos = ConfigGetParamInt(g_configVideoGliden64, "CountersPos");
+
+	//#Hotkey settings
+	for (u32 idx = 0; idx < Config::HotKey::hkTotal; ++idx) {
+		config.hotkeys.keys[idx] = ASCIItoHID(ConfigGetParamString(g_configVideoGliden64, Config::hotkeyIniName(idx)));
+	}
 
 #ifdef DEBUG_DUMP
 	config.debug.dumpMode = ConfigGetParamInt(g_configVideoGliden64, "DebugDumpMode");

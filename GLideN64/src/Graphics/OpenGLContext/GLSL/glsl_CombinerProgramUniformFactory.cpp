@@ -1,3 +1,4 @@
+#include <cmath>
 #include <Config.h>
 #include "glsl_CombinerProgramUniformFactory.h"
 #include <Graphics/Parameters.h>
@@ -216,6 +217,119 @@ private:
 	iUniform uScreenSpaceTriangle;
 };
 
+class URasterInfo : public UniformGroup {
+public:
+	URasterInfo(GLuint _program) {
+		LocateUniform(uVertexOffset);
+		LocateUniform(uTexCoordOffset[0]);
+		LocateUniform(uTexCoordOffset[1]);
+		LocateUniform(uUseTexCoordBounds);
+		LocateUniform(uTexCoordBounds0);
+		LocateUniform(uTexCoordBounds1);
+	}
+
+	void update(bool _force) override {
+		const bool isNativeRes = config.frameBufferEmulation.nativeResFactor == 1 && config.video.multisampling == 0;
+		const bool isTexRect = dwnd().getDrawer().getDrawingState() == DrawingState::TexRect;
+		const bool useTexCoordBounds = isTexRect && !isNativeRes && config.graphics2D.enableTexCoordBounds;
+		/* At rasterization stage, the N64 places samples on the top left of the fragment while OpenGL		*/
+		/* places them in the fragment center. As a result, a normal approach results in shifted texture	*/
+		/* coordinates. In native resolution, this difference can be negated by shifting vertices by 0.5.	*/
+		/* In higher resolutions, there	are more samples than the game intends, so shifting is not very		*/
+		/* effective. Still, an heuristic is applied to render texture rectangles as correctly as possible  */
+		/* in higher resolutions too. See issue #2324 for details. 											*/
+		const float vertexOffset = isNativeRes ? 0.5f : 0.0f;
+		float texCoordOffset[2][2] = { 0.0f, 0.0f };
+		if (isTexRect && !isNativeRes) {
+			float scale[2] = { 0.0f, 0.0f };
+			if (config.graphics2D.enableNativeResTexrects != 0 && gDP.otherMode.textureFilter != G_TF_POINT) {
+				scale[0] = scale[1] = 1.0f;
+			} else {
+				scale[0] = scale[1] = static_cast<float>(config.frameBufferEmulation.nativeResFactor);
+			}
+
+			for (int t = 0; t < 2; t++) {
+				const CachedTexture* _pTexture = textureCache().current[t];
+				if (_pTexture != nullptr) {
+					if (config.frameBufferEmulation.nativeResFactor != 0) {
+						texCoordOffset[t][0] = (gDP.lastTexRectInfo.dsdx >= 0.0f ? -0.5f / scale[0] : -1.0f + 0.5f / scale[0]) * gDP.lastTexRectInfo.dsdx * _pTexture->hdRatioS;
+						texCoordOffset[t][1] = (gDP.lastTexRectInfo.dtdy >= 0.0f ? -0.5f / scale[1] : -1.0f + 0.5f / scale[1]) * gDP.lastTexRectInfo.dtdy * _pTexture->hdRatioT;
+					} else {
+						texCoordOffset[t][0] = (gDP.lastTexRectInfo.dsdx >= 0.0f ? 0.0f : -1.0f) * gDP.lastTexRectInfo.dsdx * _pTexture->hdRatioS;
+						texCoordOffset[t][1] = (gDP.lastTexRectInfo.dtdy >= 0.0f ? 0.0f : -1.0f) * gDP.lastTexRectInfo.dtdy * _pTexture->hdRatioT;
+						if (gDP.otherMode.textureFilter != G_TF_POINT) {
+							texCoordOffset[t][0] -= 0.5f;
+							texCoordOffset[t][1] -= 0.5f;
+						}
+					}
+				}
+			}
+		}
+		float tcbounds[2][4] = {};
+		if (useTexCoordBounds) {
+			f32 uls, lrs, ult, lrt, S, T, shiftScaleS, shiftScaleT;
+			s16 shiftedS, shiftedT;
+			u32 shifts, shiftt;
+			for (int t = 0; t < 2; t++) {
+				const CachedTexture * _pTexture = textureCache().current[t];
+				const gDPTile * _pTile = gSP.textureTile[t];
+				if (_pTexture != nullptr && _pTile != nullptr){
+					if (_pTile->shifts > 10) {
+						shifts = 16 - _pTile->shifts;
+						shiftedS = static_cast<s16>(gDP.lastTexRectInfo.s << shifts);
+						shiftScaleS = static_cast<f32>(1 << shifts);
+					} else {
+						shifts = _pTile->shifts;
+						shiftedS = static_cast<s16>(gDP.lastTexRectInfo.s >> shifts);
+						shiftScaleS = 1.0f / static_cast<f32>(1 << shifts);
+					}
+					if (_pTile->shiftt > 10) {
+						shiftt = 16 - _pTile->shiftt;
+						shiftedT = static_cast<s16>(gDP.lastTexRectInfo.t << shiftt);
+						shiftScaleT = static_cast<f32>(1 << shiftt);
+					} else {
+						shiftt = _pTile->shiftt;
+						shiftedT = static_cast<s16>(gDP.lastTexRectInfo.t >> shiftt);
+						shiftScaleT = 1.0f / static_cast<f32>(1 << shiftt);
+					}
+
+					S = _FIXED2FLOAT(shiftedS, 5);
+					T = _FIXED2FLOAT(shiftedT, 5);
+					uls = S + (ceilf(gDP.lastTexRectInfo.ulx) - gDP.lastTexRectInfo.ulx) * gDP.lastTexRectInfo.dsdx * shiftScaleS;
+					lrs = S + (ceilf(gDP.lastTexRectInfo.lrx) - gDP.lastTexRectInfo.ulx - 1.0f) * gDP.lastTexRectInfo.dsdx * shiftScaleS;
+					ult = T + (ceilf(gDP.lastTexRectInfo.uly) - gDP.lastTexRectInfo.uly) * gDP.lastTexRectInfo.dtdy * shiftScaleT;
+					lrt = T + (ceilf(gDP.lastTexRectInfo.lry) - gDP.lastTexRectInfo.uly - 1.0f) * gDP.lastTexRectInfo.dtdy * shiftScaleT;
+
+					tcbounds[t][0] = (fmin(uls, lrs) - _pTile->fuls) * _pTexture->hdRatioS;
+					tcbounds[t][1] = (fmin(ult, lrt) - _pTile->fult) * _pTexture->hdRatioT;
+					tcbounds[t][2] = (fmax(uls, lrs) - _pTile->fuls) * _pTexture->hdRatioS;
+					tcbounds[t][3] = (fmax(ult, lrt) - _pTile->fult) * _pTexture->hdRatioT;
+					if (_pTexture->frameBufferTexture != CachedTexture::fbNone) {
+						tcbounds[t][0] += _pTexture->offsetS * _pTexture->hdRatioS;
+						tcbounds[t][1] += _pTexture->offsetT * _pTexture->hdRatioT;
+						tcbounds[t][2] += _pTexture->offsetS * _pTexture->hdRatioS;
+						tcbounds[t][3] += _pTexture->offsetT * _pTexture->hdRatioT;
+					}
+				}
+			}
+		}
+
+		uVertexOffset.set(vertexOffset, vertexOffset, _force);
+		uTexCoordOffset[0].set(texCoordOffset[0][0], texCoordOffset[0][1], _force);
+		uTexCoordOffset[1].set(texCoordOffset[1][0], texCoordOffset[1][1], _force);
+		uUseTexCoordBounds.set(useTexCoordBounds ? 1 : 0, _force);
+		uTexCoordBounds0.set(tcbounds[0], _force);
+		uTexCoordBounds1.set(tcbounds[1], _force);
+	}
+
+private:
+	fv2Uniform uVertexOffset;
+	fv2Uniform uTexCoordOffset[2];
+	iUniform uUseTexCoordBounds;
+	fv4Uniform uTexCoordBounds0;
+	fv4Uniform uTexCoordBounds1;
+};
+
 class UFrameBufferInfo : public UniformGroup
 {
 public:
@@ -358,7 +472,7 @@ public:
 		const int forceBlend2 = gDP.otherMode.forceBlender;
 		uForceBlendCycle2.set(forceBlend2, _force);
 
-		if (!graphics::Context::DualSourceBlending || dwnd().getDrawer().isTexrectDrawerMode()) {
+		if (!(graphics::Context::DualSourceBlending || graphics::Context::FramebufferFetchColor) || dwnd().getDrawer().isTexrectDrawerMode()) {
 			// Modes, which shader blender can't emulate
 			const u32 mode = _SHIFTR(gDP.otherMode.l, 16, 16);
 			switch (mode) {
@@ -574,24 +688,23 @@ public:
 	{
 		if (gDP.otherMode.cycleType == G_CYC_FILL) {
 			uEnableAlphaTest.set(0, _force);
-		}
-		else if (gDP.otherMode.cycleType == G_CYC_COPY) {
+			uAlphaCvgSel.set(0, _force);
+
+		} else if (gDP.otherMode.cycleType == G_CYC_COPY) {
+			uAlphaCvgSel.set(0, _force);
 			if (gDP.otherMode.alphaCompare & G_AC_THRESHOLD) {
 				uEnableAlphaTest.set(1, _force);
-				uAlphaCvgSel.set(0, _force);
 				uAlphaTestValue.set(0.5f, _force);
-			}
-			else {
+			} else {
 				uEnableAlphaTest.set(0, _force);
 			}
-		}
-		else if ((gDP.otherMode.alphaCompare & G_AC_THRESHOLD) != 0) {
+		} else if ((gDP.otherMode.alphaCompare & G_AC_THRESHOLD) != 0) {
 			uEnableAlphaTest.set(1, _force);
 			uAlphaTestValue.set(gDP.blendColor.a, _force);
 			uAlphaCvgSel.set(gDP.otherMode.alphaCvgSel, _force);
-		}
-		else {
+		} else {
 			uEnableAlphaTest.set(0, _force);
+			uAlphaCvgSel.set(gDP.otherMode.alphaCvgSel, _force);
 		}
 
 		uCvgXAlpha.set(gDP.otherMode.cvgXAlpha, _force);
@@ -602,6 +715,43 @@ private:
 	iUniform uAlphaCvgSel;
 	iUniform uCvgXAlpha;
 	fUniform uAlphaTestValue;
+};
+
+class UViewportInfo : public UniformGroup
+{
+public:
+	UViewportInfo(GLuint _program) {
+		LocateUniform(uVTrans);
+		LocateUniform(uVScale);
+		LocateUniform(uAdjustTrans);
+		LocateUniform(uAdjustScale);
+	}
+
+	void update(bool _force) override
+	{
+		const bool isOrthographicProjection = gSP.matrix.projection[3][2] == -1.f;
+		float adjustTrans[2] = { 0.0f, 0.0f };
+		float adjustScale[2] = { 1.0f, 1.0f };
+		if (dwnd().isAdjustScreen() && (gDP.colorImage.width > VI.width * 98 / 100)) {
+			if (isOrthographicProjection) {
+				adjustScale[1] = 1.0f / dwnd().getAdjustScale();
+				adjustTrans[1] = static_cast<f32>(gDP.colorImage.width) * 3.0f / 4.0f * (1.0f - adjustScale[1]) / 2.0f;
+			} else {
+				adjustScale[0] = dwnd().getAdjustScale();
+				adjustTrans[0] = static_cast<f32>(gDP.colorImage.width) * (1.0f - adjustScale[0]) / 2.0f;
+			}
+		}
+		uVTrans.set(gSP.viewport.vtrans[0], gSP.viewport.vtrans[1], _force);
+		uVScale.set(gSP.viewport.vscale[0], -gSP.viewport.vscale[1], _force);
+		uAdjustTrans.set(adjustTrans[0], adjustTrans[1], _force);
+		uAdjustScale.set(adjustScale[0], adjustScale[1], _force);
+	}
+
+private:
+	fv2Uniform uVTrans;
+	fv2Uniform uVScale;
+	fv2Uniform uAdjustTrans;
+	fv2Uniform uAdjustScale;
 };
 
 class UDepthScale : public UniformGroup
@@ -722,37 +872,21 @@ public:
 		int clampMode = -1;
 		switch (gfxContext.getClampMode())
 		{
-		case graphics::ClampMode::ClippingEnabled:
-			clampMode = 0;
-			break;
-		case graphics::ClampMode::NoNearPlaneClipping:
-			clampMode = 1;
-			break;
-		case graphics::ClampMode::NoClipping:
-			clampMode = 2;
-			break;
+			case graphics::ClampMode::ClippingEnabled:
+				clampMode = 0;
+				break;
+			case graphics::ClampMode::NoNearPlaneClipping:
+				clampMode = 1;
+				break;
+			case graphics::ClampMode::NoClipping:
+				clampMode = 2;
+				break;
 		}
 		uClampMode.set(clampMode, _force);
 	}
 
 private:
 	iUniform uClampMode;
-};
-
-class UClipRatio : public UniformGroup
-{
-public:
-	UClipRatio(GLuint _program) {
-		LocateUniform(uClipRatio);
-	}
-
-	void update(bool _force) override
-	{
-		uClipRatio.set(float(gSP.clipRatio), _force);
-	}
-
-private:
-	fUniform uClipRatio;
 };
 
 class UPolygonOffset : public UniformGroup
@@ -771,7 +905,6 @@ public:
 private:
 	fUniform uPolygonOffset;
 };
-
 
 class UScreenCoordsScale : public UniformGroup
 {
@@ -1017,8 +1150,8 @@ public:
 			} else {
 				aTexWrap[t][0] = f32(1 << pTile->masks) * pTexture->hdRatioS;
 				aTexWrap[t][1] = f32(1 << pTile->maskt) * pTexture->hdRatioT;
-				aTexClamp[t][0] = (pTile->flrs - pTile->fuls + 1.0f) * pTexture->hdRatioS - 1.0f;
-				aTexClamp[t][1] = (pTile->flrt - pTile->fult + 1.0f) * pTexture->hdRatioT - 1.0f;
+				aTexClamp[t][0] = f32(pTile->lrs - pTile->uls + 1) * pTexture->hdRatioS - 1.0f;
+				aTexClamp[t][1] = f32(pTile->lrt - pTile->ult + 1) * pTexture->hdRatioT - 1.0f;
 				aTexWrapEn[t][0] = f32(pTile->masks == 0 ? 0 : 1);
 				aTexWrapEn[t][1] = f32(pTile->maskt == 0 ? 0 : 1);
 				aTexClampEn[t][0] = f32(gDP.otherMode.cycleType == G_CYC_COPY ? 0 : (pTile->masks == 0 ? 1 : pTile->clamps));
@@ -1096,6 +1229,8 @@ void CombinerProgramUniformFactory::buildUniforms(GLuint _program,
 {
 	_uniforms.emplace_back(new UNoiseTex(_program));
 	_uniforms.emplace_back(new UScreenSpaceTriangleInfo(_program));
+	_uniforms.emplace_back(new URasterInfo(_program));
+	_uniforms.emplace_back(new UViewportInfo(_program));
 
 	if (!m_glInfo.isGLES2) {
 		_uniforms.emplace_back(new UDepthTex(_program));
@@ -1166,8 +1301,6 @@ void CombinerProgramUniformFactory::buildUniforms(GLuint _program,
 		_uniforms.emplace_back(new UClampMode(_program));
 		_uniforms.emplace_back(new UPolygonOffset(_program));
 	}
-
-	_uniforms.emplace_back(new UClipRatio(_program));
 
 	_uniforms.emplace_back(new UScreenCoordsScale(_program));
 

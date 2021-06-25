@@ -8,6 +8,10 @@
 #include "PluginAPI.h"
 #include "FrameBuffer.h"
 
+#ifdef min
+#undef min
+#endif
+
 bool DisplayWindow::start()
 {
 	if (!_start())
@@ -18,6 +22,11 @@ bool DisplayWindow::start()
 	gfxContext.init();
 	m_drawer._initData();
 	m_buffersSwapCount = 0;
+
+	// only query max MSAA when needed
+	if (m_maxMsaa == 0) {
+		m_maxMsaa = gfxContext.getMaxMSAALevel();
+	}
 
 	return true;
 }
@@ -38,6 +47,7 @@ void DisplayWindow::restart()
 void DisplayWindow::swapBuffers()
 {
 	m_drawer.drawOSD();
+	m_drawer.clearStatistics();
 	_swapBuffers();
 	if (!RSP.LLE) {
 		if ((config.generalEmulation.hacks & hack_doNotResetOtherModeL) == 0)
@@ -74,7 +84,7 @@ void DisplayWindow::saveBufferContent(graphics::ObjectHandle _fbo, CachedTexture
 		std::wstring pluginPath(m_strScreenDirectory);
 		if (pluginPath.back() != L'/')
 			pluginPath += L'/';
-		::wcsncpy(m_strScreenDirectory, pluginPath.c_str(), pluginPath.length() + 1);
+		::wcsncpy(m_strScreenDirectory, pluginPath.c_str(), std::min(size_t(PLUGIN_PATH_SIZE), pluginPath.length() + 1));
 	}
 	_saveBufferContent(_fbo, _pTexture);
 }
@@ -95,8 +105,7 @@ void DisplayWindow::closeWindow()
 {
 	if (!m_bToggleFullscreen || !m_bFullscreen)
 		return;
-	if (m_drawer.getDrawingState() != DrawingState::Non)
-		m_drawer._destroyData();
+	m_drawer._destroyData();
 	_changeWindow();
 	m_bToggleFullscreen = false;
 }
@@ -189,4 +198,9 @@ void DisplayWindow::readScreen(void **_pDest, long *_pWidth, long *_pHeight)
 void DisplayWindow::readScreen2(void * _dest, int * _width, int * _height, int _front)
 {
 	_readScreen2(_dest, _width, _height, _front);
+}
+
+u32 DisplayWindow::maxMSAALevel() const
+{
+	return m_maxMsaa;
 }

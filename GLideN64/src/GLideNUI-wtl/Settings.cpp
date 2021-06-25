@@ -28,6 +28,7 @@ void _loadSettings(GlSettings & settings)
 	config.video.windowedHeight = settings.value("windowedHeight", config.video.windowedHeight).toInt();
 	config.video.fullscreenRefresh = settings.value("fullscreenRefresh", config.video.fullscreenRefresh).toInt();
 	config.video.multisampling = settings.value("multisampling", config.video.multisampling).toInt();
+	config.video.maxMultiSampling = settings.value("maxMultiSampling", config.video.maxMultiSampling).toInt();
 	config.video.fxaa= settings.value("fxaa", config.video.fxaa).toInt();
 	config.video.verticalSync = settings.value("verticalSync", config.video.verticalSync).toInt();
 	config.video.threadedVideo = settings.value("threadedVideo", config.video.threadedVideo).toInt();
@@ -47,6 +48,7 @@ void _loadSettings(GlSettings & settings)
 	config.generalEmulation.rdramImageDitheringMode = settings.value("rdramImageDitheringMode", config.generalEmulation.rdramImageDitheringMode).toInt();
 	config.generalEmulation.enableLOD = settings.value("enableLOD", config.generalEmulation.enableLOD).toInt();
 	config.generalEmulation.enableHWLighting = settings.value("enableHWLighting", config.generalEmulation.enableHWLighting).toInt();
+	config.generalEmulation.enableCoverage = settings.value("enableCoverage", config.generalEmulation.enableCoverage).toInt();
 	config.generalEmulation.enableShadersStorage = settings.value("enableShadersStorage", config.generalEmulation.enableShadersStorage).toInt();
 	config.generalEmulation.enableLegacyBlending = settings.value("enableLegacyBlending", config.generalEmulation.enableLegacyBlending).toInt();			 //ini only
 	config.generalEmulation.enableHybridFilter = settings.value("enableHybridFilter", config.generalEmulation.enableHybridFilter).toInt();					 //ini only
@@ -95,16 +97,14 @@ void _loadSettings(GlSettings & settings)
 	config.textureFilter.txHiresEnable = settings.value("txHiresEnable", config.textureFilter.txHiresEnable).toInt();
 	config.textureFilter.txHiresFullAlphaChannel = settings.value("txHiresFullAlphaChannel", config.textureFilter.txHiresFullAlphaChannel).toInt();
 	config.textureFilter.txHresAltCRC = settings.value("txHresAltCRC", config.textureFilter.txHresAltCRC).toInt();
-	config.textureFilter.txDump = settings.value("txDump", config.textureFilter.txDump).toInt();
-	config.textureFilter.txReloadHiresTex = settings.value("txReloadHiresTex", config.textureFilter.txReloadHiresTex).toInt();
 	config.textureFilter.txForce16bpp = settings.value("txForce16bpp", config.textureFilter.txForce16bpp).toInt();
 	config.textureFilter.txCacheCompression = settings.value("txCacheCompression", config.textureFilter.txCacheCompression).toInt();
 	config.textureFilter.txSaveCache = settings.value("txSaveCache", config.textureFilter.txSaveCache).toInt();
 	config.textureFilter.txEnhancedTextureFileStorage = settings.value("txEnhancedTextureFileStorage", config.textureFilter.txEnhancedTextureFileStorage).toInt();
 	config.textureFilter.txHiresTextureFileStorage = settings.value("txHiresTextureFileStorage", config.textureFilter.txHiresTextureFileStorage).toInt();
 	wcscpy_s(config.textureFilter.txPath, ToUTF16(settings.value("txPath", FromUTF16(config.textureFilter.txPath).c_str()).toString().c_str()).c_str());
-	wcscpy_s(config.textureFilter.txCachePath, ToUTF16(settings.value("txCachePath", FromUTF16(config.textureFilter.txPath).c_str()).toString().c_str()).c_str());
-	wcscpy_s(config.textureFilter.txDumpPath, ToUTF16(settings.value("txDumpPath", FromUTF16(config.textureFilter.txPath).c_str()).toString().c_str()).c_str());
+	wcscpy_s(config.textureFilter.txCachePath, ToUTF16(settings.value("txCachePath", FromUTF16(config.textureFilter.txCachePath).c_str()).toString().c_str()).c_str());
+	wcscpy_s(config.textureFilter.txDumpPath, ToUTF16(settings.value("txDumpPath", FromUTF16(config.textureFilter.txDumpPath).c_str()).toString().c_str()).c_str());
 	settings.endGroup();
 
 	settings.beginGroup("font");
@@ -134,6 +134,7 @@ void _loadSettings(GlSettings & settings)
 	config.onScreenDisplay.percent = settings.value("showPercent", config.onScreenDisplay.percent).toInt();
 	config.onScreenDisplay.internalResolution = settings.value("showInternalResolution", config.onScreenDisplay.internalResolution).toInt();
 	config.onScreenDisplay.renderingResolution = settings.value("showRenderingResolution", config.onScreenDisplay.renderingResolution).toInt();
+	config.onScreenDisplay.statistics = settings.value("showStatistics", config.onScreenDisplay.statistics).toInt();
 	config.onScreenDisplay.pos = settings.value("osdPos", config.onScreenDisplay.pos).toInt();
 	settings.endGroup();
 
@@ -212,6 +213,7 @@ void writeSettings(const char * _strIniFolder)
 		settings.setValue("windowedHeight", config.video.windowedHeight);
 		settings.setValue("fullscreenRefresh", config.video.fullscreenRefresh);
 		settings.setValue("multisampling", config.video.multisampling);
+		settings.setValue("maxMultiSampling", config.video.maxMultiSampling);
 		settings.setValue("fxaa", config.video.fxaa);
 		settings.setValue("verticalSync", config.video.verticalSync);
 		settings.setValue("threadedVideo", config.video.threadedVideo);
@@ -231,6 +233,7 @@ void writeSettings(const char * _strIniFolder)
 		settings.setValue("rdramImageDitheringMode", config.generalEmulation.rdramImageDitheringMode);
 		settings.setValue("enableLOD", config.generalEmulation.enableLOD);
 		settings.setValue("enableHWLighting", config.generalEmulation.enableHWLighting);
+		settings.setValue("enableCoverage", config.generalEmulation.enableCoverage);
 		settings.setValue("enableShadersStorage", config.generalEmulation.enableShadersStorage);
 		settings.setValue("enableLegacyBlending", config.generalEmulation.enableLegacyBlending);		 //ini only
 		settings.setValue("enableHybridFilter", config.generalEmulation.enableHybridFilter);			 //ini only
@@ -279,8 +282,6 @@ void writeSettings(const char * _strIniFolder)
 		settings.setValue("txHiresEnable", config.textureFilter.txHiresEnable);
 		settings.setValue("txHiresFullAlphaChannel", config.textureFilter.txHiresFullAlphaChannel);
 		settings.setValue("txHresAltCRC", config.textureFilter.txHresAltCRC);
-		settings.setValue("txDump", config.textureFilter.txDump);
-		settings.setValue("txReloadHiresTex", config.textureFilter.txReloadHiresTex);
 		settings.setValue("txForce16bpp", config.textureFilter.txForce16bpp);
 		settings.setValue("txCacheCompression", config.textureFilter.txCacheCompression);
 		settings.setValue("txSaveCache", config.textureFilter.txSaveCache);
@@ -309,6 +310,7 @@ void writeSettings(const char * _strIniFolder)
 		settings.setValue("showInternalResolution", config.onScreenDisplay.internalResolution);
 		settings.setValue("showRenderingResolution", config.onScreenDisplay.renderingResolution);
 		settings.setValue("osdPos", config.onScreenDisplay.pos);
+		settings.setValue("showStatistics", config.onScreenDisplay.statistics);
 		settings.endGroup();
 
 		settings.beginGroup("debug");
@@ -401,8 +403,8 @@ void saveCustomRomSettings(const char * _strIniFolder, const char * _strRomName)
 		origConfig.G.S != settings.value(#S, config.G.S).toFloat()) \
 		settings.setValue(#S, config.G.S)
 #define WriteCustomSettingS(S) \
-	const std::string new##S = FromUTF16(config.textureFilter.txPath); \
-	const std::string orig##S = FromUTF16(origConfig.textureFilter.txPath); \
+	const std::string new##S = FromUTF16(config.textureFilter.S); \
+	const std::string orig##S = FromUTF16(origConfig.textureFilter.S); \
 	if (orig##S != new##S || \
 		orig##S != settings.value(#S, new##S.c_str()).toString()) \
 		settings.setValue(#S, new##S.c_str())
@@ -434,6 +436,7 @@ void saveCustomRomSettings(const char * _strIniFolder, const char * _strRomName)
 	WriteCustomSetting(generalEmulation, rdramImageDitheringMode);
 	WriteCustomSetting(generalEmulation, enableLOD);
 	WriteCustomSetting(generalEmulation, enableHWLighting);
+	WriteCustomSetting(generalEmulation, enableCoverage);
 	WriteCustomSetting(generalEmulation, enableShadersStorage);
 	settings.endGroup();
 
@@ -480,8 +483,6 @@ void saveCustomRomSettings(const char * _strIniFolder, const char * _strRomName)
 	WriteCustomSetting(textureFilter, txHiresEnable);
 	WriteCustomSetting(textureFilter, txHiresFullAlphaChannel);
 	WriteCustomSetting(textureFilter, txHresAltCRC);
-	WriteCustomSetting(textureFilter, txDump);
-	WriteCustomSetting(textureFilter, txReloadHiresTex);
 	WriteCustomSetting(textureFilter, txForce16bpp);
 	WriteCustomSetting(textureFilter, txCacheCompression);
 	WriteCustomSetting(textureFilter, txSaveCache);

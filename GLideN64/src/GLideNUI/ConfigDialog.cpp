@@ -9,6 +9,7 @@
 #include <QCursor>
 #include <QRegExpValidator>
 #include <QInputDialog>
+#include <QDirIterator>
 
 #include "../Config.h"
 #include "../DebugDump.h"
@@ -16,6 +17,9 @@
 #include "Settings.h"
 #include "ConfigDialog.h"
 #include "FullscreenResolutions.h"
+#include "qevent.h"
+#include "osal_keys.h"
+#include "QtKeyToHID.h"
 
 static
 struct
@@ -66,6 +70,52 @@ u32 powof(u32 dim)
 	return i;
 }
 
+QString ConfigDialog::_hotkeyDescription(quint32 _idx) const
+{
+	switch (_idx)
+	{
+	case Config::HotKey::hkTexDump:
+		return tr("Toggle textures dump");
+	case Config::HotKey::hkHdTexReload:
+		return tr("Reload HD textures");
+	case Config::HotKey::hkHdTexToggle:
+		return tr("Toggle HD textures");
+	case Config::HotKey::hkTexCoordBounds:
+		return tr("Toggle texcoords bounds");
+	case Config::HotKey::hkNativeResTexrects:
+		return tr("Toggle 2D texrects in native resolution");
+	case Config::HotKey::hkVsync:
+		return tr("Toggle VSync");
+	case Config::HotKey::hkFBEmulation:
+		return tr("Toggle frame buffer emulation");
+	case Config::HotKey::hkN64DepthCompare:
+		return tr("Toggle N64 depth compare");
+	case Config::HotKey::hkOsdVis:
+		return tr("Toggle OSD VI/S");
+	case Config::HotKey::hkOsdFps:
+		return tr("Toggle OSD FPS");
+	case Config::HotKey::hkOsdPercent:
+		return tr("Toggle OSD percent");
+	case Config::HotKey::hkOsdInternalResolution:
+		return tr("Toggle OSD internal resolution");
+	case Config::HotKey::hkOsdRenderingResolution:
+		return tr("Toggle OSD rendering resolution");
+	case Config::HotKey::hkForceGammaCorrection:
+		return tr("Toggle force gamma correction");
+	}
+	return tr("Unknown hotkey");
+}
+
+class HotkeyItemWidget : public QWidget
+{
+//	Q_OBJECT
+public:
+	HotkeyItemWidget(QWidget* pParent = Q_NULLPTR) : QWidget(pParent) {}
+	quint32 hidCode() const { return m_hid; }
+	void setHidCode(quint32 _code) { m_hid = _code; }
+private:
+	quint32 m_hid = 0;
+};
 
 void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 {
@@ -122,10 +172,23 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	ui->fullScreenResolutionComboBox->setCurrentIndex(fullscreenMode);
 	ui->fullScreenRefreshRateComboBox->setCurrentIndex(fullscreenRate);
 
+	if (m_maxMSAA == 0 && config.video.maxMultiSampling == 0) {
+		// default value
+		m_maxMSAA = 8;
+	} else if (m_maxMSAA == 0 && config.video.maxMultiSampling != 0) {
+		// use cached value
+		m_maxMSAA = config.video.maxMultiSampling;
+	} else {
+		// assign cached value
+		config.video.maxMultiSampling = m_maxMSAA;
+	}
+
 	const unsigned int multisampling = config.video.fxaa == 0 && config.video.multisampling > 0
-		? config.video.multisampling
-		: 8;
+		? std::min(config.video.multisampling, m_maxMSAA)
+		: m_maxMSAA;
+
 	ui->aliasingSlider->blockSignals(true);
+	ui->aliasingSlider->setMaximum(powof(m_maxMSAA));
 	ui->aliasingSlider->setValue(powof(multisampling));
 	ui->aliasingSlider->blockSignals(false);
 	ui->aliasingLabelVal->setText(QString::number(multisampling));
@@ -159,6 +222,7 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	// Emulation settings
 	ui->emulateLodCheckBox->setChecked(config.generalEmulation.enableLOD != 0);
 	ui->enableHWLightingCheckBox->setChecked(config.generalEmulation.enableHWLighting != 0);
+	ui->enableCoverageCheckBox->setChecked(config.generalEmulation.enableCoverage != 0);
 	ui->enableShadersStorageCheckBox->setChecked(config.generalEmulation.enableShadersStorage != 0);
 	if (!blockCustomSettings)
 		ui->customSettingsCheckBox->setChecked(config.generalEmulation.enableCustomSettings != 0);
@@ -185,6 +249,7 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	}
 
 	ui->halosRemovalCheckBox->setChecked(config.texture.enableHalosRemoval != 0);
+	ui->texCoordBoundsCheckBox->setChecked(config.graphics2D.enableTexCoordBounds != 0);
 
 	ui->nativeRes2DComboBox->setCurrentIndex(config.graphics2D.enableNativeResTexrects);
 
@@ -268,10 +333,6 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	ui->texturePackGroupBox->setChecked(config.textureFilter.txHiresEnable != 0);
 	ui->alphaChannelCheckBox->setChecked(config.textureFilter.txHiresFullAlphaChannel != 0);
 	ui->alternativeCRCCheckBox->setChecked(config.textureFilter.txHresAltCRC != 0);
-	ui->textureDumpCheckBox->toggle();
-	ui->textureDumpCheckBox->setChecked(config.textureFilter.txDump != 0);
-	ui->textureReloadCheckBox->toggle();
-	ui->textureReloadCheckBox->setChecked(config.textureFilter.txReloadHiresTex != 0);
 	ui->force16bppCheckBox->setChecked(config.textureFilter.txForce16bpp != 0);
 	ui->compressCacheCheckBox->setChecked(config.textureFilter.txCacheCompression != 0);
 	ui->saveTextureCacheCheckBox->setChecked(config.textureFilter.txSaveCache != 0);
@@ -326,6 +387,7 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	ui->percentCheckBox->setChecked(config.onScreenDisplay.percent != 0);
 	ui->internalResolutionCheckBox->setChecked(config.onScreenDisplay.internalResolution != 0);
 	ui->renderingResolutionCheckBox->setChecked(config.onScreenDisplay.renderingResolution != 0);
+	ui->statisticsCheckBox->setChecked(config.onScreenDisplay.statistics != 0);
 
 	// Buttons
 	ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Save and Close"));
@@ -336,6 +398,31 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	ui->dumpLowCheckBox->setChecked((config.debug.dumpMode & DEBUG_LOW) != 0);
 	ui->dumpNormalCheckBox->setChecked((config.debug.dumpMode & DEBUG_NORMAL) != 0);
 	ui->dumpDetailCheckBox->setChecked((config.debug.dumpMode & DEBUG_DETAIL) != 0);
+
+	{
+		ui->hotkeyListWidget->clear();
+		for (quint32 idx = 0; idx < Config::HotKey::hkTotal; ++idx) {
+			HotkeyItemWidget* pWgt = new HotkeyItemWidget;
+			QLayout* pLayout = new QHBoxLayout;
+			pLayout->addWidget(new QLabel(_hotkeyDescription(idx)));
+
+			QPushButton* pBtn = new QPushButton(tr("Click me"));
+			connect(pBtn, SIGNAL(clicked()), SLOT(on_btn_clicked()));
+			pLayout->addWidget(pBtn);
+			pWgt->setLayout(pLayout);
+
+			QListWidgetItem* pItem = new QListWidgetItem(ui->hotkeyListWidget);
+			pItem->setSizeHint(pWgt->sizeHint());
+			pItem->setCheckState(Qt::Unchecked);
+			ui->hotkeyListWidget->setItemWidget(pItem, pWgt);
+
+			if (config.hotkeys.keys[idx] != 0) {
+				pWgt->setHidCode(config.hotkeys.keys[idx]);
+				pBtn->setText(osal_keycode_name(config.hotkeys.keys[idx]));
+				pItem->setCheckState(Qt::Checked);
+			}
+		}
+	}
 
 #ifndef DEBUG_DUMP
 	for (int i = 0; i < ui->tabWidget->count(); ++i) {
@@ -402,9 +489,10 @@ void ConfigDialog::setRomName(const char * _romName)
 	this->on_customSettingsCheckBox_toggled(ui->customSettingsCheckBox->isChecked());
 }
 
-ConfigDialog::ConfigDialog(QWidget *parent, Qt::WindowFlags f) :
+ConfigDialog::ConfigDialog(QWidget *parent, Qt::WindowFlags f, unsigned int _maxMsaaLevel) :
 QDialog(parent, f),
 ui(new Ui::ConfigDialog),
+m_maxMSAA(_maxMsaaLevel),
 m_accepted(false),
 m_fontsInited(false),
 m_blockReInit(false)
@@ -474,6 +562,7 @@ void ConfigDialog::accept(bool justSave) {
 	// Emulation settings
 	config.generalEmulation.enableLOD = ui->emulateLodCheckBox->isChecked() ? 1 : 0;
 	config.generalEmulation.enableHWLighting = ui->enableHWLightingCheckBox->isChecked() ? 1 : 0;
+	config.generalEmulation.enableCoverage = ui->enableCoverageCheckBox->isChecked() ? 1 : 0;
 	config.generalEmulation.enableShadersStorage = ui->enableShadersStorageCheckBox->isChecked() ? 1 : 0;
 	config.generalEmulation.enableCustomSettings = ui->customSettingsCheckBox->isChecked() ? 1 : 0;
 
@@ -493,6 +582,7 @@ void ConfigDialog::accept(bool justSave) {
 		config.graphics2D.bgMode = Config::BGMode::bgStripped;
 
 	config.texture.enableHalosRemoval = ui->halosRemovalCheckBox->isChecked() ? 1 : 0;
+	config.graphics2D.enableTexCoordBounds = ui->texCoordBoundsCheckBox->isChecked() ? 1 : 0;
 	config.graphics2D.enableNativeResTexrects = ui->nativeRes2DComboBox->currentIndex();
 
 	config.frameBufferEmulation.enable = ui->frameBufferCheckBox->isChecked() ? 1 : 0;
@@ -548,8 +638,6 @@ void ConfigDialog::accept(bool justSave) {
 	config.textureFilter.txHiresEnable = ui->texturePackGroupBox->isChecked() ? 1 : 0;
 	config.textureFilter.txHiresFullAlphaChannel = ui->alphaChannelCheckBox->isChecked() ? 1 : 0;
 	config.textureFilter.txHresAltCRC = ui->alternativeCRCCheckBox->isChecked() ? 1 : 0;
-	config.textureFilter.txDump = ui->textureDumpCheckBox->isChecked() ? 1 : 0;
-	config.textureFilter.txReloadHiresTex = ui->textureReloadCheckBox->isChecked() ? 1 : 0;
 
 	config.textureFilter.txCacheCompression = ui->compressCacheCheckBox->isChecked() ? 1 : 0;
 	config.textureFilter.txForce16bpp = ui->force16bppCheckBox->isChecked() ? 1 : 0;
@@ -558,49 +646,53 @@ void ConfigDialog::accept(bool justSave) {
 	config.textureFilter.txHiresTextureFileStorage = ui->hiresTexFileStorageCheckBox->isChecked() ? 1 : 0;
 
 	QDir txPath(ui->texPackPathLineEdit->text());
-	if (txPath.exists()) {
-		config.textureFilter.txPath[txPath.absolutePath().toWCharArray(config.textureFilter.txPath)] = L'\0';
-	} else if (config.textureFilter.txHiresEnable != 0) {
+	if (!txPath.exists() &&
+		!txPath.mkdir(txPath.absolutePath()) &&
+		config.textureFilter.txHiresEnable != 0) {
 		QMessageBox msgBox;
 		msgBox.setStandardButtons(QMessageBox::Close);
 		msgBox.setWindowTitle("GLideN64");
-		msgBox.setText(tr("The texture pack folder is missing. Please change the folder or turn off texture packs."));
+		msgBox.setText(tr("Failed to create the texture pack folder. Please change the folder or turn off texture packs."));
 		msgBox.exec();
 		ui->tabWidget->setCurrentIndex(3);
 		ui->texPackPathLineEdit->setFocus(Qt::PopupFocusReason);
 		ui->texPackPathLineEdit->selectAll();
 		return;
 	}
+	config.textureFilter.txPath[txPath.path().toWCharArray(config.textureFilter.txPath)] = L'\0';
 
 	QDir txCachePath(ui->texCachePathLineEdit->text());
-	if (txCachePath.exists()) {
-		config.textureFilter.txCachePath[txCachePath.absolutePath().toWCharArray(config.textureFilter.txCachePath)] = L'\0';
-	} else if (config.textureFilter.txHiresEnable != 0) {
+	if (!txCachePath.exists() &&
+		!txCachePath.mkdir(txCachePath.absolutePath()) &&
+		config.textureFilter.txHiresEnable != 0) {
 		QMessageBox msgBox;
 		msgBox.setStandardButtons(QMessageBox::Close);
 		msgBox.setWindowTitle("GLideN64");
-		msgBox.setText(tr("The texture pack cache folder is missing. Please change the folder or turn off texture packs."));
+		msgBox.setText(tr("Failed to create the texture pack cache folder. Please change the folder or turn off texture packs."));
 		msgBox.exec();
 		ui->tabWidget->setCurrentIndex(3);
 		ui->texCachePathLineEdit->setFocus(Qt::PopupFocusReason);
 		ui->texCachePathLineEdit->selectAll();
 		return;
 	}
+	config.textureFilter.txCachePath[txCachePath.path().toWCharArray(config.textureFilter.txCachePath)] = L'\0';
 
 	QDir txDumpPath(ui->texDumpPathLineEdit->text());
-	if (txDumpPath.exists()) {
-		config.textureFilter.txDumpPath[txDumpPath.absolutePath().toWCharArray(config.textureFilter.txDumpPath)] = L'\0';
-	} else if (config.textureFilter.txHiresEnable != 0 && config.textureFilter.txDump != 0) {
+	if (!txDumpPath.exists() &&
+		!txDumpPath.mkdir(txDumpPath.absolutePath()) &&
+		config.textureFilter.txHiresEnable != 0 &&
+		config.hotkeys.keys[Config::HotKey::hkTexDump] != 0) {
 		QMessageBox msgBox;
 		msgBox.setStandardButtons(QMessageBox::Close);
 		msgBox.setWindowTitle("GLideN64");
-		msgBox.setText(tr("The texture dump folder is missing. Please change the folder or turn off dumping texture packs."));
+		msgBox.setText(tr("Failed to create the texture dump folder. Please change the folder or turn off dumping texture packs."));
 		msgBox.exec();
 		ui->tabWidget->setCurrentIndex(3);
 		ui->texDumpPathLineEdit->setFocus(Qt::PopupFocusReason);
 		ui->texDumpPathLineEdit->selectAll();
 		return;
 	}
+	config.textureFilter.txDumpPath[txDumpPath.path().toWCharArray(config.textureFilter.txDumpPath)] = L'\0';
 
 	// OSD settings
 	config.font.size = ui->fontSizeSpinBox->value();
@@ -637,6 +729,16 @@ void ConfigDialog::accept(bool justSave) {
 	config.onScreenDisplay.percent = ui->percentCheckBox->isChecked() ? 1 : 0;
 	config.onScreenDisplay.internalResolution = ui->internalResolutionCheckBox->isChecked() ? 1 : 0;
 	config.onScreenDisplay.renderingResolution = ui->renderingResolutionCheckBox->isChecked() ? 1 : 0;
+	config.onScreenDisplay.statistics = ui->statisticsCheckBox->isChecked() ? 1 : 0;
+
+	for (quint32 idx = 0; idx < Config::HotKey::hkTotal; ++idx) {
+		config.hotkeys.keys[idx] = 0;
+		QListWidgetItem * pItem = ui->hotkeyListWidget->item(idx);
+		if (pItem->checkState() == Qt::Checked) {
+			HotkeyItemWidget* pWgt = (HotkeyItemWidget*)ui->hotkeyListWidget->itemWidget(pItem);
+			config.hotkeys.keys[idx] = pWgt->hidCode();
+		}
+	}
 
 	config.debug.dumpMode = 0;
 	if (ui->dumpLowCheckBox->isChecked())
@@ -859,15 +961,15 @@ void ConfigDialog::on_tabWidget_currentChanged(int tab)
 		ui->tabWidget->setCursor(QCursor(Qt::WaitCursor));
 
 		QMap<QString, QStringList> internalFontList;
-		QDir fontDir(QStandardPaths::locate(QStandardPaths::FontsLocation, QString(), QStandardPaths::LocateDirectory));
+		QString fontDir = QStandardPaths::locate(QStandardPaths::FontsLocation, QString(), QStandardPaths::LocateDirectory);
 		QStringList fontFilter;
 		fontFilter << "*.ttf";
-		fontDir.setNameFilters(fontFilter);
-		QFileInfoList fontList = fontDir.entryInfoList();
-		for (int i = 0; i < fontList.size(); ++i) {
-			int id = QFontDatabase::addApplicationFont(fontList.at(i).absoluteFilePath());
+		QDirIterator fontIt(fontDir, fontFilter, QDir::Files, QDirIterator::Subdirectories);
+		while (fontIt.hasNext()) {
+			QString font = fontIt.next();
+			int id = QFontDatabase::addApplicationFont(font);
 			QString fontListFamily = QFontDatabase::applicationFontFamilies(id).at(0);
-			internalFontList[fontListFamily].append(fontList.at(i).fileName());
+			internalFontList[fontListFamily].append(font);
 		}
 
 		QMap<QString, QStringList>::const_iterator i;
@@ -995,4 +1097,65 @@ void ConfigDialog::on_n64DepthCompareComboBox_currentIndexChanged(int index)
 		ui->fxaaRadioButton->setChecked(true);
 	ui->msaaRadioButton->setDisabled(index > 0);
 	ui->n64DepthCompareComboBox->setStyleSheet("");
+}
+
+void ConfigDialog::on_hotkeyListWidget_itemClicked(QListWidgetItem *item)
+{
+    if (item->checkState() == Qt::Unchecked)
+        item->setCheckState(Qt::Checked);
+    else
+        item->setCheckState(Qt::Unchecked);
+}
+
+class HotkeyMessageBox: public QMessageBox
+{
+public:
+	HotkeyMessageBox(QWidget *parent = Q_NULLPTR) : QMessageBox(parent)
+	{
+		setWindowTitle("Hotkey");
+		setIcon(QMessageBox::Information);
+	}
+
+	void keyPressEvent(QKeyEvent * pEvent) override
+	{
+		switch (pEvent->key())
+		{
+		case Qt::Key_Escape:
+		case Qt::Key_Return:
+		case Qt::Key_Enter:
+			QMessageBox::keyPressEvent(pEvent);
+			return;
+		}
+		m_Key = pEvent->key();
+		QMessageBox::keyPressEvent(pEvent);
+		close();
+	}
+
+	quint32 m_Key = Qt::Key::Key_unknown;
+};
+
+void ConfigDialog::on_btn_clicked() {
+	if (QPushButton* pBtn = qobject_cast<QPushButton*>(sender())) {
+		if (QLabel* pLabel = pBtn->parent()->findChild< QLabel* >()) {
+			HotkeyMessageBox msgBox(this);
+			msgBox.setInformativeText(QString("Press a key for ") + pLabel->text());
+			msgBox.exec();
+			if (msgBox.m_Key != Qt::Key::Key_unknown) {
+				const unsigned int hidCode = QtKeyToHID(msgBox.m_Key);
+				for (quint32 idx = 0; idx < Config::HotKey::hkTotal; ++idx) {
+					QListWidgetItem * pItem = ui->hotkeyListWidget->item(idx);
+					HotkeyItemWidget* pWgt = (HotkeyItemWidget*)ui->hotkeyListWidget->itemWidget(pItem);
+					if (pWgt->hidCode() == hidCode) {
+						QPushButton* pButton = pWgt->findChild<QPushButton*>();
+						if (pButton != nullptr)
+							pButton->setText(tr("Click me"));
+						pWgt->setHidCode(0u);
+						break;
+					}
+				}
+				pBtn->setText(osal_keycode_name(hidCode));
+				((HotkeyItemWidget*)pBtn->parent())->setHidCode(hidCode);
+			}
+		}
+	}
 }

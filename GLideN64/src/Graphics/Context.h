@@ -24,7 +24,7 @@ namespace graphics {
 		ImageTextures,
 		IntegerTextures,
 		ClipControl,
-		FramebufferFetchDepth,
+		N64DepthWithFbFetchDepth,
 		FramebufferFetchColor,
 		TextureBarrier,
 		EglImage,
@@ -247,8 +247,6 @@ namespace graphics {
 
 		ShaderProgram * createGammaCorrectionShader();
 
-		ShaderProgram * createOrientationCorrectionShader();
-
 		ShaderProgram * createFXAAShader();
 
 		TextDrawerShaderProgram * createTextDrawerShader();
@@ -287,6 +285,7 @@ namespace graphics {
 		f32 getMaxLineWidth();
 
 		/*---------------Misc-------------*/
+		s32 getMaxMSAALevel();
 
 		bool isError() const;
 

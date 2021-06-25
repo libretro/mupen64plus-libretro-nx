@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <unordered_map>
+#include <stddef.h> // for size_t
 
 #include "CRC.h"
 #include "convert.h"
@@ -33,7 +34,7 @@ struct CachedTexture
 	u16		width, height;			  // N64 width and height
 	u16		clampWidth, clampHeight;  // Size to clamp to
 	f32		scaleS, scaleT;			  // Scale to map to 0.0-1.0
-	f32     hdRatioS, hdRatioT;       // HD / N64 width and height 
+	f32     hdRatioS, hdRatioT;       // HD / N64 width and height
 	f32		shiftScaleS, shiftScaleT; // Scale to shift
 	u32		textureBytes;
 
@@ -54,12 +55,14 @@ struct TextureCache
 
 	void init();
 	void destroy();
+	void clear();
 	CachedTexture * addFrameBufferTexture(graphics::Parameter _target);
 	void removeFrameBufferTexture(CachedTexture * _pTexture);
 	void activateTexture(u32 _t, CachedTexture *_pTexture);
 	void activateDummy(u32 _t);
 	void activateMSDummy(u32 _t);
 	void update(u32 _t);
+	void toggleDumpTex();
 
 	static TextureCache & get();
 
@@ -86,7 +89,6 @@ private:
 	bool _loadHiresBackground(CachedTexture *_pTexture, u64 & _ricecrc);
 	void _loadDepthTexture(CachedTexture * _pTexture, u16* _pDest);
 	void _updateBackground();
-	void _clear();
 	void _initDummyTexture(CachedTexture * _pDummy);
 	void _getTextureDestData(CachedTexture& tmptex, u32* pDest, graphics::Parameter glInternalFormat, GetTexelFunc GetTexel, u16* pLine);
 

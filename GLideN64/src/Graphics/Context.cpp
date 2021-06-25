@@ -40,7 +40,7 @@ void Context::init()
 	ImageTextures = m_impl->isSupported(SpecialFeatures::ImageTextures);
 	IntegerTextures = m_impl->isSupported(SpecialFeatures::IntegerTextures);
 	ClipControl = m_impl->isSupported(SpecialFeatures::ClipControl);
-	FramebufferFetchDepth = m_impl->isSupported(SpecialFeatures::FramebufferFetchDepth);
+	FramebufferFetchDepth = m_impl->isSupported(SpecialFeatures::N64DepthWithFbFetchDepth);
 	FramebufferFetchColor = m_impl->isSupported(SpecialFeatures::FramebufferFetchColor);
 	TextureBarrier = m_impl->isSupported(SpecialFeatures::TextureBarrier);
 	EglImage = m_impl->isSupported(SpecialFeatures::EglImage);
@@ -314,11 +314,6 @@ ShaderProgram * Context::createGammaCorrectionShader()
 	return m_impl->createGammaCorrectionShader();
 }
 
-ShaderProgram * Context::createOrientationCorrectionShader()
-{
-	return m_impl->createOrientationCorrectionShader();
-}
-
 ShaderProgram * Context::createFXAAShader()
 {
 	return m_impl->createFXAAShader();
@@ -352,6 +347,11 @@ void Context::drawLine(f32 _width, SPVertex * _vertices)
 f32 Context::getMaxLineWidth()
 {
 	return m_impl->getMaxLineWidth();
+}
+
+s32 Context::getMaxMSAALevel()
+{
+	return m_impl->getMaxMSAALevel();
 }
 
 bool Context::isError() const

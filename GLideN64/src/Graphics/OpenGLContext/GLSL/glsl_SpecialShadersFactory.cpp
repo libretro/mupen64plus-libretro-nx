@@ -68,10 +68,10 @@ namespace glsl {
 				;
 
 			if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
-				if (_glinfo.imageTextures)
+				if (_glinfo.imageTextures && !_glinfo.n64DepthWithFbFetch)
 					m_part += "layout(binding = 2, r32f) highp uniform restrict readonly image2D uDepthImageZ;		\n";
 
-				if (_glinfo.ext_fetch) {
+				if (_glinfo.n64DepthWithFbFetch) {
 					m_part +=
 						"layout(location = 0) OUT lowp vec4 fragColor;	\n"
 						"layout(location = 1) inout highp vec4 depthZ;	\n"
@@ -100,14 +100,14 @@ namespace glsl {
 			} else {
 				// Either _glinfo.imageTextures or _glinfo.ext_fetch must be enabled when N64DepthCompare != 0
 				// see GLInfo::init()
-				if (_glinfo.imageTextures) {
+				if (_glinfo.n64DepthWithFbFetch) {
+					m_part +=
+						"  highp float bufZ = depthZ.r;	\n"
+						;
+				} else if (_glinfo.imageTextures) {
 					m_part +=
 						"  mediump ivec2 coord = ivec2(gl_FragCoord.xy);	\n"
 						"  highp float bufZ = imageLoad(uDepthImageZ,coord).r;	\n"
-						;
-				} else if (_glinfo.ext_fetch) {
-					m_part +=
-						"  highp float bufZ = depthZ.r;	\n"
 						;
 				}
 			}
@@ -148,6 +148,9 @@ namespace glsl {
 					"#else																											\n"
 					"# define IN varying																							\n"
 					"# define OUT																									\n"
+					"#ifndef GL_FRAGMENT_PRECISION_HIGH																				\n"
+					"# define highp mediump																							\n"
+					"#endif																											\n"
 					"#endif // __VERSION __																							\n"
 					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);												\n"
 					"uniform lowp int uEnableAlphaTest;																				\n"
@@ -218,6 +221,9 @@ namespace glsl {
 					"#else																											\n"
 					"# define IN varying																							\n"
 					"# define OUT																									\n"
+					"#ifndef GL_FRAGMENT_PRECISION_HIGH																				\n"
+					"# define highp mediump																							\n"
+					"#endif																											\n"
 					"#endif // __VERSION __																							\n"
 					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);												\n"
 					"uniform lowp int uEnableAlphaTest;																				\n"
@@ -539,22 +545,6 @@ namespace glsl {
 				"    fragColor = texture2D(uTex0, vTexCoord0);								\n"
 				"    fragColor.rgb = pow(fragColor.rgb, vec3(1.0 / uGammaCorrectionLevel));	\n"
 				;
-		}
-	};
-
-	class OrientationCorrection : public ShaderPart
-	{
-	public:
-		OrientationCorrection(const opengl::GLInfo & _glinfo)
-		{
-			m_part =
-				"IN mediump vec2 vTexCoord0;													\n"
-				"uniform sampler2D uTex0;													\n"
-				"OUT lowp vec4 fragColor;													\n"
-				"void main()																\n"
-				"{																			\n"
-				"    fragColor = texture2D(uTex0, vec2(1.0 - vTexCoord0.x, 1.0 - vTexCoord0.y));       \n"
-			;
 		}
 	};
 
@@ -903,25 +893,6 @@ namespace glsl {
 		}
 	};
 
-	typedef SpecialShader<VertexShaderTexturedRect, OrientationCorrection> OrientationCorrectionShaderBase;
-
-	class OrientationCorrectionShader : public OrientationCorrectionShaderBase
-	{
-	public:
-		OrientationCorrectionShader(const opengl::GLInfo & _glinfo,
-			opengl::CachedUseProgram * _useProgram,
-			const ShaderPart * _vertexHeader,
-			const ShaderPart * _fragmentHeader,
-			const ShaderPart * _fragmentEnd)
-			: OrientationCorrectionShaderBase(_glinfo, _useProgram, _vertexHeader, _fragmentHeader, _fragmentEnd)
-		{
-			m_useProgram->useProgram(m_program);
-			const int texLoc = glGetUniformLocation(GLuint(m_program), "uTex0");
-			glUniform1i(texLoc, 0);
-			m_useProgram->useProgram(graphics::ObjectHandle::null);
-		}
-	};
-
 	/*---------------TexrectDrawerShader-------------*/
 
 	typedef SpecialShader<VertexShaderTexturedRect, TextDraw, graphics::TextDrawerShaderProgram> TextDrawerShaderBase;
@@ -1016,11 +987,6 @@ namespace glsl {
 	graphics::ShaderProgram * SpecialShadersFactory::createGammaCorrectionShader() const
 	{
 		return new GammaCorrectionShader(m_glinfo, m_useProgram, m_vertexHeader, m_fragmentHeader, m_fragmentEnd);
-	}
-
-	graphics::ShaderProgram * SpecialShadersFactory::createOrientationCorrectionShader() const
-	{
-		return new OrientationCorrectionShader(m_glinfo, m_useProgram, m_vertexHeader, m_fragmentHeader, m_fragmentEnd);
 	}
 
 	graphics::ShaderProgram * SpecialShadersFactory::createFXAAShader() const

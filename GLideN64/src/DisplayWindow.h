@@ -22,6 +22,7 @@ public:
 	void setToggleFullscreen() { m_bToggleFullscreen = true; }
 	void readScreen(void **_pDest, long *_pWidth, long *_pHeight);
 	void readScreen2(void * _dest, int * _width, int * _height, int _front);
+	u32 maxMSAALevel() const;
 
 	void updateScale();
 	f32 getScaleX() const { return m_scaleX; }
@@ -61,9 +62,10 @@ protected:
 	u32 m_screenRefresh = 0;
 	u32 m_resizeWidth = 0;
 	u32 m_resizeHeight = 0;
-	f32 m_scaleX = 0;
-	f32 m_scaleY = 0;
-	f32 m_adjustScale = 0;
+	u32 m_maxMsaa = 0;
+	f32 m_scaleX = 0.0f;
+	f32 m_scaleY = 0.0f;
+	f32 m_adjustScale = 1.0f;
 
 	wchar_t m_strScreenDirectory[PLUGIN_PATH_SIZE];
 
@@ -81,6 +83,7 @@ private:
 	virtual void _readScreen(void **_pDest, long *_pWidth, long *_pHeight) = 0;
 	virtual void _readScreen2(void * _dest, int * _width, int * _height, int _front) = 0;
 	virtual graphics::ObjectHandle _getDefaultFramebuffer() = 0;
+
 };
 
 inline

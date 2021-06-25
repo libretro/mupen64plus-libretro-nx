@@ -8,6 +8,7 @@
 #include "Config.h"
 #include "GBI.h"
 #include "wst.h"
+#include "osal_keys.h"
 
 void Config::resetToDefaults()
 {
@@ -24,6 +25,7 @@ void Config::resetToDefaults()
 	video.fullscreenRefresh = 60;
 	video.fxaa = 0;
 	video.multisampling = 0;
+	video.maxMultiSampling = 0;
 	video.verticalSync = 0;
 	video.threadedVideo = 0;
 
@@ -38,6 +40,8 @@ void Config::resetToDefaults()
 	generalEmulation.enableDitheringQuantization = 1;
 	generalEmulation.rdramImageDitheringMode = BufferDitheringMode::bdmBlueNoise;
 	generalEmulation.enableHWLighting = 0;
+	generalEmulation.enableCoverage = 0;
+	generalEmulation.enableClipping = 1;
 	generalEmulation.enableCustomSettings = 1;
 	generalEmulation.enableShadersStorage = 1;
 	generalEmulation.enableLegacyBlending = 0;
@@ -45,7 +49,6 @@ void Config::resetToDefaults()
 	generalEmulation.hacks = 0;
 #if defined(OS_ANDROID) || defined(OS_IOS)
 	generalEmulation.enableFragmentDepthWrite = 0;
-	generalEmulation.enableBlitScreenWorkaround = 0;
 	generalEmulation.forcePolygonOffset = 0;
 	generalEmulation.polygonOffsetFactor = 0.0f;
 	generalEmulation.polygonOffsetUnits = 0.0f;
@@ -56,6 +59,7 @@ void Config::resetToDefaults()
 	graphics2D.correctTexrectCoords = tcDisable;
 	graphics2D.enableNativeResTexrects = NativeResTexrectsMode::ntDisable;
 	graphics2D.bgMode = BGMode::bgOnePiece;
+	graphics2D.enableTexCoordBounds = 0;
 
 	frameBufferEmulation.enable = 1;
 	frameBufferEmulation.copyDepthToRDRAM = cdSoftwareRender;
@@ -86,8 +90,6 @@ void Config::resetToDefaults()
 	textureFilter.txHiresEnable = 0;
 	textureFilter.txHiresFullAlphaChannel = 1;
 	textureFilter.txHresAltCRC = 0;
-	textureFilter.txDump = 0;
-	textureFilter.txReloadHiresTex = 0;
 
 	textureFilter.txForce16bpp = 0;
 	textureFilter.txCacheCompression = 1;
@@ -126,7 +128,13 @@ void Config::resetToDefaults()
 	onScreenDisplay.vis = 0;
 	onScreenDisplay.fps = 0;
 	onScreenDisplay.percent = 0;
+	onScreenDisplay.internalResolution = 0;
+	onScreenDisplay.renderingResolution = 0;
+	onScreenDisplay.statistics = 0;
 	onScreenDisplay.pos = posBottomLeft;
+
+	for (u32 idx = 0; idx < HotKey::hkTotal; ++idx)
+		hotkeys.keys[idx] = 0;
 
 	debug.dumpMode = 0;
 }
@@ -149,4 +157,40 @@ void Config::validate()
 		if (graphics2D.enableNativeResTexrects != 0)
 			graphics2D.correctTexrectCoords = tcDisable;
 	}
+}
+
+const char* Config::hotkeyIniName(u32 _idx)
+{
+	switch (_idx)
+	{
+	case Config::HotKey::hkTexDump:
+		return "hkTexDump";
+	case Config::HotKey::hkHdTexReload:
+		return "hkHdTexReload";
+	case Config::HotKey::hkHdTexToggle:
+		return "hkHdTexToggle";
+	case Config::HotKey::hkTexCoordBounds:
+		return "hkTexCoordBounds";
+	case Config::HotKey::hkNativeResTexrects:
+		return "hkNativeResTexrects";
+	case Config::HotKey::hkVsync:
+		return "hkVsync";
+	case Config::HotKey::hkFBEmulation:
+		return "hkFBEmulation";
+	case Config::HotKey::hkN64DepthCompare:
+		return "hkN64DepthCompare";
+	case Config::HotKey::hkOsdVis:
+		return "hkOsdVis";
+	case Config::HotKey::hkOsdFps:
+		return "hkOsdFps";
+	case Config::HotKey::hkOsdPercent:
+		return "hkOsdPercent";
+	case Config::HotKey::hkOsdInternalResolution:
+		return "hkOsdInternalResolution";
+	case Config::HotKey::hkOsdRenderingResolution:
+		return "hkOsdRenderingResolution";
+	case Config::HotKey::hkForceGammaCorrection:
+		return "hkForceGammaCorrection";
+	}
+	return nullptr;
 }
