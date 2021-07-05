@@ -7,8 +7,10 @@ AUDIO_LIBRETRO_DIR = $(ROOT_DIR)/custom/mupen64plus-core/plugin/audio_libretro
 VIDEODIR_GLIDEN64  = $(ROOT_DIR)/GLideN64
 VIDEODIR_ANGRYLION = $(ROOT_DIR)/mupen64plus-video-angrylion
 VIDEODIR_PARALLEL  = $(ROOT_DIR)/mupen64plus-video-paraLLEl
+INPUTDIR_RAPHNET   = $(ROOT_DIR)/mupen64plus-input-raphnetraw
 
 MINIZIP_DIR        = $(CORE_DIR)/subprojects/minizip
+HIDAPI_DIR         = $(ROOT_DIR)/custom/dependencies/hidapi
 LIBPNG_DIR         = $(ROOT_DIR)/custom/dependencies/libpng
 XXHASH_DIR         = $(ROOT_DIR)/xxHash
 ZLIB_DIR           = $(ROOT_DIR)/custom/dependencies/libzlib
@@ -20,8 +22,10 @@ INCFLAGS += \
 	-I$(ROOT_DIR)/custom/mupen64plus-core \
 	-I$(ROOT_DIR)/custom/android/include \
 	-I$(ROOT_DIR)/custom/GLideN64 \
+	-I$(ROOT_DIR)/custom/mupen64plus-input-raphnetraw \
 	-I$(VIDEODIR_GLIDEN64)/src \
 	-I$(VIDEODIR_GLIDEN64)/src/osal \
+	-I$(INPUTDIR_RAPHNET)/src \
 	-I$(CORE_DIR)/src \
 	-I$(CORE_DIR)/src/api \
 	-I$(AUDIO_LIBRETRO_DIR) \
@@ -30,6 +34,7 @@ INCFLAGS += \
 	-I$(VIDEODIR_GLIDEN64)/src/inc
 
 MINIZIP_INCFLAGS = -I$(MINIZIP_DIR)
+HIDAPI_INCFLAGS  = -I$(HIDAPI_DIR)/hidapi
 LIBPNG_INCFLAGS  = -I$(LIBPNG_DIR)
 XXHASH_INCFLAGS  = -I$(XXHASH_DIR)
 ZLIB_INCFLAGS    = -I$(ZLIB_DIR)
@@ -260,7 +265,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
 	$(LIBRETRO_COMM_DIR)/glsm/glsm.c
 
-	
+
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp                                                         \
     $(VIDEODIR_GLIDEN64)/src/CombinerKey.cpp                                                      \
@@ -398,6 +403,27 @@ SOURCES_C   += $(VIDEODIR_ANGRYLION)/interface.c \
 				   $(VIDEODIR_ANGRYLION)/n64video.c
 endif
 
+# raphnetraw and hidapi
+ifeq ($(HAVE_RAPHNET_INPUT), 1)
+	INCFLAGS += $(HIDAPI_INCFLAGS)
+	LDFLAGS += -ludev -ldl
+
+	SOURCES_C += $(ROOT_DIR)/custom/mupen64plus-input-raphnetraw/plugin_front.c \
+		$(INPUTDIR_RAPHNET)/src/plugin_back.c \
+		$(INPUTDIR_RAPHNET)/src/hexdump.c \
+		$(INPUTDIR_RAPHNET)/src/gcn64lib.c \
+		$(INPUTDIR_RAPHNET)/src/gcn64.c
+
+	ifeq ($(platform), win)
+		SOURCES_C += $(INPUTDIR_RAPHNET)/src/osal_dynamiclib_win32.c
+	else
+		LDFLAGS += -Lhidapi/linux
+
+		SOURCES_C += $(INPUTDIR_RAPHNET)/src/osal_dynamiclib_unix.c \
+			$(HIDAPI_DIR)/linux/hid.c
+	endif
+endif
+
 SOURCES_C += \
 	$(RSPDIR)/src/alist.c \
 	$(RSPDIR)/src/alist_audio.c \
@@ -502,12 +528,12 @@ else ifeq ($(GLES),1)
 	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
-	
+
 	ifeq ($(ANDROID),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
 	endif
-else				   
+else
 	ifeq (,$(findstring win,$(platform)))
 		GLFLAGS += -DCORE
 	endif

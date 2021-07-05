@@ -4,6 +4,7 @@ FORCE_GLES3 ?= 0
 LLE ?= 0
 HAVE_PARALLEL_RSP ?= 0
 HAVE_PARALLEL_RDP ?= 0
+HAVE_RAPHNET_INPUT ?= 0
 
 SYSTEM_MINIZIP ?= 0
 SYSTEM_LIBPNG ?= 0
@@ -92,6 +93,7 @@ endif
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   HAVE_RAPHNET_INPUT = 1
 
    ifeq ($(FORCE_GLES),1)
       GLES = 1
@@ -234,6 +236,7 @@ else ifneq (,$(findstring odroid64,$(platform)))
       GLES = 0
       GLES3= 1
       GL_LIB := -lGLESv3
+      HAVE_RAPHNET_INPUT = 1
    endif
 
    COREFLAGS += -DOS_LINUX
@@ -301,7 +304,7 @@ else ifneq (,$(findstring AMLG,$(platform)))
    else
       GL_LIB := -lGLESv2
    endif
-  
+
    HAVE_NEON = 1
    WITH_DYNAREC=arm
    COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
@@ -480,7 +483,7 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T #-static -lmingw32 -lSDL2main -lSDL2 -mwindows -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid  -lsdl2_net -lsdl2 -lws2_32 -lSetupapi -lIPHLPAPI
    GL_LIB := -lopengl32
-   
+
    ifeq ($(MSYSTEM),MINGW64)
       CC ?= x86_64-w64-mingw32-gcc
       CXX ?= x86_64-w64-mingw32-g++
@@ -509,7 +512,7 @@ ifeq ($(STATIC_LINKING), 1)
    ifneq (,$(findstring win,$(platform)))
       TARGET := $(TARGET:.dll=.lib)
    else ifneq ($(platform), $(filter $(platform), osx ios))
-      TARGET := $(TARGET:.dylib=.a)            
+      TARGET := $(TARGET:.dylib=.a)
    else
       TARGET := $(TARGET:.so=.a)
    endif
