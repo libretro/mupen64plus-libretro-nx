@@ -1276,6 +1276,19 @@ struct retro_core_option_definition option_defs_us[] = {
         "False"
     },
     {
+        CORE_NAME "-RawInputAdapter",
+        "Raw Input Adapter",
+        "Select a raw input adapter to use over other controller configurations.",
+        {
+            {"None", NULL},
+#ifdef HAVE_RAPHNET_INPUT
+            {"Raphnet", NULL},
+#endif
+            {NULL, NULL},
+        },
+        "None"
+    },
+    {
         CORE_NAME "-IgnoreTLBExceptions",
         "Ignore emulated TLB Exceptions",
         "(HACK) Ignore emulated TLB Exceptions, this might fix some broken romhacks and works around the OoT dynarec freeze. This option might be removed in the future.",
