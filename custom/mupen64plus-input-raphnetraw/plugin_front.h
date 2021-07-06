@@ -43,5 +43,19 @@
 
 #define PAK_IO_RUMBLE       0xC000      // the address where rumble-commands are sent to
 
+void raphnetUpdatePortMap();
+
+m64p_error raphnetPluginStartup(m64p_dynlib_handle CoreLibHandle, void *Context, void (*DebugCallback)(void *, int, const char *));
+m64p_error raphnetPluginShutdown(void);
+m64p_error raphnetPluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion, int *APIVersion, const char **PluginNamePtr, int *Capabilities);
+void raphnetInitiateControllers(CONTROL_INFO ControlInfo);
+void raphnetReadController(int Control, unsigned char *Command);
+void raphnetControllerCommand(int Control, unsigned char *Command);
+void raphnetGetKeys( int Control, BUTTONS *Keys );
+void raphnetRomClosed(void);
+int raphnetRomOpen(void);
+void raphnetSDL_KeyDown(int keymod, int keysym);
+void raphnetSDL_KeyUp(int keymod, int keysym);
+
 #endif // __PLUGIN_H__
 

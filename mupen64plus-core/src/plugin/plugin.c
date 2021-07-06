@@ -130,19 +130,19 @@ extern m64p_error inputPluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
                                               int *APIVersion, const char **PluginNamePtr, int *Capabilities);
 extern void inputInitiateControllers (CONTROL_INFO ControlInfo);
 extern void inputGetKeys_default(int Control, BUTTONS * Keys );
-extern void inputControllerCommand(int Control, unsigned char *Command);
+extern void inputControllerCommand_default(int Control, unsigned char *Command);
 extern void inputInitiateControllers(CONTROL_INFO ControlInfo);
-extern void inputReadController(int Control, unsigned char *Command);
+extern void inputReadController_default(int Control, unsigned char *Command);
 extern int  inputRomOpen(void);
 extern void inputRomClosed(void);
 
 
 const input_plugin_functions dummy_input = {
     inputPluginGetVersion,
-    inputControllerCommand,
+    inputControllerCommand_default,
     inputGetKeys_default,
     inputInitiateControllers,
-    inputReadController,
+    inputReadController_default,
     inputRomClosed,
     inputRomOpen,
     dummyinput_SDL_KeyDown,
@@ -252,7 +252,7 @@ m64p_error plugin_start_gfx(void)
     gfx_info.VI_X_SCALE_REG = &(g_dev.vi.regs[VI_X_SCALE_REG]);
     gfx_info.VI_Y_SCALE_REG = &(g_dev.vi.regs[VI_Y_SCALE_REG]);
     gfx_info.CheckInterrupts = EmptyFunc;
-    
+
     gfx_info.version = 2; //Version 2 added SP_STATUS_REG and RDRAM_SIZE
     gfx_info.SP_STATUS_REG = &g_dev.sp.regs[SP_STATUS_REG];
     gfx_info.RDRAM_SIZE = (unsigned int*) &g_dev.rdram.dram_size;
@@ -472,7 +472,7 @@ void plugin_connect_all()
     audio = dummy_audio;
     l_AudioAttached = 1;
     //plugin_start_audio();
-    
+
     input = dummy_input;
     l_InputAttached = 1;
     plugin_start_input();
@@ -492,7 +492,7 @@ void plugin_connect_all()
     audio = dummy_audio;
     l_AudioAttached = 1;
     //plugin_start_audio();
-    
+
     input = dummy_input;
     l_InputAttached = 1;
     plugin_start_input();
