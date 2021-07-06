@@ -92,7 +92,6 @@ endif
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
-   HAVE_RAPHNET_INPUT = 1
 
    ifeq ($(FORCE_GLES),1)
       GLES = 1
@@ -235,7 +234,6 @@ else ifneq (,$(findstring odroid64,$(platform)))
       GLES = 0
       GLES3= 1
       GL_LIB := -lGLESv3
-      HAVE_RAPHNET_INPUT = 1
    endif
 
    COREFLAGS += -DOS_LINUX

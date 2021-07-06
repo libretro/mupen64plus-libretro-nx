@@ -66,7 +66,13 @@ static int emu2adap_portmap[MAX_CONTROLLERS] = { 0, 2, 3, 1 };
 static int emu2adap_portmap[MAX_CONTROLLERS] = { 0, 1, 2, 3 };
 #endif
 
-#define EMU_2_ADAP_PORT(a)	((a) == -1 ? -1 : emu2adap_portmap[a])
+extern struct
+{
+    CONTROL *control;
+    BUTTONS buttons;
+} controller[4];
+static int pad_portmap[MAX_CONTROLLERS] = { -1, -1, -1, -1 };
+#define EMU_2_ADAP_PORT(a)	((a) == -1 ? -1 : pad_portmap[a])
 
 /* static data definitions */
 static void (*l_DebugCallback)(void *, int, const char *) = NULL;
@@ -74,6 +80,19 @@ static void *l_DebugCallContext = NULL;
 static int l_PluginInit = 0;
 
 /* Global functions */
+void raphnetUpdatePortMap()
+{
+	int map = 0;
+
+	for( int i = 0; i < MAX_CONTROLLERS; i++ )
+	{
+		if (controller[i].control && controller[i].control->RawData == 1)
+			pad_portmap[i] = map++;
+		else
+			pad_portmap[i] = -1;
+    }
+}
+
 static void DebugMessage(int level, const char *message, ...)
 {
 	char msgbuf[1024];
@@ -252,7 +271,7 @@ EXPORT int CALL raphnetRomOpen(void)
 }
 
 /******************************************************************
-  Function: SDL_KeyDown
+  Function: raphnetSDL_KeyDown
   Purpose:  To pass the SDL_KeyDown message from the emulator to the
             plugin.
   input:    keymod and keysym of the SDL_KEYDOWN message.
