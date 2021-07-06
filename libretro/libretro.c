@@ -59,6 +59,10 @@
 
 #include "audio_plugin.h"
 
+#ifdef HAVE_RAPHNET_INPUT
+#include "plugin_front.h"
+#endif
+
 #ifndef PRESCALE_WIDTH
 #define PRESCALE_WIDTH  640
 #endif
@@ -98,6 +102,13 @@ static struct retro_hw_render_callback hw_render;
 static struct retro_hw_render_context_negotiation_interface_vulkan hw_context_negotiation;
 #endif
 
+#define RETRO_DEVICE_RAPHNET RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_NONE, 1)
+#ifdef HAVE_RAPHNET_INPUT
+#define NUM_DEVICE_TYPES 3
+#else
+#define NUM_DEVICE_TYPES 2
+#endif
+
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -123,6 +134,7 @@ int l_cbutton;
 int d_cbutton;
 int u_cbutton;
 bool alternate_mapping;
+int raw_input_adapter;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -234,6 +246,7 @@ extern struct
 // these instead for input_plugin to read.
 int pad_pak_types[4];
 int pad_present[4] = {1, 1, 1, 1};
+int pad_rawdata[4] = {0, 0, 0, 0};
 
 static void n64DebugCallback(void* aContext, int aLevel, const char* aMessage)
 {
@@ -336,14 +349,17 @@ static void setup_variables(void)
 
     static const struct retro_controller_description port[] = {
         { "Controller", RETRO_DEVICE_JOYPAD },
+#ifdef HAVE_RAPHNET_INPUT
+        { "Raphnet", RETRO_DEVICE_RAPHNET },
+#endif
         { "RetroPad", RETRO_DEVICE_JOYPAD },
     };
 
     static const struct retro_controller_info ports[] = {
-        { port, 2 },
-        { port, 2 },
-        { port, 2 },
-        { port, 2 },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
         { 0, 0 }
     };
 
@@ -359,6 +375,65 @@ static void setup_variables(void)
         CoreOptionUpdateDisplayCbSupported = 1;
 
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+}
+
+// Deprecated with Core Option Categories
+static void set_variable_visibility(void)
+{
+   // For simplicity we create a prepared var per plugin, maybe create a macro for this?
+   struct retro_core_option_display option_display_gliden64;
+   struct retro_core_option_display option_display_angrylion;
+   struct retro_core_option_display option_display_parallel_rdp;
+
+   size_t i;
+   size_t num_options = 0;
+   char **values_buf = NULL;
+   struct retro_variable var;
+
+   // Show/hide options depending on Plugins (Active isn't relevant!)
+   var.key = CORE_NAME "-rdp-plugin";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      option_display_gliden64.visible = !strcmp(var.value, "gliden64");
+      option_display_angrylion.visible = !strcmp(var.value, "angrylion");
+      option_display_parallel_rdp.visible = !strcmp(var.value, "parallel");
+   } else {
+      option_display_gliden64.visible = option_display_angrylion.visible = option_display_parallel_rdp.visible = true;
+   }
+
+   // Determine number of options
+   for (;;)
+   {
+      if (!option_defs_us[num_options].key)
+         break;
+      num_options++;
+   }
+
+   // Copy parameters from option_defs_us array
+   for (i = 0; i < num_options; i++)
+   {
+      const char *key  = option_defs_us[i].key;
+      const char *hint = option_defs_us[i].info;
+      if(hint)
+      {
+         // Quick and dirty, its the only consistent naming
+         // Otherwise GlideN64 Setting keys will need to be broken again..
+         if(!!strstr(hint, "(GLN64)"))
+         {
+            option_display_gliden64.key = key;
+            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_gliden64);
+         } else if(!!strstr(hint, "(AL)"))
+         {
+            option_display_angrylion.key = key;
+            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_angrylion);
+         } else if(!!strstr(key, "parallel-rdp")) // Maybe unify it later?
+         {
+            option_display_parallel_rdp.key = key;
+            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_parallel_rdp);
+         }
+      }
+   }
 }
 
 static void cleanup_global_paths()
@@ -557,16 +632,16 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             } else {
                 return false;
             }
-            
+
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            
+
             result = load_file(info[1].path, &gameBuffer, &outSize) == file_ok;
             if(result)
             {
                memcpy(&info[1].data, &gameBuffer, sizeof(void*));
                memcpy(&info[1].size, &outSize, sizeof(size_t));
                result = result && retro_load_game(&info[1]);
-               
+
                if(gameBuffer)
                {
                   free(gameBuffer);
@@ -584,7 +659,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             } else {
                 return false;
             }
-            
+
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[1].path);
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[2].path);
@@ -645,7 +720,7 @@ void retro_set_environment(retro_environment_t cb)
 
     environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
     environ_cb(RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB, &environ_clear_thread_waits_cb);
-    
+
     setup_variables();
 }
 
@@ -877,7 +952,7 @@ static void update_variables(bool startup)
                 log_cb(RETRO_LOG_INFO, "Requested Angrylion but no LLE RSP available, falling back to GLideN64!\n");
                 plugin_connect_rsp_api(RSP_PLUGIN_HLE);
                 plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
-#endif 
+#endif
              }
           }
           else if (!strcmp(var.value, "cxd4"))
@@ -905,7 +980,7 @@ static void update_variables(bool startup)
              log_cb(RETRO_LOG_INFO, "Requested Angrylion but no LLE RSP available, falling back to GLideN64!\n");
              plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
              plugin_connect_rsp_api(RSP_PLUGIN_HLE);
-#endif 
+#endif
           }
        }
 
@@ -914,7 +989,7 @@ static void update_variables(bool startup)
           unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
           environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
        }
-       
+
        var.key = CORE_NAME "-ThreadedRenderer";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -949,7 +1024,7 @@ static void update_variables(bool startup)
        {
           EnableDitheringQuantization = !strcmp(var.value, "False") ? 0 : 1;
        }
-       
+
        var.key = CORE_NAME "-RDRAMImageDitheringMode";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -963,7 +1038,7 @@ static void update_variables(bool startup)
           else
              RDRAMImageDitheringMode = 0; // bdmDisable
        }
-       
+
        var.key = CORE_NAME "-FXAA";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1360,13 +1435,6 @@ static void update_variables(bool startup)
        {
           CountPerOp = atoi(var.value);
        }
-       
-       var.key = CORE_NAME "-CountPerOpDenomPot";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          CountPerOpDenomPot = atoi(var.value);
-       }
 
        if(EnableFullspeed)
        {
@@ -1487,6 +1555,21 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           ForceDisableExtraMem = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-RawInputAdapter";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "None"))
+             raw_input_adapter = 0;
+#ifdef HAVE_RAPHNET_INPUT
+          else if (!strcmp(var.value, "Raphnet"))
+             raw_input_adapter = 1;
+#else
+         else
+            raw_input_adapter = 0;
+#endif
        }
 
        var.key = CORE_NAME "-IgnoreTLBExceptions";
@@ -1840,46 +1923,46 @@ bool retro_load_game(const struct retro_game_info *game)
             retro_dd_path_img = newPath;
         }
     }
-    
-    if (!retro_transferpak_rom_path && game->path)
-    {
-       gamePath = (char *)game->path;
-       newPath = (char *)calloc(1, strlen(gamePath) + 4);
-       strcpy(newPath, gamePath);
-       strcat(newPath, ".gb");
-       FILE *fileTest = fopen(newPath, "r");
-       if (!fileTest)
-       {
-          free(newPath);
-       }
-       else
-       {
-          fclose(fileTest);
-          // Free'd later in Mupen Core
-          retro_transferpak_rom_path = newPath;
- 
-          // We have a gb rom!
-          if (!retro_transferpak_ram_path)
-          {
-             gamePath = (char *)game->path;
-             newPath = (char *)calloc(1, strlen(gamePath) + 5);
-             strcpy(newPath, gamePath);
-             strcat(newPath, ".sav");
-             FILE *fileTest = fopen(newPath, "r");
-             if (!fileTest)
-             {
-                free(newPath);
-             }
-             else
-             {
-                fclose(fileTest);
-                // Free'd later in Mupen Core
-                retro_transferpak_ram_path = newPath;
-             }
-          }
-       }
-    }
- 
+
+   if (!retro_transferpak_rom_path)
+   {
+      gamePath = (char *)game->path;
+      newPath = (char *)calloc(1, strlen(gamePath) + 4);
+      strcpy(newPath, gamePath);
+      strcat(newPath, ".gb");
+      FILE *fileTest = fopen(newPath, "r");
+      if (!fileTest)
+      {
+         free(newPath);
+      }
+      else
+      {
+         fclose(fileTest);
+         // Free'd later in Mupen Core
+         retro_transferpak_rom_path = newPath;
+
+         // We have a gb rom!
+         if (!retro_transferpak_ram_path)
+         {
+            gamePath = (char *)game->path;
+            newPath = (char *)calloc(1, strlen(gamePath) + 5);
+            strcpy(newPath, gamePath);
+            strcat(newPath, ".sav");
+            FILE *fileTest = fopen(newPath, "r");
+            if (!fileTest)
+            {
+               free(newPath);
+            }
+            else
+            {
+               fclose(fileTest);
+               // Free'd later in Mupen Core
+               retro_transferpak_ram_path = newPath;
+            }
+         }
+      }
+   }
+
     // Init default vals
     retro_savestate_complete = true;
     load_game_successful = false;
@@ -1938,7 +2021,7 @@ bool retro_load_game(const struct retro_game_info *game)
        /* Additional check for vioverlay not set at start */
        update_variables(false);
     }
-    
+
     load_game_successful = true;
 
     return true;
@@ -1964,7 +2047,7 @@ void retro_unload_game(void)
           co_switch(game_thread);
        }
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-    
+
        pthread_join(emuThread, NULL);
 
        environ_clear_thread_waits_cb(0, NULL);
@@ -1998,7 +2081,7 @@ void retro_run (void)
              emuThreadRunning = true;
           }
        }
-       
+
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     }
 
@@ -2008,7 +2091,7 @@ void retro_run (void)
     {
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
-    
+
     if (libretro_swap_buffer)
     {
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
@@ -2142,29 +2225,43 @@ bool retro_unserialize(const void *data, size_t size)
 //Needed to be able to detach controllers for Lylat Wars multiplayer
 //Only sets if controller struct is initialised as addon paks do.
 void retro_set_controller_port_device(unsigned in_port, unsigned device) {
+    int prefer_rawdata = 0;
+
     if (in_port < 4){
         switch(device)
         {
             case RETRO_DEVICE_NONE:
                if (controller[in_port].control){
                    controller[in_port].control->Present = 0;
+                   controller[in_port].control->RawData = 0;
                    break;
                } else {
                    pad_present[in_port] = 0;
+                   pad_rawdata[in_port] = 0;
                    break;
                }
+
+            case RETRO_DEVICE_RAPHNET:
+               prefer_rawdata = 1;
 
             case RETRO_DEVICE_JOYPAD:
             default:
                if (controller[in_port].control){
                    controller[in_port].control->Present = 1;
+                   controller[in_port].control->RawData = prefer_rawdata;
                    break;
                } else {
                    pad_present[in_port] = 1;
+                   pad_rawdata[in_port] = prefer_rawdata;
                    break;
                }
         }
     }
+
+#ifdef HAVE_RAPHNET_INPUT
+    if (in_port == 3)
+      raphnetUpdatePortMap();
+#endif
 }
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }

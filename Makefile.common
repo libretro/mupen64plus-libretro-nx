@@ -407,9 +407,12 @@ SOURCES_C   += $(VIDEODIR_ANGRYLION)/interface.c \
 endif
 
 # raphnetraw and hidapi
+# FIXME windows build untested and probably incomplete
 ifeq ($(HAVE_RAPHNET_INPUT), 1)
+	CFLAGS   += -DHAVE_RAPHNET_INPUT
+	CXXFLAGS += -DHAVE_RAPHNET_INPUT
 	INCFLAGS += $(HIDAPI_INCFLAGS)
-	LDFLAGS += -ludev -ldl
+	LDFLAGS  += -ludev -ldl
 
 	SOURCES_C += $(ROOT_DIR)/custom/mupen64plus-input-raphnetraw/plugin_front.c \
 		$(INPUTDIR_RAPHNET)/src/plugin_back.c \
