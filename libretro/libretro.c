@@ -140,6 +140,13 @@ uint32_t *blitter_buf = NULL;
 uint32_t *blitter_buf_lock = NULL;
 uint32_t retro_screen_width = 640;
 uint32_t retro_screen_height = 480;
+uint32_t max_retro_screen_width = 640;
+uint32_t max_retro_screen_height = 480;
+uint32_t last_retro_screen_width = 640;
+uint32_t last_retro_screen_height = 480;
+struct retro_game_geometry active_geometry;
+extern uint32_t last_vi_width;
+extern uint32_t last_vi_height;
 uint32_t screen_pitch = 0;
 
 float retro_screen_aspect = 4.0 / 3.0;
@@ -608,15 +615,24 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
     info->geometry.base_width   = retro_screen_width;
     info->geometry.base_height  = retro_screen_height;
-    info->geometry.max_width    = retro_screen_width;
-    info->geometry.max_height   = retro_screen_height;
-    info->geometry.aspect_ratio = retro_screen_aspect;
+    info->geometry.max_width    = max_retro_screen_width;
+    info->geometry.max_height   = max_retro_screen_height;
+    info->geometry.aspect_ratio = ((float)retro_screen_width) / ((float)retro_screen_height);
 #ifdef HAVE_PARALLEL_RDP
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
         parallel_get_geometry(&info->geometry);
 #endif
     info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
+    memcpy(&active_geometry, &info->geometry, sizeof(struct retro_game_geometry));
+}
+
+void retro_set_geometry_runtime(uint32_t width, uint32_t height)
+{
+    active_geometry.base_height = height;
+    active_geometry.base_width = width;
+    active_geometry.aspect_ratio = ((float)retro_screen_width) / ((float)retro_screen_height);
+    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &active_geometry);
 }
 
 unsigned retro_get_region (void)
@@ -1251,6 +1267,9 @@ static void update_variables(bool startup)
              // Force factor to 1 for low resolutions, unless set manually
              EnableNativeResFactor = !EnableNativeResFactor ? 1 : EnableNativeResFactor;
           }
+          // Save active configuration as max value
+          max_retro_screen_width = retro_screen_width;
+          max_retro_screen_height = retro_screen_height;
        }
 
        // If we use Angrylion, we force 640x480
@@ -1916,6 +1935,13 @@ void retro_run (void)
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
     
+    if(last_vi_height != last_retro_screen_height || last_vi_width != last_retro_screen_width)
+    {
+       last_retro_screen_height = last_vi_height;
+       last_retro_screen_width = last_vi_width;
+       retro_set_geometry_runtime(last_retro_screen_width, last_retro_screen_height);
+    }
+
     if (libretro_swap_buffer)
     {
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)

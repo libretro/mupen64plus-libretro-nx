@@ -98,6 +98,13 @@ void VI_UpdateSize()
 	VI.rheight = VI.height != 0 ? 1.0f / VI.height : 0.0f;
 }
 
+extern uint32_t retro_screen_width;
+extern uint32_t retro_screen_height;
+extern "C" {
+    uint32_t last_vi_width = retro_screen_width;
+    uint32_t last_vi_height = retro_screen_height;
+}
+
 void VI_UpdateScreen()
 {
 	if (VI.lastOrigin == -1) // Workaround for Mupen64Plus issue with initialization
@@ -108,8 +115,18 @@ void VI_UpdateScreen()
 	if (ConfigOpen)
 		return;
 
-	perf.increaseVICount();
 	DisplayWindow & wnd = dwnd();
+
+    uint32_t width = VI.width;
+    uint32_t height = VI.height;
+    if(VI.lastOrigin != -1 && (height != last_vi_height || width != last_vi_width))
+    {
+	    printf("VI_UpdateScreen Origin: %08x, Old origin: %08x, width: %d, height: %d\n", *REG.VI_ORIGIN, VI.lastOrigin, VI.width, VI.height);
+        last_vi_width = retro_screen_width = width;
+        last_vi_height = retro_screen_height = height;
+    }
+
+	perf.increaseVICount();
 	if (wnd.changeWindow())
 		return;
 	if (wnd.resizeWindow())
