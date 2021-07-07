@@ -331,8 +331,8 @@ static uint8_t* get_sector_base_sdk(const struct dd_disk* disk,
         }
     }
 
-    if (lba <= MAX_LBA && sector == 0)
-        DebugMessage(M64MSG_VERBOSE, "LBA %d - Offset %08X - Size %04X", lba, offset, sector_size * SECTORS_PER_BLOCK);
+    //if (lba <= MAX_LBA && sector == 0)
+    //    DebugMessage(M64MSG_VERBOSE, "LBA %d - Offset %08X - Size %04X", lba, offset, sector_size * SECTORS_PER_BLOCK);
 
     return disk->istorage->data(disk->storage) + offset;
 }
@@ -377,8 +377,8 @@ static uint8_t* get_sector_base_d64(const struct dd_disk* disk,
         return NULL;
     }
 
-    if (lba <= MAX_LBA && sector == 0)
-        DebugMessage(M64MSG_VERBOSE, "LBA %d - Offset %08X - Size %04X", lba, offset, sector_size * SECTORS_PER_BLOCK);
+    //if (lba <= MAX_LBA && sector == 0)
+    //    DebugMessage(M64MSG_VERBOSE, "LBA %d - Offset %08X - Size %04X", lba, offset, sector_size * SECTORS_PER_BLOCK);
 
     return disk->istorage->data(disk->storage) + offset;
 }
@@ -531,7 +531,7 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
         size_t d64_size = D64_OFFSET_DATA + rom_size + ram_size;
         size_t full_d64_size = D64_OFFSET_DATA + rom_size + RAM_SIZES[disk_type];
 
-        DebugMessage(M64MSG_INFO, "D64 Disk Areas - ROM: 0000 - %04X / RAM: %04X - %04X", rom_lba_end, ram_lba_start, ram_lba_end);
+        //DebugMessage(M64MSG_INFO, "D64 Disk Areas - ROM: 0000 - %04X / RAM: %04X - %04X", rom_lba_end, ram_lba_start, ram_lba_end);
 
         if (ram_lba_start != (RAM_START_LBA[disk_type] - 24) && ram_lba_start != 0xFFFF)
         {

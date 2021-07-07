@@ -75,8 +75,17 @@ int open_rom_file_storage(struct file_storage* fstorage, const char* filename)
 
 void close_file_storage(struct file_storage* fstorage)
 {
-    free((void*)fstorage->data);
-    free((void*)fstorage->filename);
+    if(fstorage->data)
+    {
+        free((void*)fstorage->data);
+        fstorage->data = NULL;
+    }
+
+    if(fstorage->filename)
+    {
+        free((void*)fstorage->filename);
+        fstorage->filename = NULL;
+    }
 }
 
 
@@ -94,10 +103,8 @@ static size_t file_storage_size(const void* storage)
 
 static void file_storage_save(void* storage, size_t start, size_t size)
 {
-    //TODO: Fix storage
-    //if (netplay_is_init() && netplay_get_controller(0) == -1)
-    //    return;
-    return;
+    if (netplay_is_init() && netplay_get_controller(0) == -1)
+        return;
     
     struct file_storage* fstorage = (struct file_storage*)storage;
 

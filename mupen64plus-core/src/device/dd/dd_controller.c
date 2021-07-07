@@ -138,8 +138,8 @@ static void read_C2(struct dd_controller* dd)
     sector %= 90;
     size_t offset = 0x40 * (sector - SECTORS_PER_BLOCK);
 
-    DebugMessage(M64MSG_VERBOSE, "read C2: length=%08x, offset=%08x",
-            (uint32_t)length, (uint32_t)offset);
+    //DebugMessage(M64MSG_VERBOSE, "read C2: length=%08x, offset=%08x",
+    //        (uint32_t)length, (uint32_t)offset);
 
     for (i = 0; i < length; ++i) {
         dd->c2s_buf[(offset + i) ^ 3] = 0;
@@ -349,7 +349,7 @@ void read_dd_regs(void* opaque, uint32_t address, uint32_t* value)
     }
 
     *value = dd->regs[reg];
-    DebugMessage(M64MSG_VERBOSE, "DD REG: %08X -> %08x", address, *value);
+    //DebugMessage(M64MSG_VERBOSE, "DD REG: %08X -> %08x", address, *value);
 
     /* post read update. Not part of the returned value */
     switch(reg)
@@ -380,7 +380,7 @@ void write_dd_regs(void* opaque, uint32_t address, uint32_t value, uint32_t mask
 
     assert(mask == ~UINT32_C(0));
 
-    DebugMessage(M64MSG_VERBOSE, "DD REG: %08X <- %08x", address, value);
+    //DebugMessage(M64MSG_VERBOSE, "DD REG: %08X <- %08x", address, value);
 
     switch (reg)
     {
@@ -539,12 +539,12 @@ void read_dd_rom(void* opaque, uint32_t address, uint32_t* value)
 
     *value = dd->rom[addr];
 
-    DebugMessage(M64MSG_VERBOSE, "DD ROM: %08X -> %08x", address, *value);
+    //DebugMessage(M64MSG_VERBOSE, "DD ROM: %08X -> %08x", address, *value);
 }
 
 void write_dd_rom(void* opaque, uint32_t address, uint32_t value, uint32_t mask)
 {
-    DebugMessage(M64MSG_VERBOSE, "DD ROM: %08X <- %08x & %08x", address, value, mask);
+    //DebugMessage(M64MSG_VERBOSE, "DD ROM: %08X <- %08x & %08x", address, value, mask);
 }
 
 unsigned int dd_dom_dma_read(void* opaque, const uint8_t* dram, uint32_t dram_addr, uint32_t cart_addr, uint32_t length)
@@ -553,8 +553,8 @@ unsigned int dd_dom_dma_read(void* opaque, const uint8_t* dram, uint32_t dram_ad
     uint8_t* mem;
     size_t i;
 
-    DebugMessage(M64MSG_VERBOSE, "DD DMA read dram=%08x  cart=%08x length=%08x",
-            dram_addr, cart_addr, length);
+    //DebugMessage(M64MSG_VERBOSE, "DD DMA read dram=%08x  cart=%08x length=%08x",
+    //        dram_addr, cart_addr, length);
 
     if (cart_addr == MM_DD_DS_BUFFER) {
         cart_addr = (cart_addr - MM_DD_DS_BUFFER) & 0x3fffff;
@@ -588,8 +588,8 @@ unsigned int dd_dom_dma_write(void* opaque, uint8_t* dram, uint32_t dram_addr, u
     const uint8_t* mem;
     size_t i;
 
-    DebugMessage(M64MSG_VERBOSE, "DD DMA write dram=%08x  cart=%08x length=%08x",
-            dram_addr, cart_addr, length);
+    //DebugMessage(M64MSG_VERBOSE, "DD DMA write dram=%08x  cart=%08x length=%08x",
+    //        dram_addr, cart_addr, length);
 
     if (cart_addr < MM_DD_ROM) {
         if (cart_addr == MM_DD_C2S_BUFFER) {

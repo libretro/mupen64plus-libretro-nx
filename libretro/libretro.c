@@ -313,6 +313,34 @@ static void set_variable_visibility(void)
    } 
 }
 
+static void cleanup_global_paths()
+{
+    // Ensure potential leftovers are cleaned up
+    if(retro_dd_path_img)
+    {
+        free(retro_dd_path_img);
+        retro_dd_path_img = NULL;
+    }
+
+    if(retro_dd_path_rom)
+    {
+        free(retro_dd_path_rom);
+        retro_dd_path_rom = NULL;
+    }
+
+    if(retro_transferpak_rom_path)
+    {
+        free(retro_transferpak_rom_path);
+        retro_transferpak_rom_path = NULL;
+    }
+
+    if(retro_transferpak_ram_path)
+    {
+        free(retro_transferpak_ram_path);
+        retro_transferpak_ram_path = NULL;
+    }
+}
+
 static void n64StateCallback(void *Context, m64p_core_param param_type, int new_value)
 {
     if(param_type == M64CORE_STATE_LOADCOMPLETE || param_type == M64CORE_STATE_SAVECOMPLETE)
@@ -465,29 +493,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     bool result = false;
     void* gameBuffer = NULL;
 
-    if(retro_dd_path_img)
-    {
-        free(retro_dd_path_img);
-        retro_dd_path_img = NULL;
-    }
-
-    if(retro_dd_path_rom)
-    {
-        free(retro_dd_path_rom);
-        retro_dd_path_rom = NULL;
-    }
-
-    if(retro_transferpak_rom_path)
-    {
-        free(retro_transferpak_rom_path);
-        retro_transferpak_rom_path = NULL;
-    }
-
-    if(retro_transferpak_ram_path)
-    {
-        free(retro_transferpak_ram_path);
-        retro_transferpak_ram_path = NULL;
-    }
+    cleanup_global_paths();
 
     switch(game_type)
     {
@@ -1879,6 +1885,8 @@ void retro_unload_game(void)
        environ_clear_thread_waits_cb(0, NULL);
     }
 
+    cleanup_global_paths();
+    
     emu_initialized = false;
 
     // Reset savestate job var

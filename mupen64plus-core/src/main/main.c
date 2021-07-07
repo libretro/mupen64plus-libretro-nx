@@ -194,7 +194,14 @@ const char *get_dd_disk_save_path(const char* diskname, int save_format)
 {
     char* newPath = (char*)malloc(PATH_MAX);
     strcpy(newPath, diskname);
-    strcat(newPath, ".disk_save");
+
+    char* midPath = strrchr(newPath, PATH_DEFAULT_SLASH_C()) + 1;
+    midPath[0] = '\0';
+
+    if(save_format == 0)
+        strcat(midPath, ".disk_save");
+    else
+        strcat(midPath, ".ram");
 
     return newPath;
 }
@@ -962,7 +969,7 @@ static void load_dd_disk(struct dd_disk* dd_disk, const struct storage_backend_i
 {
     /* ask the core loader for DD disk filename */
     char* dd_disk_filename = (g_media_loader.get_dd_disk == NULL)
-        ? retro_dd_path_img
+        ? strdup(retro_dd_path_img)
         : g_media_loader.get_dd_disk(g_media_loader.cb_data);
 
     printf("Load DD disk %s\n", dd_disk_filename);
@@ -998,7 +1005,7 @@ static void load_dd_disk(struct dd_disk* dd_disk, const struct storage_backend_i
     }
 
     /* Determine save file name */
-    char* save_filename = get_dd_disk_save_path(namefrompath(dd_disk_filename), save_format);
+    char* save_filename = get_dd_disk_save_path(dd_disk_filename, save_format);
     if (save_filename == NULL) {
         DebugMessage(M64MSG_ERROR, "Failed to get DD save path, DD will be read-only.");
         save_format = -1;
@@ -1151,7 +1158,7 @@ static void init_gb_rom(void* opaque, void** storage, const struct storage_backe
 
     /* Ask the core loader for rom filename */
     char* rom_filename = (g_media_loader.get_gb_cart_rom == NULL)
-        ? retro_transferpak_rom_path
+        ? strdup(retro_transferpak_rom_path)
         : g_media_loader.get_gb_cart_rom(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no cart case */
@@ -1195,7 +1202,7 @@ static void init_gb_ram(void* opaque, size_t ram_size, void** storage, const str
 
     /* Ask the core loader for ram filename */
     char* ram_filename = (g_media_loader.get_gb_cart_ram == NULL)
-        ? retro_transferpak_ram_path
+        ? strdup(retro_transferpak_ram_path)
         : g_media_loader.get_gb_cart_ram(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no RAM case
@@ -1549,10 +1556,10 @@ m64p_error main_run(void)
                 NULL, &g_iclock_ctime_plus_delta,
                 g_rom_size,
                 (ROM_SETTINGS.savetype != SAVETYPE_EEPROM_16KB) ? JDT_EEPROM_4K : JDT_EEPROM_16K,
-                &eep, &g_ifile_storage,
+                &eep, &g_ifile_storage_ro,
                 flashram_type,
-                &fla, &g_ifile_storage,
-                &sra, &g_ifile_storage,
+                &fla, &g_ifile_storage_ro,
+                &sra, &g_ifile_storage_ro,
                 NULL, dd_rtc_iclock,
                 dd_rom_size,
                 &dd_disk, dd_idisk);
@@ -1598,8 +1605,9 @@ m64p_error main_run(void)
     close_file_storage(&fla);
     close_file_storage(&eep);
     close_file_storage(&mpk);
-    close_dd_disk(&dd_disk);
 #endif
+
+    close_dd_disk(&dd_disk);
 
     /* Emulation stopped */
     rsp.romClosed();
