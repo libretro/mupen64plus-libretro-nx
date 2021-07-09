@@ -55,6 +55,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/cart/cart_rom.c \
 	$(CORE_DIR)/src/device/cart/eeprom.c \
 	$(CORE_DIR)/src/device/cart/flashram.c \
+	$(CORE_DIR)/src/device/cart/is_viewer.c \
 	$(CORE_DIR)/src/device/cart/sram.c \
 	$(CORE_DIR)/src/device/controllers/game_controller.c \
 	$(CORE_DIR)/src/device/controllers/paks/biopak.c \
