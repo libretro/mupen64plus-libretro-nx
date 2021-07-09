@@ -20,7 +20,6 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdlib.h>
-
 #include "disk.h"
 
 #define M64P_CORE_PROTOTYPES 1

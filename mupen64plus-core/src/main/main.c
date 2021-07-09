@@ -1315,8 +1315,19 @@ m64p_error main_run(void)
     uint32_t flashram_type = MX29L1100_ID;
     
     randomize_interrupt = 0; // We don't want this right now
+    no_compiled_jump = 0;
     count_per_op = CountPerOp;
     disable_extra_mem = ROM_SETTINGS.disableextramem;
+
+    uint16_t eeprom_type = JDT_NONE;
+    switch (ROM_SETTINGS.savetype) {
+        case SAVETYPE_EEPROM_4K:
+            eeprom_type = JDT_EEPROM_4K;
+            break;
+        case SAVETYPE_EEPROM_16K:
+            eeprom_type = JDT_EEPROM_16K;
+            break;
+    }
 
     if (ForceDisableExtraMem == 1)
         disable_extra_mem = 1;
@@ -1555,7 +1566,7 @@ m64p_error main_run(void)
                 vi_clock_from_tv_standard(ROM_PARAMS.systemtype), vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype),
                 NULL, &g_iclock_ctime_plus_delta,
                 g_rom_size,
-                (ROM_SETTINGS.savetype != SAVETYPE_EEPROM_16KB) ? JDT_EEPROM_4K : JDT_EEPROM_16K,
+                eeprom_type,
                 &eep, &g_ifile_storage_ro,
                 flashram_type,
                 &fla, &g_ifile_storage_ro,
