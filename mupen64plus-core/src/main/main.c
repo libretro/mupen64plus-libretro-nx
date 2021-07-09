@@ -194,14 +194,11 @@ const char *get_dd_disk_save_path(const char* diskname, int save_format)
 {
     char* newPath = (char*)malloc(PATH_MAX);
     strcpy(newPath, diskname);
-
-    char* midPath = strrchr(newPath, PATH_DEFAULT_SLASH_C()) + 1;
-    midPath[0] = '\0';
-
+    
     if(save_format == 0)
-        strcat(midPath, ".disk_save");
+        strcat(newPath, ".disk_save");
     else
-        strcat(midPath, ".ram");
+        strcat(newPath, ".ram");
 
     return newPath;
 }
