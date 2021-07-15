@@ -91,6 +91,7 @@ extern uint32_t EnableDitheringQuantization;
 extern uint32_t RDRAMImageDitheringMode;
 extern uint32_t EnableHWLighting;
 extern uint32_t CorrectTexrectCoords;
+extern uint32_t EnableTexCoordBounds;
 extern uint32_t enableNativeResTexrects;
 extern uint32_t enableLegacyBlending;
 extern uint32_t EnableCopyColorToRDRAM;
