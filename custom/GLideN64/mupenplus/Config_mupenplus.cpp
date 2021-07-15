@@ -199,6 +199,7 @@ extern "C" void Config_LoadConfig()
 	config.frameBufferEmulation.overscanPAL.bottom = OverscanBottom;
 
 	config.graphics2D.correctTexrectCoords = CorrectTexrectCoords;
+	config.graphics2D.enableTexCoordBounds = EnableTexCoordBounds;
 	config.graphics2D.enableNativeResTexrects = enableNativeResTexrects;
 
 	config.graphics2D.bgMode = BackgroundMode;
