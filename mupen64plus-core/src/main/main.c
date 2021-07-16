@@ -966,11 +966,11 @@ static void load_dd_disk(struct dd_disk* dd_disk, const struct storage_backend_i
 {
     /* ask the core loader for DD disk filename */
     char* dd_disk_filename = (g_media_loader.get_dd_disk == NULL)
-        ? strdup(retro_dd_path_img)
+        ? (retro_dd_path_img ? strdup(retro_dd_path_img) : NULL)
         : g_media_loader.get_dd_disk(g_media_loader.cb_data);
 
-    printf("Load DD disk %s\n", dd_disk_filename);
-    fflush(stdout);
+    //printf("Load DD disk %s\n", dd_disk_filename);
+    //fflush(stdout);
 
     /* handle the no disk case */
     if (dd_disk_filename == NULL || strlen(dd_disk_filename) == 0) {
@@ -1155,7 +1155,7 @@ static void init_gb_rom(void* opaque, void** storage, const struct storage_backe
 
     /* Ask the core loader for rom filename */
     char* rom_filename = (g_media_loader.get_gb_cart_rom == NULL)
-        ? strdup(retro_transferpak_rom_path)
+        ? (retro_transferpak_rom_path ? strdup(retro_transferpak_rom_path) : NULL)
         : g_media_loader.get_gb_cart_rom(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no cart case */
@@ -1199,7 +1199,7 @@ static void init_gb_ram(void* opaque, size_t ram_size, void** storage, const str
 
     /* Ask the core loader for ram filename */
     char* ram_filename = (g_media_loader.get_gb_cart_ram == NULL)
-        ? strdup(retro_transferpak_ram_path)
+        ? (retro_transferpak_ram_path ? strdup(retro_transferpak_ram_path) : NULL)
         : g_media_loader.get_gb_cart_ram(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no RAM case
