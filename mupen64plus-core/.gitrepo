@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/libretro/mupen64plus-core.git
 	branch = master
-	commit = ed5c14f5f941d7c5763c955e1357f3dab5687c67
-	parent = de17151b4dc53767c71f0739d6248e217d615fb8
+	commit = ca987441cd60c73b6c6a603edad6c274ef13b515
+	parent = 855d2577d7e900dd619ac00a2b98e3799af5d337
 	method = rebase
 	cmdver = 0.4.0
