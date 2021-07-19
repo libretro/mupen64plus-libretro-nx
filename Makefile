@@ -67,7 +67,8 @@ endif
 WITH_DYNAREC ?= $(ARCH)
 
 PIC = 1
-ifeq ($(ARCH), $(filter $(ARCH), i386 i686))
+# on 32bit Haiku the output of "uname -m" is "BePC"
+ifeq ($(ARCH), $(filter $(ARCH), i386 i686 BePC))
    WITH_DYNAREC = x86
    PIC = 0
 else ifeq ($(ARCH), $(filter $(ARCH), arm))
