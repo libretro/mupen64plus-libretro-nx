@@ -67,7 +67,7 @@ endif
 WITH_DYNAREC ?= $(ARCH)
 
 PIC = 1
-ifeq ($(ARCH), $(filter $(ARCH), i386 i686))
+ifeq ($(ARCH), $(filter $(ARCH), i386 i686 BePC))
    WITH_DYNAREC = x86
    PIC = 0
 else ifeq ($(ARCH), $(filter $(ARCH), arm))
