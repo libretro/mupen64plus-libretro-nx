@@ -391,8 +391,6 @@ else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
    LDFLAGS += -dynamiclib
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
-   OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
-        LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
    PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X
@@ -404,7 +402,7 @@ else ifneq (,$(findstring osx,$(platform)))
    endif
 
    COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
+   ASFLAGS = -f macho64 -d LEADING_UNDERSCORE
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(IOSSDK),)
@@ -580,8 +578,20 @@ endif
 CPUOPTS += -fcommon
 
 ifeq ($(CORE_DEBUG), 1)
+   ifeq ($(MSYSTEM),MINGW32)
+      LIBOPCODES ?= /mingw32/lib/binutils/libopcodes.a
+      LIBBFD ?= /mingw32/lib/binutils/libbfd.a
+      LIBIBERTY ?= /mingw32/lib/binutils/libiberty.a
+      LDFLAGS += -lws2_32
+   else
+      # Where are these libs supposed to be found normally?
+      BINUTILS_BUILD_DIR ?= /Users/ethteck/binutils/build-binutils
+      LIBOPCODES ?= $(BINUTILS_BUILD_DIR)/opcodes/libopcodes.a
+      LIBBFD ?= $(BINUTILS_BUILD_DIR)/bfd/libbfd.a
+      LIBIBERTY ?= $(BINUTILS_BUILD_DIR)/libiberty/libiberty.a
+   endif
    COREFLAGS += -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
-   LDFLAGS += -mconsole -lws2_32 -lfmt /mingw32/lib/binutils/libopcodes.a /mingw32/lib/binutils/libbfd.a -lintl -lz /mingw32/lib/binutils/libiberty.a
+   LDFLAGS += -mconsole -lfmt $(LIBOPCODES) $(LIBBFD) -lintl -lz $(LIBIBERTY)
 endif
 
 # set C/C++ standard to use
@@ -640,8 +650,8 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	find -name "*.o" -type f -delete
-	find -name "*.d" -type f -delete
+	find . -name "*.o" -type f -delete
+	find . -name "*.d" -type f -delete
 	rm -f $(TARGET)
 
 .PHONY: clean
