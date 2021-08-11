@@ -228,7 +228,7 @@ int getaddrinfo_retro(const char *node, const char *service,
 
       in_addr->sin_family = host->h_addrtype;
 
-#if defined(AF_INET6) && !defined(__CELLOS_LV2__) || defined(VITA)
+#if defined(AF_INET6) && !defined(__PS3__) || defined(VITA)
       /* TODO/FIXME - In case we ever want to support IPv6 */
       in_addr->sin_addr.s_addr = inet_addr(host->h_addr_list[0]);
 #else
@@ -264,6 +264,25 @@ void freeaddrinfo_retro(struct addrinfo *res)
 #endif
 }
 
+#if defined(WIIU)
+#include <malloc.h>
+
+static OSThread wiiu_net_cmpt_thread;
+static void wiiu_net_cmpt_thread_cleanup(OSThread *thread, void *stack) {
+   free(stack);
+}
+static int wiiu_net_cmpt_thread_entry(int argc, const char** argv) {
+   const int buf_size = WIIU_RCVBUF + WIIU_SNDBUF;
+   void* buf = memalign(128, buf_size);
+   if (!buf) return -1;
+
+   somemopt(1, buf, buf_size, 0);
+
+   free(buf);
+   return 0;
+}
+#endif
+
 /**
  * network_init:
  *
@@ -286,22 +305,22 @@ bool network_init(void)
       network_deinit();
       return false;
    }
-#elif defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
+#elif defined(__PSL1GHT__) || defined(__PS3__) 
    int timeout_count = 10;
 
-   cellSysmoduleLoadModule(CELL_SYSMODULE_NET);
-   sys_net_initialize_network();
+   sysModuleLoad(SYSMODULE_NET);
+   netInitialize();
 
-   if (cellNetCtlInit() < 0)
+   if (netCtlInit() < 0)
       return false;
 
    for (;;)
    {
       int state;
-      if (cellNetCtlGetState(&state) < 0)
+      if (netCtlGetState(&state) < 0)
          return false;
 
-      if (state == CELL_NET_CTL_STATE_IPObtained)
+      if (state == NET_CTL_STATE_IPObtained)
          break;
 
       retro_sleep(500);
@@ -332,6 +351,18 @@ bool network_init(void)
       return false;
 #elif defined(WIIU)
    socket_lib_init();
+
+   const int stack_size = 4096;
+   void* stack = malloc(stack_size);
+   if (stack && OSCreateThread(&wiiu_net_cmpt_thread,
+      wiiu_net_cmpt_thread_entry, 0, NULL, stack+stack_size, stack_size,
+      3, OS_THREAD_ATTRIB_AFFINITY_ANY)) {
+
+      OSSetThreadName(&wiiu_net_cmpt_thread, "Network compat thread");
+      OSSetThreadDeallocator(&wiiu_net_cmpt_thread,
+         wiiu_net_cmpt_thread_cleanup);
+      OSResumeThread(&wiiu_net_cmpt_thread);
+   }
 #elif defined(_3DS)
     _net_compat_net_memory = (u32*)memalign(SOC_ALIGN, SOC_BUFFERSIZE);
 	if (!_net_compat_net_memory)
@@ -356,10 +387,10 @@ void network_deinit(void)
 {
 #if defined(_WIN32)
    WSACleanup();
-#elif defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-   cellNetCtlTerm();
-   sys_net_finalize_network();
-   cellSysmoduleUnloadModule(CELL_SYSMODULE_NET);
+#elif defined(__PSL1GHT__) || defined(__PS3__)
+   netCtlTerm();
+   netFinalizeNetwork();
+   sysModuleUnload(SYSMODULE_NET);
 #elif defined(VITA)
    sceNetCtlTerm();
    sceNetTerm();

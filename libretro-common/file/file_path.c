@@ -48,47 +48,9 @@
 #include <retro_miscellaneous.h>
 #include <encodings/utf.h>
 
-#if defined(_WIN32)
-#ifdef _MSC_VER
-#define setmode _setmode
-#endif
-#include <sys/stat.h>
-#ifdef _XBOX
-#include <xtl.h>
-#define INVALID_FILE_ATTRIBUTES -1
-#else
-#include <io.h>
-#include <fcntl.h>
+#ifdef _WIN32
 #include <direct.h>
-#include <windows.h>
-#if defined(_MSC_VER) && _MSC_VER <= 1200
-#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
-#endif
-#endif
-#elif defined(VITA)
-#define SCE_ERROR_ERRNO_EEXIST 0x80010011
-#include <psp2/io/fcntl.h>
-#include <psp2/io/dirent.h>
-#include <psp2/io/stat.h>
 #else
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
-
-#if defined(PSP)
-#include <pspkernel.h>
-#endif
-
-#if defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-#include <cell/cell_fs.h>
-#endif
-
-#if defined(VITA)
-#define FIO_S_ISDIR SCE_S_ISDIR
-#endif
-
-#if (defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)) || defined(__QNX__) || defined(PSP)
 #include <unistd.h> /* stat() is defined here */
 #endif
 
@@ -125,41 +87,53 @@ const char *path_get_archive_delim(const char *path)
 
    buf[0] = '\0';
 
+   /* We search for delimiters after the last slash
+    * in the file path to avoid capturing delimiter
+    * characters in any parent directory names.
+    * If there are no slashes in the file name, then
+    * the path is just the file basename - in this
+    * case we search the path in its entirety */
    if (!last_slash)
-      return NULL;
+      last_slash = path;
 
-   /* Find delimiter position */
-   delim = strrchr(last_slash, '#');
+   /* Find delimiter position
+    * > Since filenames may contain '#' characters,
+    *   must loop until we find the first '#' that
+    *   is directly *after* a compression extension */
+   delim = strchr(last_slash, '#');
 
-   if (!delim)
-      return NULL;
-
-   /* Check whether this is a known archive type
-    * > Note: The code duplication here is
-    *   deliberate, to maximise performance */
-   if (delim - last_slash > 4)
+   while (delim)
    {
-      strlcpy(buf, delim - 4, sizeof(buf));
-      buf[4] = '\0';
+      /* Check whether this is a known archive type
+       * > Note: The code duplication here is
+       *   deliberate, to maximise performance */
+      if (delim - last_slash > 4)
+      {
+         strlcpy(buf, delim - 4, sizeof(buf));
+         buf[4] = '\0';
 
-      string_to_lower(buf);
+         string_to_lower(buf);
 
-      /* Check if this is a '.zip', '.apk' or '.7z' file */
-      if (string_is_equal(buf,     ".zip") ||
-          string_is_equal(buf,     ".apk") ||
-          string_is_equal(buf + 1, ".7z"))
-         return delim;
-   }
-   else if (delim - last_slash > 3)
-   {
-      strlcpy(buf, delim - 3, sizeof(buf));
-      buf[3] = '\0';
+         /* Check if this is a '.zip', '.apk' or '.7z' file */
+         if (string_is_equal(buf,     ".zip") ||
+             string_is_equal(buf,     ".apk") ||
+             string_is_equal(buf + 1, ".7z"))
+            return delim;
+      }
+      else if (delim - last_slash > 3)
+      {
+         strlcpy(buf, delim - 3, sizeof(buf));
+         buf[3] = '\0';
 
-      string_to_lower(buf);
+         string_to_lower(buf);
 
-      /* Check if this is a '.7z' file */
-      if (string_is_equal(buf, ".7z"))
-         return delim;
+         /* Check if this is a '.7z' file */
+         if (string_is_equal(buf, ".7z"))
+            return delim;
+      }
+
+      delim++;
+      delim = strchr(delim, '#');
    }
 
    return NULL;
@@ -218,15 +192,11 @@ char *path_remove_extension(char *path)
 bool path_is_compressed_file(const char* path)
 {
    const char *ext = path_get_extension(path);
-
-   if (string_is_empty(ext))
-      return false;
-
-   if (string_is_equal_noncase(ext, "zip") ||
-       string_is_equal_noncase(ext, "apk") ||
-       string_is_equal_noncase(ext, "7z"))
-      return true;
-
+   if (!string_is_empty(ext))
+      if (  string_is_equal_noncase(ext, "zip") ||
+            string_is_equal_noncase(ext, "apk") ||
+            string_is_equal_noncase(ext, "7z"))
+         return true;
    return false;
 }
 
@@ -551,7 +521,7 @@ void path_basedir(char *path)
    if (last)
       last[1] = '\0';
    else
-      snprintf(path, 3, "." PATH_DEFAULT_SLASH());
+      strlcpy(path, "." PATH_DEFAULT_SLASH(), 3);
 }
 
 /**
@@ -616,6 +586,16 @@ const char *path_basename(const char *path)
    return path;
 }
 
+/* Specialized version */
+const char *path_basename_nocompression(const char *path)
+{
+   /* We cut at the last slash */
+   const char *last  = find_last_slash(path);
+   if (last)
+      return last + 1;
+   return path;
+}
+
 /**
  * path_is_absolute:
  * @path               : path
@@ -670,16 +650,31 @@ bool path_is_absolute(const char *path)
 char *path_resolve_realpath(char *buf, size_t size, bool resolve_symlinks)
 {
 #if !defined(RARCH_CONSOLE) && defined(RARCH_INTERNAL)
-   char tmp[PATH_MAX_LENGTH];
 #ifdef _WIN32
-   strlcpy(tmp, buf, sizeof(tmp));
-   if (!_fullpath(buf, tmp, size))
+   char *ret = NULL;
+   wchar_t abs_path[PATH_MAX_LENGTH];
+   wchar_t *rel_path = utf8_to_utf16_string_alloc(buf);
+
+   if (rel_path)
    {
-      strlcpy(buf, tmp, size);
-      return NULL;
+      if (_wfullpath(abs_path, rel_path, PATH_MAX_LENGTH))
+      {
+         char *tmp = utf16_to_utf8_string_alloc(abs_path);
+
+         if (tmp)
+         {
+            strlcpy(buf, tmp, size);
+            free(tmp);
+            ret = buf;
+         }
+      }
+
+      free(rel_path);
    }
-   return buf;
+
+   return ret;
 #else
+   char tmp[PATH_MAX_LENGTH];
    size_t t;
    char *p;
    const char *next;
@@ -1114,6 +1109,98 @@ void fill_pathname_abbreviate_special(char *out_path,
    retro_assert(strlcpy(out_path, in_path, size) < size);
 }
 
+/* Changes the slashes to the correct kind for the os 
+ * So forward slash on linux and backslash on Windows */
+void pathname_conform_slashes_to_os(char *path)
+{
+   /* Conform slashes to os standard so we get proper matching */
+   char* p;
+   for (p = path; *p; p++)
+      if (*p == '/' || *p == '\\')
+         *p = PATH_DEFAULT_SLASH_C();
+}
+
+/* Change all shashes to forward so they are more portable between windows and linux */
+void pathname_make_slashes_portable(char *path)
+{
+   /* Conform slashes to os standard so we get proper matching */
+   char* p;
+   for (p = path; *p; p++)
+      if (*p == '/' || *p == '\\')
+         *p = '/';
+}
+
+/* Get the number of slashes in a path, returns an integer */
+int get_pathname_num_slashes(const char *in_path)
+{
+   int num_slashes = 0;
+   int i = 0;
+
+   for (i = 0; i < PATH_MAX_LENGTH; i++)
+   {
+      if (PATH_CHAR_IS_SLASH(in_path[i]))
+         num_slashes++;
+      if (in_path[i] == '\0')
+         break;
+   }
+
+   return num_slashes;
+}
+
+/* Fills the supplied path with either the abbreviated path or the relative path, which ever
+ * one is has less depth / number of slashes
+ * If lengths of abbreviated and relative paths are the same the relative path will be used
+ * in_path can be an absolute, relative or abbreviated path */
+void fill_pathname_abbreviated_or_relative(char *out_path, const char *in_refpath, const char *in_path, size_t size)
+{
+   char in_path_conformed[PATH_MAX_LENGTH];
+   char in_refpath_conformed[PATH_MAX_LENGTH];
+   char expanded_path[PATH_MAX_LENGTH];
+   char absolute_path[PATH_MAX_LENGTH];
+   char relative_path[PATH_MAX_LENGTH];
+   char abbreviated_path[PATH_MAX_LENGTH];
+   
+   in_path_conformed[0]    = '\0';
+   in_refpath_conformed[0] = '\0';
+   absolute_path[0]        = '\0';
+   relative_path[0]        = '\0';
+   abbreviated_path[0]     = '\0';
+
+   strcpy_literal(in_path_conformed, in_path);
+   strcpy_literal(in_refpath_conformed, in_refpath);
+
+   pathname_conform_slashes_to_os(in_path_conformed);
+   pathname_conform_slashes_to_os(in_refpath_conformed);
+
+   /* Expand paths which start with :\ to an absolute path */
+   fill_pathname_expand_special(expanded_path,
+         in_path_conformed, sizeof(expanded_path));
+
+   /* Get the absolute path if it is not already */
+   if (path_is_absolute(expanded_path))
+      strlcpy(absolute_path, expanded_path, PATH_MAX_LENGTH);
+   else
+      fill_pathname_resolve_relative(absolute_path,
+            in_refpath_conformed, in_path_conformed, PATH_MAX_LENGTH);
+
+   pathname_conform_slashes_to_os(absolute_path);
+
+   /* Get the relative path and see how many directories long it is */
+   path_relative_to(relative_path, absolute_path,
+         in_refpath_conformed, sizeof(relative_path));
+
+   /* Get the abbreviated path and see how many directories long it is */
+   fill_pathname_abbreviate_special(abbreviated_path,
+         absolute_path, sizeof(abbreviated_path));
+
+   /* Use the shortest path, preferring the relative path*/
+   if (  get_pathname_num_slashes(relative_path) <= 
+         get_pathname_num_slashes(abbreviated_path))
+      retro_assert(strlcpy(out_path, relative_path, size) < size);
+   else
+      retro_assert(strlcpy(out_path, abbreviated_path, size) < size);
+}
+
 /**
  * path_basedir:
  * @path               : path
@@ -1139,7 +1226,7 @@ void path_basedir_wrapper(char *path)
    if (last)
       last[1] = '\0';
    else
-      snprintf(path, 3, "." PATH_DEFAULT_SLASH());
+      strlcpy(path, "." PATH_DEFAULT_SLASH(), 3);
 }
 
 #if !defined(RARCH_CONSOLE) && defined(RARCH_INTERNAL)

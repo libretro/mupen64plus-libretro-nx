@@ -328,14 +328,21 @@ audio_mixer_sound_t* audio_mixer_load_wav(void *buffer, int32_t size)
 #ifdef HAVE_RWAV
    /* WAV data */
    rwav_t wav;
+   enum rwav_state rwav_ret;
    /* WAV samples converted to float */
    float* pcm                 = NULL;
    size_t samples             = 0;
    /* Result */
    audio_mixer_sound_t* sound = NULL;
-   enum rwav_state rwav_ret   = rwav_load(&wav, buffer, size);
 
-   if (rwav_ret != RWAV_ITERATE_DONE)
+   wav.bitspersample          = 0;
+   wav.numchannels            = 0;
+   wav.samplerate             = 0;
+   wav.numsamples             = 0;
+   wav.subchunk2size          = 0;
+   wav.samples                = NULL;
+
+   if ((rwav_ret = rwav_load(&wav, buffer, size)) != RWAV_ITERATE_DONE)
       return NULL;
 
    samples       = wav.numsamples * 2;
@@ -991,18 +998,15 @@ static void audio_mixer_mix_mod(float* buffer, size_t num_frames,
 {
    int i;
    float samplef                    = 0.0f;
-   int samplei                      = 0;
    unsigned temp_samples            = 0;
    unsigned buf_free                = (unsigned)(num_frames * 2);
    int* pcm                         = NULL;
 
-   if (voice->types.mod.position == voice->types.mod.samples)
+   if (voice->types.mod.samples == 0)
    {
 again:
       temp_samples = replay_get_audio(
-            voice->types.mod.stream, voice->types.mod.buffer );
-
-      temp_samples *= 2; /* stereo */
+            voice->types.mod.stream, voice->types.mod.buffer, 0 ) * 2;
 
       if (temp_samples == 0)
       {
@@ -1031,10 +1035,9 @@ again:
    {
       for (i = voice->types.mod.samples; i != 0; i--)
       {
-         samplei     = *pcm++ * volume;
-         samplef     = (float)((int)samplei + 32768) / 65535.0f;
+         samplef     = ((float)(*pcm++) + 32768.0f) / 65535.0f;
          samplef     = samplef * 2.0f - 1.0f;
-         *buffer++  += samplef;
+         *buffer++  += samplef * volume;
       }
 
       buf_free -= voice->types.mod.samples;
@@ -1043,10 +1046,9 @@ again:
 
    for (i = buf_free; i != 0; --i )
    {
-      samplei     = *pcm++ * volume;
-      samplef     = (float)((int)samplei + 32768) / 65535.0f;
+      samplef     = ((float)(*pcm++) + 32768.0f) / 65535.0f;
       samplef     = samplef * 2.0f - 1.0f;
-      *buffer++  += samplef;
+      *buffer++  += samplef * volume;
    }
 
    voice->types.mod.position += buf_free;
