@@ -156,6 +156,8 @@ char* retro_dd_path_rom = NULL;
 char* retro_transferpak_rom_path = NULL;
 char* retro_transferpak_ram_path = NULL;
 
+uint32_t CoreOptionVersion = 0;
+uint32_t CoreOptionCategoriesSupported = 0;
 uint32_t bilinearMode = 0;
 uint32_t EnableHybridFilter = 0;
 uint32_t EnableDitheringPattern = 0;
@@ -252,10 +254,11 @@ static void setup_variables(void)
         { 0, 0 }
     };
 
-    libretro_set_core_options(environ_cb);
+    libretro_set_core_options(environ_cb, (bool*)&CoreOptionCategoriesSupported);
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
+// Deprecated with Core Option Categories
 static void set_variable_visibility(void)
 {
    // For simplicity we create a prepared var per plugin, maybe create a macro for this?
@@ -1658,7 +1661,10 @@ static void update_variables(bool startup)
 #endif // HAVE_THR_AL
 
     update_controllers();
-    set_variable_visibility();
+
+    // Compat hiding of options
+    if(!CoreOptionCategoriesSupported)
+      set_variable_visibility();
 }
 
 static void format_saved_memory(void)

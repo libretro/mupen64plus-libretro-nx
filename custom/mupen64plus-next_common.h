@@ -83,6 +83,8 @@ extern void gln64_thr_gl_invoke_command_loop();
 extern bool threaded_gl_safe_shutdown;
 
 // Core options
+extern uint32_t CoreOptionVersion;
+extern uint32_t CoreOptionCategoriesSupported;
 // GLN64
 extern uint32_t bilinearMode;
 extern uint32_t EnableHybridFilter;
