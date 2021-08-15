@@ -367,6 +367,12 @@ else ifneq (,$(findstring osx,$(platform)))
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
+
+   ifeq ($(ARCH), x86_64)
+      CC = clang -arch x86_64
+      CXX = clang++ -arch x86_64
+      WITH_DYNAREC =
+   endif
 # iOS
 else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(IOSSDK),)
