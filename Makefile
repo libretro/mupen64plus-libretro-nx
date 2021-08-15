@@ -357,7 +357,7 @@ else ifneq (,$(findstring osx,$(platform)))
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
-   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X
+   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DDONT_WANT_ARM_OPTIMIZATIONS -DNO_ASM -DHAVE_POSIX_MEMALIGN -Wno-error=implicit-function-declaration -Wno-deprecated-declarations
    GL_LIB := -framework OpenGL
 
    # Target Dynarec
@@ -597,8 +597,8 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	find -name "*.o" -type f -delete
-	find -name "*.d" -type f -delete
+	find . -name "*.o" -type f -delete
+	find . -name "*.d" -type f -delete
 	rm -f $(TARGET)
 
 .PHONY: clean
