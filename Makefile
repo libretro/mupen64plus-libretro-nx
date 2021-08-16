@@ -212,7 +212,7 @@ else ifeq ($(platform), jetson-xavier)
    HAVE_PARALLEL_RDP = 1
    HAVE_THR_AL = 1
    LLE = 1
-   COREFLAGS += -DHAVE_NEON -ftree-vectorize -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+   COREFLAGS += -ftree-vectorize -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
 
 # 64 bit ODROIDs
 else ifneq (,$(findstring odroid64,$(platform)))
