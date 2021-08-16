@@ -87,7 +87,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"3840x2880", NULL},
             { NULL, NULL },
         },
-        "640x480"
+        "640x480",
+        NULL
     },
     {
         CORE_NAME "-169screensize", // Keep this key for compatibility with existing config files. // TODO: revisit-later
@@ -115,7 +116,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"10240x4320", "10240x4320 (64:27)"},
             { NULL, NULL },
         },
-        "960x540"
+        "960x540",
+        NULL
     },
     {
         CORE_NAME "-aspect",
@@ -130,7 +132,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"16:9 adjusted", "Wide (Adjusted)"}, // Calculates the aspect ratio based on the selected "16:9 resolution".
             { NULL, NULL },
         },
-        "4:3"
+        "4:3",
+        NULL
     },
     {
         CORE_NAME "-EnableNativeResFactor",
@@ -151,7 +154,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"8", "8x"},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-ThreadedRenderer",
@@ -165,7 +169,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"False", "Disabled"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-BilinearMode",
@@ -179,7 +184,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"standard", NULL},
             { NULL, NULL },
         },
-        "standard"
+        "standard",
+        NULL
     },
     {
         CORE_NAME "-HybridFilter",
@@ -193,7 +199,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"False", "Disabled"},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
     {
         CORE_NAME "-DitheringPattern",
@@ -207,7 +214,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"False", "Disabled"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-DitheringQuantization",
@@ -221,7 +229,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"False", "Disabled"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-RDRAMImageDitheringMode",
@@ -237,7 +246,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"BlueNoise", "Blue Noise"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        NULL
     },
 #ifndef HAVE_OPENGLES2
     {
@@ -255,7 +265,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"16", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
 #endif
     {
@@ -270,7 +281,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"1", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-EnableLODEmulation",
@@ -284,7 +296,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", NULL},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
     {
         CORE_NAME "-EnableFBEmulation",
@@ -303,6 +316,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "False"
 #endif // VC
+,
+        "bool"
     },
     {
         CORE_NAME "-EnableCopyAuxToRDRAM",
@@ -317,6 +332,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { NULL, NULL },
         },
         "False",
+        "bool"
     },
     {
         CORE_NAME "-EnableCopyColorToRDRAM",
@@ -339,6 +355,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "Sync"
 #endif // HAVE_OPENGLES2
+,
+        NULL
     },
     {
         CORE_NAME "-EnableCopyDepthToRDRAM",
@@ -353,7 +371,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"FromMem", NULL},
             { NULL, NULL },
         },
-        "Software"
+        "Software",
+        NULL
     },
     {
         CORE_NAME "-BackgroundMode",
@@ -367,7 +386,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"OnePiece", NULL},
             { NULL, NULL },
         },
-        "OnePiece"
+        "OnePiece",
+        NULL
     },
     {
         CORE_NAME "-EnableHWLighting",
@@ -381,7 +401,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", NULL},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-CorrectTexrectCoords",
@@ -396,7 +417,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"Force", NULL},
             { NULL, NULL },
         },
-        "Off"
+        "Off",
+        NULL
     },
     {
         CORE_NAME "-EnableTexCoordBounds",
@@ -406,11 +428,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Bound texture rectangle texture coordinates to the values they take in native resolutions. It prevents garbage due to fetching out of texture bounds, but can result in hard edges.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-EnableNativeResTexrects",
@@ -425,7 +448,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"Optimized", NULL},
             { NULL, NULL },
         },
-        "Disabled"
+        "Disabled",
+      
     },
     {
         CORE_NAME "-EnableLegacyBlending",
@@ -435,8 +459,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Do not use shaders to emulate N64 blending modes. Works faster on slow GPU. Can cause glitches.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
 #ifdef HAVE_OPENGLES
@@ -444,6 +468,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "False"
 #endif
+,
+        "bool"
     },
     {
         CORE_NAME "-EnableFragmentDepthWrite",
@@ -453,8 +479,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Enable writing of fragment depth. Some mobile GPUs do not support it, thus it's optional. Leave enabled.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
 #ifdef HAVE_OPENGLES
@@ -462,6 +488,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "True"
 #endif
+,
+        "bool"
     },
 #if !defined(VC) && !defined(HAVE_OPENGLES)
     {
@@ -476,7 +504,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", "Fast"},
             {"Compatible", NULL},
         },
-        "False"
+        "False",
+        NULL
     },
     {
         CORE_NAME "-EnableShadersStorage",
@@ -486,11 +515,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Use persistent storage for compiled shaders.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
 #endif
     {
@@ -505,7 +535,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", NULL},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
     {
         CORE_NAME "-EnableOverscan",
@@ -515,11 +546,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Crop black borders from the overscan region around the screen.",
         "gliden64",
         {
-            {"Disabled", NULL},
-            {"Enabled", NULL},
+            {"Disabled", "disabled"},
+            {"Enabled", "enabled"},
             { NULL, NULL },
         },
-        "Enabled"
+        "Enabled",
+        "bool"
     },
     {
         CORE_NAME "-OverscanTop",
@@ -582,7 +614,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"50", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-OverscanLeft",
@@ -645,7 +678,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"50", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-OverscanRight",
@@ -708,7 +742,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"50", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-OverscanBottom",
@@ -771,7 +806,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"50", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-MaxTxCacheSize",
@@ -793,6 +829,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "8000"
 #endif
+,
+        "int"
     },
     {
         CORE_NAME "-txFilterMode",
@@ -811,7 +849,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"Sharp filtering 2", NULL},
             { NULL, NULL },
         },
-        "None"
+        "None",
+        NULL
     },
     {
         CORE_NAME "-txEnhancementMode",
@@ -837,7 +876,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"6xBRZ", NULL},
             { NULL, NULL },
         },
-        "None"
+        "None",
+        NULL
     },
     {
         CORE_NAME "-txFilterIgnoreBG",
@@ -847,11 +887,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Ignore filtering for Background Textures.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
     {
         CORE_NAME "-txHiresEnable",
@@ -861,11 +902,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Enable High-Res Texture packs if available.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-txCacheCompression",
@@ -875,11 +917,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Compress created texture caches.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "True"
+        "True",
+        "bool"
     },
     {
         CORE_NAME "-txHiresFullAlphaChannel",
@@ -889,11 +932,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "This should be enabled unless it's a old RICE Texture pack.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-EnableEnhancedTextureStorage",
@@ -903,11 +947,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-EnableHiResAltCRC",
@@ -917,11 +962,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Use an alternative method for High-Res paletted textures CRC calculations.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-EnableEnhancedHighResStorage",
@@ -931,11 +977,12 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",
         "gliden64",
         {
-            {"False", NULL},
-            {"True", NULL},
+            {"False", "false"},
+            {"True", "true"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-GLideN64IniBehaviour",
@@ -950,7 +997,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"disabled", "Disable INI"},
             { NULL, NULL },
         },
-        "late"
+        "late",
+        NULL
     },
 #ifdef HAVE_PARALLEL_RDP
     {
@@ -964,7 +1012,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-overscan",
@@ -1008,7 +1058,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "62", NULL },
             { "64", NULL },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "int"
     },
     {
         CORE_NAME "-parallel-rdp-divot-filter",
@@ -1021,8 +1073,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
-
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-gamma-dither",
@@ -1035,8 +1088,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
-
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-vi-aa",
@@ -1049,8 +1103,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
-
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-vi-bilinear",
@@ -1063,8 +1118,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
-
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-dither-filter",
@@ -1077,7 +1133,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-upscaling",
@@ -1092,7 +1150,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "4x", NULL },
             { "8x", NULL },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        NULL
     },
     {
         CORE_NAME "-parallel-rdp-super-sampled-read-back",
@@ -1105,7 +1165,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "False", "Disabled" },
             { "True", "Enabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-super-sampled-read-back-dither",
@@ -1118,7 +1180,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-downscaling",
@@ -1133,7 +1197,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "1/4", NULL },
             { "1/8", NULL },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        NULL
     },
     {
         CORE_NAME "-parallel-rdp-native-texture-lod",
@@ -1146,7 +1212,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "False", "Disabled" },
             { "True", "Enabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-native-tex-rect",
@@ -1159,7 +1227,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "True", "Enabled" },
             { "False", "Disabled" },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        "bool"
     },
     {
         CORE_NAME "-parallel-rdp-deinterlace-method",
@@ -1172,7 +1242,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             { "Bob", NULL },
             { "Weave", NULL },
             { NULL, NULL },
-        }
+        },
+        NULL,
+        NULL
     },
 #endif
 #ifdef HAVE_THR_AL
@@ -1193,7 +1265,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"Coverage", NULL},
             { NULL, NULL },
         },
-        "Filtered"
+        "Filtered",
+        NULL
     },
     {
         CORE_NAME "-angrylion-sync",
@@ -1208,7 +1281,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"High", NULL},
             { NULL, NULL },
         },
-        "Low"
+        "Low",
+        NULL
     },
     {
         CORE_NAME "-angrylion-multithread",
@@ -1285,7 +1359,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"75", NULL},
             { NULL, NULL },
         },
-        "all threads"
+        "all threads",
+        "int"
     },
     {
         CORE_NAME "-angrylion-overscan",
@@ -1299,7 +1374,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"enabled", NULL},
             { NULL, NULL },
         },
-        "disabled"
+        "disabled",
+        "bool"
     },
 #endif
     {
@@ -1322,6 +1398,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "cached_interpreter"
 #endif
+,
+        NULL
     },
     {
         CORE_NAME "-rdp-plugin",
@@ -1340,7 +1418,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"gliden64", "GLideN64"},
             { NULL, NULL },
         },
-        "gliden64"
+        "gliden64",
+        NULL
     },
     {
         CORE_NAME "-rsp-plugin",
@@ -1359,7 +1438,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"hle", "HLE"},
             { NULL, NULL },
         },
-        "hle"
+        "hle",
+        NULL
     },
     {
         CORE_NAME "-FrameDuping",
@@ -1378,6 +1458,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #else
         "False"
 #endif
+,
+        "bool"
     },
     {
         CORE_NAME "-Framerate",
@@ -1391,7 +1473,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"Fullspeed", NULL},
             { NULL, NULL },
         },
-        "Original"
+        "Original",
+        NULL
     },
     {
         CORE_NAME "-virefresh",
@@ -1406,7 +1489,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"2200", NULL},
             { NULL, NULL },
         },
-        "Auto"
+        "Auto",
+        NULL
     },
     {
         CORE_NAME "-ForceDisableExtraMem",
@@ -1420,7 +1504,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", NULL},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-IgnoreTLBExceptions",
@@ -1435,7 +1520,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"AlwaysIgnoreTLB", "Always Ignore TLB Exceptions"},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        NULL
     },
     {
         CORE_NAME "-CountPerOp",
@@ -1453,7 +1539,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"5", NULL},
             { NULL, NULL },
         },
-        "0"
+        "0",
+        "int"
     },
     {
         CORE_NAME "-astick-deadzone",
@@ -1472,7 +1559,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"30", NULL},
             { NULL, NULL },
         },
-        "15"
+        "15",
+        "int"
     },
     {
         CORE_NAME "-astick-sensitivity",
@@ -1505,7 +1593,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"150", NULL},
             { NULL, NULL },
         },
-        "100"
+        "100",
+        "int"
     },
     {
         CORE_NAME "-r-cbutton",
@@ -1521,7 +1610,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"C4", NULL},
             { NULL, NULL },
         },
-        "C1"
+        "C1",
+        NULL
     },
     {
         CORE_NAME "-l-cbutton",
@@ -1537,7 +1627,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"C4", NULL},
             { NULL, NULL },
         },
-        "C2"
+        "C2",
+        NULL
     },
     {
         CORE_NAME "-d-cbutton",
@@ -1553,7 +1644,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"C4", NULL},
             { NULL, NULL },
         },
-        "C3"
+        "C3",
+        NULL
     },
     {
         CORE_NAME "-u-cbutton",
@@ -1569,7 +1661,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"C4", NULL},
             { NULL, NULL },
         },
-        "C4"
+        "C4",
+        NULL
     },
     {
         CORE_NAME "-alt-map",
@@ -1583,7 +1676,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"True", NULL},
             { NULL, NULL },
         },
-        "False"
+        "False",
+        "bool"
     },
     {
         CORE_NAME "-pak1",
@@ -1599,7 +1693,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"transfer", NULL},
             { NULL, NULL },
         },
-        "memory"
+        "memory",
+        NULL
     },
     {
         CORE_NAME "-pak2",
@@ -1615,7 +1710,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"transfer", NULL},
             { NULL, NULL },
         },
-        "none"
+        "none",
+        NULL
     },
     {
         CORE_NAME "-pak3",
@@ -1631,7 +1727,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"transfer", NULL},
             { NULL, NULL },
         },
-        "none"
+        "none",
+        NULL
     },
     {
         CORE_NAME "-pak4",
@@ -1647,9 +1744,10 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"transfer", NULL},
             { NULL, NULL },
         },
-        "none"
+        "none",
+        NULL
     },
-    { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
+    { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL, NULL },
 };
 
 struct retro_core_options_v2 options_us = {
