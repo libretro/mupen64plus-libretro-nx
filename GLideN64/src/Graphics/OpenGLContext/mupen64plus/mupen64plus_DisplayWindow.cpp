@@ -76,7 +76,7 @@ bool DisplayWindowMupen64plus::_start()
 	_getDisplaySize();
 	_setBufferSize();
 
-#ifdef EGL
+#if defined(EGL) && !defined(__LIBRETRO__)
 	eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
 #endif // EGL
 

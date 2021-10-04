@@ -43,6 +43,7 @@
 #include "rom.h"
 #include "util.h"
 
+extern char inifile[];
 #define CHUNKSIZE 1024*128 /* Read files 128KB at a time. */
 
 /* Number of cpu cycles per instruction */
@@ -412,11 +413,13 @@ void romdatabase_open(void)
         return;
 
     /* Open romdatabase. */
-    if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
-    {
-        DebugMessage(M64MSG_ERROR, "Unable to open rom database file '%s'.", pathname);
-        return;
-    }
+    #ifndef HAVE_ANGLE
+        if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
+        {
+            DebugMessage(M64MSG_ERROR, "Unable to open rom database file '%s'.", pathname);
+            return;
+        }
+    #endif
 
     g_romdatabase.have_database = 1;
 
@@ -429,10 +432,21 @@ void romdatabase_open(void)
 
     next_search = &g_romdatabase.list;
 
+    char* lines = strtok(inifile, "\n");
+
     /* Parse ROM database file */
-    for (lineno = 1; fgets(buffer, 255, fPtr) != NULL; lineno++)
+    #ifdef HAVE_ANGLE
+        while (lines != NULL)
+    #else
+        for (lineno = 1; fgets(buffer, 255,fptr) != NULL; lineno++)
+    #endif
     {
-        char *line = buffer;
+        #ifdef HAVE_ANGLE
+            char *line = lines;
+        #else
+            char *line = buffer;
+        #endif
+
         ini_line l = ini_parse_line(&line);
         switch (l.type)
         {
@@ -672,9 +686,14 @@ void romdatabase_open(void)
         default:
             break;
         }
+        
+        lines = strtok(NULL, "\n");
     }
+    
+    #ifndef HAVE_ANGLE
+        fclose(fPtr);
+    #endif
 
-    fclose(fPtr);
     romdatabase_resolve();
 }
 
