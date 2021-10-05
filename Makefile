@@ -24,9 +24,10 @@ TR        ?= tr
 UNAME=$(shell uname -a)
 
 # Dirs
-ROOT_DIR := .
+ROOT_DIR     := .
 LIBRETRO_DIR := $(ROOT_DIR)/libretro
-DEPSDIR	:=	$(CURDIR)/
+DEPSDIR	    := $(CURDIR)/
+ANGLE_DIR    ?= $(ROOT_DIR)/../angle-bootstraps/Binaries
 
 ifeq ($(platform),)
    platform = unix
@@ -557,11 +558,11 @@ else
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(LIBRETRO_DIR)/link.T #-static -lmingw32 -lSDL2main -lSDL2 -mwindows -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid  -lsdl2_net -lsdl2 -lws2_32 -lSetupapi -lIPHLPAPI
    ifeq ($(HAVE_ANGLE),1)
+      EGL = 1
       GLES3 = 1
       INCFLAGS += -I$(ANGLE_DIR)/include
-      GL_LIB = -L$(ANGLE_DIR) -lGLESv2
-      EGL_LIB = -L$(ANGLE_DIR) -lEGL
-      COREFLAGS += -g 
+      GL_LIB = -L$(ANGLE_DIR)/lib/UWP -lGLESv2
+      EGL_LIB = -L$(ANGLE_DIR)/lib/UWP -lEGL
    else
       GL_LIB := -lopengl32
    endif
@@ -590,6 +591,7 @@ else
    	HAVE_THR_AL = 1
    	LLE = 1
    endif
+
    COREFLAGS += -DOS_WINDOWS -DMINGW -DUNICODE
    CXXFLAGS += -fpermissive
 endif

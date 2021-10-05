@@ -13,10 +13,12 @@ LIBPNG_DIR         = $(ROOT_DIR)/custom/dependencies/libpng
 XXHASH_DIR         = $(ROOT_DIR)/xxHash
 ZLIB_DIR           = $(ROOT_DIR)/custom/dependencies/libzlib
 
+# ANGLE_DIR defined in Makefile
+
 DYNAREC_USED := 0
 
 INCFLAGS += \
-	-I$(ROOT_DIR)/../angle-bootstraps/Binaries/include \
+	-I$(ANGLE_DIR)/include \
 	-I$(ROOT_DIR)/custom \
 	-I$(ROOT_DIR)/custom/mupen64plus-core \
 	-I$(ROOT_DIR)/custom/android/include \
