@@ -588,10 +588,11 @@ else
    ifeq ($(HAVE_ANGLE),0)
    	HAVE_PARALLEL_RSP = 1
    	HAVE_PARALLEL_RDP = 1
-   	HAVE_THR_AL = 1
-   	LLE = 1
    endif
 
+   HAVE_THR_AL = 1
+   LLE = 1
+   
    COREFLAGS += -DOS_WINDOWS -DMINGW -DUNICODE
    CXXFLAGS += -fpermissive
 endif
