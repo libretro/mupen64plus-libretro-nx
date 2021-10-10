@@ -4346,7 +4346,19 @@ BufferHandle Device::create_imported_host_buffer(const BufferCreateInfo &create_
 		return BufferHandle{};
 	}
 
-	uint32_t memory_type = find_memory_type(create_info.domain, reqs.memoryTypeBits);
+	uint32_t memory_type = UINT32_MAX;
+	if (gpu_props.vendorID == 0x8086 && gpu_props.driverVersion >= 0x1926a6) 
+	{
+		//Intel driver workaround for incorrect propertyFlags being returned for memoryTypes entries.
+		//Default to memoryTypes[2] which is best match based off vulkaninfo values.
+		//TODO: Revisit checks if Intel fix bug.
+		memory_type = 2;
+	}
+	else
+	{
+		memory_type = find_memory_type(create_info.domain, reqs.memoryTypeBits);
+	}
+
 	if (memory_type == UINT32_MAX)
 	{
 		LOGE("Failed to find memory type.\n");
