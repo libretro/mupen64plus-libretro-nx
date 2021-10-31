@@ -133,7 +133,6 @@ int l_cbutton;
 int d_cbutton;
 int u_cbutton;
 bool alternate_mapping;
-int raw_input_adapter;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -1436,21 +1435,6 @@ static void update_variables(bool startup)
           ForceDisableExtraMem = !strcmp(var.value, "False") ? 0 : 1;
        }
 
-       var.key = CORE_NAME "-RawInputAdapter";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "None"))
-             raw_input_adapter = 0;
-#ifdef HAVE_RAPHNET_INPUT
-          else if (!strcmp(var.value, "Raphnet"))
-             raw_input_adapter = 1;
-#else
-         else
-            raw_input_adapter = 0;
-#endif
-       }
-
        var.key = CORE_NAME "-IgnoreTLBExceptions";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1931,7 +1915,7 @@ void retro_unload_game(void)
     }
 
     cleanup_global_paths();
-    
+
     emu_initialized = false;
 
     // Reset savestate job var
