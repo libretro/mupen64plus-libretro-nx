@@ -159,11 +159,19 @@ else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=cortex-a7
       ARM_CPUFLAGS = -mfpu=neon-vfpv4
    else ifneq (,$(findstring rpi3,$(platform)))
-      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53
-      ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      ifneq (,$(findstring rpi3_64,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53
+      else
+         CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a53
+         ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      endif
    else ifneq (,$(findstring rpi4,$(platform)))
-      CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
-      ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      ifneq (,$(findstring rpi4_64,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a72 -mtune=cortex-a72
+      else
+         CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
+         ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      endif
    else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=arm1176jzf-s
       ARM_CPUFLAGS = -mfpu=vfp
@@ -225,6 +233,10 @@ else ifneq (,$(findstring odroid64,$(platform)))
    ifneq (,$(findstring C2,$(BOARD)))
       # ODROID-C2
       CPUFLAGS += -mcpu=cortex-a53
+   else ifneq (,$(findstring C4,$(BOARD)))
+      # ODROID-C4
+      CPUFLAGS += -mcpu=cortex-a55
+      GLES3 = 1
    else ifneq (,$(findstring N1,$(BOARD)))
       # ODROID-N1
       CPUFLAGS += -mcpu=cortex-a72.cortex-a53
@@ -318,6 +330,28 @@ else ifneq (,$(findstring amlogic,$(platform)))
    WITH_DYNAREC=arm
    COREFLAGS += -DUSE_GENERIC_GLESV2 -DOS_LINUX
    CPUFLAGS += -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53
+
+# Generic AArch64 Cortex-A53 GLES 2.0 target
+else ifneq (,$(findstring arm64_cortex_a53_gles2,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GL_LIB := -lGLESv2
+   WITH_DYNAREC := aarch64
+   CPUFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53
+   GLES = 1
+   COREFLAGS += -DOS_LINUX
+   ASFLAGS = -f elf64 -d ELF_TYPE
+
+# Generic AArch64 Cortex-A53 GLES 3.0 target
+else ifneq (,$(findstring arm64_cortex_a53_gles3,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   LDFLAGS += -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined -ldl
+   GL_LIB := -lGLESv2
+   WITH_DYNAREC := aarch64
+   CPUFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53
+   GLES3 = 1
+   COREFLAGS += -DOS_LINUX
+   ASFLAGS = -f elf64 -d ELF_TYPE
 
 # Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
 else ifneq (,$(findstring RK,$(platform)))
