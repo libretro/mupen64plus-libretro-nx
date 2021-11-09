@@ -44,6 +44,7 @@ stages:
 # Windows 64-bit
 libretro-build-windows-x64-mingw:
   variables:
+    HAVE_RAPHNET_INPUT: 1
     HAVE_PARALLEL_RDP: 1
     HAVE_PARALLEL_RSP: 1
     HAVE_THR_AL: 1
@@ -55,6 +56,7 @@ libretro-build-windows-x64-mingw:
 # Windows 32-bit
 libretro-build-windows-i686-mingw:
   variables:
+    HAVE_RAPHNET_INPUT: 1
     HAVE_PARALLEL_RDP: 1
     HAVE_PARALLEL_RSP: 1
     HAVE_THR_AL: 1
@@ -66,6 +68,7 @@ libretro-build-windows-i686-mingw:
 # Linux 32-bit
 libretro-build-linux-i686:
   variables:
+    HAVE_RAPHNET_INPUT: 1
     HAVE_PARALLEL_RDP: 1
     HAVE_PARALLEL_RSP: 1
     HAVE_THR_AL: 1
@@ -77,6 +80,7 @@ libretro-build-linux-i686:
 # Linux 64-bit
 libretro-build-linux-x64:
   variables:
+    HAVE_RAPHNET_INPUT: 1
     HAVE_PARALLEL_RDP: 1
     HAVE_PARALLEL_RSP: 1
     HAVE_THR_AL: 1
