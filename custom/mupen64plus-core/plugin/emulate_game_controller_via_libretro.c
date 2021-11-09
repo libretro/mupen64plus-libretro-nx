@@ -22,11 +22,6 @@
 #include "emulate_game_controller_via_input_plugin.h"
 #include "plugin/plugin.h"
 
-#ifdef HAVE_RAPHNET_INPUT
-#include "mupen64plus-input-raphnetraw/plugin_front.h"
-#include "plugin_back.h"
-#endif
-
 #include "api/m64p_plugin.h"
 #include "device/controllers/game_controller.h"
 #include <libretro.h>
@@ -53,7 +48,6 @@ extern int l_cbutton;
 extern int d_cbutton;
 extern int u_cbutton;
 extern bool alternate_mapping;
-extern int raw_input_adapter;
 static bool libretro_supports_bitmasks = false;
 
 extern m64p_rom_header ROM_HEADER;
@@ -79,14 +73,6 @@ struct
 void inputGetKeys_default( int Control, BUTTONS *Keys );
 typedef void (*get_keys_t)(int, BUTTONS*);
 static get_keys_t getKeys = inputGetKeys_default;
-
-void inputControllerCommand_default( int Control, unsigned char *Command );
-typedef void (*controller_command_t)(int, unsigned char*);
-static controller_command_t controllerCommand = inputControllerCommand_default;
-
-void inputReadController_default( int Control, unsigned char *Command );
-typedef void (*read_controller_t)(int, unsigned char*);
-static read_controller_t readController = inputReadController_default;
 
 static void inputGetKeys_default_descriptor(void)
 {
@@ -161,31 +147,11 @@ EXPORT m64p_error CALL inputPluginStartup(m64p_dynlib_handle CoreLibHandle, void
       libretro_supports_bitmasks = true;
    getKeys = inputGetKeys_default;
    inputGetKeys_default_descriptor();
-
-#ifdef HAVE_RAPHNET_INPUT
-   if (raw_input_adapter == 1)
-   {
-      controllerCommand = raphnetControllerCommand;
-      readController = raphnetReadController;
-      raphnetPluginStartup(CoreLibHandle, Context, DebugCallback);
-   }
-   else
-   {
-      controllerCommand = inputControllerCommand_default;
-      readController = inputReadController_default;
-   }
-#endif
-
    return M64ERR_SUCCESS;
 }
 
 EXPORT m64p_error CALL inputPluginShutdown(void)
 {
-#ifdef HAVE_RAPHNET_INPUT
-   if (raw_input_adapter == 1)
-      raphnetPluginShutdown();
-#endif
-
    libretro_supports_bitmasks = false;
    abort();
    return 0;
@@ -237,14 +203,8 @@ static unsigned char DataCRC( unsigned char *Data, int iLenght )
             initilize controller: 01 03 00 FF FF FF
             read controller:      01 04 01 FF FF FF FF
 *******************************************************************/
-EXPORT void CALL inputControllerCommand_default(int Control, unsigned char *Command)
+EXPORT void CALL inputControllerCommand(int Control, unsigned char *Command)
 {
-   if (controllerCommand != inputControllerCommand_default)
-   {
-      controllerCommand(Control, Command);
-      return;
-   }
-
     unsigned char *Data = &Command[5];
 
     if (Control == -1)
@@ -454,20 +414,6 @@ EXPORT void CALL inputInitiateControllers(CONTROL_INFO ControlInfo)
 
    getKeys = inputGetKeys_default;
    inputGetKeys_default_descriptor();
-
-#ifdef HAVE_RAPHNET_INPUT
-   if (raw_input_adapter == 1)
-   {
-      controllerCommand = raphnetControllerCommand;
-      readController = raphnetReadController;
-      pb_scanControllers();
-   }
-   else
-   {
-      controllerCommand = inputControllerCommand_default;
-      readController = inputReadController_default;
-   }
-#endif
 }
 
 /******************************************************************
@@ -481,12 +427,9 @@ EXPORT void CALL inputInitiateControllers(CONTROL_INFO ControlInfo)
   note:     This function is only needed if the DLL is allowing raw
             data.
 *******************************************************************/
-EXPORT void CALL inputReadController_default(int Control, unsigned char *Command)
+EXPORT void CALL inputReadController(int Control, unsigned char *Command)
 {
-   if (readController != inputReadController_default)
-      readController(Control, Command);
-   else
-      inputControllerCommand_default(Control, Command);
+   inputControllerCommand(Control, Command);
 }
 
 /******************************************************************
@@ -495,12 +438,7 @@ EXPORT void CALL inputReadController_default(int Control, unsigned char *Command
   input:    none
   output:   none
 *******************************************************************/
-EXPORT void CALL inputRomClosed(void) {
-#ifdef HAVE_RAPHNET_INPUT
-   if (raw_input_adapter == 1)
-      raphnetRomClosed();
-#endif
-}
+EXPORT void CALL inputRomClosed(void) { }
 
 /******************************************************************
   Function: RomOpen
@@ -509,29 +447,7 @@ EXPORT void CALL inputRomClosed(void) {
   input:    none
   output:   none
 *******************************************************************/
-EXPORT int CALL inputRomOpen(void) {
-#ifdef HAVE_RAPHNET_INPUT
-   if (raw_input_adapter == 1)
-   {
-      bool all_unset = true;
-
-      for (int i = 0; i < 4; i++)
-      {
-         if (pad_rawdata[i] == 1)
-            all_unset = false;
-      }
-
-      // HACK: handle a special case if we enable raphnet support, but
-      // don't change any of the controllers to actually use raw data
-      if (all_unset)
-         raphnetPluginShutdown();
-      else
-         raphnetRomOpen();
-   }
-#endif
-
-   return 1;
-}
+EXPORT int CALL inputRomOpen(void) { return 1; }
 
 
 int egcvip_is_connected(void* opaque, enum pak_type* pak)

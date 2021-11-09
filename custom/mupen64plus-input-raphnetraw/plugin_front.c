@@ -50,6 +50,9 @@
 #include "plugin_back.h"
 #include "version.h"
 
+#ifdef __LIBRETRO__
+#include <libretro_private.h>
+#endif /* __LIBRETRO__ */
 
 #ifdef __linux__
 #endif /* __linux__ */
@@ -58,7 +61,19 @@
 
 #define MAX_CONTROLLERS	4
 
-#ifdef PORTS_1_AND_4
+#ifdef __LIBRETRO__
+static int emu2adap_portmap[MAX_CONTROLLERS] = { -1, -1, -1, -1 };
+#undef PLUGIN_NAME
+#define PLUGIN_NAME "raphnetraw libretro"
+
+/* global data definitions */
+struct
+{
+    CONTROL *control;               // pointer to CONTROL struct in Core library
+    BUTTONS buttons;
+} controller[4];
+
+#elif PORTS_1_AND_4
 static int emu2adap_portmap[MAX_CONTROLLERS] = { 0, 2, 3, 1 };
 #undef PLUGIN_NAME
 #define PLUGIN_NAME "raphnetraw ports 1 and 4"
@@ -66,13 +81,7 @@ static int emu2adap_portmap[MAX_CONTROLLERS] = { 0, 2, 3, 1 };
 static int emu2adap_portmap[MAX_CONTROLLERS] = { 0, 1, 2, 3 };
 #endif
 
-extern struct
-{
-    CONTROL *control;
-    BUTTONS buttons;
-} controller[4];
-static int pad_portmap[MAX_CONTROLLERS] = { -1, -1, -1, -1 };
-#define EMU_2_ADAP_PORT(a)	((a) == -1 ? -1 : pad_portmap[a])
+#define EMU_2_ADAP_PORT(a)	((a) == -1 ? -1 : emu2adap_portmap[a])
 
 /* static data definitions */
 static void (*l_DebugCallback)(void *, int, const char *) = NULL;
@@ -80,19 +89,6 @@ static void *l_DebugCallContext = NULL;
 static int l_PluginInit = 0;
 
 /* Global functions */
-void raphnetUpdatePortMap()
-{
-	int map = 0;
-
-	for( int i = 0; i < MAX_CONTROLLERS; i++ )
-	{
-		if (controller[i].control && controller[i].control->RawData == 1)
-			pad_portmap[i] = map++;
-		else
-			pad_portmap[i] = -1;
-    }
-}
-
 static void DebugMessage(int level, const char *message, ...)
 {
 	char msgbuf[1024];
@@ -110,6 +106,19 @@ static void DebugMessage(int level, const char *message, ...)
 
 	va_end(args);
 }
+
+
+/* Libretro related functions */
+#ifdef __LIBRETRO__
+void raphnetUpdatePortMap(int in_port, int device)
+{
+    int is_plugged = (int) (controller[in_port].control ? controller[in_port].control->Present : 0);
+    int is_raphnet = (int) (device == RETRO_DEVICE_RAPHNET);
+
+    if (pb_updatePortMap(in_port, is_plugged, is_raphnet) > 0)
+        pb_scanControllers();
+}
+#endif
 
 
 /* Mupen64Plus plugin functions */
@@ -200,6 +209,12 @@ EXPORT m64p_error CALL raphnetPluginGetVersion(m64p_plugin_type *PluginType, int
 *******************************************************************/
 EXPORT void CALL raphnetInitiateControllers(CONTROL_INFO ControlInfo)
 {
+#ifdef __LIBRETRO__
+    // we need the built-in plugin for GetKeys, this also correctly
+    // sets ControlInfo to what the user selected in libretro
+    inputInitiateControllers(ControlInfo);
+    pb_init(DebugMessage);
+#else
     int i, n_controllers, adap_port;
 
 	n_controllers = pb_scanControllers();
@@ -223,6 +238,7 @@ EXPORT void CALL raphnetInitiateControllers(CONTROL_INFO ControlInfo)
 			ControlInfo.Controls[i].Present = 1;
 		}
 	}
+#endif
 
     DebugMessage(PB_MSG_INFO, "%s version %i.%i.%i %s(compiled "__DATE__" "__TIME__") initialized.", PLUGIN_NAME, VERSION_PRINTF_SPLIT(PLUGIN_VERSION),
 #ifdef _DEBUG
@@ -247,16 +263,20 @@ EXPORT void CALL raphnetInitiateControllers(CONTROL_INFO ControlInfo)
 *******************************************************************/
 EXPORT void CALL raphnetReadController(int Control, unsigned char *Command)
 {
-	pb_readController(EMU_2_ADAP_PORT(Control), Command);
+    pb_readController(Control, Command);
 }
 
 EXPORT void CALL raphnetControllerCommand(int Control, unsigned char *Command)
 {
-	pb_controllerCommand(EMU_2_ADAP_PORT(Control), Command);
+	pb_controllerCommand(Control, Command);
 }
 
-EXPORT void CALL raphnetGetKeys( int Control, BUTTONS *Keys )
+EXPORT void CALL raphnetGetKeys_default( int Control, BUTTONS *Keys )
 {
+#ifdef __LIBRETRO__
+    // pass GetKeys requests back to the built-in plugin
+    inputGetKeys_default(Control, Keys);
+#endif
 }
 
 EXPORT void CALL raphnetRomClosed(void)
@@ -266,7 +286,7 @@ EXPORT void CALL raphnetRomClosed(void)
 
 EXPORT int CALL raphnetRomOpen(void)
 {
-	pb_romOpen();
+    pb_romOpen();
 	return 1;
 }
 

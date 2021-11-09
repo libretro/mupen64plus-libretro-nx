@@ -101,13 +101,6 @@ static struct retro_hw_render_callback hw_render;
 static struct retro_hw_render_context_negotiation_interface_vulkan hw_context_negotiation;
 #endif
 
-#define RETRO_DEVICE_RAPHNET RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_NONE, 1)
-#ifdef HAVE_RAPHNET_INPUT
-#define NUM_DEVICE_TYPES 3
-#else
-#define NUM_DEVICE_TYPES 2
-#endif
-
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 
@@ -875,6 +868,13 @@ static void update_variables(bool startup)
 #endif
           }
        }
+
+       setup_variables();
+#if defined(HAVE_RAPHNET_INPUT)
+       plugin_connect_input_api(INPUT_PLUGIN_RAPHNET);
+#else
+       plugin_connect_input_api(INPUT_PLUGIN_INPUT);
+#endif
 
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
        {
@@ -2102,8 +2102,10 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) {
                    break;
                }
 
+#ifdef HAVE_RAPHNET_INPUT
             case RETRO_DEVICE_RAPHNET:
                prefer_rawdata = 1;
+#endif
 
             case RETRO_DEVICE_JOYPAD:
             default:
@@ -2120,8 +2122,7 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) {
     }
 
 #ifdef HAVE_RAPHNET_INPUT
-    if (in_port == 3)
-      raphnetUpdatePortMap();
+   raphnetUpdatePortMap(in_port, device);
 #endif
 }
 

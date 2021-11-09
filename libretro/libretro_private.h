@@ -29,5 +29,11 @@ void retro_return();
 #define strcasecmp stricmp
 #endif
 
+#ifdef HAVE_RAPHNET_INPUT
+#define RETRO_DEVICE_RAPHNET RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_NONE, 1)
+#define NUM_DEVICE_TYPES 3
+#else
+#define NUM_DEVICE_TYPES 2
+#endif
 
 #endif

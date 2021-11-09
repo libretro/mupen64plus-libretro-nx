@@ -33,6 +33,13 @@ extern "C" {
 #include "api/m64p_plugin.h"
 #include "api/m64p_types.h"
 
+enum input_plugin_type
+{
+   INPUT_PLUGIN_NONE = 0,
+   INPUT_PLUGIN_INPUT,
+   INPUT_PLUGIN_RAPHNET
+};
+
 enum rdp_plugin_type
 {
    RDP_PLUGIN_NONE = 0,
@@ -51,6 +58,7 @@ enum rsp_plugin_type
    RSP_PLUGIN_MAX
 };
 
+void plugin_connect_input_api(enum input_plugin_type type);
 void plugin_connect_rsp_api(enum rsp_plugin_type type);
 void plugin_connect_rdp_api(enum rdp_plugin_type type);
 void plugin_connect_all();
@@ -179,7 +187,7 @@ extern uint32_t OverscanBottom;
 
 #define RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE (4 | RETRO_ENVIRONMENT_RETROARCH_START_BLOCK)
                                             /* unsigned * --
-                                            * Tells the frontend to override the poll type behavior. 
+                                            * Tells the frontend to override the poll type behavior.
                                             * Allows the frontend to influence the polling behavior of the
                                             * frontend.
                                             *
