@@ -409,7 +409,6 @@ ifeq ($(HAVE_RAPHNET_INPUT), 1)
 	CFLAGS   += -DHAVE_RAPHNET_INPUT
 	CXXFLAGS += -DHAVE_RAPHNET_INPUT
 	INCFLAGS += $(HIDAPI_INCFLAGS)
-	LDFLAGS  += -ludev -ldl
 
 	SOURCES_C += $(ROOT_DIR)/custom/mupen64plus-input-raphnetraw/plugin_front.c \
 		$(ROOT_DIR)/custom/mupen64plus-input-raphnetraw/plugin_back.c \
@@ -417,11 +416,12 @@ ifeq ($(HAVE_RAPHNET_INPUT), 1)
 		$(INPUTDIR_RAPHNET)/src/gcn64lib.c \
 		$(INPUTDIR_RAPHNET)/src/gcn64.c
 
-	ifeq ($(platform), win)
-		SOURCES_C += $(INPUTDIR_RAPHNET)/src/osal_dynamiclib_win32.c
+	ifneq (,$(findstring win,$(platform)))
+		LDFLAGS += -lsetupapi -Lhidapi/windows
+		SOURCES_C += $(INPUTDIR_RAPHNET)/src/osal_dynamiclib_win32.c \
+			$(HIDAPI_DIR)/windows/hid.c
 	else
-		LDFLAGS += -Lhidapi/linux
-
+		LDFLAGS += -ludev -ldl -Lhidapi/linux
 		SOURCES_C += $(INPUTDIR_RAPHNET)/src/osal_dynamiclib_unix.c \
 			$(HIDAPI_DIR)/linux/hid.c
 	endif
