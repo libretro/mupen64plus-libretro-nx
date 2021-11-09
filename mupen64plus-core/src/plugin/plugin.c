@@ -125,30 +125,37 @@ const audio_plugin_functions dummy_audio = {
     dummyaudio_VolumeGetString
 };
 
+/* INPUT */
+#define DEFINE_INPUT(X) \
+    EXPORT m64p_error CALL X##PluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion, \
+                                                int *APIVersion, const char **PluginNamePtr, int *Capabilities); \
+    EXPORT void CALL X##InitiateControllers (CONTROL_INFO ControlInfo); \
+    EXPORT void CALL X##GetKeys_default(int Control, BUTTONS * Keys ); \
+    EXPORT void CALL X##ControllerCommand(int Control, unsigned char *Command); \
+    EXPORT void CALL X##InitiateControllers(CONTROL_INFO ControlInfo); \
+    EXPORT void CALL X##ReadController(int Control, unsigned char *Command); \
+    EXPORT int  CALL X##RomOpen(void); \
+    EXPORT void CALL X##RomClosed(void); \
+    \
+    input_plugin_functions input_##X = { \
+        X##PluginGetVersion, \
+        X##ControllerCommand, \
+        X##GetKeys_default, \
+        X##InitiateControllers, \
+        X##ReadController, \
+        X##RomClosed, \
+        X##RomOpen, \
+        dummyinput_SDL_KeyDown, \
+        dummyinput_SDL_KeyUp, \
+        dummyinput_RenderCallback \
+    }
 
-extern m64p_error inputPluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion,
-                                              int *APIVersion, const char **PluginNamePtr, int *Capabilities);
-extern void inputInitiateControllers (CONTROL_INFO ControlInfo);
-extern void inputGetKeys_default(int Control, BUTTONS * Keys );
-extern void inputControllerCommand_default(int Control, unsigned char *Command);
-extern void inputInitiateControllers(CONTROL_INFO ControlInfo);
-extern void inputReadController_default(int Control, unsigned char *Command);
-extern int  inputRomOpen(void);
-extern void inputRomClosed(void);
-
-
-const input_plugin_functions dummy_input = {
-    inputPluginGetVersion,
-    inputControllerCommand_default,
-    inputGetKeys_default,
-    inputInitiateControllers,
-    inputReadController_default,
-    inputRomClosed,
-    inputRomOpen,
-    dummyinput_SDL_KeyDown,
-    dummyinput_SDL_KeyUp,
-    dummyinput_RenderCallback
-};
+#if defined(HAVE_RAPHNET_INPUT)
+DEFINE_INPUT(input);
+DEFINE_INPUT(raphnet);
+#else
+DEFINE_INPUT(input);
+#endif
 
 static AUDIO_INFO audio_info;
 static CONTROL_INFO control_info;
@@ -294,7 +301,7 @@ static m64p_error plugin_start_audio(void)
 
 static void plugin_disconnect_input(void)
 {
-    input = dummy_input;
+    input = input_input;
     l_InputAttached = 0;
 }
 
@@ -387,8 +394,23 @@ m64p_error plugin_check(void)
 }
 
 #ifdef __LIBRETRO__
+enum input_plugin_type current_input_type = INPUT_PLUGIN_NONE;
 enum rdp_plugin_type current_rdp_type = RDP_PLUGIN_NONE;
 enum rsp_plugin_type current_rsp_type = RSP_PLUGIN_NONE;
+
+void plugin_connect_input_api(enum input_plugin_type type)
+{
+   switch (type)
+   {
+      case INPUT_PLUGIN_INPUT:
+      case INPUT_PLUGIN_RAPHNET:
+         current_input_type = type;
+         break;
+      case INPUT_PLUGIN_NONE:
+      default:
+         break;
+   }
+}
 
 void plugin_connect_rdp_api(enum rdp_plugin_type type)
 {
@@ -473,7 +495,21 @@ void plugin_connect_all()
     l_AudioAttached = 1;
     //plugin_start_audio();
 
-    input = dummy_input;
+    switch (current_input_type)
+    {
+       case INPUT_PLUGIN_RAPHNET:
+#ifdef HAVE_RAPHNET_INPUT
+          input = input_raphnet;
+#endif
+          break;
+       case INPUT_PLUGIN_INPUT:
+          input = input_input;
+          break;
+       case INPUT_PLUGIN_NONE:
+       default:
+          break;
+    }
+
     l_InputAttached = 1;
     plugin_start_input();
 }
@@ -493,7 +529,7 @@ void plugin_connect_all()
     l_AudioAttached = 1;
     //plugin_start_audio();
 
-    input = dummy_input;
+    input = input_input;
     l_InputAttached = 1;
     plugin_start_input();
 }
