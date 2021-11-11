@@ -32,6 +32,8 @@
 
 #include <mupen64plus-next_common.h>
 
+extern retro_log_printf_t log_cb;
+
 int open_file_storage(struct file_storage* fstorage, size_t size, const char* filename)
 {
     /* ! Take ownership of filename ! */
