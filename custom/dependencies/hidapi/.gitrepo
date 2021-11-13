@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/libusb/hidapi.git
 	branch = master
-	commit = 382138ee67adf539f60fc986a3409cf1f1fc3cee
-	parent = b0b794fdc973191c6e3c46cc1cd0adb45f81d033
+	commit = b66d7c2c889d39cdce8eedc50692c318911b04a9
+	parent = 9ede812a19ae69de06ec4d0fb5227b67c1b0327c
 	method = merge
 	cmdver = 0.4.3
