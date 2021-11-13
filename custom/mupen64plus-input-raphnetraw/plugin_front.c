@@ -95,7 +95,14 @@ static void DebugMessage(int level, const char *message, ...)
 	va_list args;
 
 	if (!l_DebugCallback) {
+#ifdef __LIBRETRO__
+		va_start(args, message);
+		vsnprintf(msgbuf, sizeof(msgbuf), message, args);
+		printf("%s\n", msgbuf);
+		va_end(args);
+#else
 		printf("No debug callback!\n");
+#endif
 		return;
 	}
 
