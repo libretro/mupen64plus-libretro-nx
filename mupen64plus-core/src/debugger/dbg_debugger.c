@@ -70,7 +70,7 @@ void destroy_debugger()
 {
     sem_destroy(sem_pending_steps);
     free(sem_pending_steps);
-    sem_pending_steps = NULL;
+    sem_pending_steps = 0;
     g_DebuggerActive = 0;
 }
 
