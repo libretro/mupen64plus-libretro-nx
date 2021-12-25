@@ -52,7 +52,7 @@ void debugger_update(unsigned int pc);
 }
 
 #include <mupen64plus-next_common.h>
-
+#include <vector>
 //#define LOG_ERROR(...)
 #define LOG_ERROR(...) GDBStub::FormatMsg(M64MSG_ERROR, __VA_ARGS__)
 //#define LOG_DEBUG(...)
