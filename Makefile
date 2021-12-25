@@ -545,7 +545,11 @@ ifeq ($(CORE_DEBUG), 1)
       LIBOPCODES ?= /mingw32/lib/binutils/libopcodes.a
       LIBBFD ?= /mingw32/lib/binutils/libbfd.a
       LIBIBERTY ?= /mingw32/lib/binutils/libiberty.a
-      LDFLAGS += -lws2_32
+      LDFLAGS += -lws2_32 -mconsole -lintl
+  else ifeq ($(platform),unix)
+      LIBOPCODES ?= /usr/lib/libopcodes.a
+      LIBBFD ?= /usr/lib/libbfd.a
+      LIBIBERTY ?= /usr/lib/libiberty.a
    else
       # Where are these libs supposed to be found normally?
       BINUTILS_BUILD_DIR ?= /Users/ethteck/binutils/build-binutils
@@ -554,7 +558,11 @@ ifeq ($(CORE_DEBUG), 1)
       LIBIBERTY ?= $(BINUTILS_BUILD_DIR)/libiberty/libiberty.a
    endif
    COREFLAGS += -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
-   LDFLAGS += -mconsole -lfmt $(LIBOPCODES) $(LIBBFD) -lintl -lz $(LIBIBERTY)
+   LDFLAGS += -lfmt $(LIBOPCODES) $(LIBBFD) -lz
+   ifeq ($(platform),unix)
+      LDFLAGS += -ldl
+   endif
+   LDFLAGS += $(LIBIBERTY)
 endif
 
 # set C/C++ standard to use
