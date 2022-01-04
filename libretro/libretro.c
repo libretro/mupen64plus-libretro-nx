@@ -1773,45 +1773,45 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
     
-   if (!retro_transferpak_rom_path && game->path)
-   {
-      gamePath = (char *)game->path;
-      newPath = (char *)calloc(1, strlen(gamePath) + 4);
-      strcpy(newPath, gamePath);
-      strcat(newPath, ".gb");
-      FILE *fileTest = fopen(newPath, "r");
-      if (!fileTest)
-      {
-         free(newPath);
-      }
-      else
-      {
-         fclose(fileTest);
-         // Free'd later in Mupen Core
-         retro_transferpak_rom_path = newPath;
-
-         // We have a gb rom!
-         if (!retro_transferpak_ram_path)
-         {
-            gamePath = (char *)game->path;
-            newPath = (char *)calloc(1, strlen(gamePath) + 5);
-            strcpy(newPath, gamePath);
-            strcat(newPath, ".sav");
-            FILE *fileTest = fopen(newPath, "r");
-            if (!fileTest)
-            {
-               free(newPath);
-            }
-            else
-            {
-               fclose(fileTest);
-               // Free'd later in Mupen Core
-               retro_transferpak_ram_path = newPath;
-            }
-         }
-      }
-   }
-
+    if (!retro_transferpak_rom_path && game->path)
+    {
+       gamePath = (char *)game->path;
+       newPath = (char *)calloc(1, strlen(gamePath) + 4);
+       strcpy(newPath, gamePath);
+       strcat(newPath, ".gb");
+       FILE *fileTest = fopen(newPath, "r");
+       if (!fileTest)
+       {
+          free(newPath);
+       }
+       else
+       {
+          fclose(fileTest);
+          // Free'd later in Mupen Core
+          retro_transferpak_rom_path = newPath;
+ 
+          // We have a gb rom!
+          if (!retro_transferpak_ram_path)
+          {
+             gamePath = (char *)game->path;
+             newPath = (char *)calloc(1, strlen(gamePath) + 5);
+             strcpy(newPath, gamePath);
+             strcat(newPath, ".sav");
+             FILE *fileTest = fopen(newPath, "r");
+             if (!fileTest)
+             {
+                free(newPath);
+             }
+             else
+             {
+                fclose(fileTest);
+                // Free'd later in Mupen Core
+                retro_transferpak_ram_path = newPath;
+             }
+          }
+       }
+    }
+ 
     // Init default vals
     retro_savestate_complete = true;
     load_game_successful = false;
