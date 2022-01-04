@@ -1753,7 +1753,10 @@ bool retro_load_game(const struct retro_game_info *game)
     char* newPath;
 
     // Workaround for broken subsystem on static platforms
-    if(!retro_dd_path_img)
+    // Note: game->path can be NULL if loading from a archive
+    // Current impl. uses mupen internals so that wouldn't work either way for dd/tpak
+    // So we just sanity check
+    if(!retro_dd_path_img && game->path)
     {
         gamePath = (char*)game->path;
         newPath = (char*)calloc(1, strlen(gamePath)+5);
@@ -1770,7 +1773,7 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
     
-   if (!retro_transferpak_rom_path)
+   if (!retro_transferpak_rom_path && game->path)
    {
       gamePath = (char *)game->path;
       newPath = (char *)calloc(1, strlen(gamePath) + 4);
