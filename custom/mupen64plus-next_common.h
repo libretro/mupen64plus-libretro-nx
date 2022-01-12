@@ -115,6 +115,7 @@ extern uint32_t EnableFrameDuping;
 extern uint32_t EnableLODEmulation;
 extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;
+extern uint32_t CountPerOpDenomPot;
 extern uint32_t CountPerScanlineOverride;
 extern uint32_t BackgroundMode;
 extern uint32_t EnableEnhancedTextureStorage;

@@ -206,6 +206,7 @@ uint32_t OverscanBottom = 0;
 
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
+uint32_t CountPerOpDenomPot = 0;
 uint32_t CountPerScanlineOverride = 0;
 uint32_t ForceDisableExtraMem = 0;
 uint32_t IgnoreTLBExceptions = 0;
@@ -1299,6 +1300,13 @@ static void update_variables(bool startup)
           CountPerOp = atoi(var.value);
        }
        
+       var.key = CORE_NAME "-CountPerOpDenomPot";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          CountPerOpDenomPot = atoi(var.value);
+       }
+
        if(EnableFullspeed)
        {
           CountPerOp = 1; // Force CountPerOp == 1

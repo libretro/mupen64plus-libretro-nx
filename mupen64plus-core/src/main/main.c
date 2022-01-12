@@ -1316,7 +1316,7 @@ m64p_error main_run(void)
     randomize_interrupt = 0; // We don't want this right now
     no_compiled_jump = 0;
     count_per_op = CountPerOp;
-    count_per_op_denom_pot = 0;
+    count_per_op_denom_pot = CountPerOpDenomPot;
     disable_extra_mem = ROM_SETTINGS.disableextramem;
 
     uint16_t eeprom_type = JDT_NONE;

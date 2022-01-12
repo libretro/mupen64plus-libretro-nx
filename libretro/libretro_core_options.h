@@ -1456,6 +1456,30 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "0"
     },
     {
+        CORE_NAME "-CountPerOpDenomPot",
+        "Count Per Op Divider (Overclock)",
+        NULL,
+        "Denominator for Count per Op (allowing sub-1 Count per Op in practice). Changing this can break stuff!",
+        NULL,
+        NULL,
+        {
+            {"0", NULL},
+            {"1", NULL},
+            {"2", NULL},
+            {"3", NULL},
+            {"4", NULL},
+            {"5", NULL},
+            {"6", NULL},
+            {"7", NULL},
+            {"8", NULL},
+            {"9", NULL},
+            {"10", NULL},
+            {"11", NULL},
+            { NULL, NULL },
+        },
+        "0"
+    },
+    {
         CORE_NAME "-astick-deadzone",
         "Analog Deadzone (percent)",
         NULL,
