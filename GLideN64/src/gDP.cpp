@@ -43,6 +43,38 @@ bool isDepthCompareEnabled()
 		((gSP.geometryMode & G_ZBUFFER) || gDP.otherMode.depthSource == G_ZS_PRIM);
 }
 
+f32 calcShiftScaleS(const gDPTile & _tile, s16 * _s)
+{
+	if (_tile.shifts > 10) {
+		const u32 shifts = 16 - _tile.shifts;
+		if (_s != nullptr)
+			*_s = static_cast<s16>(*_s << shifts);
+		return static_cast<f32>(1 << shifts);
+	} else if (_tile.shifts > 0) {
+		const u32 shifts = _tile.shifts;
+		if (_s != nullptr)
+			*_s = static_cast<s16>(*_s >> shifts);
+		return 1.0f / static_cast<f32>(1 << shifts);
+	}
+	return 1.0f;
+}
+
+f32 calcShiftScaleT(const gDPTile & _tile, s16 * _t)
+{
+	if (_tile.shiftt > 10) {
+		const u32 shiftt = 16 - _tile.shiftt;
+		if (_t != nullptr)
+			*_t = static_cast<s16>(*_t << shiftt);
+		return static_cast<f32>(1 << shiftt);
+	} else if (_tile.shiftt > 0) {
+		const u32 shiftt = _tile.shiftt;
+		if (_t != nullptr)
+			*_t = static_cast<s16>(*_t >> shiftt);
+		return 1.0f / static_cast<f32>(1 << shiftt);
+	}
+	return 1.0f;
+}
+
 void gDPSetOtherMode( u32 mode0, u32 mode1 )
 {
 	gDP.otherMode.h = mode0;
@@ -874,6 +906,23 @@ void gDPTextureRectangle(f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, s16 s, s1
 	gDP.lastTexRectInfo.t = !flip ? t : s;
 	gDP.lastTexRectInfo.dsdx = !flip ? dsdx : dtdy;
 	gDP.lastTexRectInfo.dtdy = !flip ? dtdy : dsdx;
+
+	f32 S = _FIXED2FLOAT(!flip ? s : t, 5);
+	f32 T = _FIXED2FLOAT(!flip ? t : s, 5);
+	f32 DSDX = !flip ? dsdx : dtdy;
+	f32 DTDY = !flip ? dtdy : dsdx;
+	f32 uls = S + (ceilf(ulx) - ulx) * DSDX;
+	f32 lrs = S + (ceilf(lrx) - ulx - 1.0f) * DSDX;
+	f32 ult = T + (ceilf(uly) - uly) * DTDY;
+	f32 lrt = T + (ceilf(lry) - uly - 1.0f) * DTDY;
+
+	if (config.graphics2D.enableTexCoordBounds != 0) {
+		gDP.m_texCoordBounds.valid = true;
+		gDP.m_texCoordBounds.uls = fmin(uls, lrs);
+		gDP.m_texCoordBounds.ult = fmin(ult, lrt);
+		gDP.m_texCoordBounds.lrs = fmax(uls, lrs);
+		gDP.m_texCoordBounds.lrt = fmax(ult, lrt);
+	}
 
 	GraphicsDrawer & drawer = dwnd().getDrawer();
 	GraphicsDrawer::TexturedRectParams params(ulx, uly, lrx, lry, dsdx, dtdy, s, t,

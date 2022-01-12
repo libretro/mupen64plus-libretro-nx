@@ -34,12 +34,11 @@
 #include "TxFilter.h"
 #include "TextureFilters.h"
 #include "TxDbg.h"
-#include "bldno.h"
 
 void TxFilter::clear()
 {
-	/* clear hires texture cache */
-	delete _txHiResCache;
+	/* clear hires texture loader */
+	delete _txHiResLoader;
 
 	/* clear texture cache */
 	delete _txTexCache;
@@ -71,7 +70,7 @@ TxFilter::TxFilter(int maxwidth,
 	, _tex2(nullptr)
 	, _txQuantize(nullptr)
 	, _txTexCache(nullptr)
-	, _txHiResCache(nullptr)
+	, _txHiResLoader(nullptr)
 	, _txImage(nullptr)
 {
 	/* HACKALERT: the emulator misbehaves and sometimes forgets to shutdown */
@@ -88,11 +87,7 @@ TxFilter::TxFilter(int maxwidth,
 	/* shamelessness :P this first call to the debug output message creates
    * a file in the executable directory. */
 	INFO(0, wst("------------------------------------------------------------------\n"));
-#ifdef GHQCHK
-	INFO(0, wst(" GLideNHQ Hires Texture Checker 1.02.00.%d\n"), BUILD_NUMBER);
-#else
-	INFO(0, wst(" GLideNHQ version 1.00.00.%d\n"), BUILD_NUMBER);
-#endif
+	INFO(0, wst(" GLideNHQ\n"));
 	INFO(0, wst(" Copyright (C) 2010  Hiroshi Morii   All Rights Reserved\n"));
 	INFO(0, wst("    email   : koolsmoky(at)users.sourceforge.net\n"));
 	INFO(0, wst("    website : http://www.3dfxzone.it/koolsmoky\n"));
@@ -150,9 +145,17 @@ TxFilter::TxFilter(int maxwidth,
 
 	/* hires texture */
 #if HIRES_TEXTURE
-	_txHiResCache = new TxHiResCache(_maxwidth, _maxheight, _maxbpp, _options, texCachePath, texPackPath, _ident.c_str(), callback);
+	if ((_options & FILE_NOTEXCACHE) == FILE_NOTEXCACHE) {
+		wchar_t fullTexPackPath[MAX_PATH];
+		wcscpy(fullTexPackPath, texPackPath);
+		wcscat(fullTexPackPath, OSAL_DIR_SEPARATOR_STR);
+		wcscat(fullTexPackPath, ident);
+		_txHiResLoader = new TxHiResNoCache(_maxwidth, _maxheight, _maxbpp, _options, texCachePath, texPackPath, fullTexPackPath, _ident.c_str(), callback);
+	} else {
+		_txHiResLoader = new TxHiResCache(_maxwidth, _maxheight, _maxbpp, _options, texCachePath, texPackPath, _ident.c_str(), callback);
+	}
 
-	if (_txHiResCache->empty())
+	if (_txHiResLoader->empty())
 		_options &= ~HIRESTEXTURES_MASK;
 #endif
 
@@ -479,7 +482,7 @@ TxFilter::hirestex(uint64 g64crc, uint64 r_crc64, uint16 *palette, GHQTexInfo *i
 #if HIRES_TEXTURE
 	/* check if we have it in hires memory cache. */
 	if ((_options & HIRESTEXTURES_MASK) && r_crc64) {
-		if (_txHiResCache->get(r_crc64, info)) {
+		if (_txHiResLoader->get(r_crc64, info)) {
 			DBG_INFO(80, wst("hires hit: %d x %d gfmt:%x\n"), info->width, info->height, info->format);
 
 			/* TODO: Enable emulation for special N64 combiner modes. There are few ways
@@ -506,8 +509,8 @@ TxFilter::hirestex(uint64 g64crc, uint64 r_crc64, uint16 *palette, GHQTexInfo *i
 
 			return 1; /* yep, got it */
 		}
-		if (_txHiResCache->get((r_crc64 >> 32), info) ||
-			_txHiResCache->get((r_crc64 & 0xffffffff), info)) {
+		if (_txHiResLoader->get((r_crc64 >> 32), info) ||
+			_txHiResLoader->get((r_crc64 & 0xffffffff), info)) {
 			DBG_INFO(80, wst("hires hit: %d x %d gfmt:%x\n"), info->width, info->height, info->format);
 
 			/* for true CI textures, we use the passed in palette to convert to
@@ -543,7 +546,7 @@ TxFilter::hirestex(uint64 g64crc, uint64 r_crc64, uint16 *palette, GHQTexInfo *i
 				setTextureFormat(format, info);
 
 				/* XXX: add to hires texture cache!!! */
-				_txHiResCache->add(r_crc64, info);
+				_txHiResLoader->add(r_crc64, info);
 
 				DBG_INFO(80, wst("COLOR_INDEX8 loaded as gfmt:%x!\n"), u32(format));
 			}
@@ -639,7 +642,7 @@ TxFilter::reloadhirestex()
 {
 	DBG_INFO(80, wst("Reload hires textures from texture pack.\n"));
 
-	if (_txHiResCache->load(0) && !_txHiResCache->empty()) {
+	if (_txHiResLoader->reload()) {
 		_options |= HIRESTEXTURES_MASK;
 		return 1;
 	}
@@ -655,6 +658,6 @@ TxFilter::dumpcache()
 
 	/* hires texture */
 #if HIRES_TEXTURE
-	_txHiResCache->dump();
+	_txHiResLoader->dump();
 #endif
 }

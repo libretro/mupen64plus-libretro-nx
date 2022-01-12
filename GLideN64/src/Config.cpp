@@ -29,10 +29,10 @@ void Config::resetToDefaults()
 	video.verticalSync = 0;
 	video.threadedVideo = 0;
 
+	texture.anisotropy = 0;
 	texture.maxAnisotropy = 0;
 	texture.bilinearMode = BILINEAR_STANDARD;
 	texture.enableHalosRemoval = 0;
-	texture.screenShotFormat = 0;
 
 	generalEmulation.enableLOD = 1;
 	generalEmulation.enableHiresNoiseDithering = 0;
@@ -46,6 +46,7 @@ void Config::resetToDefaults()
 	generalEmulation.enableShadersStorage = 1;
 	generalEmulation.enableLegacyBlending = 0;
 	generalEmulation.enableHybridFilter = 1;
+	generalEmulation.enableInaccurateTextureCoordinates = 0;
 	generalEmulation.hacks = 0;
 #if defined(OS_ANDROID) || defined(OS_IOS)
 	generalEmulation.enableFragmentDepthWrite = 0;
@@ -97,6 +98,9 @@ void Config::resetToDefaults()
 
 	textureFilter.txEnhancedTextureFileStorage = 0;
 	textureFilter.txHiresTextureFileStorage = 0;
+	textureFilter.txNoTextureFileStorage = 0;
+
+	textureFilter.txHiresVramLimit = 0u;
 
 	api().GetUserDataPath(textureFilter.txPath);
 	gln_wcscat(textureFilter.txPath, wst("/hires_texture"));
@@ -133,8 +137,10 @@ void Config::resetToDefaults()
 	onScreenDisplay.statistics = 0;
 	onScreenDisplay.pos = posBottomLeft;
 
-	for (u32 idx = 0; idx < HotKey::hkTotal; ++idx)
+	for (u32 idx = 0; idx < HotKey::hkTotal; ++idx) {
+		hotkeys.enabledKeys[idx] = 0;
 		hotkeys.keys[idx] = 0;
+	}
 
 	debug.dumpMode = 0;
 }
@@ -194,3 +200,40 @@ const char* Config::hotkeyIniName(u32 _idx)
 	}
 	return nullptr;
 }
+
+const char* Config::enabledHotkeyIniName(u32 _idx)
+{
+	switch (_idx)
+	{
+	case Config::HotKey::hkTexDump:
+		return "hkTexDumpEnabled";
+	case Config::HotKey::hkHdTexReload:
+		return "hkHdTexReloadEnabled";
+	case Config::HotKey::hkHdTexToggle:
+		return "hkHdTexToggleEnabled";
+	case Config::HotKey::hkTexCoordBounds:
+		return "hkTexCoordBoundsEnabled";
+	case Config::HotKey::hkNativeResTexrects:
+		return "hkNativeResTexrectsEnabled";
+	case Config::HotKey::hkVsync:
+		return "hkVsyncEnabled";
+	case Config::HotKey::hkFBEmulation:
+		return "hkFBEmulationEnabled";
+	case Config::HotKey::hkN64DepthCompare:
+		return "hkN64DepthCompareEnabled";
+	case Config::HotKey::hkOsdVis:
+		return "hkOsdVisEnabled";
+	case Config::HotKey::hkOsdFps:
+		return "hkOsdFpsEnabled";
+	case Config::HotKey::hkOsdPercent:
+		return "hkOsdPercentEnabled";
+	case Config::HotKey::hkOsdInternalResolution:
+		return "hkOsdInternalResolutionEnabled";
+	case Config::HotKey::hkOsdRenderingResolution:
+		return "hkOsdRenderingResolutionEnabled";
+	case Config::HotKey::hkForceGammaCorrection:
+		return "hkForceGammaCorrectionEnabled";
+	}
+	return nullptr;
+}
+

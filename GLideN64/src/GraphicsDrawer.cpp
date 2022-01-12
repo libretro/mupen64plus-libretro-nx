@@ -93,15 +93,6 @@ void GraphicsDrawer::addTriangle(u32 _v0, u32 _v1, u32 _v2)
 			vtx.z = gDP.primDepth.z * vtx.w;
 		}
 	}
-
-	if (!Context::ClipControl) {
-		if (GBI.isNoN() && gDP.otherMode.depthCompare == 0 && gDP.otherMode.depthUpdate == 0) {
-			for (u32 i = firstIndex; i < triangles.num; ++i) {
-				SPVertex & vtx = triangles.vertices[triangles.elements[i]];
-				vtx.z = 0.0f;
-			}
-		}
-	}
 }
 
 void GraphicsDrawer::_updateCullFace() const
@@ -1282,78 +1273,46 @@ void GraphicsDrawer::drawTexturedRect(const TexturedRectParams & _params)
 		offsetY = (_params.lry - _params.uly) * _params.dtdy;
 	}
 
-	for (u32 t = 0; t < 2; ++t) {
-		if (pCurrentCombiner->usesTile(t) && cache.current[t] && gSP.textureTile[t]) {
-			f32 shiftScaleS = 1.0f;
-			f32 shiftScaleT = 1.0f;
+	if (config.generalEmulation.enableInaccurateTextureCoordinates == 0u) {
+		// Accurate texture path
+		texST[0].s0 = _FIXED2FLOAT(_params.s, 5);
+		texST[0].s1 = texST[0].s0 + offsetX;
+		texST[0].t0 = _FIXED2FLOAT(_params.t, 5);
+		texST[0].t1 = texST[0].t0 + offsetY;
+	} else {
+		// Fast texture path
+		for (u32 t = 0; t < 2; ++t) {
+			if (pCurrentCombiner->usesTile(t) && cache.current[t] && gSP.textureTile[t]) {
+				f32 shiftScaleS = 1.0f;
+				f32 shiftScaleT = 1.0f;
 
-			s16 S = _params.s;
-			if (gSP.textureTile[t]->shifts > 10) {
-				const u32 shifts = 16 - gSP.textureTile[t]->shifts;
-				S = static_cast<s16>(S << shifts);
-				shiftScaleS = static_cast<f32>(1 << shifts);
-			} else if (gSP.textureTile[t]->shifts > 0) {
-				const u32 shifts = gSP.textureTile[t]->shifts;
-				S = static_cast<s16>(S >> shifts);
-				shiftScaleS /= static_cast<f32>(1 << shifts);
-			}
-			const f32 uls = _FIXED2FLOAT(S, 5);
-			const f32 lrs = uls + offsetX * shiftScaleS;
+				s16 S = _params.s;
+				shiftScaleS = calcShiftScaleS(*gSP.textureTile[t], &S);
+				const f32 uls = _FIXED2FLOAT(S, 5);
+				const f32 lrs = uls + offsetX * shiftScaleS;
 
-			s16 T = _params.t;
-			if (gSP.textureTile[t]->shiftt > 10) {
-				const u32 shiftt = 16 - gSP.textureTile[t]->shiftt;
-				T = static_cast<s16>(T << shiftt);
-				shiftScaleT = static_cast<f32>(1 << shiftt);
-			} else if (gSP.textureTile[t]->shiftt > 0) {
-				const u32 shiftt = gSP.textureTile[t]->shiftt;
-				T = static_cast<s16>(T >> shiftt);
-				shiftScaleT /= static_cast<f32>(1 << shiftt);
-			}
-			const f32 ult = _FIXED2FLOAT(T, 5);
-			const f32 lrt = ult + offsetY * shiftScaleT;
+				s16 T = _params.t;
+				shiftScaleT = calcShiftScaleT(*gSP.textureTile[t], &T);
+				const f32 ult = _FIXED2FLOAT(T, 5);
+				const f32 lrt = ult + offsetY * shiftScaleT;
 
-			texST[t].s0 = uls - gSP.textureTile[t]->fuls;
-			texST[t].s1 = lrs - gSP.textureTile[t]->fuls;
-			texST[t].t0 = ult - gSP.textureTile[t]->fult;
-			texST[t].t1 = lrt - gSP.textureTile[t]->fult;
+				texST[t].s0 = uls - gSP.textureTile[t]->fuls;
+				texST[t].s1 = lrs - gSP.textureTile[t]->fuls;
+				texST[t].t0 = ult - gSP.textureTile[t]->fult;
+				texST[t].t1 = lrt - gSP.textureTile[t]->fult;
 
-			if (cache.current[t]->frameBufferTexture != CachedTexture::fbNone) {
-				texST[t].s0 = cache.current[t]->offsetS + texST[t].s0;
-				texST[t].t0 = cache.current[t]->offsetT + texST[t].t0;
-				texST[t].s1 = cache.current[t]->offsetS + texST[t].s1;
-				texST[t].t1 = cache.current[t]->offsetT + texST[t].t1;
-			}
-
-			if (cache.current[t]->frameBufferTexture != CachedTexture::fbMultiSample) {
-				Context::TexParameters texParams;
-
-				if ((cache.current[t]->mirrorS == 0 && cache.current[t]->maskS == 0 &&
-					(texST[t].s0 < texST[t].s1 ?
-					texST[t].s0 >= 0.0f && texST[t].s1 <= static_cast<f32>(cache.current[t]->width) :
-					texST[t].s1 >= 0.0f && texST[t].s0 <= static_cast<f32>(cache.current[t]->width)))
-					|| (cache.current[t]->maskS == 0 && (texST[t].s0 < -1024.0f || texST[t].s1 > 1023.99f)))
-					texParams.wrapS = textureParameters::WRAP_CLAMP_TO_EDGE;
-
-				if (cache.current[t]->mirrorT == 0 &&
-					(texST[t].t0 < texST[t].t1 ?
-					texST[t].t0 >= 0.0f && texST[t].t1 <= static_cast<f32>(cache.current[t]->height) :
-					texST[t].t1 >= 0.0f && texST[t].t0 <= static_cast<f32>(cache.current[t]->height)))
-					texParams.wrapT = textureParameters::WRAP_CLAMP_TO_EDGE;
-
-				if (texParams.wrapS.isValid() || texParams.wrapT.isValid()) {
-					texParams.handle = cache.current[t]->name;
-					texParams.target = textureTarget::TEXTURE_2D;
-					texParams.textureUnitIndex = textureIndices::Tex[t];
-					gfxContext.setTextureParameters(texParams);
+				if (cache.current[t]->frameBufferTexture != CachedTexture::fbNone) {
+					texST[t].s0 = cache.current[t]->offsetS + texST[t].s0;
+					texST[t].t0 = cache.current[t]->offsetT + texST[t].t0;
+					texST[t].s1 = cache.current[t]->offsetS + texST[t].s1;
+					texST[t].t1 = cache.current[t]->offsetT + texST[t].t1;
 				}
+
+				texST[t].s0 *= cache.current[t]->scaleS;
+				texST[t].t0 *= cache.current[t]->scaleT;
+				texST[t].s1 *= cache.current[t]->scaleS;
+				texST[t].t1 *= cache.current[t]->scaleT;
 			}
-
-			texST[t].s0 *= cache.current[t]->hdRatioS;
-			texST[t].t0 *= cache.current[t]->hdRatioT;
-			texST[t].s1 *= cache.current[t]->hdRatioS;
-			texST[t].t1 *= cache.current[t]->hdRatioT;
-
 		}
 	}
 

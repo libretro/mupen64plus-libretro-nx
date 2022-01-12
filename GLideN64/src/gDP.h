@@ -129,6 +129,11 @@ struct gDPTexrectInfo
 	f32 dsdx, dtdy;
 };
 
+struct texCoordBounds {
+	bool valid = false;
+	f32 uls, lrs, ult, lrt;
+};
+
 struct gDPInfo
 {
 	struct OtherMode
@@ -264,6 +269,7 @@ struct gDPInfo
 
 	gDPLoadTileInfo loadInfo[512];
 	gDPTexrectInfo lastTexRectInfo;
+	texCoordBounds m_texCoordBounds;
 };
 
 extern gDPInfo gDP;
@@ -328,5 +334,8 @@ void gDPTriShadeTxtrZ( u32 w0, u32 w1 );
 
 bool isCurrentColorImageDepthImage();
 bool isDepthCompareEnabled();
+
+f32 calcShiftScaleS(const gDPTile & _tile, s16 * _s = nullptr);
+f32 calcShiftScaleT(const gDPTile & _tile, s16 * _t = nullptr);
 
 #endif

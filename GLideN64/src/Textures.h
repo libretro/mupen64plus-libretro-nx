@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <unordered_map>
+#include <vector>
 #include <stddef.h> // for size_t
 
 #include "CRC.h"
@@ -13,6 +14,7 @@
 #include "Graphics/Parameter.h"
 
 typedef u32 (*GetTexelFunc)( u64 *src, u16 x, u16 i, u8 palette );
+struct GHQTexInfo;
 
 struct CachedTexture
 {
@@ -40,6 +42,8 @@ struct CachedTexture
 
 	u32		address;
 	u8		max_level;
+	u16		mipmapAtlasWidth{ 0 };
+	u16		mipmapAtlasHeight{ 0 };
 	enum {
 		fbNone = 0,
 		fbOneSample = 1,
@@ -47,7 +51,6 @@ struct CachedTexture
 	} frameBufferTexture;
 	bool bHDTexture;
 };
-
 
 struct TextureCache
 {
@@ -82,8 +85,10 @@ private:
 	TextureCache(const TextureCache &) = delete;
 
 	void _checkCacheSize();
+	void _checkHdTexLimit();
 	CachedTexture * _addTexture(u64 _crc64);
-	void _load(u32 _tile, CachedTexture *_pTexture);
+	void _loadFast(u32 _tile, CachedTexture *_pTexture);
+	void _loadAccurate(u32 _tile, CachedTexture *_pTexture);
 	bool _loadHiresTexture(u32 _tile, CachedTexture *_pTexture, u64 & _ricecrc);
 	void _loadBackground(CachedTexture *pTexture);
 	bool _loadHiresBackground(CachedTexture *_pTexture, u64 & _ricecrc);
@@ -91,6 +96,7 @@ private:
 	void _updateBackground();
 	void _initDummyTexture(CachedTexture * _pDummy);
 	void _getTextureDestData(CachedTexture& tmptex, u32* pDest, graphics::Parameter glInternalFormat, GetTexelFunc GetTexel, u16* pLine);
+	void _updateCachedTexture(const GHQTexInfo & _info, CachedTexture *_pTexture, u16 widthOrg, u16 heightOrg);
 
 	typedef std::list<CachedTexture> Textures;
 	typedef std::unordered_map<u64, Textures::iterator> Texture_Locations;
@@ -103,6 +109,9 @@ private:
 	u32 m_hits, m_misses;
 	s32 m_curUnpackAlignment;
 	bool m_toggleDumpTex;
+	std::vector<u32> m_tempTextureHolder;
+	
+	u64 m_hdTexCacheSize = 0u;
 };
 
 void getTextureShiftScale(u32 tile, const TextureCache & cache, f32 & shiftScaleS, f32 & shiftScaleT);
