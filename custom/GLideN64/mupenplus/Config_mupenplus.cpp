@@ -208,6 +208,7 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txEnhancedTextureFileStorage = EnableEnhancedTextureStorage;
 	config.textureFilter.txHresAltCRC = EnableHiResAltCRC;
 	config.textureFilter.txHiresTextureFileStorage = EnableEnhancedHighResStorage;
+	config.textureFilter.txHiresVramLimit = MaxHiResTxVramLimit;
 	config.frameBufferEmulation.nativeResFactor = EnableNativeResFactor;
 
 	config.generalEmulation.hacks = hacks;

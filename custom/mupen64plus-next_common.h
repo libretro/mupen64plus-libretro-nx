@@ -101,6 +101,7 @@ extern uint32_t EnableCopyColorToRDRAM;
 extern uint32_t EnableCopyDepthToRDRAM;
 extern uint32_t AspectRatio;
 extern uint32_t MaxTxCacheSize;
+extern uint32_t MaxHiResTxVramLimit;
 extern uint32_t txFilterMode;
 extern uint32_t txEnhancementMode;
 extern uint32_t txHiresEnable;

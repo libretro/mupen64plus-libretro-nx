@@ -173,6 +173,7 @@ uint32_t EnableCopyColorToRDRAM = 0;
 uint32_t EnableCopyDepthToRDRAM = 0;
 uint32_t AspectRatio = 0;
 uint32_t MaxTxCacheSize = 0;
+uint32_t MaxHiResTxVramLimit = 0;
 uint32_t txFilterMode = 0;
 uint32_t txEnhancementMode = 0;
 uint32_t txHiresEnable = 0;
@@ -1144,6 +1145,13 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           txHiresFullAlphaChannel = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-MaxHiResTxVramLimit";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          MaxHiResTxVramLimit = atoi(var.value);
        }
 
        var.key = CORE_NAME "-MaxTxCacheSize";

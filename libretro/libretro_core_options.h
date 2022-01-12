@@ -788,6 +788,27 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "0"
     },
     {
+        CORE_NAME "-MaxHiResTxVramLimit",
+        "Max High-Res VRAM Limit",
+        NULL,
+        "(GLN64) Limit High-Res textures size in VRAM (in MB, 0 = no limit).",
+        "Limit High-Res textures size in VRAM (in MB, 0 = no limit).",
+        "gliden64",
+        {
+            {"0", NULL},
+            {"500", NULL},
+            {"1000", NULL},
+            {"1500", NULL},
+            {"2000", NULL},
+            {"2500", NULL},
+            {"3000", NULL},
+            {"3500", NULL},
+            {"4000", NULL},
+            { NULL, NULL },
+        },
+        "0"
+    },
+    {
         CORE_NAME "-MaxTxCacheSize",
         "Max texture cache size",
         NULL,
