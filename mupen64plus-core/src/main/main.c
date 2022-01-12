@@ -1287,6 +1287,7 @@ m64p_error main_run(void)
 {
     size_t i, k;
     uint32_t count_per_op;
+    uint32_t count_per_op_denom_pot;
     uint32_t emumode;
     uint32_t disable_extra_mem;
     int32_t si_dma_duration;
@@ -1311,9 +1312,11 @@ m64p_error main_run(void)
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
     
+    emumode = r4300_emumode;
     randomize_interrupt = 0; // We don't want this right now
     no_compiled_jump = 0;
     count_per_op = CountPerOp;
+    count_per_op_denom_pot = 0;
     disable_extra_mem = ROM_SETTINGS.disableextramem;
 
     uint16_t eeprom_type = JDT_NONE;
@@ -1334,10 +1337,13 @@ m64p_error main_run(void)
     if (count_per_op <= 0)
         count_per_op = ROM_SETTINGS.countperop;
 
+    if (count_per_op_denom_pot > 11)
+        count_per_op_denom_pot = 11;
+
     si_dma_duration = ROM_SETTINGS.sidmaduration;
 
     //During netplay, player 1 is the source of truth for these settings
-    netplay_sync_settings(&count_per_op, &disable_extra_mem, &si_dma_duration, &emumode, &no_compiled_jump);
+    netplay_sync_settings(&count_per_op, &count_per_op_denom_pot, &disable_extra_mem, &si_dma_duration, &emumode, &no_compiled_jump);
 
     cheat_add_hacks(&g_cheat_ctx, ROM_PARAMS.cheats);
 
@@ -1553,6 +1559,7 @@ m64p_error main_run(void)
                 g_mem_base,
                 r4300_emumode,
                 count_per_op,
+                count_per_op_denom_pot,
                 no_compiled_jump,
                 randomize_interrupt,
                 g_start_address,
