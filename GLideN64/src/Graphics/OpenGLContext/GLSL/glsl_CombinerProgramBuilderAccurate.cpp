@@ -1,4 +1,5 @@
 #include <Config.h>
+#include <Graphics/Context.h>
 #include "glsl_CombinerProgramBuilderAccurate.h"
 #include "glsl_CombinerProgramUniformFactoryAccurate.h"
 
@@ -1194,7 +1195,7 @@ public:
 namespace glsl {
 
 CombinerProgramBuilderAccurate::CombinerProgramBuilderAccurate(const opengl::GLInfo & _glinfo, opengl::CachedUseProgram * _useProgram)
-: CombinerProgramBuilderCommon(_glinfo, _useProgram, std::make_unique<CombinerProgramUniformFactoryAccurate>(_glinfo))
+: CombinerProgramBuilderCommon(_glinfo, _useProgram, ::make_unique<CombinerProgramUniformFactoryAccurate>(_glinfo))
 , m_vertexTexturedTriangle(new VertexShaderTexturedTriangle(_glinfo))
 , m_vertexTexturedRect(new VertexShaderTexturedRect(_glinfo))
 , m_fragmentCorrectTexCoords(new ShaderFragmentCorrectTexCoords())

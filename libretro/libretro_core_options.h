@@ -399,6 +399,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Off"
     },
     {
+        CORE_NAME "-EnableInaccurateTextureCoordinates",
+        "Enable inaccurate texture coordinates",
+        NULL,
+        "(GLN64) Enables inaccurate texture coordinate calculations. This can improve performance and texture pack compatibity at the cost of accuracy.",
+        "Enables inaccurate texture coordinate calculations. This can improve performance and texture pack compatibity at the cost of accuracy.",
+        "gliden64",
+        {
+            {"False", NULL},
+            {"True", NULL},
+            { NULL, NULL },
+        },
+        "False"
+    },
+    {
         CORE_NAME "-EnableTexCoordBounds",
         "Enable native-res boundaries for texture coordinates",
         NULL,

@@ -149,6 +149,7 @@ extern "C" void Config_LoadConfig()
 
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHybridFilter = EnableHybridFilter;
+	config.generalEmulation.enableInaccurateTextureCoordinates = EnableInaccurateTextureCoordinates;	
 	config.generalEmulation.enableDitheringPattern = EnableDitheringPattern;
 	config.generalEmulation.enableDitheringQuantization = EnableDitheringQuantization;
 	config.generalEmulation.rdramImageDitheringMode = RDRAMImageDitheringMode;

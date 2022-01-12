@@ -166,6 +166,7 @@ uint32_t EnableDitheringQuantization = 0;
 uint32_t EnableHWLighting = 0;
 uint32_t CorrectTexrectCoords = 0;
 uint32_t EnableTexCoordBounds = 0;
+uint32_t EnableInaccurateTextureCoordinates = 0;
 uint32_t enableNativeResTexrects = 0;
 uint32_t enableLegacyBlending = 0;
 uint32_t EnableCopyColorToRDRAM = 0;
@@ -1028,6 +1029,13 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           EnableTexCoordBounds = !strcmp(var.value, "False") ? 0 : 1;
+       }
+
+       var.key = CORE_NAME "-EnableInaccurateTextureCoordinates";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableInaccurateTextureCoordinates = !strcmp(var.value, "False") ? 0 : 1;
        }
 
        var.key = CORE_NAME "-BackgroundMode";

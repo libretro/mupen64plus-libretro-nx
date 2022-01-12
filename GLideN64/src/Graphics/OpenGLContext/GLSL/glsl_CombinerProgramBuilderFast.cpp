@@ -1,4 +1,5 @@
 #include <Config.h>
+#include <Graphics/Context.h>
 #include "glsl_CombinerProgramBuilderFast.h"
 #include "glsl_CombinerProgramUniformFactoryFast.h"
 
@@ -1140,7 +1141,7 @@ public:
 namespace glsl {
 
 CombinerProgramBuilderFast::CombinerProgramBuilderFast(const opengl::GLInfo & _glinfo, opengl::CachedUseProgram * _useProgram)
-: CombinerProgramBuilderCommon(_glinfo, _useProgram, std::make_unique<CombinerProgramUniformFactoryFast>(_glinfo))
+: CombinerProgramBuilderCommon(_glinfo, _useProgram, ::make_unique<CombinerProgramUniformFactoryFast>(_glinfo))
 , m_vertexTexturedTriangle(new VertexShaderTexturedTriangleFast(_glinfo))
 , m_vertexTexturedRect(new VertexShaderTexturedRectFast(_glinfo))
 , m_fragmentGlobalVariablesTex(new ShaderFragmentGlobalVariablesTexFast(_glinfo))
