@@ -2,7 +2,7 @@
 #define offsetof_struct_r4300_core_cp0 (0x031017e8)
 #define offsetof_struct_cp0_last_addr (0x00000278)
 #define offsetof_struct_cp0_count_per_op (0x0000027c)
-#define offsetof_struct_cp0_tlb (0x00000280)
+#define offsetof_struct_cp0_tlb (0x00000284)
 #define offsetof_struct_tlb_entries (0x00000000)
 #define offsetof_struct_tlb_LUT_r (0x00000680)
 #define offsetof_struct_tlb_LUT_w (0x00400680)
