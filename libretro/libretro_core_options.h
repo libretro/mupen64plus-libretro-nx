@@ -65,6 +65,25 @@ struct retro_core_option_v2_category option_cats_us[] = {
 
 struct retro_core_option_v2_definition option_defs_us[] = {
     {
+        CORE_NAME "-rdp-plugin",
+        "RDP Plugin",
+        NULL,
+        "Select a RDP Plugin, use Angrylion (if available) for best compability, GLideN64 for Performance",
+        NULL,
+        NULL,
+        {
+#ifdef HAVE_THR_AL
+            {"angrylion", "Angrylion"},
+#endif
+#ifdef HAVE_PARALLEL_RDP
+            {"parallel", "ParaLLEl-RDP"},
+#endif
+            {"gliden64", "GLideN64"},
+            { NULL, NULL },
+        },
+        "gliden64"
+    },
+    {
         CORE_NAME "-43screensize",
         "4:3 Resolution",
         NULL,
@@ -1359,25 +1378,6 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #endif
     },
     {
-        CORE_NAME "-rdp-plugin",
-        "RDP Plugin",
-        NULL,
-        "Select a RDP Plugin, use Angrylion (if available) for best compability, GLideN64 for Performance",
-        NULL,
-        NULL,
-        {
-#ifdef HAVE_THR_AL
-            {"angrylion", "Angrylion"},
-#endif
-#ifdef HAVE_PARALLEL_RDP
-            {"parallel", "ParaLLEl-RDP"},
-#endif
-            {"gliden64", "GLideN64"},
-            { NULL, NULL },
-        },
-        "gliden64"
-    },
-    {
         CORE_NAME "-rsp-plugin",
         "RSP Plugin",
         NULL,
@@ -1759,8 +1759,6 @@ static INLINE void libretro_set_core_options(retro_environment_t environ_cb,
 
    if (!environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
       version = 0;
-
-   CoreOptionVersion = version;
 
    if (version >= 2)
    {
