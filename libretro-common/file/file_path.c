@@ -31,6 +31,7 @@
 #include <boolean.h>
 #include <file/file_path.h>
 #include <retro_assert.h>
+#include <retro_miscellaneous.h>
 #include <string/stdstring.h>
 #include <time/rtime.h>
 
@@ -961,7 +962,7 @@ size_t fill_pathname_join_delim_concat(char *out_path, const char *dir,
 size_t fill_short_pathname_representation(char* out_rep,
       const char *in_path, size_t size)
 {
-   char path_short[PATH_MAX_LENGTH];
+   char path_short[NAME_MAX_LENGTH];
 
    path_short[0] = '\0';
 
@@ -1162,6 +1163,7 @@ void fill_pathname_abbreviated_or_relative(char *out_path, const char *in_refpat
    
    in_path_conformed[0]    = '\0';
    in_refpath_conformed[0] = '\0';
+   expanded_path[0]        = '\0';
    absolute_path[0]        = '\0';
    relative_path[0]        = '\0';
    abbreviated_path[0]     = '\0';
