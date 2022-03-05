@@ -42,6 +42,13 @@ void alist_repeat64(struct hle_t* hle, uint16_t dmemo, uint16_t dmemi, uint8_t c
 void alist_copy_blocks(struct hle_t* hle, uint16_t dmemo, uint16_t dmemi, uint16_t block_size, uint8_t count);
 void alist_interleave(struct hle_t* hle, uint16_t dmemo, uint16_t left, uint16_t right, uint16_t count);
 
+void alist_overload(
+        struct hle_t* hle,
+        uint16_t dmem,
+        int16_t count,
+        int16_t gain,
+        int16_t attenuation);
+
 void alist_envmix_exp(
         struct hle_t* hle,
         bool init,
