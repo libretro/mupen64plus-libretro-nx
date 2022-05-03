@@ -223,9 +223,9 @@ EXPORT void CALL hleInitiateRSP(RSP_INFO Rsp_Info, unsigned int* CycleCount)
     g_hle.hle_aud = 0;
     
     /* notify fallback plugin */
-    if (l_InitiateRSP) {
+    /*if (l_InitiateRSP) {
         l_InitiateRSP(Rsp_Info, CycleCount);
-    }
+    }*/
 }
 
 EXPORT void CALL hleRomClosed(void)
@@ -233,7 +233,7 @@ EXPORT void CALL hleRomClosed(void)
      g_hle.cached_ucodes.count = 0;
      
     /* notify fallback plugin */
-    if (l_RomClosed) {
+    /*if (l_RomClosed) {
         l_RomClosed();
-    }
+    }*/
 }
