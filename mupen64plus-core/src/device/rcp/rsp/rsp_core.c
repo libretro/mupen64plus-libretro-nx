@@ -300,7 +300,13 @@ void write_rsp_regs2(void* opaque, uint32_t address, uint32_t value, uint32_t ma
 {
     struct rsp_core* sp = (struct rsp_core*)opaque;
     uint32_t reg = rsp_reg2(address);
-
+    
+    // Mask PC
+    if (reg == SP_PC_REG)
+    {
+        value &= 0xFFC;
+    }
+    
     masked_write(&sp->regs2[reg], value, mask);
 }
 
@@ -380,7 +386,7 @@ void do_SP_Task(struct rsp_core* sp)
     }
 
     sp->regs[SP_STATUS_REG] &=
-        ~(SP_STATUS_TASKDONE | SP_STATUS_BROKE | SP_STATUS_HALT);
+        ~(SP_STATUS_TASKDONE | SP_STATUS_BROKE); // | SP_STATUS_HALT); // DONT CLEAR HALT!!
 }
 
 void rsp_interrupt_event(void* opaque)

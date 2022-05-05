@@ -5,6 +5,7 @@
 #endif
 #include <stdint.h>
 
+#include <mupen64plus-next_common.h>
 #include "m64p_plugin.h"
 #include "rsp_1.1.h"
 
@@ -49,7 +50,7 @@ extern "C"
 		fprintf(stderr, "DMEM HASH: 0x%016llx\n", hash_imem(RSP::rsp.DMEM, 0x1000));
 	}
 #endif
-
+	extern "C" retro_log_printf_t log_cb;
 	EXPORT unsigned int CALL parallelRSPDoRspCycles(unsigned int cycles)
 	{
 		if (*RSP::rsp.SP_STATUS_REG & (SP_STATUS_HALT | SP_STATUS_BROKE))
@@ -61,11 +62,8 @@ extern "C"
 		// Run CPU until we either break or we need to fire an IRQ.
 		RSP::cpu.get_state().pc = *RSP::rsp.SP_PC_REG & 0xfff;
 
-#ifdef INTENSE_DEBUG
-		fprintf(stderr, "RUN TASK: %u\n", RSP::cpu.get_state().pc);
-		log_rsp_mem_parallel();
-#endif
-
+		//log_cb(RETRO_LOG_INFO, "RUN TASK: %u\n", RSP::cpu.get_state().pc);
+		
 		for (auto &count : RSP::MFC0_count)
 			count = 0;
 
@@ -78,11 +76,19 @@ extern "C"
 
 		*RSP::rsp.SP_PC_REG = 0x04001000 | (RSP::cpu.get_state().pc & 0xffc);
 
+		//log_cb(RETRO_LOG_INFO, "RUN TASK FINISHED: %u\n", RSP::cpu.get_state().pc);
+
 		// From CXD4.
 		if (*RSP::rsp.SP_STATUS_REG & SP_STATUS_BROKE)
+		{
+			//log_cb(RETRO_LOG_INFO, "RUN TASK BROKE: %u irq %i status 0x%x\n", RSP::cpu.get_state().pc, *RSP::cpu.get_state().cp0.irq & 1, *RSP::rsp.SP_STATUS_REG);
 			return cycles;
+		}
 		else if (*RSP::cpu.get_state().cp0.irq & 1)
+		{
+			//log_cb(RETRO_LOG_INFO, "RUN TASK IRQ: %u\n", RSP::cpu.get_state().pc);
 			RSP::rsp.CheckInterrupts();
+		}
 		else if (*RSP::rsp.SP_SEMAPHORE_REG != 0) // Semaphore lock fixes.
 		{
 		}
@@ -90,7 +96,7 @@ extern "C"
 			RSP::SP_STATUS_TIMEOUT = 16; // From now on, wait 16 times, not 0x7fff
 
 		// CPU restarts with the correct SIGs.
-		*RSP::rsp.SP_STATUS_REG &= ~SP_STATUS_HALT;
+		//*RSP::rsp.SP_STATUS_REG &= ~SP_STATUS_HALT;
 
 		return cycles;
 	}

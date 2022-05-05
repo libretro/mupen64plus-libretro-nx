@@ -288,8 +288,8 @@ void read_pif_mem(void* opaque, uint32_t address, uint32_t* value)
     struct pif* pif = (struct pif*)opaque;
     uint32_t addr = pif_address(address);
 
-    memcpy(value, pif->base + addr, sizeof(*value));
-    if (addr >= PIF_ROM_SIZE)
+    memcpy(value, &pif->ram[address - 0x1FC007C0], sizeof(*value));
+    if (address >= 0x1FC007C0)
         *value = tohl(*value);
 }
 
@@ -298,13 +298,13 @@ void write_pif_mem(void* opaque, uint32_t address, uint32_t value, uint32_t mask
     struct pif* pif = (struct pif*)opaque;
     uint32_t addr = pif_address(address);
 
-    if (addr < PIF_ROM_SIZE)
+    if (address < 0x1FC007C0)
     {
         DebugMessage(M64MSG_ERROR, "Invalid write to PIF ROM: %08" PRIX32, address);
         return;
     }
 
-    masked_write((uint32_t*)(&pif->base[addr]), fromhl(value), fromhl(mask));
+    masked_write((uint32_t*)(&pif->ram[address - 0x1FC007C0]), fromhl(value), fromhl(mask));
 
     pif->si->dma_dir = SI_DMA_WRITE;
 

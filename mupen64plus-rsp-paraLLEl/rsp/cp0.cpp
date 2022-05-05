@@ -50,16 +50,20 @@ extern "C"
 		return MODE_CONTINUE;
 	}
 
+	#include <mupen64plus-next_common.h>
+	extern "C" retro_log_printf_t log_cb;
+
 	static inline int rsp_status_write(RSP::CPUState *rsp, uint32_t rt)
 	{
-		//fprintf(stderr, "Writing 0x%x to status reg!\n", rt);
+		log_cb(RETRO_LOG_INFO,  "Writing 0x%x to status reg!\n", rt);
 
 		uint32_t status = *rsp->cp0.cr[CP0_REGISTER_SP_STATUS];
 
+		if (rt & SP_SET_HALT)
+			status |= SP_STATUS_HALT;
+			
 		if (rt & SP_CLR_HALT)
 			status &= ~SP_STATUS_HALT;
-		else if (rt & SP_SET_HALT)
-			status |= SP_STATUS_HALT;
 
 		if (rt & SP_CLR_BROKE)
 			status &= ~SP_STATUS_BROKE;

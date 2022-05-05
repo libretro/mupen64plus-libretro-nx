@@ -60,8 +60,8 @@ void poweron_cp0(struct cp0* cp0)
     memset(cp0_regs, 0, CP0_REGS_COUNT * sizeof(cp0_regs[0]));
     cp0_regs[CP0_RANDOM_REG] = UINT32_C(31);
     cp0_regs[CP0_STATUS_REG]= UINT32_C(0x34000000);
-    cp0_regs[CP0_CONFIG_REG]= UINT32_C(0x6e463);
-    cp0_regs[CP0_PREVID_REG] = UINT32_C(0xb00);
+    cp0_regs[CP0_CONFIG_REG]= UINT32_C(0x7006e463);
+    cp0_regs[CP0_PREVID_REG] = UINT32_C(0xb22);
     cp0_regs[CP0_COUNT_REG] = UINT32_C(0x5000);
     cp0_regs[CP0_CAUSE_REG] = UINT32_C(0x5c);
     cp0_regs[CP0_CONTEXT_REG] = UINT32_C(0x7ffff0);

@@ -283,14 +283,11 @@ void cached_interp_NOTCOMPILED2(void)
 #define cached_interp_BC2TL       cached_interp_NI
 #define cached_interp_BC2TL_IDLE  cached_interp_NI
 #define cached_interp_BC2TL_OUT   cached_interp_NI
-#define cached_interp_BREAK       cached_interp_NI
 #define cached_interp_CFC0        cached_interp_NI
 #define cached_interp_CFC2        cached_interp_NI
 #define cached_interp_CTC0        cached_interp_NI
 #define cached_interp_CTC2        cached_interp_NI
-#define cached_interp_DMFC0       cached_interp_NI
 #define cached_interp_DMFC2       cached_interp_NI
-#define cached_interp_DMTC0       cached_interp_NI
 #define cached_interp_DMTC2       cached_interp_NI
 #define cached_interp_LDC2        cached_interp_NI
 #define cached_interp_LWC2        cached_interp_NI
@@ -477,12 +474,18 @@ enum r4300_opcode r4300_decode(struct precomp_instr* inst, struct r4300_core* r4
         /* optimization: nopify instruction when r0 is the destination register (rd) */
         if (inst->f.r.nrd == 0) { opcode = R4300_OP_NOP; }
         break;
-
     case R4300_OP_ADDI:
     case R4300_OP_ADDIU:
     case R4300_OP_ANDI:
     case R4300_OP_DADDI:
     case R4300_OP_DADDIU:
+        inst->f.i.rs = IDEC_U53(r4300, iw, idec->u53[2], &dummy);
+        inst->f.i.rt = IDEC_U53(r4300, iw, idec->u53[1], &dummy);
+        inst->f.i.immediate  = (int16_t)iw;
+
+        /* TODO: Trigger overflow exception! */
+        if (dummy == 0) { opcode = R4300_OP_NOP; }
+        break;
     case R4300_OP_LB:
     case R4300_OP_LBU:
     case R4300_OP_LD:
@@ -507,7 +510,7 @@ enum r4300_opcode r4300_decode(struct precomp_instr* inst, struct r4300_core* r4
         inst->f.i.immediate  = (int16_t)iw;
 
         /* optimization: nopify instruction when r0 is the destination register (rt) */
-        if (dummy == 0) { opcode = R4300_OP_NOP; }
+        //if (dummy == 0) { opcode = R4300_OP_NOP; }
         break;
 
     case R4300_OP_LDC1:
@@ -534,7 +537,7 @@ enum r4300_opcode r4300_decode(struct precomp_instr* inst, struct r4300_core* r4
         idec_u53(iw, idec->u53[3], &inst->f.r.sa);
 
         /* optimization: nopify instruction when r0 is the destination register (rt) */
-        if (dummy == 0) { opcode = R4300_OP_NOP; }
+        //if (dummy == 0) { opcode = R4300_OP_NOP; }
         break;
 
 #define CP1_S_D(op) \
@@ -696,7 +699,6 @@ enum r4300_opcode r4300_decode(struct precomp_instr* inst, struct r4300_core* r4
     /* propagate opcode info to allow further processing */
     return opcode;
 }
-
 
 static uint32_t update_invalid_addr(struct r4300_core* r4300, uint32_t addr)
 {

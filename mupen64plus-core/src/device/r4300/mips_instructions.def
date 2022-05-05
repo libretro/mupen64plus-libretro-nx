@@ -99,6 +99,19 @@ static unsigned int hshift(uint32_t address)
 }
 
 
+static void store_load_exception(struct r4300_core* r4300, int cause, uint32_t lsaddr)
+{
+    uint32_t* cp0_regs = r4300_cp0_regs(&r4300->cp0);
+    cp0_regs[CP0_BADVADDR_REG] = lsaddr;
+    cp0_regs[CP0_CONTEXT_REG] = (cp0_regs[CP0_CONTEXT_REG] & UINT32_C(0xFF80000F)) | ((lsaddr >> 9) & UINT32_C(0x007FFFF0));
+    cp0_regs[CP0_ENTRYHI_REG] = lsaddr & UINT32_C(0xFFFFE000);
+    cp0_regs[CP0_CAUSE_REG] = cause;
+    if ((lsaddr & UINT32_C(0xc0000000)) != UINT32_C(0x80000000)) {
+        TLB_refill_exception(r4300, lsaddr, cause == CP0_CAUSE_EXCCODE_ADEL ? 2 : 1);
+    }
+    exception_general(r4300);
+}
+
 /* M64P Pseudo instructions */
 
 DECLARE_INSTRUCTION(NI)
@@ -116,6 +129,15 @@ DECLARE_INSTRUCTION(RESERVED)
     DECLARE_R4300
     DebugMessage(M64MSG_ERROR, "reserved opcode: %" PRIX32 ":%" PRIX32, PCADDR, *fast_mem_access(r4300, PCADDR));
     *r4300_stop(r4300) = 1;
+}
+
+/* Misc */
+DECLARE_INSTRUCTION(BREAK)
+{
+    DECLARE_R4300
+    uint32_t* cp0_regs = r4300_cp0_regs(&r4300->cp0);
+    cp0_regs[CP0_CAUSE_REG] = CP0_CAUSE_EXCCODE_BP;
+    exception_general(r4300);
 }
 
 /* Load instructions */
@@ -195,10 +217,14 @@ DECLARE_INSTRUCTION(LW)
     DECLARE_R4300
     const uint32_t lsaddr = (uint32_t) irs32 + (uint32_t) iimmediate;
     int64_t *lsrtp = &irt;
-    ADD_TO_PC(1);
     uint32_t value;
+    uint32_t alignment = lsaddr & UINT32_C(0x3);
 
-    if (r4300_read_aligned_word(r4300, lsaddr, &value)) {
+    if(alignment != 0) {
+        DebugMessage(M64MSG_ERROR, "unaligned LW: %p", lsaddr);
+        store_load_exception(r4300, CP0_CAUSE_EXCCODE_ADEL, lsaddr);
+    } else if (r4300_read_aligned_word(r4300, lsaddr, &value)) {
+        ADD_TO_PC(1);
         *lsrtp = SE32(value);
     }
 }
@@ -208,11 +234,14 @@ DECLARE_INSTRUCTION(LWU)
     DECLARE_R4300
     const uint32_t lsaddr = (uint32_t) irs32 + (uint32_t) iimmediate;
     int64_t *lsrtp = &irt;
-    ADD_TO_PC(1);
-
     uint32_t value;
+    uint32_t alignment = lsaddr & UINT32_C(0x3);
 
-    if (r4300_read_aligned_word(r4300, lsaddr, &value)) {
+    if(alignment != 0) {
+        DebugMessage(M64MSG_ERROR, "unaligned LWU: %p", lsaddr);
+        store_load_exception(r4300, CP0_CAUSE_EXCCODE_ADEL, lsaddr);
+    } else if (r4300_read_aligned_word(r4300, lsaddr, &value)) {
+        ADD_TO_PC(1);
         *lsrtp = value;
     }
 }
@@ -258,9 +287,15 @@ DECLARE_INSTRUCTION(LD)
     DECLARE_R4300
     const uint32_t lsaddr = (uint32_t) irs32 + (uint32_t) iimmediate;
     int64_t *lsrtp = &irt;
-    ADD_TO_PC(1);
-
-    r4300_read_aligned_dword(r4300, lsaddr, (uint64_t*)lsrtp);
+    uint32_t alignment = lsaddr & UINT32_C(0x7);
+    
+    if(alignment != 0) {
+        DebugMessage(M64MSG_ERROR, "unaligned LD: %p", lsaddr);
+        store_load_exception(r4300, CP0_CAUSE_EXCCODE_ADES, lsaddr);
+    } else {
+        ADD_TO_PC(1);
+        r4300_read_aligned_dword(r4300, lsaddr, (uint64_t*)lsrtp);
+    }
 }
 
 DECLARE_INSTRUCTION(LDL)
@@ -348,9 +383,15 @@ DECLARE_INSTRUCTION(SW)
     DECLARE_R4300
     const uint32_t lsaddr = (uint32_t) irs32 + (uint32_t) iimmediate;
     int64_t *lsrtp = &irt;
-    ADD_TO_PC(1);
+    uint32_t alignment = lsaddr & UINT32_C(0x3);
 
-    r4300_write_aligned_word(r4300, lsaddr, (uint32_t)*lsrtp, ~UINT32_C(0));
+    if(alignment != 0) {
+        DebugMessage(M64MSG_ERROR, "unaligned SW: %p", lsaddr);
+        store_load_exception(r4300, CP0_CAUSE_EXCCODE_ADES, lsaddr);
+    } else {
+        ADD_TO_PC(1);
+        r4300_write_aligned_word(r4300, lsaddr, (uint32_t)*lsrtp, ~UINT32_C(0));
+    }
 }
 
 DECLARE_INSTRUCTION(SWL)
@@ -390,9 +431,16 @@ DECLARE_INSTRUCTION(SD)
     DECLARE_R4300
     const uint32_t lsaddr = (uint32_t) irs32 + (uint32_t) iimmediate;
     int64_t *lsrtp = &irt;
-    ADD_TO_PC(1);
 
-    r4300_write_aligned_dword(r4300, lsaddr, (uint64_t)*lsrtp, ~UINT64_C(0));
+    uint32_t alignment = lsaddr & UINT32_C(0x7);
+
+    if(alignment != 0) {
+        DebugMessage(M64MSG_ERROR, "unaligned SD: %p", lsaddr);
+        store_load_exception(r4300, CP0_CAUSE_EXCCODE_ADES, lsaddr);
+    } else {
+        ADD_TO_PC(1);
+        r4300_write_aligned_dword(r4300, lsaddr, (uint64_t)*lsrtp, ~UINT64_C(0));
+    }
 }
 
 DECLARE_INSTRUCTION(SDL)
@@ -682,7 +730,7 @@ DECLARE_INSTRUCTION(DSRL32)
 DECLARE_INSTRUCTION(SRA)
 {
     DECLARE_R4300
-    rrd = SE32((int32_t) rrt32 >> rsa);
+    rrd = SE32(rrt >> rsa);
     ADD_TO_PC(1);
 }
 
@@ -1229,6 +1277,14 @@ DECLARE_INSTRUCTION(MFC0)
     ADD_TO_PC(1);
 }
 
+DECLARE_INSTRUCTION(DMFC0)
+{
+    DECLARE_R4300
+    uint32_t* cp0_regs = r4300_cp0_regs(&r4300->cp0);
+    rrt = SE32(*((int64_t*)(&cp0_regs[rfs])));
+    ADD_TO_PC(1);
+}
+
 DECLARE_INSTRUCTION(MTC0)
 {
     DECLARE_R4300
@@ -1242,7 +1298,7 @@ DECLARE_INSTRUCTION(MTC0)
         if ((cp0_regs[CP0_INDEX_REG] & UINT32_C(0x3F)) > UINT32_C(31))
         {
             DebugMessage(M64MSG_ERROR, "MTC0 instruction writing Index register with TLB index > 31");
-            *r4300_stop(r4300)=1;
+            //*r4300_stop(r4300)=1;
         }
         break;
     case CP0_RANDOM_REG:
@@ -1257,11 +1313,14 @@ DECLARE_INSTRUCTION(MTC0)
         cp0_regs[CP0_CONTEXT_REG] = (rrt32 & UINT32_C(0xFF800000))
             | (cp0_regs[CP0_CONTEXT_REG] & UINT32_C(0x007FFFF0));
         break;
+    case CP0_XCONTEXT_REG:
+        // Read only!
+        break;
     case CP0_PAGEMASK_REG:
         cp0_regs[CP0_PAGEMASK_REG] = rrt32 & UINT32_C(0x01FFE000);
         break;
     case CP0_WIRED_REG:
-        cp0_regs[CP0_WIRED_REG] = rrt32;
+        cp0_regs[CP0_WIRED_REG] = rrt32 % 32;
         cp0_regs[CP0_RANDOM_REG] = UINT32_C(31);
         break;
     case CP0_BADVADDR_REG:
@@ -1311,6 +1370,7 @@ DECLARE_INSTRUCTION(MTC0)
         cp0_regs[CP0_EPC_REG] = rrt32;
         break;
     case CP0_PREVID_REG:
+        cp0_regs[CP0_PREVID_REG] = rrt32;
         break;
     case CP0_CONFIG_REG:
         cp0_regs[CP0_CONFIG_REG] = rrt32;
@@ -1334,6 +1394,14 @@ DECLARE_INSTRUCTION(MTC0)
         DebugMessage(M64MSG_ERROR, "Unknown MTC0 write: %d", rfs);
         *r4300_stop(r4300)=1;
     }
+    ADD_TO_PC(1);
+}
+
+DECLARE_INSTRUCTION(DMTC0)
+{
+    DECLARE_R4300
+    uint32_t* cp0_regs = r4300_cp0_regs(&r4300->cp0);
+    *((int64_t*)&cp0_regs[rfs]) = rrt;
     ADD_TO_PC(1);
 }
 
