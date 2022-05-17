@@ -406,7 +406,7 @@ void compare_int_handler(void* opaque)
     cp0_regs[CP0_COUNT_REG] -= r4300->cp0.count_per_op;
 
     /* Update next interrupt in case first event is COMPARE_INT */
-    *cp0_cycle_count = cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count;
+    *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] / 2) - r4300->cp0.q.first->data.count;
 
     raise_maskable_interrupt(r4300, CP0_CAUSE_IP7);
 }

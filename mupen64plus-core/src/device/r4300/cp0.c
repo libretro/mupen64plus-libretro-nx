@@ -134,12 +134,16 @@ void cp0_update_count(struct r4300_core* r4300)
     if (r4300->emumode != EMUMODE_DYNAREC)
     {
 #endif
-        uint32_t count = ((*r4300_pc(r4300) - cp0->last_addr) >> 2) * cp0->count_per_op;
+        // Update at half pipeline clock speed
+        // Assume that the pipeline is at least 1 cycles long per op
+        uint32_t count = ((*r4300_pc(r4300) - cp0->last_addr) >> 2) * 1;
+        /*
         if (r4300->cp0.count_per_op_denom_pot) {
             count += (1 << r4300->cp0.count_per_op_denom_pot) - 1;
             count >>= r4300->cp0.count_per_op_denom_pot;
-        }
-        cp0_regs[CP0_COUNT_REG] += count;
+        }*/
+        // fixme
+        cp0_regs[CP0_COUNT_REG] += count * 2;
         *r4300_cp0_cycle_count(cp0) += count;
         cp0->last_addr = *r4300_pc(r4300);
 #ifdef NEW_DYNAREC
