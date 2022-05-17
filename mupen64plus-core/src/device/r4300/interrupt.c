@@ -106,7 +106,7 @@ static int before_event(const struct cp0* cp0, unsigned int evt1, unsigned int e
 
     /* At least one other interrupt is pending */
     if (*cp0_cycle_count > 0)
-        count -= *cp0_cycle_count;
+        count -= *cp0_cycle_count >> 1;
 
     if ((evt1 - count) < (evt2 - count)) return 1;
     else return 0;
@@ -185,7 +185,7 @@ void add_interrupt_event_count(struct cp0* cp0, int type, unsigned int count)
         }
     }
     *cp0_next_interrupt = cp0->q.first->data.count;
-    *cp0_cycle_count = cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count;
+    *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count) << 1;
 }
 
 void remove_interrupt_event(struct cp0* cp0)
@@ -204,7 +204,7 @@ void remove_interrupt_event(struct cp0* cp0)
         : 0;
 
     *cp0_cycle_count = (cp0->q.first != NULL)
-        ? (cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count)
+        ? (cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count) << 1
         : 0;
 }
 
@@ -280,12 +280,11 @@ void translate_event_queue(struct cp0* cp0, unsigned int base)
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += cp0->count_per_op;
-    *cp0_cycle_count += cp0->count_per_op;
     add_interrupt_event_count(cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
     cp0_regs[CP0_COUNT_REG] -= cp0->count_per_op;
 
     /* Update next interrupt in case first event is COMPARE_INT */
-    *cp0_cycle_count = cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count;
+    *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] - cp0->q.first->data.count) << 1;
 }
 
 int save_eventqueue_infos(const struct cp0* cp0, char *buf)
@@ -401,12 +400,11 @@ void compare_int_handler(void* opaque)
 
     /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
     cp0_regs[CP0_COUNT_REG] += r4300->cp0.count_per_op;
-    *cp0_cycle_count += r4300->cp0.count_per_op;
     add_interrupt_event_count(&r4300->cp0, COMPARE_INT, cp0_regs[CP0_COMPARE_REG]);
     cp0_regs[CP0_COUNT_REG] -= r4300->cp0.count_per_op;
 
     /* Update next interrupt in case first event is COMPARE_INT */
-    *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] / 2) - r4300->cp0.q.first->data.count;
+    *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count) << 1;
 
     raise_maskable_interrupt(r4300, CP0_CAUSE_IP7);
 }
@@ -573,7 +571,7 @@ void gen_interrupt(struct r4300_core* r4300)
             : 0;
 
         *cp0_cycle_count = (r4300->cp0.q.first != NULL)
-            ? (cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count)
+            ? (cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count) << 1
             : 0;
 
         r4300->cp0.last_addr = dest;

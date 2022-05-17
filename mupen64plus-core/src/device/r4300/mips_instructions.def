@@ -774,7 +774,7 @@ DECLARE_INSTRUCTION(MULT)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(MULTU)
@@ -787,7 +787,7 @@ DECLARE_INSTRUCTION(MULTU)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DMULT)
@@ -837,7 +837,7 @@ DECLARE_INSTRUCTION(DMULT)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((8) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DMULTU)
@@ -868,7 +868,7 @@ DECLARE_INSTRUCTION(DMULTU)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((8) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DIV)
@@ -895,7 +895,7 @@ DECLARE_INSTRUCTION(DIV)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((37) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((37) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((37) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DIVU)
@@ -914,7 +914,7 @@ DECLARE_INSTRUCTION(DIVU)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((37) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((37) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((37) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DDIV)
@@ -941,7 +941,7 @@ DECLARE_INSTRUCTION(DDIV)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((69) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((69) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((69) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DDIVU)
@@ -960,7 +960,7 @@ DECLARE_INSTRUCTION(DDIVU)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((69) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((69) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((69) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(MFHI)
@@ -1365,12 +1365,11 @@ DECLARE_INSTRUCTION(MTC0)
 
         /* Add count_per_op to avoid wrong event order in case CP0_COUNT_REG == CP0_COMPARE_REG */
         r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += r4300->cp0.count_per_op;
-        *cp0_cycle_count += r4300->cp0.count_per_op;
         add_interrupt_event_count(&r4300->cp0, COMPARE_INT, rrt32);
         cp0_regs[CP0_COUNT_REG] -= r4300->cp0.count_per_op;
 
         /* Update next interrupt in case first event is COMPARE_INT */
-        *cp0_cycle_count = cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count;
+        *cp0_cycle_count = (cp0_regs[CP0_COUNT_REG] - r4300->cp0.q.first->data.count) << 1;
         cp0_regs[CP0_COMPARE_REG] = rrt32;
         cp0_regs[CP0_CAUSE_REG] &= ~CP0_CAUSE_IP7;
         break;
@@ -1562,7 +1561,7 @@ DECLARE_INSTRUCTION(ADD_S)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((3) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(ADD_D)
@@ -1573,7 +1572,7 @@ DECLARE_INSTRUCTION(ADD_D)
     ADD_TO_PC(1);
 
     *r4300_cp0_cycle_count(&r4300->cp0) += ((3) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DIV_S)
@@ -1588,7 +1587,7 @@ DECLARE_INSTRUCTION(DIV_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((29) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((29) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((29) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(DIV_D)
@@ -1608,7 +1607,7 @@ DECLARE_INSTRUCTION(DIV_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((58) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((58) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((58) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(MOV_S)
@@ -1635,7 +1634,7 @@ DECLARE_INSTRUCTION(MUL_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(MUL_D)
@@ -1646,7 +1645,7 @@ DECLARE_INSTRUCTION(MUL_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((8) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((8) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(NEG_S)
@@ -1673,7 +1672,7 @@ DECLARE_INSTRUCTION(SQRT_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((29) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((29) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((29) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(SQRT_D)
@@ -1684,7 +1683,7 @@ DECLARE_INSTRUCTION(SQRT_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((58) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((58) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((58) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(SUB_S)
@@ -1695,7 +1694,7 @@ DECLARE_INSTRUCTION(SUB_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((3) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(SUB_D)
@@ -1706,7 +1705,7 @@ DECLARE_INSTRUCTION(SUB_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((3) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((3) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(TRUNC_W_S)
@@ -1717,7 +1716,7 @@ DECLARE_INSTRUCTION(TRUNC_W_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(TRUNC_W_D)
@@ -1728,7 +1727,7 @@ DECLARE_INSTRUCTION(TRUNC_W_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(TRUNC_L_S)
@@ -1739,7 +1738,7 @@ DECLARE_INSTRUCTION(TRUNC_L_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(TRUNC_L_D)
@@ -1750,7 +1749,7 @@ DECLARE_INSTRUCTION(TRUNC_L_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(ROUND_W_S)
@@ -1761,7 +1760,7 @@ DECLARE_INSTRUCTION(ROUND_W_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(ROUND_W_D)
@@ -1772,7 +1771,7 @@ DECLARE_INSTRUCTION(ROUND_W_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(ROUND_L_S)
@@ -1783,7 +1782,7 @@ DECLARE_INSTRUCTION(ROUND_L_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(ROUND_L_D)
@@ -1794,7 +1793,7 @@ DECLARE_INSTRUCTION(ROUND_L_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CEIL_W_S)
@@ -1805,7 +1804,7 @@ DECLARE_INSTRUCTION(CEIL_W_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CEIL_W_D)
@@ -1816,7 +1815,7 @@ DECLARE_INSTRUCTION(CEIL_W_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CEIL_L_S)
@@ -1827,7 +1826,7 @@ DECLARE_INSTRUCTION(CEIL_L_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CEIL_L_D)
@@ -1838,7 +1837,7 @@ DECLARE_INSTRUCTION(CEIL_L_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(FLOOR_W_S)
@@ -1849,7 +1848,7 @@ DECLARE_INSTRUCTION(FLOOR_W_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(FLOOR_W_D)
@@ -1860,7 +1859,7 @@ DECLARE_INSTRUCTION(FLOOR_W_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(FLOOR_L_S)
@@ -1871,7 +1870,7 @@ DECLARE_INSTRUCTION(FLOOR_L_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(FLOOR_L_D)
@@ -1882,7 +1881,7 @@ DECLARE_INSTRUCTION(FLOOR_L_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_S_D)
@@ -1893,7 +1892,7 @@ DECLARE_INSTRUCTION(CVT_S_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_S_W)
@@ -1904,7 +1903,7 @@ DECLARE_INSTRUCTION(CVT_S_W)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_S_L)
@@ -1915,7 +1914,7 @@ DECLARE_INSTRUCTION(CVT_S_L)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_D_S)
@@ -1934,7 +1933,7 @@ DECLARE_INSTRUCTION(CVT_D_W)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_D_L)
@@ -1945,7 +1944,7 @@ DECLARE_INSTRUCTION(CVT_D_L)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_W_S)
@@ -1956,7 +1955,7 @@ DECLARE_INSTRUCTION(CVT_W_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_W_D)
@@ -1967,7 +1966,7 @@ DECLARE_INSTRUCTION(CVT_W_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_L_S)
@@ -1978,7 +1977,7 @@ DECLARE_INSTRUCTION(CVT_L_S)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(CVT_L_D)
@@ -1989,7 +1988,7 @@ DECLARE_INSTRUCTION(CVT_L_D)
     ADD_TO_PC(1);
     
     *r4300_cp0_cycle_count(&r4300->cp0) += ((5) - 1);
-    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) / 2;
+    r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((5) - 1) >> 1; cp0_update_count(r4300);
 }
 
 /* CP1 relational instructions */
@@ -2001,8 +2000,8 @@ DECLARE_INSTRUCTION(C_F_S)
     c_f_s(r4300_cp1_fcr31(&r4300->cp1));
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_F_D)
@@ -2012,8 +2011,8 @@ DECLARE_INSTRUCTION(C_F_D)
     c_f_d(r4300_cp1_fcr31(&r4300->cp1));
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_UN_S)
@@ -2023,8 +2022,8 @@ DECLARE_INSTRUCTION(C_UN_S)
     c_un_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_UN_D)
@@ -2034,8 +2033,8 @@ DECLARE_INSTRUCTION(C_UN_D)
     c_un_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_EQ_S)
@@ -2045,8 +2044,8 @@ DECLARE_INSTRUCTION(C_EQ_S)
     c_eq_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_EQ_D)
@@ -2056,8 +2055,8 @@ DECLARE_INSTRUCTION(C_EQ_D)
     c_eq_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_UEQ_S)
@@ -2067,8 +2066,8 @@ DECLARE_INSTRUCTION(C_UEQ_S)
     c_ueq_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_UEQ_D)
@@ -2078,8 +2077,8 @@ DECLARE_INSTRUCTION(C_UEQ_D)
     c_ueq_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_OLT_S)
@@ -2089,8 +2088,8 @@ DECLARE_INSTRUCTION(C_OLT_S)
     c_olt_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_OLT_D)
@@ -2100,8 +2099,8 @@ DECLARE_INSTRUCTION(C_OLT_D)
     c_olt_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_ULT_S)
@@ -2111,8 +2110,8 @@ DECLARE_INSTRUCTION(C_ULT_S)
     c_ult_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_ULT_D)
@@ -2122,8 +2121,8 @@ DECLARE_INSTRUCTION(C_ULT_D)
     c_ult_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_OLE_S)
@@ -2133,8 +2132,8 @@ DECLARE_INSTRUCTION(C_OLE_S)
     c_ole_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_OLE_D)
@@ -2144,8 +2143,8 @@ DECLARE_INSTRUCTION(C_OLE_D)
     c_ole_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_ULE_S)
@@ -2155,8 +2154,8 @@ DECLARE_INSTRUCTION(C_ULE_S)
     c_ule_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_ULE_D)
@@ -2166,8 +2165,8 @@ DECLARE_INSTRUCTION(C_ULE_D)
     c_ule_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_SF_S)
@@ -2182,8 +2181,8 @@ DECLARE_INSTRUCTION(C_SF_S)
     c_sf_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_SF_D)
@@ -2197,8 +2196,8 @@ DECLARE_INSTRUCTION(C_SF_D)
     c_sf_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGLE_S)
@@ -2213,8 +2212,8 @@ DECLARE_INSTRUCTION(C_NGLE_S)
     c_ngle_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGLE_D)
@@ -2228,8 +2227,8 @@ DECLARE_INSTRUCTION(C_NGLE_D)
     c_ngle_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_SEQ_S)
@@ -2244,8 +2243,8 @@ DECLARE_INSTRUCTION(C_SEQ_S)
     c_seq_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_SEQ_D)
@@ -2259,8 +2258,8 @@ DECLARE_INSTRUCTION(C_SEQ_D)
     c_seq_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGL_S)
@@ -2275,8 +2274,8 @@ DECLARE_INSTRUCTION(C_NGL_S)
     c_ngl_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGL_D)
@@ -2290,8 +2289,8 @@ DECLARE_INSTRUCTION(C_NGL_D)
     c_ngl_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_LT_S)
@@ -2306,8 +2305,8 @@ DECLARE_INSTRUCTION(C_LT_S)
     c_lt_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_LT_D)
@@ -2322,8 +2321,8 @@ DECLARE_INSTRUCTION(C_LT_D)
     c_lt_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGE_S)
@@ -2338,8 +2337,8 @@ DECLARE_INSTRUCTION(C_NGE_S)
     c_nge_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGE_D)
@@ -2354,8 +2353,8 @@ DECLARE_INSTRUCTION(C_NGE_D)
     c_nge_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_LE_S)
@@ -2370,8 +2369,8 @@ DECLARE_INSTRUCTION(C_LE_S)
     c_le_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_LE_D)
@@ -2386,8 +2385,8 @@ DECLARE_INSTRUCTION(C_LE_D)
     c_le_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGT_S)
@@ -2402,8 +2401,8 @@ DECLARE_INSTRUCTION(C_NGT_S)
     c_ngt_s(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_simple(&r4300->cp1))[cffs], (r4300_cp1_regs_simple(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
 
 DECLARE_INSTRUCTION(C_NGT_D)
@@ -2418,6 +2417,6 @@ DECLARE_INSTRUCTION(C_NGT_D)
     c_ngt_d(r4300_cp1_fcr31(&r4300->cp1), (r4300_cp1_regs_double(&r4300->cp1))[cffs], (r4300_cp1_regs_double(&r4300->cp1))[cfft]);
     ADD_TO_PC(1);
 
-    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) / 2;
-    //r4300_cp0_regs(&r4300->cp0)[CP0_COUNT_REG] += ((2) - 1) / 2;
+    //*r4300_cp0_cycle_count(&r4300->cp0) += ((2) - 1) >> 1; cp0_update_count(r4300);
+    // cp0_update_count(r4300);
 }
