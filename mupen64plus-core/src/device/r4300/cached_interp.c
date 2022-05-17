@@ -143,7 +143,7 @@ void cached_interp_##name##_IDLE(void) \
     if (take_jump) \
     { \
         cp0_update_count(r4300); \
-        if(*cp0_cycle_count < 0) \
+        if(*cp0_cycle_count > 0) \
         { \
             cp0_regs[CP0_COUNT_REG] -= *cp0_cycle_count; \
             *cp0_cycle_count = 0; \
