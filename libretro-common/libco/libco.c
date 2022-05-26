@@ -21,7 +21,9 @@ void genode_free_secondary_stack(void *stack);
     #include "fiber.c"
   #endif
 #elif defined __GNUC__
-  #if defined __i386__
+  #ifdef _WIN32
+    #include "fiber.c"
+  #elif defined __i386__
     #include "x86.c"
   #elif defined __amd64__
     #include "amd64.c"
