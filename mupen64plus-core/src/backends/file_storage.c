@@ -124,10 +124,10 @@ static void file_storage_save(void* storage, size_t start, size_t size)
     switch(err)
     {
     case file_open_error:
-        log_cb(RETRO_LOG_WARN, "Couldn't open storage file '%s' for writing\n", fstorage->filename);
+        //log_cb(RETRO_LOG_WARN, "Couldn't open storage file '%s' for writing\n", fstorage->filename);
         break;
     case file_write_error:
-        log_cb(RETRO_LOG_WARN, "Failed to write storage file '%s'\n", fstorage->filename);
+        //log_cb(RETRO_LOG_WARN, "Failed to write storage file '%s'\n", fstorage->filename);
         break;
     default:
         break;

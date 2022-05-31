@@ -493,7 +493,7 @@ static void EmuThreadFunction(void)
         emuThreadRunning = false;
     }
 
-    return NULL;
+    return;
 }
 
 static void reinit_gfx_plugin(void)
