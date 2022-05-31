@@ -273,6 +273,9 @@ namespace opengl {
 
 			const bool iterValid = iter != m_texparams->end();
 			const GLenum target(_parameters.target);
+
+			// Emscripten, only do for non-pow2...
+
 			if (_parameters.magFilter.isValid() && !(iterValid && iter->second.magFilter == GLint(_parameters.magFilter))) {
 				glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GLint(_parameters.magFilter));
 				(*m_texparams)[u32(_parameters.handle)].magFilter = GLint(_parameters.magFilter);

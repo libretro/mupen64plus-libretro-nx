@@ -521,7 +521,7 @@ else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
    GLES := 1
    WITH_DYNAREC :=
-   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
+   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1 -s EMULATE_FUNCTION_POINTER_CASTS=1
    CC = emcc
    CXX = em++
    HAVE_NEON = 0
@@ -591,11 +591,8 @@ endif
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
-# Use -fcommon
-CPUOPTS += -fcommon
-
 # set C/C++ standard to use
-CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS -Wno-discarded-qualifiers
+CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS -Wno-incompatible-pointer-types-discards-qualifiers
 CXXFLAGS += -std=gnu++11 -D_CRT_SECURE_NO_WARNINGS
 
 ifeq ($(HAVE_LTCG),1)

@@ -11,7 +11,7 @@
 #include <malloc.h>
 #include <emscripten/fiber.h>
 
-#define ASYNCIFY_STACK_SIZE (32768)
+#define ASYNCIFY_STACK_SIZE (12582912)
 
 static thread_local emscripten_fiber_t *co_active_;
 
