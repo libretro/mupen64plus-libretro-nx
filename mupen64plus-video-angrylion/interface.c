@@ -6,7 +6,6 @@
 #include <ctype.h>
 #include <boolean.h>
 
-#include "mupen64plus-next_common.h"
 #include "m64p_plugin.h"
 
 extern void DebugMessage(int level, const char *message, ...);
@@ -18,6 +17,8 @@ extern void DebugMessage(int level, const char *message, ...);
 #include "m64p_config.h"
 #include "vdac.h"
 
+int retro_return(bool just_flipping);
+
 #define DP_INTERRUPT    0x20
 
 static bool angrylion_init = false;
@@ -26,14 +27,8 @@ int ProcessDListShown = 0;
 
 extern GFX_INFO gfx_info;
 
-extern uint32_t retro_screen_width;
-extern uint32_t retro_screen_height;
+extern unsigned int retro_screen_width, retro_screen_height;
 extern uint32_t screen_pitch;
-
-// Some macro trickery to avoid conflicting symbols and ease maintenance efforts
-#define config _al_config
-#define screen_width retro_screen_width
-#define screen_height retro_screen_height
 
 struct n64video_config config;
 
@@ -139,18 +134,17 @@ uint32_t plugin_get_rom_name(char* name, uint32_t name_size)
 }
 
 void vdac_init(struct n64video_config* config) { }
-void vdac_read(struct frame_buffer* fb, bool alpha) { }
-void vdac_write(struct frame_buffer* fb)
+void vdac_read(struct n64video_frame_buffer* fb, bool alpha) { }
+void vdac_write(struct n64video_frame_buffer* fb)
 {
-   screen_width = fb->width;
-   screen_height = fb->height;
+   retro_screen_width = fb->width;
+   retro_screen_height = fb->height;
    screen_pitch = fb->pitch * 4;
 }
 
 void vdac_sync(bool invalid) { 
-   libretro_swap_buffer = !invalid;
+retro_return(!invalid);
 }
-
 void vdac_close(void) { }
 
 void angrylion_set_vi(unsigned value)
@@ -159,6 +153,19 @@ void angrylion_set_vi(unsigned value)
    if(config.vi.mode != (enum vi_mode)value)
    {
       config.vi.mode = (enum vi_mode)value;
+      if (angrylion_init)
+      {
+          n64video_close();
+          n64video_init(&config);
+      }
+   }
+}
+
+void angrylion_set_busy(unsigned value)
+{
+   if(config.busyloop != value)
+   {
+       config.busyloop = value;
       if (angrylion_init)
       {
           n64video_close();
@@ -333,15 +340,15 @@ int angrylionRomOpen(void)
     * for better performance as well in case screen_width
     * is 320 and height is 240.
     */
-   if (screen_width < 640)
-      screen_width = 640;
-   if (screen_width > 640)
-      screen_width = 640;
+   if (retro_screen_width < 640)
+      retro_screen_width = 640;
+   if (retro_screen_width > 640)
+      retro_screen_width = 640;
 
-   if (screen_height < 480)
-      screen_height = 480;
-   if (screen_height > 480)
-      screen_height = 480;
+   if (retro_screen_height < 480)
+      retro_screen_height = 480;
+   if (retro_screen_height > 480)
+      retro_screen_height = 480;
 
    screen_pitch  = 640 << 2;
 
@@ -368,7 +375,8 @@ void angrylionUpdateScreen(void)
         return;
     counter = 0;
 #endif
-    n64video_update_screen();
+ struct n64video_frame_buffer fb;
+ n64video_update_screen(&fb);
     
 }
 

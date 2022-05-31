@@ -80,6 +80,7 @@ void angrylion_set_overscan(unsigned value);
 void angrylion_set_synclevel(unsigned value);
 void angrylion_set_vi_dedither(unsigned value);
 void angrylion_set_vi(unsigned value);
+void angrylion_set_busy(unsigned value);
 
 struct rgba
 {
@@ -1679,6 +1680,23 @@ static void update_variables(bool startup)
            angrylion_set_vi_dedither(1);
            angrylion_set_vi_blur(1);
         }
+
+      var.key = CORE_NAME "-angrylion-busy";
+      var.value = NULL;
+
+       environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var);
+        if (var.value)
+        {
+           if (!strcmp(var.value, "enabled"))
+              angrylion_set_busy(1);
+           else if (!strcmp(var.value, "disabled"))
+              angrylion_set_busy(0);
+        }
+        else
+        {
+           angrylion_set_busy(0);
+        }
+
 
         var.key = CORE_NAME "-angrylion-sync";
         var.value = NULL;
