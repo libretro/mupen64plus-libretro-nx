@@ -161,6 +161,19 @@ void angrylion_set_vi(unsigned value)
    }
 }
 
+void angrylion_set_busy(unsigned value)
+{
+   if(config.busyloop != value)
+   {
+       config.busyloop = value;
+      if (angrylion_init)
+      {
+          n64video_close();
+          n64video_init(&config);
+      }
+   }
+}
+
 void angrylion_set_threads(unsigned value)
 {
   

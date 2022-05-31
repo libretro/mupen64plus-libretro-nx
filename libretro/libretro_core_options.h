@@ -1355,6 +1355,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         },
         "disabled"
     },
+     {
+        CORE_NAME "-angrylion-busy",
+        "Busywait work threads",
+        NULL,
+        "(AL) Enable busywaiting of worker threads.",
+        "Enable busywaiting of worker threads.",
+        "angrylion",
+        {
+            {"disabled", NULL},
+            {"enabled", NULL},
+            { NULL, NULL },
+        },
+        "disabled"
+    },
 #endif
     {
         CORE_NAME "-cpucore",

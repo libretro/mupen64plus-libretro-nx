@@ -207,9 +207,13 @@ std::unique_ptr<T> make_unique(Args&&... args) {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
-void parallel_alinit(uint32_t num)
+void parallel_alinit(uint32_t num,bool busy)
 {
+    if(!busy)
     parallel = make_unique<Parallel>(num);
+    else
+    parallel = make_unique<ParallelBusy>(num);
+
 
     parallel->begin();
 }
