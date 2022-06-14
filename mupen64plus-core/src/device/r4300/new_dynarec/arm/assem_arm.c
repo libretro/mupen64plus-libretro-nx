@@ -1092,7 +1092,7 @@ static void emit_pcreladdr(u_int rt)
   output_w32(0xe2800000|rd_rn_rm(rt,15,0));
 }
 
-static void emit_loadreg(int r, int hr)
+void emit_loadreg(int r, int hr)
 {
   if((r&63)==0)
     emit_zeroreg(hr);
@@ -1112,7 +1112,7 @@ static void emit_loadreg(int r, int hr)
     output_w32(0xe5900000|rd_rn_rm(hr,FP,0)|offset);
   }
 }
-static void emit_storereg(int r, int hr)
+void emit_storereg(int r, int hr)
 {
   u_int offset = fp_regs+((r&63)<<3)+((r&64)>>4);
   if((r&63)==HIREG) offset=fp_hi+((r&64)>>4);

@@ -867,7 +867,7 @@ static void emit_zeroreg(int rt)
   assem_debug("xor %%%s,%%%s",regname[rt],regname[rt]);
 }
 
-static void emit_loadreg(int r, int hr)
+void emit_loadreg(int r, int hr)
 {
   if((r&63)==0)
     emit_zeroreg(hr);
@@ -884,7 +884,7 @@ static void emit_loadreg(int r, int hr)
     output_w32(addr);
   }
 }
-static void emit_storereg(int r, int hr)
+void emit_storereg(int r, int hr)
 {
   int addr=((int)g_dev.r4300.new_dynarec_hot_state.regs)+((r&63)<<3)+((r&64)>>4);
   if((r&63)==HIREG) addr=(int)&g_dev.r4300.new_dynarec_hot_state.hi+((r&64)>>4);

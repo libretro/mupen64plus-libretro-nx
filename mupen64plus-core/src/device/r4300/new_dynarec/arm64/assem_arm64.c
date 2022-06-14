@@ -1327,7 +1327,7 @@ static void emit_movimm(u_int imm,u_int rt)
   }
 }
 
-static void emit_loadreg(int r, int hr)
+void emit_loadreg(int r, int hr)
 {
   if((r&63)==0)
     emit_zeroreg(hr);
@@ -1356,7 +1356,7 @@ static void emit_loadreg(int r, int hr)
   }
 }
 
-static void emit_storereg(int r, int hr)
+void emit_storereg(int r, int hr)
 {
   u_int offset = fp_regs+((r&63)<<3)+((r&64)>>4);
   if((r&63)==HIREG) offset=fp_hi+((r&64)>>4);
@@ -2005,14 +2005,14 @@ static void emit_set_if_carry64_32(int u1, int l1, int u2, int l2, int rt)
   emit_cmovb_imm(1,rt);
 }
 
-static void emit_call(intptr_t a)
+void emit_call(intptr_t a)
 {
   assem_debug("bl %x (%x+%x)",a,(intptr_t)out,a-(intptr_t)out);
   u_int offset=genjmp(a);
   output_w32(0x94000000|offset);
 }
 
-static void emit_jmp(intptr_t a)
+void emit_jmp(intptr_t a)
 {
   assem_debug("b %x (%x+%x)",a,(intptr_t)out,a-(intptr_t)out);
   u_int offset=genjmp(a);

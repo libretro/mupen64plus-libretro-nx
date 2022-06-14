@@ -36,8 +36,19 @@
 #include "debugger/dbg_debugger.h"
 #endif
 
+#include <stdio.h>
 
 static void InterpretOpcode(struct r4300_core* r4300);
+
+static void ultra_bcopy(struct r4300_core* r4300, uint32_t src, uint32_t dst,int length)
+{
+  //printf("ultra_bcopy: %x -> %x (%d)\n",(intptr_t)src,(intptr_t)dst,length);
+  //fflush(stdout);
+
+  char* mem_src = fast_mem_access(r4300, src);
+  char* mem_dst = fast_mem_access(r4300, dst);
+  memcpy(mem_dst, mem_src, length);
+}
 
 #define DECLARE_R4300
 #define PCADDR r4300->interp_PC.addr
@@ -63,7 +74,10 @@ static void InterpretOpcode(struct r4300_core* r4300);
         r4300->delay_slot=0; \
         if (take_jump && !r4300->skip_jump) \
         { \
-          r4300->interp_PC.addr = jump_target; \
+		  if(jump_target == 0x8005AD60) { ultra_bcopy(r4300, r4300_regs(r4300)[4], r4300_regs(r4300)[5], (int)r4300_regs(r4300)[6]); r4300->interp_PC.addr = *link_register; } \
+		  else { \
+          	r4300->interp_PC.addr = jump_target; \
+		  } \
         } \
       } \
       else \

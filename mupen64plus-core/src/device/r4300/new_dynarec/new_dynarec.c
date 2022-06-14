@@ -44,6 +44,8 @@
 #include "device/rcp/mi/mi_controller.h"
 #include "device/rcp/rsp/rsp_core.h"
 
+#include "hle/detours/detours.h"
+
 #if !defined(WIN32)
 #ifndef HAVE_LIBNX
 #include <sys/mman.h>
@@ -192,21 +194,6 @@ void recomp_dbg_block(int addr);
 #define MAXBLOCK 4096
 #define MAX_OUTPUT_BLOCK_SIZE 262144
 #define CLOCK_DIVIDER g_dev.r4300.cp0.count_per_op
-
-struct regstat
-{
-  signed char regmap_entry[HOST_REGS];
-  signed char regmap[HOST_REGS];
-  uint64_t was32;
-  uint64_t is32;
-  uint64_t wasdirty;
-  uint64_t dirty;
-  uint64_t u;
-  uint64_t uu;
-  u_int wasconst;
-  u_int isconst;
-  uint64_t constmap[HOST_REGS];
-};
 
 struct ll_entry
 {
@@ -1804,7 +1791,7 @@ static void alloc_all(struct regstat *cur,int i)
   }
 }
 
-static void add_to_linker(intptr_t addr,u_int target,int ext)
+void add_to_linker(intptr_t addr,u_int target,int ext)
 {
   assert(linkcount<MAXBLOCK);
   link_addr[linkcount][0]=addr;
@@ -7136,6 +7123,11 @@ static void ujump_assemble(int i,struct regstat *i_regs)
   #ifdef REG_PREFETCH
   if(rt1[i]==31&&temp>=0) emit_prefetchreg(temp);
   #endif
+
+  if(ujump_detour(i, i_regs, &ba[0], start) == DETOUR_SUCCESS) {
+    return;
+  }
+  
   do_cc(i,branch_regs[i].regmap,&adj,ba[i],TAKEN,0);
   if(i!=(ba[i]-start)>>2 || source[i+1]!=0) {
     if(adj) emit_addimm(cc,CLOCK_DIVIDER*(ccadj[i]+2-adj),cc);
@@ -11526,9 +11518,6 @@ int new_recompile_block(int addr)
   }
   for(i=0;i<slen;i++)
   {
-#if ASSEM_DEBUG
-    disassemble_inst(i);
-#endif
     if(ds) {
       ds=0; // Skip delay slot
       if(bt[i]) assem_debug("OOPS - branch into delay slot");

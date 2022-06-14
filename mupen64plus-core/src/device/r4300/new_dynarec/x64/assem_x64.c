@@ -908,7 +908,7 @@ static void emit_zeroreg(int rt)
   assem_debug("xor %%%s,%%%s",regname[rt],regname[rt]);
 }
 
-static void emit_loadreg(int r, int hr)
+void emit_loadreg(int r, int hr)
 {
   if((r&63)==0)
     emit_zeroreg(hr);
@@ -940,7 +940,7 @@ static void emit_loadreg(int r, int hr)
     output_w32(addr-(intptr_t)out-4); // Note: rip-relative in 64-bit mode
   }
 }
-static void emit_storereg(int r, int hr)
+void emit_storereg(int r, int hr)
 {
   intptr_t addr=((intptr_t)g_dev.r4300.new_dynarec_hot_state.regs)+((r&63)<<3)+((r&64)>>4);
   if((r&63)==HIREG) addr=(intptr_t)&g_dev.r4300.new_dynarec_hot_state.hi+((r&64)>>4);
@@ -1782,13 +1782,13 @@ static void emit_set_if_carry64_32(int u1, int l1, int u2, int l2, int rt)
   emit_adcimm(0,rt);
 }
 
-static void emit_call(intptr_t a)
+void emit_call(intptr_t a)
 {
   assem_debug("call %llx (%llx+%llx)",a,(intptr_t)out+5,a-(intptr_t)out-5);
   output_byte(0xe8);
   output_w32(a-(intptr_t)out-4);
 }
-static void emit_jmp(intptr_t a)
+void emit_jmp(intptr_t a)
 {
   assem_debug("jmp %llx (%llx+%llx)",a,(intptr_t)out+5,a-(intptr_t)out-5);
   output_byte(0xe9);

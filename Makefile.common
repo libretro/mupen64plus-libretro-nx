@@ -222,7 +222,8 @@ ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
 	DYNAREC_USED = 1
 	DYNAFLAGS += -DNEW_DYNAREC=2
 	SOURCES_C += \
-		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/hle/detours/detours.c
 	SOURCES_NASM += \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/x64/linkage_x64.asm
 endif

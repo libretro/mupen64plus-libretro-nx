@@ -26,6 +26,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
+#include <api/m64p_types.h>
 
 #define NEW_DYNAREC_X86 1
 #define NEW_DYNAREC_X64 2
@@ -82,6 +84,33 @@ struct new_dynarec_hot_state
 #else
     char dummy;
 #endif
+};
+
+#if NEW_DYNAREC == NEW_DYNAREC_X86
+#include "x86/assem_x86.h"
+#elif NEW_DYNAREC == NEW_DYNAREC_X64
+#include "x64/assem_x64.h"
+#elif NEW_DYNAREC == NEW_DYNAREC_ARM
+#include "arm/assem_arm.h"
+#elif NEW_DYNAREC == NEW_DYNAREC_ARM64
+#include "arm64/assem_arm64.h"
+#else
+#error Unsupported dynarec architecture
+#endif
+
+struct regstat
+{
+  signed char regmap_entry[HOST_REGS];
+  signed char regmap[HOST_REGS];
+  uint64_t was32;
+  uint64_t is32;
+  uint64_t wasdirty;
+  uint64_t dirty;
+  uint64_t u;
+  uint64_t uu;
+  u_int wasconst;
+  u_int isconst;
+  uint64_t constmap[HOST_REGS];
 };
 
 extern unsigned int stop_after_jal;
