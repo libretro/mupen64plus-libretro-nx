@@ -1121,7 +1121,7 @@ static void emit_addimm(int rs,int imm,int rt)
   }
 }
 
-static void emit_addimm64(int rs,int imm,int rt)
+void emit_addimm64(int rs,int imm,int rt)
 {
   if(rs==rt) {
     if(imm!=0) {
@@ -1872,14 +1872,14 @@ static void emit_pushimm(int imm)
   output_byte(0x68);
   output_w32(imm);
 }
-static void emit_pushreg(u_int r)
+void emit_pushreg(u_int r)
 {
   assem_debug("push %%%s",regname[r]);
   if(r>=8)
     output_rex(0,0,0,r>>3);
   output_byte(0x50+(r&7));
 }
-static void emit_popreg(u_int r)
+void emit_popreg(u_int r)
 {
   assem_debug("pop %%%s",regname[r]);
   if(r>=8)
