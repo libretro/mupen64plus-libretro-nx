@@ -153,8 +153,8 @@ static void detour__ll_div(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3)
 
     int64_t result = numer / denom;
 
-    g_dev.r4300.new_dynarec_hot_state.regs[2] = g_dev.r4300.new_dynarec_hot_state.hi = (int64_t)(int32_t)(result >> 32);
-    g_dev.r4300.new_dynarec_hot_state.regs[3] = g_dev.r4300.new_dynarec_hot_state.lo = (int64_t)(int32_t)(result & 0xffffffff);
+    g_dev.r4300.new_dynarec_hot_state.regs[2] = (int64_t)(int32_t)(result >> 32);
+    g_dev.r4300.new_dynarec_hot_state.regs[3] = (int64_t)(int32_t)(result & 0xffffffff);
 
     return;
 }
