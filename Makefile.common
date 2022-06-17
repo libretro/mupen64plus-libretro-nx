@@ -204,7 +204,8 @@ ifeq ($(WITH_DYNAREC), aarch64)
 	DYNAREC_USED = 1
 	DYNAFLAGS += -DNEW_DYNAREC=4
 	SOURCES_C += \
-		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c
+		$(CORE_DIR)/src/device/r4300/new_dynarec/new_dynarec.c \
+		$(CORE_DIR)/src/device/r4300/new_dynarec/hle/detours/detours.c
 	SOURCES_ASM += \
 		$(CORE_DIR)/src/device/r4300/new_dynarec/arm64/linkage_arm64.S
 endif

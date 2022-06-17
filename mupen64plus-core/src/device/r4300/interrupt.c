@@ -51,13 +51,13 @@
  * Pool of Single Linked List Nodes
  **************************************************************************/
 
-static struct node* alloc_node(struct pool* p);
+struct node* alloc_node(struct pool* p);
 static void free_node(struct pool* p, struct node* node);
 static void clear_pool(struct pool* p);
 
 
 /* node allocation/deallocation on a given pool */
-static struct node* alloc_node(struct pool* p)
+struct node* alloc_node(struct pool* p)
 {
     /* return NULL if pool is too small */
     if (p->index >= INTERRUPT_NODES_POOL_CAPACITY) {

@@ -296,7 +296,7 @@ static void cache_flush(char* start, char* end)
 }
 
 /* Linker */
-static void set_jump_target(intptr_t addr,uintptr_t target)
+void set_jump_target(intptr_t addr,uintptr_t target)
 {
   u_int *ptr=(u_int *)addr;
   intptr_t offset=target-(intptr_t)addr;
@@ -2026,7 +2026,7 @@ static void emit_jne(intptr_t a)
   output_w32(0x54000000|offset<<5|COND_NE);
 }
 
-static void emit_jeq(intptr_t a)
+void emit_jeq(intptr_t a)
 {
   assem_debug("beq %x",a);
   u_int offset=gencondjmp(a);
@@ -2540,7 +2540,7 @@ static void emit_cmov2imm_e_ne_compact(int imm1,int imm2,u_int rt)
 #endif
 
 // special case for checking pending_exception
-static void emit_cmpmem_imm(intptr_t addr, int imm)
+void emit_cmpmem_imm(intptr_t addr, int imm)
 {
   assert(imm==0);
   emit_readword(addr,HOST_TEMPREG);

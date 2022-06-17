@@ -304,7 +304,7 @@ static void clear_all_regs(signed char regmap[])
   for (hr=0;hr<HOST_REGS;hr++) regmap[hr]=-1;
 }
 
-static signed char get_reg(signed char regmap[],int r)
+signed char get_reg(signed char regmap[],int r)
 {
   int hr;
   for (hr=0;hr<HOST_REGS;hr++) if(hr!=EXCLUDE_REG&&regmap[hr]==r) return hr;
@@ -3762,7 +3762,7 @@ static void wb_invalidate(signed char pre[],signed char entry[],uint64_t dirty,u
 }
 
 // Write out all dirty registers (except cycle count)
-static void wb_dirtys(signed char i_regmap[],uint64_t i_is32,uint64_t i_dirty)
+void wb_dirtys(signed char i_regmap[],uint64_t i_is32,uint64_t i_dirty)
 {
   int hr;
   for(hr=0;hr<HOST_REGS;hr++) {
@@ -4110,7 +4110,7 @@ static void load_consts(signed char pre[],signed char regmap[],int is32,int i)
   }
 }
 
-static void load_all_consts(signed char regmap[],int is32,u_int dirty,u_int isconst,int i)
+void load_all_consts(signed char regmap[],int is32,u_int dirty,u_int isconst,int i)
 {
   int hr;
   // Load 32-bit regs
@@ -5263,7 +5263,7 @@ static void cop0_assemble(int i,struct regstat *i_regs)
 
     restore_regs(reglist);
 
-    if(copr==CP0_COUNT_REG||copr==CP0_STATUS_REG) {
+    if(copr==CP0_STATUS_REG) {
       assert(!is_delayslot);
       emit_cmpmem_imm((intptr_t)&g_dev.r4300.new_dynarec_hot_state.pending_exception,0);
       intptr_t jaddr=(intptr_t)out;
@@ -7124,7 +7124,7 @@ static void ujump_assemble(int i,struct regstat *i_regs)
   if(rt1[i]==31&&temp>=0) emit_prefetchreg(temp);
   #endif
 
-  if(ujump_detour(i, i_regs, &ba[0], start) == DETOUR_SUCCESS) {
+  if(ujump_detour(i, i_regs, &regs[0], &ba[0], start) == DETOUR_SUCCESS) {
     return;
   }
   

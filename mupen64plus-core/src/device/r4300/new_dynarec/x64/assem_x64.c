@@ -67,7 +67,7 @@ static const uintptr_t invalidate_block_reg[8] = {
 
 /* Linker */
 
-static void set_jump_target(uintptr_t addr,uintptr_t target)
+void set_jump_target(uintptr_t addr,uintptr_t target)
 {
   u_char *ptr=(u_char *)addr;
   
@@ -1801,7 +1801,7 @@ static void emit_jne(intptr_t a)
   output_byte(0x85);
   output_w32(a-(intptr_t)out-4);
 }
-static void emit_jeq(intptr_t a)
+void emit_jeq(intptr_t a)
 {
   assem_debug("jeq %llx",a);
   output_byte(0x0f);
@@ -2310,7 +2310,7 @@ static void emit_xchg64(int rs, int rt)
     output_modrm(3,rs,rt&7);
   }
 }
-static void emit_writeword(int rt, intptr_t addr)
+void emit_writeword(int rt, intptr_t addr)
 {
   assert((intptr_t)addr-(intptr_t)out>=-2147483648LL&&(intptr_t)addr-(intptr_t)out<2147483647LL);
   assem_debug("movl %%%s,%llx",regname[rt],addr);
@@ -2581,7 +2581,7 @@ static void emit_mov2imm_compact(int imm1,u_int rt1,int imm2,u_int rt2)
 }
 
 // special case for checking pending_exception
-static void emit_cmpmem_imm(intptr_t addr, int imm)
+void emit_cmpmem_imm(intptr_t addr, int imm)
 {
   assert((intptr_t)addr-(intptr_t)out>=-2147483648LL&&(intptr_t)addr-(intptr_t)out<2147483647LL);
   assert(imm<128&&imm>=-127);

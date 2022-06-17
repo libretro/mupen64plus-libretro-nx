@@ -29,6 +29,6 @@
 #define DETOUR_IGNORE  2
 
 struct regstat;
-int ujump_detour(int i, struct regstat *i_regs, u_int *ba, u_int start);
+int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba, u_int start);
 
 #endif // HLE_DETOURS_H
