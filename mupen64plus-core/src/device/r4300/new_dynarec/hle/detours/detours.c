@@ -113,6 +113,7 @@ static void detour_invalidate_cache(uint32_t addr, uint32_t size)
     //flush(stdout);
 
     invalidate_cached_code_new_dynarec(&g_dev.r4300, addr, size);
+    invalidate_cached_code_new_dynarec(&g_dev.r4300, addr ^ UINT32_C(0x20000000), size);
 }
 
 static void SqrtF(void)
