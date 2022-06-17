@@ -181,6 +181,7 @@ static void detour__osRestoreInt(uint32_t flags)
     //fflush(stdout);
 
     g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] |= flags;
+    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] += 18;
     
     //printf("g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]: %p\n", g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]);
     //fflush(stdout);
@@ -230,6 +231,11 @@ static void detour_DisableInterrupt(void)
     uint32_t cur_status = g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG];
     g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] = cur_status & ~CP0_STATUS_IE;
     g_dev.r4300.new_dynarec_hot_state.regs[2] = (int64_t)(cur_status & CP0_STATUS_IE);
+}
+
+static void detour__osSetCompare(uint32_t comp)
+{
+    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COMPARE_REG] = comp;
 }
 
 
@@ -364,10 +370,6 @@ int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba,
     if (ba[i] == 0x8005BBC0)
     {
         int cc = get_reg(i_regs->regmap, CCREG);
-        if (cc >= 0)
-        {
-            emit_storereg(CCREG, cc);
-        }
         emit_loadreg(4, ARG1_REG);
         // Call to our hook
         emit_call((intptr_t)detour__osRestoreInt);
@@ -382,6 +384,18 @@ int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba,
         emit_jmp((intptr_t)&do_interrupt);
         set_jump_target(jaddr, (intptr_t)out);
         emit_loadreg(CCREG, cc);
+        // Link back to Return addr
+        DETOUR_LINK_LR;
+
+        return DETOUR_SUCCESS;
+    }
+
+    // Quake2 hook for __osSetCompare
+    if (ba[i] == 0x8005F100)
+    {
+        // Call to our hook
+        emit_loadreg(4, ARG1_REG);
+        emit_call((intptr_t)detour__osSetCompare);
         // Link back to Return addr
         DETOUR_LINK_LR;
 
