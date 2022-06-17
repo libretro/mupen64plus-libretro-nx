@@ -190,7 +190,7 @@ static void detour__osRestoreInt(uint32_t flags)
     //fflush(stdout);
 
     g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] |= flags;
-    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] += 18;
+    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] = *cp0_next_interrupt;
     
     //printf("g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]: %p\n", g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]);
     //fflush(stdout);
