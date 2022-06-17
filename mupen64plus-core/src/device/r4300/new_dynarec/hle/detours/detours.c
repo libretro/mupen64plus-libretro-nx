@@ -225,6 +225,14 @@ static void detour_getcount(void)
     g_dev.r4300.new_dynarec_hot_state.regs[2] = g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG];
 }
 
+static void detour_DisableInterrupt(void)
+{
+    uint32_t cur_status = g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG];
+    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] = cur_status & ~CP0_STATUS_IE;
+    g_dev.r4300.new_dynarec_hot_state.regs[2] = (int64_t)(cur_status & CP0_STATUS_IE);
+}
+
+
 // UJUMP Assemble Hook
 int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba, u_int start)
 {
@@ -335,6 +343,17 @@ int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba,
     {
         // Call to our hook
         emit_call((intptr_t)detour_getcount);
+        //  Link back to Return addr
+        DETOUR_LINK_LR;
+
+        return DETOUR_SUCCESS;
+    }
+
+    // Quake2 hook for __osDisableInterrupt
+    if (ba[i] == 0x8005BB00)
+    {
+        // Call to our hook
+        emit_call((intptr_t)detour_DisableInterrupt);
         //  Link back to Return addr
         DETOUR_LINK_LR;
 
