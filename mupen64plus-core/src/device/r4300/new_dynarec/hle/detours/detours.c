@@ -104,7 +104,15 @@ static void ultra_bzero(uint32_t dst, int length)
 
 static void detour_stub(void)
 {
-    // Stub
+
+}
+
+static void detour_invalidate_cache(uint32_t addr, uint32_t size)
+{
+    //printf("detour_invalidate_cache: %x (%d)\n", addr, size);
+    //flush(stdout);
+
+    invalidate_cached_code_new_dynarec(&g_dev.r4300, addr, size);
 }
 
 static void SqrtF(void)
@@ -283,8 +291,21 @@ int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba,
         return DETOUR_SUCCESS;
     }
 
-    // Quake2 hook for detour_stub/osWritebackDCache (stub)
-    if (ba[i] == 0x80051980 || ba[i] == 0x8005BCC0)
+    // Quake2 hook for osInvalICache
+    if (ba[i] == 0x8005BB20 || ba[i] == 0x80051980)
+    {
+        // Call to our hook
+        emit_loadreg(4, ARG1_REG);
+        emit_loadreg(5, ARG2_REG);
+        emit_call((intptr_t)detour_invalidate_cache);
+        // Link back to Return addr
+        DETOUR_LINK_LR;
+
+        return DETOUR_SUCCESS;
+    }
+
+    // Quake2 hook for osWritebackDCache
+    if (ba[i] == 0x8005BCC0)
     {
         // Call to our hook
         emit_call((intptr_t)detour_stub);

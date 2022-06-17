@@ -351,7 +351,7 @@ int r4300_write_aligned_word(struct r4300_core* r4300, uint32_t address, uint32_
 {
     if ((address & UINT32_C(0xc0000000)) != UINT32_C(0x80000000)) {
 
-        invalidate_r4300_cached_code(r4300, address, 4);
+        //invalidate_r4300_cached_code(r4300, address, 4);
 
         address = virtual_to_physical_address(r4300, address, 1);
         if (address == 0) {
@@ -359,8 +359,8 @@ int r4300_write_aligned_word(struct r4300_core* r4300, uint32_t address, uint32_
         }
     }
 
-    invalidate_r4300_cached_code(r4300, address, 4);
-    invalidate_r4300_cached_code(r4300, address ^ UINT32_C(0x20000000), 4);
+    //invalidate_r4300_cached_code(r4300, address, 4);
+    //invalidate_r4300_cached_code(r4300, address ^ UINT32_C(0x20000000), 4);
 
     address &= UINT32_C(0x1ffffffc);
 
@@ -381,7 +381,7 @@ int r4300_write_aligned_dword(struct r4300_core* r4300, uint32_t address, uint64
 
     if ((address & UINT32_C(0xc0000000)) != UINT32_C(0x80000000)) {
 
-        invalidate_r4300_cached_code(r4300, address, 8);
+        //invalidate_r4300_cached_code(r4300, address, 8);
 
         address = virtual_to_physical_address(r4300, address, 1);
         if (address == 0) {
@@ -389,8 +389,8 @@ int r4300_write_aligned_dword(struct r4300_core* r4300, uint32_t address, uint64
         }
     }
 
-    invalidate_r4300_cached_code(r4300, address, 8);
-    invalidate_r4300_cached_code(r4300, address ^ UINT32_C(0x20000000), 8);
+    //invalidate_r4300_cached_code(r4300, address, 8);
+    //invalidate_r4300_cached_code(r4300, address ^ UINT32_C(0x20000000), 8);
 
     address &= UINT32_C(0x1ffffffc);
 
@@ -403,19 +403,6 @@ int r4300_write_aligned_dword(struct r4300_core* r4300, uint32_t address, uint64
 
 void invalidate_r4300_cached_code(struct r4300_core* r4300, uint32_t address, size_t size)
 {
-    if (r4300->emumode != EMUMODE_PURE_INTERPRETER)
-    {
-#ifdef NEW_DYNAREC
-        if (r4300->emumode == EMUMODE_DYNAREC)
-        {
-            invalidate_cached_code_new_dynarec(r4300, address, size);
-        }
-        else
-#endif
-        {
-            invalidate_cached_code_hacktarux(r4300, address, size);
-        }
-    }
 }
 
 
@@ -453,5 +440,5 @@ void generic_jump_to(struct r4300_core* r4300, uint32_t address)
 void savestates_load_set_pc(struct r4300_core* r4300, uint32_t pc)
 {
     generic_jump_to(r4300, pc);
-    invalidate_r4300_cached_code(r4300, 0, 0);
+    //invalidate_r4300_cached_code(r4300, 0, 0);
 }
