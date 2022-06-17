@@ -190,15 +190,16 @@ static void detour__osRestoreInt(uint32_t flags)
     //fflush(stdout);
 
     g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] |= flags;
-    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] = *cp0_next_interrupt;
-    
+    *r4300_cp0_cycle_count(&g_dev.r4300.cp0) += 7 * 2;
+    g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] = *r4300_cp0_next_interrupt(&g_dev.r4300.cp0) + *r4300_cp0_cycle_count(&g_dev.r4300.cp0);    
+
     //printf("g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]: %p\n", g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG]);
     //fflush(stdout);
 
 
     if (g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] & g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_CAUSE_REG] & UINT32_C(0xFF00))
     {
-        //*r4300_cp0_cycle_count(&g_dev.r4300.cp0) = g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] - g_dev.r4300.cp0.q.first->data.count;
+        *r4300_cp0_cycle_count(&g_dev.r4300.cp0) = g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_COUNT_REG] - g_dev.r4300.cp0.q.first->data.count;
         //r4300_check_interrupt(&g_dev.r4300, g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_STATUS_REG] & g_dev.r4300.new_dynarec_hot_state.cp0_regs[CP0_CAUSE_REG] & UINT32_C(0xFF00), 1); // ???
         
         event = alloc_node(&g_dev.r4300.cp0.q.pool);
