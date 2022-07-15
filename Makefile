@@ -145,6 +145,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       MESA = 1
    endif
    ifneq (,$(findstring rpi4,$(platform)))
+      GLES3 = 1
       MESA = 1
    endif
    ifeq ($(MESA), 1)
