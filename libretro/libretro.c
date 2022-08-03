@@ -369,65 +369,6 @@ static void setup_variables(void)
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
-// Deprecated with Core Option Categories
-static void set_variable_visibility(void)
-{
-   // For simplicity we create a prepared var per plugin, maybe create a macro for this?
-   struct retro_core_option_display option_display_gliden64;
-   struct retro_core_option_display option_display_angrylion;
-   struct retro_core_option_display option_display_parallel_rdp;
-
-   size_t i;
-   size_t num_options = 0;
-   char **values_buf = NULL;
-   struct retro_variable var;
-
-   // Show/hide options depending on Plugins (Active isn't relevant!)
-   var.key = CORE_NAME "-rdp-plugin";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      option_display_gliden64.visible = !strcmp(var.value, "gliden64");
-      option_display_angrylion.visible = !strcmp(var.value, "angrylion");
-      option_display_parallel_rdp.visible = !strcmp(var.value, "parallel");
-   } else {
-      option_display_gliden64.visible = option_display_angrylion.visible = option_display_parallel_rdp.visible = true;
-   }
-
-   // Determine number of options
-   for (;;)
-   {
-      if (!option_defs_us[num_options].key)
-         break;
-      num_options++;
-   }
-
-   // Copy parameters from option_defs_us array
-   for (i = 0; i < num_options; i++)
-   {
-      const char *key  = option_defs_us[i].key;
-      const char *hint = option_defs_us[i].info;
-      if(hint)
-      {
-         // Quick and dirty, its the only consistent naming
-         // Otherwise GlideN64 Setting keys will need to be broken again..
-         if(!!strstr(hint, "(GLN64)"))
-         {
-            option_display_gliden64.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_gliden64);
-         } else if(!!strstr(hint, "(AL)"))
-         {
-            option_display_angrylion.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_angrylion);
-         } else if(!!strstr(key, "parallel-rdp")) // Maybe unify it later?
-         {
-            option_display_parallel_rdp.key = key;
-            environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display_parallel_rdp);
-         }
-      }
-   }
-}
-
 static void cleanup_global_paths()
 {
     // Ensure potential leftovers are cleaned up
