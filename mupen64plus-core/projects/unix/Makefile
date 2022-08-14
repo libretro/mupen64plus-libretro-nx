@@ -135,21 +135,28 @@ ifneq ("$(filter aarch64,$(HOST_CPU))","")
     PIC ?= 1
     NEW_DYNAREC := 1
 endif
+ifneq ("$(filter riscv64,$(HOST_CPU))","")
+    CPU := RISCV64
+    ARCH_DETECTED := 64BITS
+    PIC ?= 1
+    NO_ASM := 1
+    $(warning Architecture "$(HOST_CPU)" not officially supported.)
+endif
 ifeq ("$(CPU)","NONE")
   $(error CPU type "$(HOST_CPU)" not supported.  Please file bug report at 'https://github.com/mupen64plus/mupen64plus-core/issues')
 endif
-
-# base CFLAGS, LDLIBS, and LDFLAGS
-OPTFLAGS ?= -O3 -flto
-WARNFLAGS ?= -Wall
-CFLAGS += -fno-strict-aliasing -fvisibility=hidden -I../../src -I../../src/asm_defines -DM64P_PARALLEL
-CXXFLAGS += -fvisibility-inlines-hidden
-LDLIBS +=  -lm
 
 # directory paths
 SRCDIR = ../../src
 OBJDIR = _obj$(POSTFIX)
 SUBDIR = ../../subprojects
+
+# base CFLAGS, LDLIBS, and LDFLAGS
+OPTFLAGS ?= -O3 -flto
+WARNFLAGS ?= -Wall
+CFLAGS += -fno-strict-aliasing -fvisibility=hidden -I$(SRCDIR) -I$(SRCDIR)/asm_defines -DM64P_PARALLEL
+CXXFLAGS += -fvisibility-inlines-hidden
+LDLIBS +=  -lm
 
 # Since we are building a shared library, we must compile with -fPIC on some architectures
 # On 32-bit x86 systems we do not want to use -fPIC because we don't have to and it has a big performance penalty on this arch
@@ -192,7 +199,7 @@ ifeq ($(OS), LINUX)
   LDFLAGS += -Wl,-Bsymbolic -shared -Wl,-export-dynamic -Wl,-soname,$(SONAME)
   LDLIBS += -ldl
   # only export api symbols
-  LDFLAGS += -Wl,-version-script,../../src/api/api_export.ver
+  LDFLAGS += -Wl,-version-script,$(SRCDIR)/api/api_export.ver
   ifeq ($(ARCH_DETECTED), 64BITS)
     ASFLAGS = -f elf64
   else
@@ -211,11 +218,12 @@ ifeq ($(OS), OSX)
     ASFLAGS = -f macho -d LEADING_UNDERSCORE
   endif
 
+  CXXFLAGS += '-stdlib=libc++'
   ifeq ($(CPU), X86)
     ifeq ($(ARCH_DETECTED), 64BITS)
-      CFLAGS += -pipe -arch x86_64 -mmacosx-version-min=10.6 -isysroot $(OSX_SDK_PATH)
+      CFLAGS += -pipe -arch x86_64 -mmacosx-version-min=10.7 -isysroot $(OSX_SDK_PATH)
     else
-      CFLAGS += -pipe -mmmx -msse -arch i686 -mmacosx-version-min=10.6 -isysroot $(OSX_SDK_PATH)
+      CFLAGS += -pipe -mmmx -msse -arch i686 -mmacosx-version-min=10.7 -isysroot $(OSX_SDK_PATH)
       ifneq ($(PROFILE), 1)
         CFLAGS += -fomit-frame-pointer
       endif
@@ -227,7 +235,7 @@ ifeq ($(OS), MINGW)
   TARGET = mupen64plus$(POSTFIX).dll
   LDFLAGS += -Wl,-Bsymbolic -shared -Wl,-export-all-symbols
   # only export api symbols
-  LDFLAGS += -Wl,-version-script,../../src/api/api_export.ver
+  LDFLAGS += -Wl,-version-script,$(SRCDIR)/api/api_export.ver
   LDLIBS += -lpthread
   ifeq ($(ARCH_DETECTED), 64BITS)
     ASFLAGS = -f win64 -d WIN64
@@ -241,7 +249,7 @@ ifeq ($(PIC), 1)
 endif
 
 # assembler also needs base include directories
-ASFLAGS += -I../../src/ -I../../src/asm_defines/
+ASFLAGS += -I$(SRCDIR) -I$(SRCDIR)/asm_defines/
 
 ifeq ($(CPU_ENDIANNESS), BIG)
   CFLAGS += -DM64P_BIG_ENDIAN
@@ -439,7 +447,7 @@ ifeq ($(PROFILE), 1)
 else
   ifeq ($(DEBUG), 1)
     CFLAGS += -g
-    OPTFLAGS = -O0
+    OPTFLAGS = -Og
     INSTALL_STRIP_FLAG ?= 
   else
     CFLAGS += -DNDEBUG
@@ -503,6 +511,7 @@ SOURCE = \
     $(SRCDIR)/device/cart/cart_rom.c \
     $(SRCDIR)/device/cart/eeprom.c \
     $(SRCDIR)/device/cart/flashram.c \
+    $(SRCDIR)/device/cart/is_viewer.c \
     $(SRCDIR)/device/cart/sram.c \
     $(SRCDIR)/device/controllers/game_controller.c \
     $(SRCDIR)/device/controllers/paks/biopak.c \
@@ -510,6 +519,7 @@ SOURCE = \
     $(SRCDIR)/device/controllers/paks/rumblepak.c \
     $(SRCDIR)/device/controllers/paks/transferpak.c \
     $(SRCDIR)/device/dd/dd_controller.c \
+    $(SRCDIR)/device/dd/disk.c \
     $(SRCDIR)/device/device.c \
     $(SRCDIR)/device/gb/gb_cart.c \
     $(SRCDIR)/device/gb/mbc3_rtc.c \
@@ -662,6 +672,10 @@ ifeq ($(LIRC), 1)
   LDLIBS += -llirc_client
 endif
 
+ifeq ($(KEYBINDINGS), 0)
+	CFLAGS += -DNO_KEYBINDINGS
+endif
+
 ifeq ($(DEBUGGER), 1)
   SOURCE += \
     $(SRCDIR)/debugger/dbg_debugger.c \
@@ -724,6 +738,7 @@ targets:
 	@echo "    OSD=(1|0)      == Enable/disable build of OpenGL On-screen display"
 	@echo "    NETPLAY=1      == Enable netplay functionality, requires SDL2_net"
 	@echo "    NEW_DYNAREC=1  == Replace dynamic recompiler with Ari64's experimental dynarec"
+	@echo "    KEYBINDINGS=0  == Disables the default keybindings"
 	@echo "    OPENCV=1       == Enable OpenCV support"
 	@echo "    POSTFIX=name   == String added to the name of the the build (default: '')"
 	@echo "  Install Options:"
@@ -749,9 +764,9 @@ install: $(TARGET)
 	$(INSTALL) -d "$(DESTDIR)$(LIBDIR)"
 	$(INSTALL) -m 0644 $(INSTALL_STRIP_FLAG) $(TARGET) "$(DESTDIR)$(LIBDIR)"
 	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)"
-	$(INSTALL) -m 0644 ../../data/* "$(DESTDIR)$(SHAREDIR)"
+	$(INSTALL) -m 0644 $(SRCDIR)/../data/* "$(DESTDIR)$(SHAREDIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INCDIR)"
-	$(INSTALL) -m 0644 ../../src/api/m64p_*.h "$(DESTDIR)$(INCDIR)"
+	$(INSTALL) -m 0644 $(SRCDIR)/api/m64p_*.h "$(DESTDIR)$(INCDIR)"
 	-$(LDCONFIG) "$(DESTDIR)$(LIBDIR)"
 	if [ ! -e "$(DESTDIR)$(LIBDIR)/$(SONAME)" ]; then ln -sf "$(TARGET)" "$(DESTDIR)$(LIBDIR)/$(SONAME)"; fi
 
@@ -779,8 +794,8 @@ $(ASM_DEFINES_OBJ): $(SRCDIR)/asm_defines/asm_defines.c
 
 # Script hackery for generating ASM include files for the new dynarec assembly code
 $(SRCDIR)/asm_defines/asm_defines_gas.h: $(SRCDIR)/asm_defines/asm_defines_nasm.h
-$(SRCDIR)/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ) ../../tools/gen_asm_script.sh
-	sh ../../tools/gen_asm_script.sh "$(SRCDIR)/asm_defines" "$(ASM_DEFINES_OBJ)"
+$(SRCDIR)/asm_defines/asm_defines_nasm.h: $(ASM_DEFINES_OBJ) $(SRCDIR)/../tools/gen_asm_script.sh
+	bash $(SRCDIR)/../tools/gen_asm_script.sh "$(SRCDIR)/asm_defines" "$(ASM_DEFINES_OBJ)"
 
 # standard build rules
 $(OBJDIR)/%.o: $(SRCDIR)/%.asm $(SRCDIR)/asm_defines/asm_defines_nasm.h

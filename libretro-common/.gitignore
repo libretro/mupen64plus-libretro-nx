@@ -1,5 +1,5 @@
 glsm/
-*.o
+*.[od]
 *.dll
 *.so
 *.dylib

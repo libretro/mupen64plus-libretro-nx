@@ -83,6 +83,7 @@ void init_device(struct device* dev,
     /* r4300 */
     unsigned int emumode,
     unsigned int count_per_op,
+    unsigned int count_per_op_denom_pot,
     int no_compiled_jump,
     int randomize_interrupt,
     uint32_t start_address,
@@ -150,6 +151,7 @@ void init_device(struct device* dev,
         { A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
         { A(MM_DD_ROM, 0x1ffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
         { A(MM_DOM2_ADDR2, 0x1ffff), M64P_MEM_FLASHRAMSTAT, { &dev->cart, RW(cart_dom2)  } },
+        { A(MM_IS_VIEWER, 0xfff), M64P_MEM_NOTHING, { &dev->is, RW(is_viewer) } },
         { A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) } },
         { A(MM_PIF_MEM, 0xffff), M64P_MEM_PIF, { &dev->pif, RW(pif_mem) } }
     };
@@ -177,7 +179,7 @@ void init_device(struct device* dev,
     init_rdram(&dev->rdram, mem_base_u32(base, MM_RDRAM_DRAM), dram_size, &dev->r4300);
 
     init_r4300(&dev->r4300, &dev->mem, &dev->mi, &dev->rdram, interrupt_handlers,
-            emumode, count_per_op, no_compiled_jump, randomize_interrupt, start_address);
+            emumode, count_per_op, count_per_op_denom_pot, no_compiled_jump, randomize_interrupt, start_address);
     init_rdp(&dev->dp, &dev->sp, &dev->mi, &dev->mem, &dev->rdram, &dev->r4300);
     init_rsp(&dev->sp, mem_base_u32(base, MM_RSP_MEM), &dev->mi, &dev->dp, &dev->ri);
     init_ai(&dev->ai, &dev->mi, &dev->ri, &dev->vi, aout, iaout);
@@ -235,6 +237,8 @@ void poweron_device(struct device* dev)
     poweron_pif(&dev->pif);
 
     poweron_cart(&dev->cart);
+
+    poweron_is_viewer(&dev->is);
 
     /* poweron for controllers */
     for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {

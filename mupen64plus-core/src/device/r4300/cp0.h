@@ -185,9 +185,10 @@ struct cp0
     unsigned int interrupt_unsafe_state;
 
     struct interrupt_queue q;
+    unsigned int next_interrupt;
+
 #ifndef NEW_DYNAREC
 	/* New dynarec uses a different memory layout */
-    unsigned int next_interrupt;
     int cycle_count;
 #endif
 
@@ -200,6 +201,7 @@ struct cp0
 
     uint32_t last_addr;
     unsigned int count_per_op;
+    unsigned int count_per_op_denom_pot;
 
     struct tlb tlb;
 };
@@ -214,7 +216,7 @@ struct cp0
     offsetof(struct new_dynarec_hot_state, cp0_regs))
 #endif
 
-void init_cp0(struct cp0* cp0, unsigned int count_per_op, struct new_dynarec_hot_state* new_dynarec_hot_state, const struct interrupt_handler* interrupt_handlers);
+void init_cp0(struct cp0* cp0, unsigned int count_per_op, unsigned int count_per_op_denom_pot, struct new_dynarec_hot_state* new_dynarec_hot_state, const struct interrupt_handler* interrupt_handlers);
 void poweron_cp0(struct cp0* cp0);
 
 uint32_t* r4300_cp0_regs(struct cp0* cp0);

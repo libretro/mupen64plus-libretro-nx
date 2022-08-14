@@ -11,6 +11,12 @@
 
 #define GRAPHICS_CONTEXT
 
+// Fix for C++11 Support
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 struct CachedTexture;
 
 namespace graphics {
@@ -23,8 +29,7 @@ namespace graphics {
 		ShaderProgramBinary,
 		ImageTextures,
 		IntegerTextures,
-		ClipControl,
-		FramebufferFetchDepth,
+		N64DepthWithFbFetchDepth,
 		FramebufferFetchColor,
 		TextureBarrier,
 		EglImage,
@@ -148,6 +153,8 @@ namespace graphics {
 
 		s32 getMaxTextureSize() const;
 
+		f32 getMaxAnisotropy() const;
+
 		struct BindImageTextureParameters {
 			ImageUnitParam imageUnit;
 			ObjectHandle texture;
@@ -247,8 +254,6 @@ namespace graphics {
 
 		ShaderProgram * createGammaCorrectionShader();
 
-		ShaderProgram * createOrientationCorrectionShader();
-
 		ShaderProgram * createFXAAShader();
 
 		TextDrawerShaderProgram * createTextDrawerShader();
@@ -287,6 +292,7 @@ namespace graphics {
 		f32 getMaxLineWidth();
 
 		/*---------------Misc-------------*/
+		s32 getMaxMSAALevel();
 
 		bool isError() const;
 
@@ -299,7 +305,6 @@ namespace graphics {
 		static bool ShaderProgramBinary;
 		static bool ImageTextures;
 		static bool IntegerTextures;
-		static bool ClipControl;
 		static bool FramebufferFetchDepth;
 		static bool FramebufferFetchColor;
 		static bool TextureBarrier;

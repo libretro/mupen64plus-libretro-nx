@@ -30,6 +30,9 @@ namespace glsl {
 				"void main()                                                    \n"
 				"{                                                              \n"
 				"  gl_Position = aRectPosition;									\n"
+				"  gl_Position.xy += uVertexOffset * vec2(gl_Position.w);		\n"
+				"  gl_Position.xy -= vec2(0.5*screenSizeDims) * gl_Position.ww;	\n"
+				"  gl_Position.xy /= vec2(0.5*screenSizeDims);					\n"
 				"}                                                              \n"
 				;
 		}
@@ -68,10 +71,10 @@ namespace glsl {
 				;
 
 			if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
-				if (_glinfo.imageTextures)
+				if (_glinfo.imageTextures && !_glinfo.n64DepthWithFbFetch)
 					m_part += "layout(binding = 2, r32f) highp uniform restrict readonly image2D uDepthImageZ;		\n";
 
-				if (_glinfo.ext_fetch) {
+				if (_glinfo.n64DepthWithFbFetch) {
 					m_part +=
 						"layout(location = 0) OUT lowp vec4 fragColor;	\n"
 						"layout(location = 1) inout highp vec4 depthZ;	\n"
@@ -100,14 +103,14 @@ namespace glsl {
 			} else {
 				// Either _glinfo.imageTextures or _glinfo.ext_fetch must be enabled when N64DepthCompare != 0
 				// see GLInfo::init()
-				if (_glinfo.imageTextures) {
+				if (_glinfo.n64DepthWithFbFetch) {
+					m_part +=
+						"  highp float bufZ = depthZ.r;	\n"
+						;
+				} else if (_glinfo.imageTextures) {
 					m_part +=
 						"  mediump ivec2 coord = ivec2(gl_FragCoord.xy);	\n"
 						"  highp float bufZ = imageLoad(uDepthImageZ,coord).r;	\n"
-						;
-				} else if (_glinfo.ext_fetch) {
-					m_part +=
-						"  highp float bufZ = depthZ.r;	\n"
 						;
 				}
 			}
@@ -127,9 +130,6 @@ namespace glsl {
 				"  fragColor = vec4(uFogColor.rgb, get_alpha());			\n"
 				"}															\n"
 				;
-
-			if (config.frameBufferEmulation.N64DepthCompare == Config::dcDisable && _glinfo.fetch_depth)
-				 m_part = "#extension GL_ARM_shader_framebuffer_fetch_depth_stencil : enable	\n" + m_part;
 		}
 	};
 
@@ -148,6 +148,9 @@ namespace glsl {
 					"#else																											\n"
 					"# define IN varying																							\n"
 					"# define OUT																									\n"
+					"#ifndef GL_FRAGMENT_PRECISION_HIGH																				\n"
+					"# define highp mediump																							\n"
+					"#endif																											\n"
 					"#endif // __VERSION __																							\n"
 					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);												\n"
 					"uniform lowp int uEnableAlphaTest;																				\n"
@@ -218,6 +221,9 @@ namespace glsl {
 					"#else																											\n"
 					"# define IN varying																							\n"
 					"# define OUT																									\n"
+					"#ifndef GL_FRAGMENT_PRECISION_HIGH																				\n"
+					"# define highp mediump																							\n"
+					"#endif																											\n"
 					"#endif // __VERSION __																							\n"
 					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);												\n"
 					"uniform lowp int uEnableAlphaTest;																				\n"
@@ -542,22 +548,6 @@ namespace glsl {
 		}
 	};
 
-	class OrientationCorrection : public ShaderPart
-	{
-	public:
-		OrientationCorrection(const opengl::GLInfo & _glinfo)
-		{
-			m_part =
-				"IN mediump vec2 vTexCoord0;													\n"
-				"uniform sampler2D uTex0;													\n"
-				"OUT lowp vec4 fragColor;													\n"
-				"void main()																\n"
-				"{																			\n"
-				"    fragColor = texture2D(uTex0, vec2(1.0 - vTexCoord0.x, 1.0 - vTexCoord0.y));       \n"
-			;
-		}
-	};
-
 	/*---------------TextDrawerShaderPart-------------*/
 
 	class TextDraw : public ShaderPart
@@ -647,6 +637,8 @@ namespace glsl {
 			m_locZlut = glGetUniformLocation(GLuint(m_program), "uZlutImage");
 			m_locTlut = glGetUniformLocation(GLuint(m_program), "uTlutImage");
 			m_locDepthImage = glGetUniformLocation(GLuint(m_program), "uDepthImage");
+			m_locVertexOffset = glGetUniformLocation(GLuint(m_program), "uVertexOffset");
+
 			m_useProgram->useProgram(graphics::ObjectHandle::null);
 		}
 
@@ -657,6 +649,9 @@ namespace glsl {
 			glUniform1i(m_locTlut, int(graphics::textureIndices::PaletteTex));
 			glUniform1i(m_locDepthImage, 0);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			const bool isNativeRes = config.frameBufferEmulation.nativeResFactor == 1 && config.video.multisampling == 0;
+			const float vertexOffset = isNativeRes ? 0.5f : 0.0f;
+			glUniform2f(m_locVertexOffset, vertexOffset, vertexOffset);
 			g_paletteTexture.update();
 		}
 
@@ -665,6 +660,7 @@ namespace glsl {
 		int m_locZlut;
 		int m_locTlut;
 		int m_locDepthImage;
+		int m_locVertexOffset;
 	};
 
 	/*---------------FXAAShader-------------*/
@@ -903,25 +899,6 @@ namespace glsl {
 		}
 	};
 
-	typedef SpecialShader<VertexShaderTexturedRect, OrientationCorrection> OrientationCorrectionShaderBase;
-
-	class OrientationCorrectionShader : public OrientationCorrectionShaderBase
-	{
-	public:
-		OrientationCorrectionShader(const opengl::GLInfo & _glinfo,
-			opengl::CachedUseProgram * _useProgram,
-			const ShaderPart * _vertexHeader,
-			const ShaderPart * _fragmentHeader,
-			const ShaderPart * _fragmentEnd)
-			: OrientationCorrectionShaderBase(_glinfo, _useProgram, _vertexHeader, _fragmentHeader, _fragmentEnd)
-		{
-			m_useProgram->useProgram(m_program);
-			const int texLoc = glGetUniformLocation(GLuint(m_program), "uTex0");
-			glUniform1i(texLoc, 0);
-			m_useProgram->useProgram(graphics::ObjectHandle::null);
-		}
-	};
-
 	/*---------------TexrectDrawerShader-------------*/
 
 	typedef SpecialShader<VertexShaderTexturedRect, TextDraw, graphics::TextDrawerShaderProgram> TextDrawerShaderBase;
@@ -1016,11 +993,6 @@ namespace glsl {
 	graphics::ShaderProgram * SpecialShadersFactory::createGammaCorrectionShader() const
 	{
 		return new GammaCorrectionShader(m_glinfo, m_useProgram, m_vertexHeader, m_fragmentHeader, m_fragmentEnd);
-	}
-
-	graphics::ShaderProgram * SpecialShadersFactory::createOrientationCorrectionShader() const
-	{
-		return new OrientationCorrectionShader(m_glinfo, m_useProgram, m_vertexHeader, m_fragmentHeader, m_fragmentEnd);
 	}
 
 	graphics::ShaderProgram * SpecialShadersFactory::createFXAAShader() const

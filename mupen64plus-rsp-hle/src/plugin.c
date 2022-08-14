@@ -179,28 +179,6 @@ EXPORT m64p_error CALL hlePluginShutdown(void)
 
 EXPORT unsigned int CALL hleDoRspCycles(unsigned int Cycles)
 {
-    /* Since RSP plugin API doesn't provide a "RomOpen" function
-     * we implement one with a flag inside DoRspCycle.
-     * once_per_rom is reset in RomClose. */
-    if (!g_hle.once_per_rom) {
-
-        /* Extract ROM product code so we can roughly identify ROM */
-        m64p_rom_header rom_header;
-        CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(rom_header), &rom_header);
-
-        /* XXX: rom_header structure is WRONG,
-         * so we recompose proper product code from exposed m64p_rom_header */
-        g_hle.product_code
-            = ((uint32_t)rom_header.Manufacturer_ID & UINT32_C(0xff000000))
-            | ((uint32_t)rom_header.Cartridge_ID & UINT32_C(0x00ff)) << 16
-            | ((uint32_t)rom_header.Cartridge_ID & UINT32_C(0xff00))
-            | ((uint32_t)rom_header.Country_code & UINT32_C(0x00ff));
-
-        HleWarnMessage(g_hle.user_defined, "Product Code = %08x", g_hle.product_code);
-
-        g_hle.once_per_rom = 1;
-    }
-
     hle_execute(&g_hle);
     return Cycles;
 }
@@ -243,9 +221,19 @@ EXPORT void CALL hleInitiateRSP(RSP_INFO Rsp_Info, unsigned int* CycleCount)
 
     g_hle.hle_gfx = 1;
     g_hle.hle_aud = 0;
+    
+    /* notify fallback plugin */
+    /*if (l_InitiateRSP) {
+        l_InitiateRSP(Rsp_Info, CycleCount);
+    }*/
 }
 
 EXPORT void CALL hleRomClosed(void)
 {
-    /* do nothing */
+     g_hle.cached_ucodes.count = 0;
+     
+    /* notify fallback plugin */
+    /*if (l_RomClosed) {
+        l_RomClosed();
+    }*/
 }

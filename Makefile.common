@@ -55,6 +55,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/cart/cart_rom.c \
 	$(CORE_DIR)/src/device/cart/eeprom.c \
 	$(CORE_DIR)/src/device/cart/flashram.c \
+	$(CORE_DIR)/src/device/cart/is_viewer.c \
 	$(CORE_DIR)/src/device/cart/sram.c \
 	$(CORE_DIR)/src/device/controllers/game_controller.c \
 	$(CORE_DIR)/src/device/controllers/paks/biopak.c \
@@ -62,6 +63,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
 	$(CORE_DIR)/src/device/controllers/paks/transferpak.c \
 	$(CORE_DIR)/src/device/dd/dd_controller.c \
+	$(CORE_DIR)/src/device/dd/disk.c \
 	$(CORE_DIR)/src/device/device.c \
 	$(CORE_DIR)/src/device/gb/gb_cart.c \
 	$(CORE_DIR)/src/device/gb/mbc3_rtc.c \
@@ -243,7 +245,6 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path_io.c \
 	$(LIBRETRO_COMM_DIR)/time/rtime.c \
-	$(LIBRETRO_COMM_DIR)/hash/rhash.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
@@ -278,7 +279,6 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/gDP.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/GLideN64.cpp                                                         \
     $(VIDEODIR_GLIDEN64)/src/gSP.cpp                                                              \
-    $(VIDEODIR_GLIDEN64)/src/Keys.cpp                                                             \
     $(VIDEODIR_GLIDEN64)/src/N64.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/TextDrawer.cpp                                                       \
     $(VIDEODIR_GLIDEN64)/src/PaletteTexture.cpp                                                   \
@@ -329,6 +329,12 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramBuilder.cpp          \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramImpl.cpp             \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactory.cpp   \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactoryAccurate.cpp \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactoryFast.cpp     \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramUniformFactoryCommon.cpp   \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramBuilderCommon.cpp    \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramBuilderAccurate.cpp  \
+    $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_CombinerProgramBuilderFast.cpp      \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_FXAA.cpp                            \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_ShaderStorage.cpp                   \
     $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GLSL/glsl_SpecialShadersFactory.cpp           \
@@ -363,13 +369,8 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/MupenPlusPluginAPI.cpp                                               \
 	$(VIDEODIR_GLIDEN64)/src/mupenplus/MupenPlusAPIImpl.cpp                                       \
 	$(ROOT_DIR)/custom/GLideN64/mupenplus/Config_mupenplus.cpp                                    \
-	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp
-ifneq (,$(findstring android,$(platform)))
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/GLideNHQ/txWidestringWrapper.cpp \
-		$(VIDEODIR_GLIDEN64)/src/Log_android.cpp
-else
-	SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Log.cpp
-endif
+	$(ROOT_DIR)/custom/GLideN64/mupenplus/CommonAPIImpl_mupenplus.cpp							  \
+	$(VIDEODIR_GLIDEN64)/src/Log.cpp
 
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TextureFilters.cpp \
@@ -382,6 +383,8 @@ SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilter.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxFilterExport.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxHiResCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxHiResNoCache.cpp \
+	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxHiResLoader.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxImage.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxQuantize.cpp \
 	$(VIDEODIR_GLIDEN64)/src/GLideNHQ/TxReSample.cpp \

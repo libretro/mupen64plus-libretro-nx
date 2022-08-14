@@ -42,9 +42,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(HAVE_LIBNX)
 #include <malloc.h>
 #endif
+
 
 #ifdef DBG
 enum
@@ -242,17 +243,17 @@ void* init_mem_base(void)
     void* mem_base;
 
     /* First try the full mem base alloc */
-#ifdef HAVE_PARALLEL_RDP
 #ifdef _WIN32
     mem_base = _aligned_malloc(MB_MAX_SIZE_FULL, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT);
 #else
-    if (posix_memalign(&mem_base, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL) < 0)
+#ifdef HAVE_LIBNX
+    if (!(mem_base = memalign(MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL)))
         mem_base = NULL;
-#endif
 #else
-    mem_base = malloc(MB_MAX_SIZE_FULL);
+    if (posix_memalign(&mem_base, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL) != 0)
+        mem_base = NULL;
+#endif // HAVE_LIBNX
 #endif
-
     if (mem_base == NULL) {
         /* if it failed, try the compressed mem base alloc */
         mem_base = malloc(MB_MAX_SIZE);
@@ -274,11 +275,12 @@ void* init_mem_base(void)
 
 void release_mem_base(void* mem_base)
 {
-#if defined(HAVE_PARALLEL_RDP) && defined(_WIN32)
-    _aligned_free(MEM_BASE_PTR(mem_base));
-#else
-    free(MEM_BASE_PTR(mem_base));
+#ifdef _WIN32
+    if (MEM_BASE_MODE(mem_base) == 0)
+        _aligned_free(MEM_BASE_PTR(mem_base));
+    else
 #endif
+        free(MEM_BASE_PTR(mem_base));
 }
 
 uint32_t* mem_base_u32(void* mem_base, uint32_t address)

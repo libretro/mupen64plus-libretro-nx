@@ -20,6 +20,9 @@ struct FrameBuffer;
 #define VERTBUFF_SIZE 256U
 #define ELEMBUFF_SIZE 1024U
 
+constexpr f32 SCREEN_SIZE_DIM = 640.0f;
+constexpr u32 MIPMAP_TILE_WIDTH = 256u;
+
 enum class DrawingState
 {
 	Non,
@@ -34,6 +37,7 @@ struct RectVertex
 {
 	float x, y, z, w;
 	float s0, t0, s1, t1;
+	float bc0, bc1;
 };
 
 typedef std::chrono::milliseconds Milliseconds;
@@ -128,10 +132,7 @@ public:
 
 	int getTrianglesCount() const { return triangles.num; }
 
-	bool isClipped(u32 _v0, u32 _v1, u32 _v2) const
-	{
-		return (triangles.vertices[_v0].clip & triangles.vertices[_v1].clip & triangles.vertices[_v2].clip) != 0;
-	}
+	bool isClipped(u32 _v0, u32 _v1, u32 _v2) const;
 
 	bool isRejected(u32 _v0, u32 _v1, u32 _v2) const;
 
@@ -160,6 +161,19 @@ public:
 
 	void setBlendMode(bool _forceLegacyBlending = false) const;
 
+	void clearStatistics() { m_statistics.clear(); }
+
+	struct Statistics {
+		u32 fillRects = 0;
+		u32 texRects = 0;
+		u32 clippedTris = 0;
+		u32 rejectedTris = 0;
+		u32 culledTris = 0;
+		u32 drawnTris = 0;
+		u32 lines = 0;
+		void clear();
+	};
+
 private:
 	friend class DisplayWindow;
 	friend TexrectDrawer;
@@ -179,8 +193,7 @@ private:
 	void _ordinaryBlending() const;
 	void _dualSourceBlending() const;
 	void _updateCullFace() const;
-	void _updateViewport() const;
-	void _updateScreenCoordsViewport(const FrameBuffer * _pBuffer = nullptr) const;
+	void _updateViewport(const FrameBuffer * _pBuffer = nullptr, const f32 scale = 0.0f) const;
 	void _updateDepthUpdate() const;
 	void _updateDepthCompare() const;
 	void _updateTextures() const;
@@ -215,4 +228,5 @@ private:
 	bool m_bBGMode;
 	TexrectDrawer m_texrectDrawer;
 	OSDMessages m_osdMessages;
+	mutable Statistics m_statistics;
 };

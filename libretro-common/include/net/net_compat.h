@@ -116,16 +116,8 @@ struct SceNetInAddr inet_aton(const char *ip_addr);
 #include <netdb.h>
 #include <fcntl.h>
 
-#if defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-#include <cell/sysmodule.h>
-#include <netex/net.h>
+#if !defined(__PSL1GHT__) && defined(__PS3__)
 #include <netex/libnetctl.h>
-#include <sys/timer.h>
-
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK SYS_NET_EWOULDBLOCK
-#endif
-
 #else
 #include <signal.h>
 #endif
@@ -155,8 +147,8 @@ static INLINE bool isagain(int bytes)
    if (WSAGetLastError() != WSAEWOULDBLOCK)
       return false;
    return true;
-#elif defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-   return (sys_net_errno == SYS_NET_EWOULDBLOCK) || (sys_net_errno == SYS_NET_EAGAIN);//35
+#elif !defined(__PSL1GHT__) && defined(__PS3__) 
+   return (sys_net_errno == SYS_NET_EWOULDBLOCK) || (sys_net_errno == SYS_NET_EAGAIN);
 #elif defined(VITA)
    return (bytes<0 && (bytes == SCE_NET_ERROR_EAGAIN || bytes == SCE_NET_ERROR_EWOULDBLOCK));
 #elif defined(WIIU)
@@ -165,6 +157,11 @@ static INLINE bool isagain(int bytes)
    return (bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
 #endif
 }
+
+#ifdef WIIU
+#define WIIU_RCVBUF (128 * 2 * 1024)
+#define WIIU_SNDBUF (128 * 2 * 1024)
+#endif
 
 #ifdef _XBOX
 #define socklen_t int

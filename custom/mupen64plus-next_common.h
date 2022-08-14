@@ -83,6 +83,8 @@ extern void gln64_thr_gl_invoke_command_loop();
 extern bool threaded_gl_safe_shutdown;
 
 // Core options
+extern uint32_t CoreOptionCategoriesSupported;
+extern uint32_t CoreOptionUpdateDisplayCbSupported;
 // GLN64
 extern uint32_t bilinearMode;
 extern uint32_t EnableHybridFilter;
@@ -91,12 +93,15 @@ extern uint32_t EnableDitheringQuantization;
 extern uint32_t RDRAMImageDitheringMode;
 extern uint32_t EnableHWLighting;
 extern uint32_t CorrectTexrectCoords;
+extern uint32_t EnableTexCoordBounds;
+extern uint32_t EnableInaccurateTextureCoordinates;
 extern uint32_t enableNativeResTexrects;
 extern uint32_t enableLegacyBlending;
 extern uint32_t EnableCopyColorToRDRAM;
 extern uint32_t EnableCopyDepthToRDRAM;
 extern uint32_t AspectRatio;
 extern uint32_t MaxTxCacheSize;
+extern uint32_t MaxHiResTxVramLimit;
 extern uint32_t txFilterMode;
 extern uint32_t txEnhancementMode;
 extern uint32_t txHiresEnable;
@@ -112,6 +117,7 @@ extern uint32_t EnableFrameDuping;
 extern uint32_t EnableLODEmulation;
 extern uint32_t EnableFullspeed;
 extern uint32_t CountPerOp;
+extern uint32_t CountPerOpDenomPot;
 extern uint32_t CountPerScanlineOverride;
 extern uint32_t BackgroundMode;
 extern uint32_t EnableEnhancedTextureStorage;

@@ -149,6 +149,7 @@ extern "C" void Config_LoadConfig()
 
 	config.texture.bilinearMode = bilinearMode;
 	config.generalEmulation.enableHybridFilter = EnableHybridFilter;
+	config.generalEmulation.enableInaccurateTextureCoordinates = EnableInaccurateTextureCoordinates;	
 	config.generalEmulation.enableDitheringPattern = EnableDitheringPattern;
 	config.generalEmulation.enableDitheringQuantization = EnableDitheringQuantization;
 	config.generalEmulation.rdramImageDitheringMode = RDRAMImageDitheringMode;
@@ -199,6 +200,7 @@ extern "C" void Config_LoadConfig()
 	config.frameBufferEmulation.overscanPAL.bottom = OverscanBottom;
 
 	config.graphics2D.correctTexrectCoords = CorrectTexrectCoords;
+	config.graphics2D.enableTexCoordBounds = EnableTexCoordBounds;
 	config.graphics2D.enableNativeResTexrects = enableNativeResTexrects;
 
 	config.graphics2D.bgMode = BackgroundMode;
@@ -206,6 +208,7 @@ extern "C" void Config_LoadConfig()
 	config.textureFilter.txEnhancedTextureFileStorage = EnableEnhancedTextureStorage;
 	config.textureFilter.txHresAltCRC = EnableHiResAltCRC;
 	config.textureFilter.txHiresTextureFileStorage = EnableEnhancedHighResStorage;
+	config.textureFilter.txHiresVramLimit = MaxHiResTxVramLimit;
 	config.frameBufferEmulation.nativeResFactor = EnableNativeResFactor;
 
 	config.generalEmulation.hacks = hacks;
