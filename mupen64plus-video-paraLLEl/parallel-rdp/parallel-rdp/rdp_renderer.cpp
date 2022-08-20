@@ -1397,6 +1397,11 @@ void Renderer::fixup_triangle_setup(TriangleSetup &setup) const
 		setup.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_KEEP_ODD_BIT) ?
 		               TRIANGLE_SETUP_INTERLACE_KEEP_ODD_BIT : 0;
 	}
+
+	// Span size is inclusive, not exclusive.
+	// Rasterization is based on X range directly.
+	if ((stream.static_raster_state.flags & (RASTERIZATION_COPY_BIT | RASTERIZATION_FILL_BIT)) != 0)
+		setup.flags |= TRIANGLE_SETUP_FILL_COPY_RASTER_BIT;
 }
 
 void Renderer::draw_shaded_primitive(TriangleSetup &setup, const AttributeSetup &attr)
@@ -3498,7 +3503,7 @@ bool Renderer::supports_subgroup_size_control(uint32_t minimum_size, uint32_t ma
 void Renderer::PipelineExecutor::perform_work(const Vulkan::DeferredPipelineCompile &compile) const
 {
 	auto start_ts = device->write_calibrated_timestamp();
-	Vulkan::CommandBuffer::build_compute_pipeline(device, compile);
+	Vulkan::CommandBuffer::build_compute_pipeline(device, compile, Vulkan::CommandBuffer::CompileMode::AsyncThread);
 	auto end_ts = device->write_calibrated_timestamp();
 	device->register_time_interval("RDP Pipeline", std::move(start_ts), std::move(end_ts),
 	                               "pipeline-compilation", std::to_string(compile.hash));

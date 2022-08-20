@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -118,13 +118,7 @@ static inline VkAccessFlags image_usage_to_possible_access(VkImageUsageFlags usa
 static inline uint32_t image_num_miplevels(const VkExtent3D &extent)
 {
 	uint32_t size = std::max(std::max(extent.width, extent.height), extent.depth);
-	uint32_t levels = 0;
-	while (size)
-	{
-		levels++;
-		size >>= 1;
-	}
-	return levels;
+	return Util::floor_log2(size) + 1;
 }
 
 static inline VkFormatFeatureFlags image_usage_to_features(VkImageUsageFlags usage)
@@ -161,7 +155,8 @@ enum ImageMiscFlagBits
 	IMAGE_MISC_VERIFY_FORMAT_FEATURE_SAMPLED_LINEAR_FILTER_BIT = 1 << 7,
 	IMAGE_MISC_LINEAR_IMAGE_IGNORE_DEVICE_LOCAL_BIT = 1 << 8,
 	IMAGE_MISC_FORCE_NO_DEDICATED_BIT = 1 << 9,
-	IMAGE_MISC_NO_DEFAULT_VIEWS_BIT = 1 << 10
+	IMAGE_MISC_NO_DEFAULT_VIEWS_BIT = 1 << 10,
+	IMAGE_MISC_EXTERNAL_MEMORY_BIT = 1 << 11
 };
 using ImageMiscFlags = uint32_t;
 
@@ -175,7 +170,7 @@ class Image;
 
 struct ImageViewCreateInfo
 {
-	Image *image = nullptr;
+	const Image *image = nullptr;
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	unsigned base_level = 0;
 	unsigned levels = VK_REMAINING_MIP_LEVELS;
@@ -184,7 +179,7 @@ struct ImageViewCreateInfo
 	VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 	ImageViewMiscFlags misc = 0;
 	VkComponentMapping swizzle = {
-			VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
+		VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
 	};
 };
 
@@ -276,15 +271,14 @@ public:
 		return *info.image;
 	}
 
-	Image &get_image()
-	{
-		return *info.image;
-	}
-
 	const ImageViewCreateInfo &get_create_info() const
 	{
 		return info;
 	}
+
+	unsigned get_view_width() const;
+	unsigned get_view_height() const;
+	unsigned get_view_depth() const;
 
 private:
 	Device *device;
@@ -325,12 +319,13 @@ struct ImageCreateInfo
 	ImageMiscFlags misc = 0;
 	VkImageLayout initial_layout = VK_IMAGE_LAYOUT_GENERAL;
 	VkComponentMapping swizzle = {
-			VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
+		VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
 	};
 	const DeviceAllocation **memory_aliases = nullptr;
 	unsigned num_memory_aliases = 0;
 	const ImmutableYcbcrConversion *ycbcr_conversion = nullptr;
 	void *pnext = nullptr;
+	ExternalHandle external;
 
 	static ImageCreateInfo immutable_image(const TextureFormatLayout &layout)
 	{
@@ -600,6 +595,8 @@ public:
 	{
 		return surface_transform;
 	}
+
+	ExternalHandle export_handle();
 
 private:
 	friend class Util::ObjectPool<Image>;
