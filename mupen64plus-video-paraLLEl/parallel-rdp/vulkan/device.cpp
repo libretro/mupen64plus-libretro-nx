@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -100,66 +100,147 @@ Device::Device()
 #endif
 }
 
-Semaphore Device::request_legacy_semaphore()
+Semaphore Device::request_semaphore(VkSemaphoreTypeKHR type, VkSemaphore vk_semaphore, bool transfer_ownership)
 {
-	LOCK();
-	auto semaphore = managers.semaphore.request_cleared_semaphore();
-	Semaphore ptr(handle_pool.semaphores.allocate(this, semaphore, false));
+	if (type == VK_SEMAPHORE_TYPE_TIMELINE_KHR && !ext.timeline_semaphore_features.timelineSemaphore)
+	{
+		LOGE("Timeline semaphores not supported.\n");
+		return Semaphore{};
+	}
+
+	if (vk_semaphore == VK_NULL_HANDLE)
+	{
+		if (type == VK_SEMAPHORE_TYPE_BINARY_KHR)
+		{
+			LOCK();
+			vk_semaphore = managers.semaphore.request_cleared_semaphore();
+		}
+		else
+		{
+			VkSemaphoreTypeCreateInfoKHR type_info = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO_KHR };
+			VkSemaphoreCreateInfo info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+			info.pNext = &type_info;
+			type_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE_KHR;
+			type_info.initialValue = 0;
+			if (table->vkCreateSemaphore(device, &info, nullptr, &vk_semaphore) != VK_SUCCESS)
+			{
+				LOGE("Failed to create semaphore.\n");
+				return Semaphore{};
+			}
+		}
+		transfer_ownership = true;
+	}
+
+	if (type == VK_SEMAPHORE_TYPE_BINARY_KHR)
+	{
+		Semaphore ptr(handle_pool.semaphores.allocate(this, vk_semaphore, false, transfer_ownership));
+		return ptr;
+	}
+	else
+	{
+		Semaphore ptr(handle_pool.semaphores.allocate(this, 0, vk_semaphore, transfer_ownership));
+		ptr->set_proxy_timeline();
+		return ptr;
+	}
+}
+
+Semaphore Device::request_timeline_semaphore_as_binary(const SemaphoreHolder &holder, uint64_t value)
+{
+	VK_ASSERT(holder.get_semaphore_type() == VK_SEMAPHORE_TYPE_TIMELINE_KHR);
+	VK_ASSERT(holder.is_proxy_timeline());
+	Semaphore ptr(handle_pool.semaphores.allocate(this, value, holder.get_semaphore(), false));
 	return ptr;
+}
+
+Semaphore Device::request_semaphore_external(VkSemaphoreTypeKHR type,
+                                             VkExternalSemaphoreHandleTypeFlagBits handle_type)
+{
+	if (type == VK_SEMAPHORE_TYPE_TIMELINE_KHR && !ext.timeline_semaphore_features.timelineSemaphore)
+	{
+		LOGE("Timeline semaphores not supported.\n");
+		return Semaphore{};
+	}
+
+	if (!ext.supports_external)
+	{
+		LOGE("External semaphores not supported.\n");
+		return Semaphore{};
+	}
+
+	VkSemaphoreTypeCreateInfoKHR type_info = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO_KHR };
+	type_info.semaphoreType = type;
+	VkExternalSemaphoreFeatureFlags features;
+
+	{
+		VkExternalSemaphoreProperties props = { VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES };
+		VkPhysicalDeviceExternalSemaphoreInfo info = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO };
+		info.handleType = handle_type;
+
+		// Workaround AMD Windows bug where it reports TIMELINE as not supported.
+		// D3D12_FENCE used to be BINARY type before timelines were introduced to Vulkan.
+		if (type != VK_SEMAPHORE_TYPE_BINARY_KHR && handle_type != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT)
+			info.pNext = &type_info;
+		vkGetPhysicalDeviceExternalSemaphoreProperties(gpu, &info, &props);
+
+		features = props.externalSemaphoreFeatures;
+
+		if (!features)
+		{
+			LOGE("External semaphore handle type #%x is not supported.\n", handle_type);
+			return Semaphore{};
+		}
+	}
+
+	VkSemaphoreCreateInfo info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+	VkExportSemaphoreCreateInfo export_info = { VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO };
+
+	if ((features & VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT) != 0)
+	{
+		export_info.handleTypes = handle_type;
+		export_info.pNext = info.pNext;
+		info.pNext = &export_info;
+	}
+
+	if (type != VK_SEMAPHORE_TYPE_BINARY_KHR)
+	{
+		type_info.pNext = info.pNext;
+		info.pNext = &type_info;
+	}
+
+	VkSemaphore semaphore;
+	if (table->vkCreateSemaphore(device, &info, nullptr, &semaphore) != VK_SUCCESS)
+	{
+		LOGE("Failed to create external semaphore.\n");
+		return Semaphore{};
+	}
+
+	if (type == VK_SEMAPHORE_TYPE_TIMELINE_KHR)
+	{
+		Semaphore ptr(handle_pool.semaphores.allocate(this, 0, semaphore, true));
+		ptr->set_external_object_compatible(handle_type, features);
+		ptr->set_proxy_timeline();
+		return ptr;
+	}
+	else
+	{
+		Semaphore ptr(handle_pool.semaphores.allocate(this, semaphore, false, true));
+		ptr->set_external_object_compatible(handle_type, features);
+		return ptr;
+	}
 }
 
 Semaphore Device::request_proxy_semaphore()
 {
-	LOCK();
 	Semaphore ptr(handle_pool.semaphores.allocate(this));
 	return ptr;
 }
 
-Semaphore Device::request_external_semaphore(VkSemaphore semaphore, bool signalled)
-{
-	LOCK();
-	VK_ASSERT(semaphore);
-	Semaphore ptr(handle_pool.semaphores.allocate(this, semaphore, signalled));
-	return ptr;
-}
-
-#ifndef _WIN32
-Semaphore Device::request_imported_semaphore(int fd, VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type)
-{
-	LOCK();
-	if (!ext.supports_external)
-		return {};
-
-	VkExternalSemaphorePropertiesKHR props = { VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR };
-	VkPhysicalDeviceExternalSemaphoreInfoKHR info = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHR };
-	info.handleType = handle_type;
-
-	vkGetPhysicalDeviceExternalSemaphorePropertiesKHR(gpu, &info, &props);
-	if ((props.externalSemaphoreFeatures & VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR) == 0)
-		return Semaphore(nullptr);
-
-	auto semaphore = managers.semaphore.request_cleared_semaphore();
-
-	VkImportSemaphoreFdInfoKHR import = { VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHR };
-	import.fd = fd;
-	import.semaphore = semaphore;
-	import.handleType = handle_type;
-	import.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR;
-	Semaphore ptr(handle_pool.semaphores.allocate(this, semaphore, false));
-
-	if (table->vkImportSemaphoreFdKHR(device, &import) != VK_SUCCESS)
-		return Semaphore(nullptr);
-
-	ptr->signal_external();
-	ptr->destroy_on_consume();
-	return ptr;
-}
-#endif
-
 void Device::add_wait_semaphore(CommandBuffer::Type type, Semaphore semaphore, VkPipelineStageFlags stages, bool flush)
 {
+	VK_ASSERT(!semaphore->is_proxy_timeline());
+
 	LOCK();
-	add_wait_semaphore_nolock(get_physical_queue_type(type), semaphore, stages, flush);
+	add_wait_semaphore_nolock(get_physical_queue_type(type), std::move(semaphore), stages, flush);
 }
 
 void Device::add_wait_semaphore_nolock(QueueIndices physical_type, Semaphore semaphore, VkPipelineStageFlags stages,
@@ -175,7 +256,7 @@ void Device::add_wait_semaphore_nolock(QueueIndices physical_type, Semaphore sem
 		VK_ASSERT(sem.get() != semaphore.get());
 #endif
 
-	semaphore->signal_pending_wait();
+	semaphore->set_pending_wait();
 	data.wait_semaphores.push_back(semaphore);
 	data.wait_stages.push_back(stages);
 	data.need_fence = true;
@@ -303,11 +384,7 @@ Shader *Device::request_shader(const uint32_t *data, size_t size,
                                const ResourceLayout *layout,
                                const ImmutableSamplerBank *sampler_bank)
 {
-	Util::Hasher hasher;
-	hasher.data(data, size);
-	ImmutableSamplerBank::hash(hasher, sampler_bank);
-
-	auto hash = hasher.get();
+	auto hash = Shader::hash(data, size, sampler_bank);
 	auto *ret = shaders.find(hash);
 	if (!ret)
 		ret = shaders.emplace_yield(hash, hash, this, data, size, layout, sampler_bank);
@@ -446,7 +523,8 @@ void Device::bake_program(Program &program)
 			layout.sets[set].storage_image_mask |= shader_layout.sets[set].storage_image_mask;
 			layout.sets[set].uniform_buffer_mask |= shader_layout.sets[set].uniform_buffer_mask;
 			layout.sets[set].storage_buffer_mask |= shader_layout.sets[set].storage_buffer_mask;
-			layout.sets[set].sampled_buffer_mask |= shader_layout.sets[set].sampled_buffer_mask;
+			layout.sets[set].sampled_texel_buffer_mask |= shader_layout.sets[set].sampled_texel_buffer_mask;
+			layout.sets[set].storage_texel_buffer_mask |= shader_layout.sets[set].storage_texel_buffer_mask;
 			layout.sets[set].input_attachment_mask |= shader_layout.sets[set].input_attachment_mask;
 			layout.sets[set].sampler_mask |= shader_layout.sets[set].sampler_mask;
 			layout.sets[set].separate_image_mask |= shader_layout.sets[set].separate_image_mask;
@@ -473,7 +551,8 @@ void Device::bake_program(Program &program)
 					shader_layout.sets[set].storage_image_mask |
 					shader_layout.sets[set].uniform_buffer_mask|
 					shader_layout.sets[set].storage_buffer_mask |
-					shader_layout.sets[set].sampled_buffer_mask |
+					shader_layout.sets[set].sampled_texel_buffer_mask |
+					shader_layout.sets[set].storage_texel_buffer_mask |
 					shader_layout.sets[set].input_attachment_mask |
 					shader_layout.sets[set].sampler_mask |
 					shader_layout.sets[set].separate_image_mask;
@@ -556,9 +635,10 @@ void Device::bake_program(Program &program)
 bool Device::init_pipeline_cache(const uint8_t *data, size_t size)
 {
 	static const auto uuid_size = sizeof(gpu_props.pipelineCacheUUID);
+	static const auto hash_size = sizeof(Util::Hash);
 
 	VkPipelineCacheCreateInfo info = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-	if (!data || size < uuid_size)
+	if (!data || size < uuid_size + hash_size)
 	{
 		LOGI("Creating a fresh pipeline cache.\n");
 	}
@@ -568,9 +648,24 @@ bool Device::init_pipeline_cache(const uint8_t *data, size_t size)
 	}
 	else
 	{
-		info.initialDataSize = size - uuid_size;
-		info.pInitialData = data + uuid_size;
-		LOGI("Initializing pipeline cache.\n");
+		Util::Hash reference_hash;
+		memcpy(&reference_hash, data + uuid_size, sizeof(reference_hash));
+
+		info.initialDataSize = size - uuid_size - hash_size;
+		data += uuid_size + hash_size;
+		info.pInitialData = data;
+
+		Util::Hasher h;
+		h.data(data, info.initialDataSize);
+
+		if (h.get() == reference_hash)
+			LOGI("Initializing pipeline cache.\n");
+		else
+		{
+			LOGW("Pipeline cache is corrupt, creating a fresh cache.\n");
+			info.pInitialData = nullptr;
+			info.initialDataSize = 0;
+		}
 	}
 
 	if (pipeline_cache != VK_NULL_HANDLE)
@@ -579,35 +674,12 @@ bool Device::init_pipeline_cache(const uint8_t *data, size_t size)
 	return table->vkCreatePipelineCache(device, &info, nullptr, &pipeline_cache) == VK_SUCCESS;
 }
 
-static inline char to_hex(uint8_t v)
-{
-	if (v < 10)
-		return char('0' + v);
-	else
-		return char('a' + (v - 10));
-}
-
-string Device::get_pipeline_cache_string() const
-{
-	string res;
-	res.reserve(sizeof(gpu_props.pipelineCacheUUID) * 2);
-
-	for (auto &c : gpu_props.pipelineCacheUUID)
-	{
-		res += to_hex(uint8_t((c >> 4) & 0xf));
-		res += to_hex(uint8_t(c & 0xf));
-	}
-
-	return res;
-}
-
 void Device::init_pipeline_cache()
 {
 #ifdef GRANITE_VULKAN_FILESYSTEM
 	if (!system_handles.filesystem)
 		return;
-	auto file = system_handles.filesystem->open(Util::join("cache://pipeline_cache_", get_pipeline_cache_string(), ".bin"),
-	                                            Granite::FileMode::ReadOnly);
+	auto file = system_handles.filesystem->open("cache://pipeline_cache.bin", Granite::FileMode::ReadOnly);
 	if (file)
 	{
 		auto size = file->get_size();
@@ -626,6 +698,7 @@ size_t Device::get_pipeline_cache_size()
 		return 0;
 
 	static const auto uuid_size = sizeof(gpu_props.pipelineCacheUUID);
+	static const auto hash_size = sizeof(Util::Hash);
 	size_t size = 0;
 	if (table->vkGetPipelineCacheData(device, pipeline_cache, &size, nullptr) != VK_SUCCESS)
 	{
@@ -633,7 +706,7 @@ size_t Device::get_pipeline_cache_size()
 		return 0;
 	}
 
-	return size + uuid_size;
+	return size + uuid_size + hash_size;
 }
 
 bool Device::get_pipeline_cache_data(uint8_t *data, size_t size)
@@ -642,18 +715,26 @@ bool Device::get_pipeline_cache_data(uint8_t *data, size_t size)
 		return false;
 
 	static const auto uuid_size = sizeof(gpu_props.pipelineCacheUUID);
-	if (size < uuid_size)
+	static const auto hash_size = sizeof(Util::Hash);
+	if (size < uuid_size + hash_size)
 		return false;
 
-	size -= uuid_size;
+	auto *hash_data = data + uuid_size;
+
+	size -= uuid_size + hash_size;
 	memcpy(data, gpu_props.pipelineCacheUUID, uuid_size);
-	data += uuid_size;
+	data = hash_data + hash_size;
 
 	if (table->vkGetPipelineCacheData(device, pipeline_cache, &size, data) != VK_SUCCESS)
 	{
 		LOGE("Failed to get pipeline cache data.\n");
 		return false;
 	}
+
+	Util::Hasher h;
+	h.data(data, size);
+	auto blob_hash = h.get();
+	memcpy(hash_data, &blob_hash, sizeof(blob_hash));
 
 	return true;
 }
@@ -671,8 +752,10 @@ void Device::flush_pipeline_cache()
 		return;
 	}
 
-	auto file = system_handles.filesystem->open(Util::join("cache://pipeline_cache_", get_pipeline_cache_string(), ".bin"),
-	                                            Granite::FileMode::WriteOnly);
+	auto file = system_handles.filesystem->open(
+			"cache://pipeline_cache.bin",
+			Granite::FileMode::WriteOnlyTransactional);
+
 	if (!file)
 	{
 		LOGE("Failed to get pipeline cache data.\n");
@@ -700,36 +783,16 @@ void Device::init_workarounds()
 
 #ifdef __APPLE__
 	// Events are not supported in MoltenVK.
+	// TODO: Use VK_KHR_portability_subset to determine this.
 	workarounds.emulate_event_as_pipeline_barrier = true;
 	LOGW("Emulating events as pipeline barriers on Metal emulation.\n");
 #else
-	if (gpu_props.vendorID == VENDOR_ID_NVIDIA &&
-#ifdef _WIN32
-	    VK_VERSION_MAJOR(gpu_props.driverVersion) < 417)
-#else
-	    VK_VERSION_MAJOR(gpu_props.driverVersion) < 415)
-#endif
-	{
-		workarounds.force_store_in_render_pass = true;
-		LOGW("Detected workaround for render pass STORE_OP_STORE.\n");
-	}
-
-	if (gpu_props.vendorID == VENDOR_ID_QCOM)
-	{
-		// Apparently, we need to use STORE_OP_STORE in all render passes no matter what ...
-		workarounds.force_store_in_render_pass = true;
-		workarounds.broken_color_write_mask = true;
-		LOGW("Detected workaround for render pass STORE_OP_STORE.\n");
-		LOGW("Detected workaround for broken color write masks.\n");
-	}
-
-	// UNDEFINED -> COLOR_ATTACHMENT_OPTIMAL stalls, so need to acquire async.
 	if (gpu_props.vendorID == VENDOR_ID_ARM)
 	{
 		LOGW("Workaround applied: Emulating events as pipeline barriers.\n");
 		LOGW("Workaround applied: Optimize ALL_GRAPHICS_BIT barriers.\n");
 
-		// All performance related workarounds.
+		// Both are performance related workarounds.
 		workarounds.emulate_event_as_pipeline_barrier = true;
 		workarounds.optimize_all_graphics_barrier = true;
 
@@ -738,6 +801,11 @@ void Device::init_workarounds()
 			LOGW("Workaround applied: Split binary timeline semaphores.\n");
 			workarounds.split_binary_timeline_semaphores = true;
 		}
+	}
+	else if (ext.driver_properties.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
+	{
+		LOGW("Disabling pipeline cache control.\n");
+		workarounds.broken_pipeline_cache_control = true;
 	}
 #endif
 }
@@ -759,6 +827,7 @@ void Device::set_context(const Context &context)
 	mem_props = context.get_mem_props();
 	gpu_props = context.get_gpu_props();
 	ext = context.get_enabled_device_features();
+	system_handles = context.get_system_handles();
 
 	init_workarounds();
 
@@ -814,14 +883,14 @@ void Device::set_context(const Context &context)
 			queue_data[i].performance_query_pool.init_device(this, queue_info.family_indices[i]);
 	}
 
-#ifdef GRANITE_VULKAN_FOSSILIZE
-	init_pipeline_state();
-#endif
 #ifdef GRANITE_VULKAN_FILESYSTEM
 	init_shader_manager_cache();
 #endif
 
-	system_handles = context.get_system_handles();
+#ifdef GRANITE_VULKAN_FOSSILIZE
+	init_pipeline_state(context.get_feature_filter());
+#endif
+
 	if (system_handles.timeline_trace_file)
 		init_calibrated_timestamps();
 }
@@ -1106,7 +1175,7 @@ void Device::submit_nolock(CommandBufferHandle cmd, Fence *fence, unsigned semap
 	{
 		LOGI("Submitting profiled command buffer, draining GPU.\n");
 		Fence drain_fence;
-		submit_empty_nolock(physical_type, &drain_fence, 0, nullptr, -1);
+		submit_empty_nolock(physical_type, &drain_fence, nullptr, -1);
 		drain_fence->wait();
 		drain_fence->set_internal_sync_object();
 	}
@@ -1119,6 +1188,7 @@ void Device::submit_nolock(CommandBufferHandle cmd, Fence *fence, unsigned semap
 	if (fence || semaphore_count)
 	{
 		submit_queue(physical_type, fence ? &signalled_fence : nullptr,
+		             nullptr,
 		             semaphore_count, semaphores,
 		             profiled_submit ? 0 : -1);
 	}
@@ -1138,7 +1208,7 @@ void Device::submit_nolock(CommandBufferHandle cmd, Fence *fence, unsigned semap
 		LOGI("Submitted profiled command buffer, draining GPU and report ...\n");
 		auto &query_pool = get_performance_query_pool(physical_type);
 		Fence drain_fence;
-		submit_empty_nolock(physical_type, &drain_fence, 0, nullptr, fence || semaphore_count ? -1 : 0);
+		submit_empty_nolock(physical_type, &drain_fence, nullptr, fence || semaphore_count ? -1 : 0);
 		drain_fence->wait();
 		drain_fence->set_internal_sync_object();
 		query_pool.report();
@@ -1147,21 +1217,24 @@ void Device::submit_nolock(CommandBufferHandle cmd, Fence *fence, unsigned semap
 	decrement_frame_counter_nolock();
 }
 
-void Device::submit_empty(CommandBuffer::Type type, Fence *fence,
-                          unsigned semaphore_count, Semaphore *semaphores)
+void Device::submit_empty(CommandBuffer::Type type, Fence *fence, SemaphoreHolder *semaphore)
 {
+	VK_ASSERT(!semaphore || !semaphore->is_proxy_timeline());
 	LOCK();
-	submit_empty_nolock(get_physical_queue_type(type), fence, semaphore_count, semaphores, -1);
+	submit_empty_nolock(get_physical_queue_type(type), fence, semaphore, -1);
 }
 
 void Device::submit_empty_nolock(QueueIndices physical_type, Fence *fence,
-                                 unsigned semaphore_count, Semaphore *semaphores, int profiling_iteration)
+                                 SemaphoreHolder *semaphore, int profiling_iteration)
 {
 	if (physical_type != QUEUE_INDEX_TRANSFER)
 		flush_frame(QUEUE_INDEX_TRANSFER);
 
 	InternalFence signalled_fence;
-	submit_queue(physical_type, fence ? &signalled_fence : nullptr, semaphore_count, semaphores, profiling_iteration);
+
+	submit_queue(physical_type, fence ? &signalled_fence : nullptr, semaphore,
+	             0, nullptr, profiling_iteration);
+
 	if (fence)
 	{
 		if (signalled_fence.value)
@@ -1172,6 +1245,7 @@ void Device::submit_empty_nolock(QueueIndices physical_type, Fence *fence,
 }
 
 void Device::submit_empty_inner(QueueIndices physical_type, InternalFence *fence,
+                                SemaphoreHolder *external_semaphore,
                                 unsigned semaphore_count, Semaphore *semaphores)
 {
 	auto &data = queue_data[physical_type];
@@ -1185,7 +1259,9 @@ void Device::submit_empty_inner(QueueIndices physical_type, InternalFence *fence
 	Helper::BatchComposer composer(get_workarounds().split_binary_timeline_semaphores);
 	collect_wait_semaphores(data, wait_semaphores);
 	composer.add_wait_submissions(wait_semaphores);
-	emit_queue_signals(composer, timeline_semaphore, timeline_value,
+
+	emit_queue_signals(composer, external_semaphore,
+	                   timeline_semaphore, timeline_value,
 	                   fence, semaphore_count, semaphores);
 
 	VkFence cleared_fence = fence && !ext.timeline_semaphore_features.timelineSemaphore ?
@@ -1304,7 +1380,7 @@ void Device::collect_wait_semaphores(QueueData &data, Helper::WaitSemaphores &se
 	{
 		auto &semaphore = data.wait_semaphores[i];
 		auto vk_semaphore = semaphore->consume();
-		if (semaphore->get_timeline_value())
+		if (semaphore->get_semaphore_type() == VK_SEMAPHORE_TYPE_TIMELINE_KHR)
 		{
 			sem.timeline_waits.push_back(vk_semaphore);
 			sem.timeline_wait_stages.push_back(data.wait_stages[i]);
@@ -1312,10 +1388,10 @@ void Device::collect_wait_semaphores(QueueData &data, Helper::WaitSemaphores &se
 		}
 		else
 		{
-			if (semaphore->can_recycle())
-				frame().recycled_semaphores.push_back(vk_semaphore);
-			else
+			if (semaphore->is_external_object_compatible())
 				frame().destroyed_semaphores.push_back(vk_semaphore);
+			else
+				frame().recycled_semaphores.push_back(vk_semaphore);
 
 			sem.binary_waits.push_back(vk_semaphore);
 			sem.binary_wait_stages.push_back(data.wait_stages[i]);
@@ -1432,10 +1508,9 @@ Helper::BatchComposer::bake(int profiling_iteration)
 		{
 			profiling_infos[i] = { VK_STRUCTURE_TYPE_PERFORMANCE_QUERY_SUBMIT_INFO_KHR };
 			profiling_infos[i].counterPassIndex = uint32_t(profiling_iteration);
-			if (submit.pNext)
-				timeline_submit.pNext = &profiling_infos[i];
-			else
-				submit.pNext = &profiling_infos[i];
+
+			profiling_infos[i].pNext = submit.pNext;
+			submit.pNext = &profiling_infos[i];
 		}
 
 		submit.commandBufferCount = cmds[i].size();
@@ -1490,23 +1565,39 @@ void Helper::BatchComposer::add_wait_semaphore(SemaphoreHolder &sem, VkPipelineS
 	if (!cmds[submit_index].empty() || !signals[submit_index].empty())
 		begin_batch();
 
-	uint64_t timeline = sem.get_timeline_value();
+	bool is_timeline = sem.get_semaphore_type() == VK_SEMAPHORE_TYPE_TIMELINE_KHR;
+
 	if (split_binary_timeline_semaphores)
 	{
-		if ((timeline == 0 && has_timeline_semaphore_in_batch(submit_index)) ||
-		    (timeline != 0 && has_binary_semaphore_in_batch(submit_index)))
+		if ((!is_timeline && has_timeline_semaphore_in_batch(submit_index)) ||
+		    (is_timeline && has_binary_semaphore_in_batch(submit_index)))
 			begin_batch();
 	}
 
 	waits[submit_index].push_back(sem.get_semaphore());
 	wait_stages[submit_index].push_back(stage);
-	wait_counts[submit_index].push_back(timeline);
+	wait_counts[submit_index].push_back(is_timeline ? sem.get_timeline_value() : 0);
 }
 
 void Device::emit_queue_signals(Helper::BatchComposer &composer,
+                                SemaphoreHolder *external_semaphore,
                                 VkSemaphore sem, uint64_t timeline, InternalFence *fence,
                                 unsigned semaphore_count, Semaphore *semaphores)
 {
+	if (external_semaphore)
+	{
+		VK_ASSERT(!external_semaphore->is_signalled());
+		VK_ASSERT(!external_semaphore->is_proxy_timeline());
+		VK_ASSERT(external_semaphore->get_semaphore());
+		external_semaphore->signal_external();
+		composer.add_signal_semaphore(external_semaphore->get_semaphore(),
+		                              external_semaphore->get_semaphore_type() == VK_SEMAPHORE_TYPE_TIMELINE_KHR ?
+		                              external_semaphore->get_timeline_value() : 0);
+
+		// Make sure we observe that the external semaphore is signalled before fences are signalled.
+		composer.begin_batch();
+	}
+
 	// Add external signal semaphores.
 	if (ext.timeline_semaphore_features.timelineSemaphore)
 	{
@@ -1523,7 +1614,8 @@ void Device::emit_queue_signals(Helper::BatchComposer &composer,
 		for (unsigned i = 0; i < semaphore_count; i++)
 		{
 			VK_ASSERT(!semaphores[i]);
-			semaphores[i] = Semaphore(handle_pool.semaphores.allocate(this, timeline, sem));
+			semaphores[i] = Semaphore(handle_pool.semaphores.allocate(this, timeline, sem, false));
+			semaphores[i]->signal_external();
 		}
 	}
 	else
@@ -1539,7 +1631,7 @@ void Device::emit_queue_signals(Helper::BatchComposer &composer,
 			VkSemaphore cleared_semaphore = managers.semaphore.request_cleared_semaphore();
 			composer.add_signal_semaphore(cleared_semaphore, 0);
 			VK_ASSERT(!semaphores[i]);
-			semaphores[i] = Semaphore(handle_pool.semaphores.allocate(this, cleared_semaphore, true));
+			semaphores[i] = Semaphore(handle_pool.semaphores.allocate(this, cleared_semaphore, true, true));
 		}
 	}
 }
@@ -1573,6 +1665,7 @@ VkResult Device::submit_batches(Helper::BatchComposer &composer, VkQueue queue, 
 }
 
 void Device::submit_queue(QueueIndices physical_type, InternalFence *fence,
+                          SemaphoreHolder *external_semaphore,
                           unsigned semaphore_count, Semaphore *semaphores, int profiling_iteration)
 {
 	// Always check if we need to flush pending transfers.
@@ -1585,7 +1678,7 @@ void Device::submit_queue(QueueIndices physical_type, InternalFence *fence,
 	if (submissions.empty())
 	{
 		if (fence || semaphore_count)
-			submit_empty_inner(physical_type, fence, semaphore_count, semaphores);
+			submit_empty_inner(physical_type, fence, external_semaphore, semaphore_count, semaphores);
 		return;
 	}
 
@@ -1618,12 +1711,12 @@ void Device::submit_queue(QueueIndices physical_type, InternalFence *fence,
 			{
 				VK_ASSERT(wsi.acquire->is_signalled());
 				composer.add_wait_semaphore(*wsi.acquire, wsi_stages);
-				if (!wsi.acquire->get_timeline_value())
+				if (wsi.acquire->get_semaphore_type() == VK_SEMAPHORE_TYPE_BINARY_KHR)
 				{
-					if (wsi.acquire->can_recycle())
-						frame().recycled_semaphores.push_back(wsi.acquire->get_semaphore());
-					else
+					if (wsi.acquire->is_external_object_compatible())
 						frame().destroyed_semaphores.push_back(wsi.acquire->get_semaphore());
+					else
+						frame().recycled_semaphores.push_back(wsi.acquire->get_semaphore());
 				}
 				wsi.acquire->consume();
 				wsi.acquire.reset();
@@ -1632,7 +1725,7 @@ void Device::submit_queue(QueueIndices physical_type, InternalFence *fence,
 			composer.add_command_buffer(cmd->get_command_buffer());
 
 			VkSemaphore release = managers.semaphore.request_cleared_semaphore();
-			wsi.release = Semaphore(handle_pool.semaphores.allocate(this, release, true));
+			wsi.release = Semaphore(handle_pool.semaphores.allocate(this, release, true, true));
 			wsi.release->set_internal_sync_object();
 			composer.add_signal_semaphore(release, 0);
 			wsi.present_queue = queue;
@@ -1654,7 +1747,7 @@ void Device::submit_queue(QueueIndices physical_type, InternalFence *fence,
 	if (fence)
 		fence->fence = cleared_fence;
 
-	emit_queue_signals(composer, timeline_semaphore, timeline_value,
+	emit_queue_signals(composer, external_semaphore, timeline_semaphore, timeline_value,
 	                   fence, semaphore_count, semaphores);
 
 	auto start_ts = write_calibrated_timestamp_nolock();
@@ -1679,7 +1772,7 @@ void Device::flush_frame(QueueIndices physical_type)
 
 	if (physical_type == QUEUE_INDEX_TRANSFER)
 		sync_buffer_blocks();
-	submit_queue(physical_type, nullptr, 0, nullptr);
+	submit_queue(physical_type, nullptr);
 }
 
 void Device::sync_buffer_blocks()
@@ -1748,7 +1841,7 @@ void Device::end_frame_nolock()
 	{
 		if (queue_data[i].need_fence || !frame().submissions[i].empty())
 		{
-			submit_queue(i, &fence, 0, nullptr);
+			submit_queue(i, &fence);
 			if (fence.fence != VK_NULL_HANDLE)
 			{
 				frame().wait_fences.push_back(fence.fence);
@@ -2034,10 +2127,10 @@ void Device::init_swapchain(const vector<VkImage> &swapchain_images, unsigned wi
 		VkImageViewCreateInfo view_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 		view_info.image = image;
 		view_info.format = format;
-		view_info.components.r = VK_COMPONENT_SWIZZLE_R;
-		view_info.components.g = VK_COMPONENT_SWIZZLE_G;
-		view_info.components.b = VK_COMPONENT_SWIZZLE_B;
-		view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+		view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 		view_info.subresourceRange.aspectMask = format_to_aspect_mask(format);
 		view_info.subresourceRange.baseMipLevel = 0;
 		view_info.subresourceRange.baseArrayLayer = 0;
@@ -2997,20 +3090,18 @@ public:
 	bool setup_view_usage_info(VkImageViewCreateInfo &create_info, VkImageUsageFlags usage,
 	                           VkImageViewUsageCreateInfo &usage_info) const
 	{
-		if (device->get_device_features().supports_maintenance_2)
-		{
-			usage_info.usage = usage;
-			usage_info.usage &= VK_IMAGE_USAGE_SAMPLED_BIT |
-			                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-			                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-			                    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+		usage_info.usage = usage;
+		usage_info.usage &= VK_IMAGE_USAGE_SAMPLED_BIT |
+		                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+		                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+		                    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+		                    vk_video_image_usage_flags;
 
-			if (format_is_srgb(create_info.format))
-				usage_info.usage &= ~VK_IMAGE_USAGE_STORAGE_BIT;
+		if (format_is_srgb(create_info.format))
+			usage_info.usage &= ~VK_IMAGE_USAGE_STORAGE_BIT;
 
-			usage_info.pNext = create_info.pNext;
-			create_info.pNext = &usage_info;
-		}
+		usage_info.pNext = create_info.pNext;
+		create_info.pNext = &usage_info;
 
 		return true;
 	}
@@ -3274,99 +3365,6 @@ ImageViewHandle Device::create_image_view(const ImageViewCreateInfo &create_info
 		return ImageViewHandle(nullptr);
 }
 
-#ifndef _WIN32
-ImageHandle Device::create_imported_image(int fd, VkDeviceSize size, uint32_t memory_type,
-                                          VkExternalMemoryHandleTypeFlagBitsKHR handle_type,
-                                          const ImageCreateInfo &create_info)
-{
-	if (!ext.supports_external)
-		return {};
-
-	ImageResourceHolder holder(this);
-
-	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-	info.format = create_info.format;
-	info.extent.width = create_info.width;
-	info.extent.height = create_info.height;
-	info.extent.depth = create_info.depth;
-	info.imageType = create_info.type;
-	info.mipLevels = create_info.levels;
-	info.arrayLayers = create_info.layers;
-	info.samples = create_info.samples;
-	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	info.tiling = VK_IMAGE_TILING_OPTIMAL;
-	info.usage = create_info.usage;
-	info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	info.flags = create_info.flags;
-	info.pNext = create_info.pnext;
-	VK_ASSERT(create_info.domain != ImageDomain::Transient);
-
-	VkExternalMemoryImageCreateInfoKHR externalInfo = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHR };
-	externalInfo.handleTypes = handle_type;
-	externalInfo.pNext = info.pNext;
-	info.pNext = &externalInfo;
-
-	VK_ASSERT(image_format_is_supported(create_info.format, image_usage_to_features(info.usage), info.tiling));
-
-	if (table->vkCreateImage(device, &info, nullptr, &holder.image) != VK_SUCCESS)
-		return ImageHandle(nullptr);
-
-	VkMemoryAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-	alloc_info.allocationSize = size;
-	alloc_info.memoryTypeIndex = memory_type;
-
-	VkMemoryDedicatedAllocateInfoKHR dedicated_info = { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR };
-	dedicated_info.image = holder.image;
-	alloc_info.pNext = &dedicated_info;
-
-	VkImportMemoryFdInfoKHR fd_info = { VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR };
-	fd_info.handleType = handle_type;
-	fd_info.fd = fd;
-	dedicated_info.pNext = &fd_info;
-
-	VkMemoryRequirements reqs;
-	table->vkGetImageMemoryRequirements(device, holder.image, &reqs);
-	if (reqs.size > size)
-		return ImageHandle(nullptr);
-
-	if (((1u << memory_type) & reqs.memoryTypeBits) == 0)
-		return ImageHandle(nullptr);
-
-	if (table->vkAllocateMemory(device, &alloc_info, nullptr, &holder.memory) != VK_SUCCESS)
-		return ImageHandle(nullptr);
-
-	if (table->vkBindImageMemory(device, holder.image, holder.memory, 0) != VK_SUCCESS)
-		return ImageHandle(nullptr);
-
-	// Create default image views.
-	// App could of course to this on its own, but it's very handy to have these being created automatically for you.
-	VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-	if (info.usage & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-	                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
-	{
-		if (!holder.create_default_views(create_info, nullptr))
-			return ImageHandle(nullptr);
-		view_type = holder.get_default_view_type();
-	}
-
-	auto allocation = DeviceAllocation::make_imported_allocation(holder.memory, size, memory_type);
-	ImageHandle handle(handle_pool.images.allocate(this, holder.image, holder.image_view, allocation, create_info, view_type));
-	if (handle)
-	{
-		holder.owned = false;
-		handle->get_view().set_alt_views(holder.depth_view, holder.stencil_view);
-		handle->get_view().set_render_target_views(move(holder.rt_views));
-
-		// Set possible dstStage and dstAccess.
-		handle->set_stage_flags(image_usage_to_possible_stages(info.usage));
-		handle->set_access_flags(image_usage_to_possible_access(info.usage));
-		return handle;
-	}
-	else
-		return ImageHandle(nullptr);
-}
-#endif
-
 InitialImageBuffer Device::create_image_staging_buffer(const TextureFormatLayout &layout)
 {
 	InitialImageBuffer result;
@@ -3480,8 +3478,11 @@ DeviceAllocationOwnerHandle Device::allocate_memory(const MemoryAllocateInfo &in
 		return {};
 
 	DeviceAllocation alloc = {};
-	if (!managers.memory.allocate(info.requirements.size, info.requirements.alignment, info.mode, index, &alloc))
+	if (!managers.memory.allocate_generic_memory(info.requirements.size, info.requirements.alignment,
+	                                             info.mode, index, &alloc))
+	{
 		return {};
+	}
 	return DeviceAllocationOwnerHandle(handle_pool.allocations.allocate(this, alloc));
 }
 
@@ -3507,6 +3508,19 @@ bool Device::allocate_image_memory(DeviceAllocation *allocation, const ImageCrea
 	if ((info.flags & VK_IMAGE_CREATE_DISJOINT_BIT) != 0 && info.num_memory_aliases == 0)
 	{
 		LOGE("Must use memory aliases when creating a DISJOINT planar image.\n");
+		return false;
+	}
+
+	bool use_external = (info.misc & IMAGE_MISC_EXTERNAL_MEMORY_BIT) != 0;
+	if (use_external && info.num_memory_aliases != 0)
+	{
+		LOGE("Cannot use external and memory aliases at the same time.\n");
+		return false;
+	}
+
+	if (use_external && tiling == VK_IMAGE_TILING_LINEAR)
+	{
+		LOGE("Cannot use linear tiling with external memory.\n");
 		return false;
 	}
 
@@ -3537,24 +3551,21 @@ bool Device::allocate_image_memory(DeviceAllocation *allocation, const ImageCrea
 		}
 		else
 		{
-			if (!ext.supports_bind_memory2 || !ext.supports_get_memory_requirements2)
-				return false;
-
 			VkBindImageMemoryInfo bind_infos[3];
 			VkBindImagePlaneMemoryInfo bind_plane_infos[3];
 			VK_ASSERT(num_planes <= 3);
 
 			for (unsigned plane = 0; plane < num_planes; plane++)
 			{
-				VkMemoryRequirements2KHR memory_req = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR };
-				VkImageMemoryRequirementsInfo2KHR image_info = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2_KHR };
+				VkMemoryRequirements2 memory_req = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
+				VkImageMemoryRequirementsInfo2 image_info = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2 };
 				image_info.image = image;
 
-				VkImagePlaneMemoryRequirementsInfo plane_info = { VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO_KHR };
+				VkImagePlaneMemoryRequirementsInfo plane_info = { VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO };
 				plane_info.planeAspect = static_cast<VkImageAspectFlagBits>(VK_IMAGE_ASPECT_PLANE_0_BIT << plane);
 				image_info.pNext = &plane_info;
 
-				table->vkGetImageMemoryRequirements2KHR(device, &image_info, &memory_req);
+				table->vkGetImageMemoryRequirements2(device, &image_info, &memory_req);
 				auto &reqs = memory_req.memoryRequirements;
 				auto &alias = *info.memory_aliases[plane];
 
@@ -3576,7 +3587,7 @@ bool Device::allocate_image_memory(DeviceAllocation *allocation, const ImageCrea
 				bind_plane_infos[plane].planeAspect = static_cast<VkImageAspectFlagBits>(VK_IMAGE_ASPECT_PLANE_0_BIT << plane);
 			}
 
-			if (table->vkBindImageMemory2KHR(device, num_planes, bind_infos) != VK_SUCCESS)
+			if (table->vkBindImageMemory2(device, num_planes, bind_infos) != VK_SUCCESS)
 				return false;
 		}
 	}
@@ -3606,16 +3617,20 @@ bool Device::allocate_image_memory(DeviceAllocation *allocation, const ImageCrea
 				return false;
 		}
 
+		ExternalHandle external = info.external;
+
 		AllocationMode mode;
-		if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-		    (info.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT)) != 0)
+		if (use_external)
+			mode = AllocationMode::External;
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+		         (info.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT)) != 0)
 			mode = AllocationMode::OptimalRenderTarget;
 		else
 			mode = tiling == VK_IMAGE_TILING_OPTIMAL ? AllocationMode::OptimalResource : AllocationMode::LinearHostMappable;
 
 		if (!managers.memory.allocate_image_memory(reqs.size, reqs.alignment, mode, memory_type,
-		                                           allocation, image,
-		                                           (info.misc & IMAGE_MISC_FORCE_NO_DEDICATED_BIT) != 0))
+		                                           image, (info.misc & IMAGE_MISC_FORCE_NO_DEDICATED_BIT) != 0,
+		                                           allocation, use_external ? &external : nullptr))
 		{
 			LOGE("Failed to allocate image memory (type %u, size: %u).\n", unsigned(memory_type), unsigned(reqs.size));
 			return false;
@@ -3773,15 +3788,15 @@ ImageHandle Device::create_image_from_staging_buffer(const ImageCreateInfo &crea
 		if (info.samples != VK_SAMPLE_COUNT_1_BIT)
 			return ImageHandle(nullptr);
 
-		VkImageFormatProperties props;
-		if (!get_image_format_properties(info.format, info.imageType, info.tiling, info.usage, info.flags, &props))
+		VkImageFormatProperties2 props = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2 };
+		if (!get_image_format_properties(info.format, info.imageType, info.tiling, info.usage, info.flags, nullptr, &props))
 			return ImageHandle(nullptr);
 
-		if (!props.maxArrayLayers ||
-		    !props.maxMipLevels ||
-		    (info.extent.width > props.maxExtent.width) ||
-		    (info.extent.height > props.maxExtent.height) ||
-		    (info.extent.depth > props.maxExtent.depth))
+		if (!props.imageFormatProperties.maxArrayLayers ||
+		    !props.imageFormatProperties.maxMipLevels ||
+		    (info.extent.width > props.imageFormatProperties.maxExtent.width) ||
+		    (info.extent.height > props.imageFormatProperties.maxExtent.height) ||
+		    (info.extent.depth > props.imageFormatProperties.maxExtent.depth))
 		{
 			return ImageHandle(nullptr);
 		}
@@ -3792,6 +3807,63 @@ ImageHandle Device::create_image_from_staging_buffer(const ImageCreateInfo &crea
 	{
 		LOGE("Format %u is not supported for usage flags!\n", unsigned(create_info.format));
 		return ImageHandle(nullptr);
+	}
+
+	bool use_external = (create_info.misc & IMAGE_MISC_EXTERNAL_MEMORY_BIT) != 0;
+	if (use_external && create_info.domain != ImageDomain::Physical)
+	{
+		LOGE("Must use physical image domain for external memory images.\n");
+		return ImageHandle(nullptr);
+	}
+
+	if (use_external && !ext.supports_external)
+	{
+		LOGE("External memory not supported.\n");
+		return ImageHandle(nullptr);
+	}
+
+	VkExternalMemoryImageCreateInfo external_info = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO };
+	if (ext.supports_external && use_external)
+	{
+		// Ensure that the handle type is supported.
+		VkImageFormatProperties2 props2 = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2 };
+		VkExternalImageFormatProperties external_props =
+		    { VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES };
+		VkPhysicalDeviceExternalImageFormatInfo external_format_info =
+		    { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO };
+		external_format_info.handleType = create_info.external.memory_handle_type;
+
+		props2.pNext = &external_props;
+		if (!get_image_format_properties(info.format, info.imageType, info.tiling,
+		                                 info.usage, info.flags,
+		                                 &external_format_info, &props2))
+		{
+			LOGE("Image format is not supported for external memory type #%x.\n",
+			     external_format_info.handleType);
+			return ImageHandle(nullptr);
+		}
+
+		bool supports_import = (external_props.externalMemoryProperties.externalMemoryFeatures &
+		                        VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) != 0;
+		bool supports_export = (external_props.externalMemoryProperties.externalMemoryFeatures &
+		                        VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) != 0;
+
+		if (!supports_import && create_info.external)
+		{
+			LOGE("Attempting to import with handle type #%x, but it is not supported.\n",
+			     create_info.external.memory_handle_type);
+			return ImageHandle(nullptr);
+		}
+		else if (!supports_export && !create_info.external)
+		{
+			LOGE("Attempting to export with handle type #%x, but it is not supported.\n",
+			     create_info.external.memory_handle_type);
+			return ImageHandle(nullptr);
+		}
+
+		external_info.handleTypes = create_info.external.memory_handle_type;
+		external_info.pNext = info.pNext;
+		info.pNext = &external_info;
 	}
 
 	if (table->vkCreateImage(device, &info, nullptr, &holder.image) != VK_SUCCESS)
@@ -4146,7 +4218,7 @@ BufferHandle Device::create_imported_host_buffer(const BufferCreateInfo &create_
 		return BufferHandle{};
 	}
 
-	VkExternalMemoryBufferCreateInfo external_info = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR };
+	VkExternalMemoryBufferCreateInfo external_info = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO };
 	external_info.handleTypes = type;
 
 	VkMemoryHostPointerPropertiesEXT host_pointer_props = { VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT };
@@ -4245,14 +4317,20 @@ BufferHandle Device::create_imported_host_buffer(const BufferCreateInfo &create_
 
 BufferHandle Device::create_buffer(const BufferCreateInfo &create_info, const void *initial)
 {
-	VkBuffer buffer;
-	VkMemoryRequirements reqs;
 	DeviceAllocation allocation;
+	VkBuffer buffer;
 
 	bool zero_initialize = (create_info.misc & BUFFER_MISC_ZERO_INITIALIZE_BIT) != 0;
+	bool use_external = (create_info.misc & BUFFER_MISC_EXTERNAL_MEMORY_BIT) != 0;
 	if (initial && zero_initialize)
 	{
 		LOGE("Cannot initialize buffer with data and clear.\n");
+		return BufferHandle{};
+	}
+
+	if (use_external && create_info.domain != BufferDomain::Device)
+	{
+		LOGE("When using external memory, must be Device domain.\n");
 		return BufferHandle{};
 	}
 
@@ -4264,12 +4342,55 @@ BufferHandle Device::create_buffer(const BufferCreateInfo &create_info, const vo
 	uint32_t sharing_indices[QUEUE_INDEX_COUNT];
 	fill_buffer_sharing_indices(info, sharing_indices);
 
+	if (use_external && !ext.supports_external)
+	{
+		LOGE("External memory not supported.\n");
+		return BufferHandle{};
+	}
+
+	VkExternalMemoryBufferCreateInfo external_info = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO };
+	if (ext.supports_external && use_external)
+	{
+		// Ensure that the handle type is supported.
+		VkPhysicalDeviceExternalBufferInfo external_buffer_props_info =
+		    { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO };
+		VkExternalBufferProperties external_buffer_props = { VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES };
+		external_buffer_props_info.handleType = create_info.external.memory_handle_type;
+		external_buffer_props_info.usage = info.usage;
+		external_buffer_props_info.flags = info.flags;
+		vkGetPhysicalDeviceExternalBufferProperties(gpu, &external_buffer_props_info, &external_buffer_props);
+
+		bool supports_import = (external_buffer_props.externalMemoryProperties.externalMemoryFeatures &
+		                        VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) != 0;
+		bool supports_export = (external_buffer_props.externalMemoryProperties.externalMemoryFeatures &
+		                        VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) != 0;
+
+		if (!supports_import && !create_info.external)
+		{
+			LOGE("Attempting to import with handle type #%x, but it is not supported.\n",
+			     create_info.external.memory_handle_type);
+			return BufferHandle{};
+		}
+		else if (!supports_export && create_info.external)
+		{
+			LOGE("Attempting to export with handle type #%x, but it is not supported.\n",
+			     create_info.external.memory_handle_type);
+			return BufferHandle{};
+		}
+
+		external_info.handleTypes = create_info.external.memory_handle_type;
+		info.pNext = &external_info;
+	}
+
 	if (table->vkCreateBuffer(device, &info, nullptr, &buffer) != VK_SUCCESS)
 		return BufferHandle(nullptr);
 
-	table->vkGetBufferMemoryRequirements(device, buffer, &reqs);
+	VkMemoryRequirements2 reqs = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
+	VkBufferMemoryRequirementsInfo2 req_info = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2 };
+	req_info.buffer = buffer;
+	table->vkGetBufferMemoryRequirements2(device, &req_info, &reqs);
 
-	uint32_t memory_type = find_memory_type(create_info.domain, reqs.memoryTypeBits);
+	uint32_t memory_type = find_memory_type(create_info.domain, reqs.memoryRequirements.memoryTypeBits);
 	if (memory_type == UINT32_MAX)
 	{
 		LOGE("Failed to find memory type.\n");
@@ -4278,7 +4399,9 @@ BufferHandle Device::create_buffer(const BufferCreateInfo &create_info, const vo
 	}
 
 	AllocationMode mode;
-	if (create_info.domain == BufferDomain::Device &&
+	if ((create_info.misc & BUFFER_MISC_EXTERNAL_MEMORY_BIT) != 0)
+		mode = AllocationMode::External;
+	else if (create_info.domain == BufferDomain::Device &&
 	    (create_info.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) != 0)
 		mode = AllocationMode::LinearDeviceHighPriority;
 	else if (create_info.domain == BufferDomain::Device ||
@@ -4287,28 +4410,41 @@ BufferHandle Device::create_buffer(const BufferCreateInfo &create_info, const vo
 	else
 		mode = AllocationMode::LinearHostMappable;
 
-	if (!managers.memory.allocate(reqs.size, reqs.alignment, mode, memory_type, &allocation))
+	auto external = create_info.external;
+
+	if (!managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
+	                                            mode, memory_type, buffer, &allocation,
+	                                            use_external ? &external : nullptr))
 	{
+		if (use_external)
+		{
+			LOGE("Failed to export / import buffer memory.\n");
+			table->vkDestroyBuffer(device, buffer, nullptr);
+			return BufferHandle(nullptr);
+		}
+
+		auto fallback_domain = create_info.domain;
+
 		// This memory type is rather scarce, so fallback to Host type if we've exhausted this memory.
 		if (create_info.domain == BufferDomain::LinkedDeviceHost)
 		{
 			LOGW("Exhausted LinkedDeviceHost memory, falling back to host.\n");
-			memory_type = find_memory_type(BufferDomain::Host, reqs.memoryTypeBits);
-			if (memory_type == UINT32_MAX)
-			{
-				LOGE("Failed to find memory type.\n");
-				table->vkDestroyBuffer(device, buffer, nullptr);
-				return BufferHandle(nullptr);
-			}
+			fallback_domain = BufferDomain::Host;
 
-			if (!managers.memory.allocate(reqs.size, reqs.alignment, mode, memory_type, &allocation))
-			{
-				table->vkDestroyBuffer(device, buffer, nullptr);
-				return BufferHandle(nullptr);
-			}
 		}
-		else
+		else if (create_info.domain == BufferDomain::LinkedDeviceHostPreferDevice)
 		{
+			LOGW("Exhausted LinkedDeviceHostPreferDevice memory, falling back to device.\n");
+			fallback_domain = BufferDomain::Device;
+		}
+
+		memory_type = find_memory_type(fallback_domain, reqs.memoryRequirements.memoryTypeBits);
+
+		if (memory_type == UINT32_MAX || fallback_domain == create_info.domain ||
+			!managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
+			                                        mode, memory_type, buffer, &allocation, nullptr))
+		{
+			LOGE("Failed to allocate fallback memory.\n");
 			table->vkDestroyBuffer(device, buffer, nullptr);
 			return BufferHandle(nullptr);
 		}
@@ -4376,25 +4512,72 @@ bool Device::memory_type_is_host_visible(uint32_t type) const
 	return (mem_props.memoryTypes[type].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
 }
 
-void Device::get_format_properties(VkFormat format, VkFormatProperties *properties)
+static VkFormatFeatureFlags2KHR promote_storage_usage(const DeviceFeatures &features, VkFormat format,
+                                                      VkFormatFeatureFlags2KHR supported)
 {
-	vkGetPhysicalDeviceFormatProperties(gpu, format, properties);
+	if ((supported & VK_FORMAT_FEATURE_2_STORAGE_IMAGE_BIT_KHR) != 0 &&
+	    format_supports_storage_image_read_write_without_format(format))
+	{
+		if (features.enabled_features.shaderStorageImageReadWithoutFormat)
+			supported |= VK_FORMAT_FEATURE_2_STORAGE_READ_WITHOUT_FORMAT_BIT_KHR;
+		if (features.enabled_features.shaderStorageImageWriteWithoutFormat)
+			supported |= VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT_KHR;
+	}
+
+	return supported;
+}
+
+void Device::get_format_properties(VkFormat format, VkFormatProperties3KHR *properties3) const
+{
+	VkFormatProperties2 properties2 = { VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
+	VK_ASSERT(properties3->sType == VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_3_KHR);
+
+	if (ext.supports_format_feature_flags2)
+	{
+		properties2.pNext = properties3;
+		vkGetPhysicalDeviceFormatProperties2(gpu, format, &properties2);
+	}
+	else
+	{
+		// Skip properties3 and synthesize the results instead.
+		properties2.pNext = properties3->pNext;
+		vkGetPhysicalDeviceFormatProperties2(gpu, format, &properties2);
+
+		properties3->optimalTilingFeatures = properties2.formatProperties.optimalTilingFeatures;
+		properties3->linearTilingFeatures = properties2.formatProperties.linearTilingFeatures;
+		properties3->bufferFeatures = properties2.formatProperties.bufferFeatures;
+
+		// Automatically promote for supported formats.
+		properties3->optimalTilingFeatures =
+				promote_storage_usage(ext, format, properties3->optimalTilingFeatures);
+		properties3->linearTilingFeatures =
+				promote_storage_usage(ext, format, properties3->linearTilingFeatures);
+	}
 }
 
 bool Device::get_image_format_properties(VkFormat format, VkImageType type, VkImageTiling tiling,
                                          VkImageUsageFlags usage, VkImageCreateFlags flags,
-                                         VkImageFormatProperties *properties)
+                                         const void *pNext,
+                                         VkImageFormatProperties2 *properties2) const
 {
-	auto res = vkGetPhysicalDeviceImageFormatProperties(gpu, format, type, tiling, usage, flags,
-	                                                    properties);
+	VK_ASSERT(properties2->sType == VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2);
+	VkPhysicalDeviceImageFormatInfo2 info = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2 };
+	info.pNext = pNext;
+	info.format = format;
+	info.type = type;
+	info.tiling = tiling;
+	info.usage = usage;
+	info.flags = flags;
+
+	VkResult res = vkGetPhysicalDeviceImageFormatProperties2(gpu, &info, properties2);
 	return res == VK_SUCCESS;
 }
 
-bool Device::image_format_is_supported(VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling) const
+bool Device::image_format_is_supported(VkFormat format, VkFormatFeatureFlags2KHR required, VkImageTiling tiling) const
 {
-	VkFormatProperties props;
-	vkGetPhysicalDeviceFormatProperties(gpu, format, &props);
-	auto flags = tiling == VK_IMAGE_TILING_OPTIMAL ? props.optimalTilingFeatures : props.linearTilingFeatures;
+	VkFormatProperties3KHR props3 = { VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_3_KHR };
+	get_format_properties(format, &props3);
+	auto flags = tiling == VK_IMAGE_TILING_OPTIMAL ? props3.optimalTilingFeatures : props3.linearTilingFeatures;
 	return (flags & required) == required;
 }
 
@@ -4673,18 +4856,9 @@ void Device::query_available_performance_counters(CommandBuffer::Type type, uint
 	*desc = query_pool.get_available_counter_descs();
 }
 
-bool Device::init_performance_counters(const std::vector<std::string> &names)
+bool Device::init_performance_counters(CommandBuffer::Type type, const std::vector<std::string> &names)
 {
-	for (int i = 0; i < QUEUE_INDEX_COUNT; i++)
-	{
-		if (&get_performance_query_pool(QueueIndices(i)) == &queue_data[i].performance_query_pool)
-		{
-			if (!queue_data[i].performance_query_pool.init_counters(names))
-				return false;
-		}
-	}
-
-	return true;
+	return queue_data[get_physical_queue_type(type)].performance_query_pool.init_counters(names);
 }
 
 void Device::release_profiling()
@@ -4817,9 +4991,8 @@ ShaderManager &Device::get_shader_manager()
 #ifdef GRANITE_VULKAN_FILESYSTEM
 void Device::init_shader_manager_cache()
 {
-	//if (!shader_manager.load_shader_cache("assets://shader_cache.json"))
-	//	shader_manager.load_shader_cache("cache://shader_cache.json");
-	shader_manager.load_shader_cache("assets://shader_cache.json");
+	if (!shader_manager.load_shader_cache("assets://shader_cache.json"))
+		shader_manager.load_shader_cache("cache://shader_cache.json");
 }
 
 void Device::flush_shader_manager_cache()
@@ -4879,6 +5052,87 @@ bool Device::supports_subgroup_size_log2(bool subgroup_full_group, uint8_t subgr
 
 	// We need requiredSubgroupSizeStages support here.
 	return (ext.subgroup_size_control_properties.requiredSubgroupSizeStages & VK_SHADER_STAGE_COMPUTE_BIT) != 0;
+}
+
+const QueueInfo &Device::get_queue_info() const
+{
+	return queue_info;
+}
+
+void Device::timestamp_log_reset()
+{
+	managers.timestamps.reset();
+}
+
+void Device::timestamp_log(const TimestampIntervalReportCallback &cb) const
+{
+	managers.timestamps.log_simple(cb);
+}
+
+CommandBufferHandle request_command_buffer_with_ownership_transfer(
+		Device &device,
+		const Vulkan::Image &image,
+		const OwnershipTransferInfo &info,
+		const Vulkan::Semaphore &semaphore)
+{
+	auto &queue_info = device.get_queue_info();
+	unsigned old_family = queue_info.family_indices[device.get_physical_queue_type(info.old_queue)];
+	unsigned new_family = queue_info.family_indices[device.get_physical_queue_type(info.new_queue)];
+	bool image_is_concurrent = (image.get_create_info().misc &
+	                            (Vulkan::IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_TRANSFER_BIT |
+	                             Vulkan::IMAGE_MISC_CONCURRENT_QUEUE_GRAPHICS_BIT |
+	                             Vulkan::IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_COMPUTE_BIT |
+	                             Vulkan::IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_GRAPHICS_BIT)) != 0;
+	bool need_ownership_transfer = old_family != new_family && !image_is_concurrent;
+
+	VkImageMemoryBarrier ownership = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	ownership.image = image.get_image();
+	ownership.srcAccessMask = 0;
+	ownership.dstAccessMask = 0;
+	ownership.subresourceRange.aspectMask = format_to_aspect_mask(image.get_format());
+	ownership.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	ownership.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+	ownership.oldLayout = info.old_image_layout;
+	ownership.newLayout = info.new_image_layout;
+
+	if (need_ownership_transfer)
+	{
+		ownership.srcQueueFamilyIndex = old_family;
+		ownership.dstQueueFamilyIndex = new_family;
+
+		if (semaphore)
+			device.add_wait_semaphore(info.old_queue, semaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, true);
+		auto release_cmd = device.request_command_buffer(info.old_queue);
+
+		release_cmd->image_barriers(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		                            1, &ownership);
+
+		Semaphore sem;
+		device.submit(release_cmd, nullptr, 1, &sem);
+		device.add_wait_semaphore(info.new_queue, sem, info.dst_pipeline_stage, true);
+	}
+	else
+	{
+		ownership.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		ownership.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		if (semaphore)
+			device.add_wait_semaphore(info.new_queue, semaphore, info.dst_pipeline_stage, true);
+	}
+
+	// Ownership transfers may perform writes, so make those operations visible.
+	// If we require neither layout transition nor ownership transfer,
+	// visibility is ensured by semaphores.
+	bool need_dst_barrier = need_ownership_transfer || info.old_image_layout != info.new_image_layout;
+
+	auto acquire_cmd = device.request_command_buffer(info.new_queue);
+	if (need_dst_barrier)
+	{
+		ownership.dstAccessMask = info.dst_access;
+		acquire_cmd->image_barriers(info.dst_pipeline_stage, info.dst_pipeline_stage, 1, &ownership);
+	}
+
+	return acquire_cmd;
 }
 
 static ImplementationQuirks implementation_quirks;
