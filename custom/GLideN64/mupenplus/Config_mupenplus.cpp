@@ -225,4 +225,6 @@ extern "C" void Config_LoadConfig()
 		LoadCustomSettings(true);
 		LoadCustomSettings(false);
 	}
+
+	config.validate();
 }
