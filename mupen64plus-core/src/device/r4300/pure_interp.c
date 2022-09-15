@@ -720,9 +720,8 @@ void run_pure_interpreter(struct r4300_core* r4300)
 #ifdef COMPARE_CORE
      CoreCompareCallback();
 #endif
-#ifdef DBG
-     if (g_DebuggerActive) update_debugger(*r4300_pc(r4300));
-#endif
+	 update_debugger(*r4300_pc(r4300));
+
      InterpretOpcode(r4300);
    }
 }

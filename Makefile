@@ -578,10 +578,10 @@ endif
 CPUOPTS += -fcommon
 
 ifeq ($(CORE_DEBUG), 1)
-   ifeq ($(MSYSTEM),MINGW32)
-      LIBOPCODES ?= /mingw32/lib/binutils/libopcodes.a
-      LIBBFD ?= /mingw32/lib/binutils/libbfd.a
-      LIBIBERTY ?= /mingw32/lib/binutils/libiberty.a
+   ifeq ($(MSYSTEM),MINGW64)
+      LIBOPCODES ?= /mingw64/lib/binutils/libopcodes.a
+      LIBBFD ?= /mingw64/lib/binutils/libbfd.a
+      LIBIBERTY ?= /mingw64/lib/binutils/libiberty.a
       LDFLAGS += -lws2_32 -mconsole -lintl
   else ifeq ($(platform),unix)
       LIBOPCODES ?= /usr/lib/libopcodes.a
@@ -594,8 +594,8 @@ ifeq ($(CORE_DEBUG), 1)
       LIBBFD ?= $(BINUTILS_BUILD_DIR)/bfd/libbfd.a
       LIBIBERTY ?= $(BINUTILS_BUILD_DIR)/libiberty/libiberty.a
    endif
-   COREFLAGS += -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
-   LDFLAGS += -lfmt $(LIBOPCODES) $(LIBBFD) -lz
+   COREFLAGS += -I/e/Development/fmt/include -DDBG -DUSE_LIBOPCODES_GE_2_29 -DFMT_HEADER_ONLY
+   LDFLAGS += /e/Development/fmt/build/libfmt.a $(LIBOPCODES) $(LIBBFD) -lz
    ifeq ($(platform),unix)
       LDFLAGS += -ldl
    endif

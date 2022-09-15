@@ -198,6 +198,7 @@ int check_breakpoints_on_mem_access(uint32_t pc, uint32_t address, uint32_t size
     return -1;
 }
 
+extern void debugger_update(unsigned int pc);
 int log_breakpoint(uint32_t PC, uint32_t Flag, uint32_t Access)
 {
     char msg[32];
@@ -206,7 +207,10 @@ int log_breakpoint(uint32_t PC, uint32_t Flag, uint32_t Access)
     else if (Flag & M64P_BKP_FLAG_WRITE)
         sprintf(msg, "0x%08X wrote 0x%08X", PC, Access);
     else
+    {
+        debugger_update(PC);
         sprintf(msg, "0x%08X executed", PC);
+    }
     DebugMessage(M64MSG_INFO, "BPT: %s", msg);
     return 0;
 }

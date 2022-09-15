@@ -148,7 +148,7 @@ constexpr char target_xml[] =
 	  <reg name="k0" bitsize="64" type="data_ptr"/>
 	  <reg name="k1" bitsize="64" type="data_ptr"/>
 	  <reg name="gp" bitsize="64" type="data_ptr"/>
-	  <reg name="sp" bitsize="64" type="stack_ptr"/>
+	  <reg name="sp" bitsize="64" type="data_ptr"/>
 	  <reg name="fp" bitsize="64" type="data_ptr"/>
 	  <reg name="ra" bitsize="64" type="data_ptr"/>
 	  <reg name="lo" bitsize="64" regnum="33"/>
@@ -286,7 +286,7 @@ void Init(int port) {
     const sockaddr* server_addr = reinterpret_cast<const sockaddr*>(&saddr_server);
     socklen_t server_addrlen = sizeof(saddr_server);
     if (bind(tmpsock, server_addr, server_addrlen) < 0) {
-        LOG_ERROR("Failed to bind gdb socket");
+        LOG_ERROR("Failed to bind gdb socket {}", WSAGetLastError());
     }
 
     if (listen(tmpsock, 1) < 0) {
@@ -547,7 +547,7 @@ static u64 GdbHexToLong(const u8* src) {
 static u8 ReadByte() {
     u8 c;
     std::size_t received_size = recv(gdbserver_socket, reinterpret_cast<char*>(&c), 1, MSG_WAITALL);
-    if (received_size != 1) {
+    if (received_size != 1 && received_size != 0) {
         LOG_ERROR("recv failed: {}", received_size);
         Shutdown();
     }
@@ -625,6 +625,7 @@ static void SendReply(const char* reply) {
     memset(command_buffer, 0, sizeof(command_buffer));
 
     command_length = static_cast<u32>(strlen(reply));
+
     if (command_length + 4 > sizeof(command_buffer)) {
         LOG_ERROR("command_buffer overflow in SendReply");
         return;
@@ -652,19 +653,20 @@ static void SendReply(const char* reply) {
     }
 }
 
+static int attached = 0;
 /// Handle query command from gdb client.
-static void HandleQuery() {
+static int HandleQuery() {
     LOG_DEBUG("gdb: query '{}'", command_buffer + 1);
 
     const char* query = reinterpret_cast<const char*>(command_buffer + 1);
 
     if (strcmp(query, "TStatus") == 0) {
-        SendReply("T0");
+        SendReply("Trunning;tnotrun:0");
     } else if (strcmp(query, "Attached") == 0) {
         SendReply("1");
     } else if (strncmp(query, "Supported", strlen("Supported")) == 0) {
         // PacketSize needs to be large enough for target xml
-        std::string buffer = "PacketSize=10000;qXfer:features:read+";
+        std::string buffer = "PacketSize=4095;qXfer:features:read+";
         SendReply(buffer.c_str());
     } else if (strncmp(query, "Xfer:features:read:target.xml:",
                        strlen("Xfer:features:read:target.xml:")) == 0) {
@@ -674,24 +676,21 @@ static void HandleQuery() {
         std::string buffer = fmt::format("TextSeg={:0x}", base_address);
         SendReply(buffer.c_str());
     } else if (strncmp(query, "fThreadInfo", strlen("fThreadInfo")) == 0) {
-        std::string val = "m";
-        val.pop_back();
+        std::string val = "m1";
         SendReply(val.c_str());
     } else if (strncmp(query, "sThreadInfo", strlen("sThreadInfo")) == 0) {
         SendReply("l");
+    } else if (strncmp(query, "ThreadExtraInfo,", strlen("ThreadExtraInfo,")) == 0) {
+        SendReply("l");
+    } else if (*query == 'C') {
+        SendReply("1"); // Currently active thread
+    } else if (*query == 'L') {
+        SendReply("OK");
     } else {
         SendReply("");
     }
-}
 
-/// Handle set thread command from gdb client.
-static void HandleSetThread() {
-    SendReply("E01");
-}
-
-/// Handle thread alive command from gdb client.
-static void HandleThreadAlive() {
-    SendReply("E01");
+    return 0;
 }
 
 /**
@@ -714,6 +713,17 @@ static void SendSignal(u32 signal, bool full = true) {
     SendReply(buffer.c_str());
 }
 
+/// Handle set thread command from gdb client.
+static void HandleSetThread() {
+    SendReply("OK");
+    //SendSignal(SIGTRAP);
+}
+
+/// Handle thread alive command from gdb client.
+static void HandleThreadAlive() {
+    SendReply("OK");
+}
+
 /// Read command from gdb client.
 static void ReadCommand() {
     command_length = 0;
@@ -726,6 +736,7 @@ static void ReadCommand() {
     } else if (c == 0x03) {
         LOG_INFO("gdb: found break command");
         SendSignal(SIGTRAP);
+        (*DebugSetRunState)(M64P_DBG_RUNSTATE_PAUSED);
         return;
     } else if (c != GDB_STUB_START) {
         LOG_DEBUG("gdb: read invalid byte {:02X}", c);
@@ -906,12 +917,14 @@ static void Step() {
     /*if (command_length > 1) {
         RegWrite(PC_REGISTER, GdbHexToLong(command_buffer + 1));
     }*/
+    (*DebugSetRunState)(M64P_DBG_RUNSTATE_PAUSED);
     (*DebugStep)();
 }
 
 /// Tell the CPU to continue executing.
 static void Continue() {
     (*DebugSetRunState)(M64P_DBG_RUNSTATE_RUNNING);
+    (*DebugStep)(); // Unlocks semaphore if state was paused
 }
 
 u32 func_osVirtualToPhysical(VAddr vaddr) {
@@ -1078,7 +1091,7 @@ static void RemoveBreakpoint() {
 
 //TODO: handle pause via ctrl-c?
 void HandlePacket() {
-    if (!first_exception)
+    if (first_exception)
         SendSignal(SIGTRAP);
 
     first_exception = false;
@@ -1113,9 +1126,10 @@ void HandlePacket() {
             SendSignal(latest_signal);
             break;
         case 'k':
-            Shutdown();
-            LOG_INFO("killed by gdb");
-            return;
+            //Shutdown();
+            //LOG_INFO("killed by gdb");
+            SendReply("OK");
+            break;
         case 'g':
             ReadRegisters();
             break;
@@ -1150,21 +1164,27 @@ void HandlePacket() {
         case 'T':
             HandleThreadAlive();
             break;
+        case 'D':
+            SendReply("OK");
+            break;
         case 'v':
             if(!strcmp((char*)command_buffer, "vCont?"))
                 SendReply("vCont;s;c");
-            else
+            else if(!strcmp((char*)command_buffer, "vKill;a410"))
+                SendReply("OK");
+            else if(!strcmp((char*)command_buffer, "vAttach;1"))
+                SendReply("OK");
+            else if(!strcmp((char*)command_buffer, "vMustReplyEmpty"))
+                SendReply("");
+            else if(!strcmp((char*)command_buffer, "vCont;s:1"))
             {
-                if(!strcmp((char*)command_buffer, "vCont;s:1"))
-                {
-                    Step();
-                    return;
-                }else if(strstr((char*)command_buffer, "vCont;c"))
-                {
-                    Continue();
-                    return;
-                }
+                Step();
+                SendSignal(SIGTRAP);
+            }else if(strstr((char*)command_buffer, "vCont;c"))
+            {
+                Continue();
             }
+            return;
             
         default:
             SendReply("");
@@ -1188,10 +1208,27 @@ extern "C" {
         LOG_DEBUG("Debugger initialized.");
     }
 
+    void debug_worker()
+    {
+        while(1)
+            GDBStub::HandlePacket();
+    }
+
     void debugger_update(unsigned int pc)
     {
         LOG_DEBUG("PC at 0x%08X.", pc);
-        GDBStub::HandlePacket();
+        static int started_thread = 0;
+        if(!started_thread)
+        {
+            started_thread = 1;
+            static pthread_t thread;
+            LOG_INFO("Started Worker!");
+            pthread_create(&thread, NULL, (void*(*)(void*))debug_worker, NULL);
+        } else if(pc)
+        {
+            // Signal in case we did hit a breakpoint
+            GDBStub::SendSignal(GDBStub::SIGTRAP);
+        }
     }
     
     static void debugger_vi(void)

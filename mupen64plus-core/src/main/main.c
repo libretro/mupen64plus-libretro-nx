@@ -1312,7 +1312,7 @@ m64p_error main_run(void)
     /* XXX: select type of flashram from db */
     uint32_t flashram_type = MX29L1100_ID;
     
-    emumode = r4300_emumode;
+    emumode = r4300_emumode = EMUMODE_PURE_INTERPRETER;
     randomize_interrupt = 0; // We don't want this right now
     no_compiled_jump = 0;
     count_per_op = CountPerOp;
