@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -57,7 +57,6 @@
 
 #ifdef GRANITE_VULKAN_FOSSILIZE
 #include "fossilize.hpp"
-#include "thread_group.hpp"
 #endif
 
 #include "quirks.hpp"
@@ -66,6 +65,11 @@
 namespace Util
 {
 class TimelineTraceFile;
+}
+
+namespace Granite
+{
+struct TaskGroup;
 }
 
 namespace Vulkan
@@ -135,6 +139,7 @@ public:
 	void add_signal_semaphore(VkSemaphore sem, uint64_t count);
 	void add_command_buffer(VkCommandBuffer cmd);
 
+	void begin_batch();
 	Util::SmallVector<VkSubmitInfo, MaxSubmissions> &bake(int profiling_iteration = -1);
 
 private:
@@ -152,16 +157,15 @@ private:
 	unsigned submit_index = 0;
 	bool split_binary_timeline_semaphores = false;
 
-	void begin_batch();
-
 	bool has_timeline_semaphore_in_batch(unsigned index) const;
 	bool has_binary_semaphore_in_batch(unsigned index) const;
 };
 }
 
 class Device
+	: public Util::IntrusivePtrEnabled<Device, std::default_delete<Device>, HandleCounter>
 #ifdef GRANITE_VULKAN_FOSSILIZE
-	: public Fossilize::StateCreatorInterface
+	, public Fossilize::StateCreatorInterface
 #endif
 {
 public:
@@ -223,7 +227,7 @@ public:
 	const VolkDeviceTable &get_device_table() const;
 
 	// Profiling
-	bool init_performance_counters(const std::vector<std::string> &names);
+	bool init_performance_counters(CommandBuffer::Type type, const std::vector<std::string> &names);
 	bool acquire_profiling();
 	void release_profiling();
 	void query_available_performance_counters(CommandBuffer::Type type,
@@ -271,8 +275,7 @@ public:
 	            unsigned semaphore_count = 0, Semaphore *semaphore = nullptr);
 	void submit_empty(CommandBuffer::Type type,
 	                  Fence *fence = nullptr,
-	                  unsigned semaphore_count = 0,
-	                  Semaphore *semaphore = nullptr);
+	                  SemaphoreHolder *semaphore = nullptr);
 	void submit_discard(CommandBufferHandle &cmd);
 	void add_wait_semaphore(CommandBuffer::Type type, Semaphore semaphore, VkPipelineStageFlags stages, bool flush);
 	QueueIndices get_physical_queue_type(CommandBuffer::Type queue_type) const;
@@ -319,14 +322,6 @@ public:
 	InitialImageBuffer create_image_staging_buffer(const ImageCreateInfo &info, const ImageInitialData *initial);
 	InitialImageBuffer create_image_staging_buffer(const TextureFormatLayout &layout);
 
-#ifndef _WIN32
-	ImageHandle create_imported_image(int fd,
-	                                  VkDeviceSize size,
-	                                  uint32_t memory_type,
-	                                  VkExternalMemoryHandleTypeFlagBitsKHR handle_type,
-	                                  const ImageCreateInfo &create_info);
-#endif
-
 	// Create image view, buffer views and samplers.
 	ImageViewHandle create_image_view(const ImageViewCreateInfo &view_info);
 	BufferViewHandle create_buffer_view(const BufferViewCreateInfo &view_info);
@@ -336,10 +331,12 @@ public:
 	                                                             unsigned num_sets, unsigned num_descriptors);
 
 	// Render pass helpers.
-	bool image_format_is_supported(VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL) const;
-	void get_format_properties(VkFormat format, VkFormatProperties *properties);
-	bool get_image_format_properties(VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
-	                                 VkImageFormatProperties *properties);
+	bool image_format_is_supported(VkFormat format, VkFormatFeatureFlags2KHR required, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL) const;
+	void get_format_properties(VkFormat format, VkFormatProperties3KHR *properties) const;
+	bool get_image_format_properties(VkFormat format, VkImageType type, VkImageTiling tiling,
+	                                 VkImageUsageFlags usage, VkImageCreateFlags flags,
+	                                 const void *pNext,
+	                                 VkImageFormatProperties2 *properties2) const;
 
 	VkFormat get_default_depth_stencil_format() const;
 	VkFormat get_default_depth_format() const;
@@ -347,18 +344,42 @@ public:
 	                                     unsigned index = 0, unsigned samples = 1, unsigned layers = 1);
 	RenderPassInfo get_swapchain_render_pass(SwapchainRenderPass style);
 
-	// Request legacy (non-timeline) semaphores.
-	// Timeline semaphores are only used internally to reduce handle bloat.
-	Semaphore request_legacy_semaphore();
-	Semaphore request_external_semaphore(VkSemaphore semaphore, bool signalled);
-#ifndef _WIN32
-	Semaphore request_imported_semaphore(int fd, VkExternalSemaphoreHandleTypeFlagBitsKHR handle_type);
-#endif
+	// Semaphore API:
+	// Semaphores in Granite are abstracted to support both binary and timeline semaphores
+	// internally.
+	// In practice this means that semaphores behave like single-use binary semaphores,
+	// with one signal and one wait.
+	// A single semaphore handle is not reused for multiple submissions, and they must be recycled through
+	// the device. The intended use is device.submit(&sem), device.add_wait_semaphore(sem); dispose(sem);
+	// For timeline semaphores, the semaphore is just a proxy object which
+	// holds the internally owned VkSemaphore + timeline value and is otherwise lightweight.
+	//
+	// However, there are various use cases where we explicitly need semaphore objects:
+	// - Interoperate with other code that only accepts VkSemaphore.
+	// - Interoperate with external objects. We need to know whether to use binary or timeline.
+	//   For timelines, we need to know which handle type to use (OPAQUE or ID3D12Fence).
+	//   Binary external semaphore is always opaque with TEMPORARY semantics.
+
+	// If transfer_ownership is set, Semaphore owns the VkSemaphore. Otherwise, application must
+	// free the semaphore when GPU usage of it is complete.
+	Semaphore request_semaphore(VkSemaphoreTypeKHR type, VkSemaphore handle = VK_NULL_HANDLE, bool transfer_ownership = false);
+
+	// Requests a binary or timeline semaphore that can be used to import/export.
+	// These semaphores cannot be used directly by add_wait_semaphore() and submit_empty().
+	// See request_timeline_semaphore_as_binary() for how to use timelines.
+	Semaphore request_semaphore_external(VkSemaphoreTypeKHR type,
+	                                     VkExternalSemaphoreHandleTypeFlagBits handle_type);
+	// The created semaphore does not hold ownership of the VkSemaphore object.
+	Semaphore request_timeline_semaphore_as_binary(const SemaphoreHolder &holder, uint64_t value);
+
 	// A proxy semaphore which lets us grab a semaphore handle before we signal it.
+	// Move assignment can be used to move a payload.
 	// Mostly useful to deal better with render graph implementation.
-	// TODO: When we require timeline semaphores, this could be a bit more elegant, and we could expose timeline directly.
 	// For time being however, we'll support moving the payload over to the proxy object.
 	Semaphore request_proxy_semaphore();
+
+	// For compat with existing code that uses this entry point.
+	inline Semaphore request_legacy_semaphore() { return request_semaphore(VK_SEMAPHORE_TYPE_BINARY_KHR); }
 
 	VkDevice get_device() const
 	{
@@ -435,6 +456,11 @@ public:
 	bool supports_subgroup_size_log2(bool subgroup_full_group,
 	                                 uint8_t subgroup_minimum_size_log2,
 	                                 uint8_t subgroup_maximum_size_log2) const;
+
+	const QueueInfo &get_queue_info() const;
+
+	void timestamp_log_reset();
+	void timestamp_log(const TimestampIntervalReportCallback &cb) const;
 
 private:
 	VkInstance instance = VK_NULL_HANDLE;
@@ -633,6 +659,7 @@ private:
 	} dma;
 
 	void submit_queue(QueueIndices physical_type, InternalFence *fence,
+	                  SemaphoreHolder *external_semaphore = nullptr,
 	                  unsigned semaphore_count = 0,
 	                  Semaphore *semaphore = nullptr,
 	                  int profiled_iteration = -1);
@@ -689,11 +716,13 @@ private:
 	void flush_frame(QueueIndices physical_type);
 	void sync_buffer_blocks();
 	void submit_empty_inner(QueueIndices type, InternalFence *fence,
+	                        SemaphoreHolder *external_semaphore,
 	                        unsigned semaphore_count,
 	                        Semaphore *semaphore);
 
 	void collect_wait_semaphores(QueueData &data, Helper::WaitSemaphores &semaphores);
 	void emit_queue_signals(Helper::BatchComposer &composer,
+	                        SemaphoreHolder *external_semaphore,
 	                        VkSemaphore sem, uint64_t timeline, InternalFence *fence,
 	                        unsigned semaphore_count, Semaphore *semaphores);
 	VkResult submit_batches(Helper::BatchComposer &composer, VkQueue queue, VkFence fence,
@@ -734,8 +763,7 @@ private:
 	void submit_nolock(CommandBufferHandle cmd, Fence *fence,
 	                   unsigned semaphore_count, Semaphore *semaphore);
 	void submit_empty_nolock(QueueIndices physical_type, Fence *fence,
-	                         unsigned semaphore_count,
-	                         Semaphore *semaphore, int profiling_iteration);
+	                         SemaphoreHolder *semaphore, int profiling_iteration);
 	void add_wait_semaphore_nolock(QueueIndices type, Semaphore semaphore, VkPipelineStageFlags stages,
 	                               bool flush);
 
@@ -764,8 +792,6 @@ private:
 	TextureManager texture_manager;
 #endif
 
-	std::string get_pipeline_cache_string() const;
-
 #ifdef GRANITE_VULKAN_FOSSILIZE
 	Fossilize::StateRecorder state_recorder;
 	bool enqueue_create_sampler(Fossilize::Hash hash, const VkSamplerCreateInfo *create_info, VkSampler *sampler) override;
@@ -773,8 +799,10 @@ private:
 	bool enqueue_create_pipeline_layout(Fossilize::Hash hash, const VkPipelineLayoutCreateInfo *create_info, VkPipelineLayout *layout) override;
 	bool enqueue_create_shader_module(Fossilize::Hash hash, const VkShaderModuleCreateInfo *create_info, VkShaderModule *module) override;
 	bool enqueue_create_render_pass(Fossilize::Hash hash, const VkRenderPassCreateInfo *create_info, VkRenderPass *render_pass) override;
+	bool enqueue_create_render_pass2(Fossilize::Hash hash, const VkRenderPassCreateInfo2 *create_info, VkRenderPass *render_pass) override;
 	bool enqueue_create_compute_pipeline(Fossilize::Hash hash, const VkComputePipelineCreateInfo *create_info, VkPipeline *pipeline) override;
 	bool enqueue_create_graphics_pipeline(Fossilize::Hash hash, const VkGraphicsPipelineCreateInfo *create_info, VkPipeline *pipeline) override;
+	bool enqueue_create_raytracing_pipeline(Fossilize::Hash hash, const VkRayTracingPipelineCreateInfoKHR *create_info, VkPipeline *pipeline) override;
 	void notify_replayed_resources_for_type() override;
 	VkPipeline fossilize_create_graphics_pipeline(Fossilize::Hash hash, VkGraphicsPipelineCreateInfo &info);
 	VkPipeline fossilize_create_compute_pipeline(Fossilize::Hash hash, VkComputePipelineCreateInfo &info);
@@ -785,18 +813,20 @@ private:
 	void register_descriptor_set_layout(VkDescriptorSetLayout layout, Fossilize::Hash hash, const VkDescriptorSetLayoutCreateInfo &info);
 	void register_pipeline_layout(VkPipelineLayout layout, Fossilize::Hash hash, const VkPipelineLayoutCreateInfo &info);
 	void register_shader_module(VkShaderModule module, Fossilize::Hash hash, const VkShaderModuleCreateInfo &info);
-	void register_sampler(VkSampler sampler, Fossilize::Hash hash, const VkSamplerCreateInfo &info);
+	//void register_sampler(VkSampler sampler, Fossilize::Hash hash, const VkSamplerCreateInfo &info);
 
 	struct
 	{
 		std::unordered_map<VkShaderModule, Shader *> shader_map;
 		std::unordered_map<VkRenderPass, RenderPass *> render_pass_map;
+		const Fossilize::FeatureFilter *feature_filter = nullptr;
 #ifdef GRANITE_VULKAN_MT
-		Granite::TaskGroupHandle pipeline_group;
+		// Need to forward-declare the type, avoid the ref-counted wrapper.
+		Granite::TaskGroup *pipeline_group = nullptr;
 #endif
 	} replayer_state;
 
-	void init_pipeline_state();
+	void init_pipeline_state(const Fossilize::FeatureFilter &filter);
 	void flush_pipeline_state();
 #endif
 
@@ -809,4 +839,32 @@ private:
 	bool allocate_image_memory(DeviceAllocation *allocation, const ImageCreateInfo &info,
 	                           VkImage image, VkImageTiling tiling);
 };
+
+// A fairly complex helper used for async queue readbacks.
+// Typically used for things like headless backend which emulates WSI through readbacks + encode.
+struct OwnershipTransferInfo
+{
+	CommandBuffer::Type old_queue;
+	CommandBuffer::Type new_queue;
+	VkImageLayout old_image_layout;
+	VkImageLayout new_image_layout;
+	VkPipelineStageFlags dst_pipeline_stage;
+	VkAccessFlags dst_access;
+};
+
+// For an image which was last accessed in old_queue, requests a command buffer
+// for new_queue. Commands will be enqueued as necessary in new_queue to ensure that a complete ownership
+// transfer has taken place.
+// If queue family for old_queue differs from new_queue, a release barrier is enqueued in old_queue.
+// In new_queue we perform either an acquire barrier or a simple pipeline barrier to change layout if required.
+// If semaphore is a valid handle, it will be waited on in either old_queue to perform release barrier
+// or new_queue depending on what is required.
+// If the image uses CONCURRENT sharing mode, acquire/release barriers are skipped.
+CommandBufferHandle request_command_buffer_with_ownership_transfer(
+		Device &device,
+		const Vulkan::Image &image,
+		const OwnershipTransferInfo &info,
+		const Vulkan::Semaphore &semaphore);
+
+using DeviceHandle = Util::IntrusivePtr<Device>;
 }

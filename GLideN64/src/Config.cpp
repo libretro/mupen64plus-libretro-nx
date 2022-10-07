@@ -21,12 +21,15 @@ void Config::resetToDefaults()
 	video.fullscreen = 0;
 	video.fullscreenWidth = video.windowedWidth = 640;
 #endif
+	video.borderless = 0u;
 	video.fullscreenHeight = video.windowedHeight = 480;
 	video.fullscreenRefresh = 60;
 	video.fxaa = 0;
 	video.multisampling = 0;
 	video.maxMultiSampling = 0;
 	video.verticalSync = 0;
+	video.deviceName[0] = L'\0';
+
 	video.threadedVideo = 0;
 
 	texture.anisotropy = 0;
@@ -95,6 +98,7 @@ void Config::resetToDefaults()
 	textureFilter.txForce16bpp = 0;
 	textureFilter.txCacheCompression = 1;
 	textureFilter.txSaveCache = 1;
+	textureFilter.txDump = 0;
 
 	textureFilter.txEnhancedTextureFileStorage = 0;
 	textureFilter.txHiresTextureFileStorage = 0;
@@ -197,6 +201,8 @@ const char* Config::hotkeyIniName(u32 _idx)
 		return "hkOsdRenderingResolution";
 	case Config::HotKey::hkForceGammaCorrection:
 		return "hkForceGammaCorrection";
+	case Config::HotKey::hkInaccurateTexCords:
+		return "hkInaccurateTexCords";
 	}
 	return nullptr;
 }
@@ -233,6 +239,8 @@ const char* Config::enabledHotkeyIniName(u32 _idx)
 		return "hkOsdRenderingResolutionEnabled";
 	case Config::HotKey::hkForceGammaCorrection:
 		return "hkForceGammaCorrectionEnabled";
+	case Config::HotKey::hkInaccurateTexCords:
+		return "hkInaccurateTexCordsEnabled";
 	}
 	return nullptr;
 }

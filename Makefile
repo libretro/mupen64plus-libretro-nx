@@ -111,6 +111,8 @@ ifneq (,$(findstring unix,$(platform)))
    endif
 
    ifneq (,$(findstring armv,$(platform)))
+      ARCH = arm
+      WITH_DYNAREC = arm
       CPUFLAGS += -DARM -marm
       ifneq (,$(findstring cortexa8,$(platform)))
          CPUFLAGS += -mcpu=cortex-a8
@@ -143,6 +145,7 @@ else ifneq (,$(findstring rpi,$(platform)))
       MESA = 1
    endif
    ifneq (,$(findstring rpi4,$(platform)))
+      GLES3 = 1
       MESA = 1
    endif
    ifeq ($(MESA), 1)

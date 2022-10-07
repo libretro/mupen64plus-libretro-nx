@@ -104,14 +104,20 @@ void LoadCustomSettings(bool internal)
 							config.frameBufferEmulation.N64DepthCompare = atoi(l.value);
 						}
 					}
+					else if (!strcmp(l.name, "frameBufferEmulation\\forceDepthBufferClear"))
+						config.frameBufferEmulation.forceDepthBufferClear = atoi(l.value);
 					else if (!strcmp(l.name, "frameBufferEmulation\\bufferSwapMode"))
 						config.frameBufferEmulation.bufferSwapMode = atoi(l.value);
 					else if (!strcmp(l.name, "texture\\bilinearMode"))
 						config.texture.bilinearMode = atoi(l.value);
+					else if (!strcmp(l.name, "texture\\enableHalosRemoval"))
+						config.texture.enableHalosRemoval = atoi(l.value);
 					else if (!strcmp(l.name, "texture\\maxAnisotropy"))
 						config.texture.maxAnisotropy = atoi(l.value);
 					else if (!strcmp(l.name, "graphics2D\\enableNativeResTexrects"))
 						config.graphics2D.enableNativeResTexrects = atoi(l.value);
+					else if (!strcmp(l.name, "graphics2D\\enableTexCoordBounds"))
+						config.graphics2D.enableTexCoordBounds = atoi(l.value);
 					// Inconsistent
 					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords") || !strcmp(l.name, "graphics2D\\correctTexrectCoords"))
 						config.graphics2D.correctTexrectCoords = atoi(l.value);
@@ -219,4 +225,6 @@ extern "C" void Config_LoadConfig()
 		LoadCustomSettings(true);
 		LoadCustomSettings(false);
 	}
+
+	config.validate();
 }

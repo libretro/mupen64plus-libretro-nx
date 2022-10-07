@@ -2,6 +2,9 @@
 #define GLFUNCTIONS_H
 
 #ifdef OS_WINDOWS
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 //#define FORCE_UNBUFFERED_DRAWER // Debug option.
 #elif defined(OS_LINUX)
@@ -88,6 +91,8 @@ extern PFNGLACTIVETEXTUREPROC ptrActiveTexture;
 extern PFNGLBLENDCOLORPROC ptrBlendColor;
 extern PFNGLREADBUFFERPROC ptrReadBuffer;
 extern PFNGLFINISHPROC ptrFinish;
+extern PFNGLFLUSHPROC ptrFlush;
+
 #if defined(OS_ANDROID)
 struct AHardwareBuffer;
 typedef EGLClientBuffer (EGLAPIENTRYP PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) (const struct AHardwareBuffer *buffer);
@@ -245,6 +250,7 @@ extern "C" void initGLFunctions();
 #define glBlendColor(...) opengl::FunctionWrapper::wrBlendColor(__VA_ARGS__)
 #define glReadBuffer(...) opengl::FunctionWrapper::wrReadBuffer(__VA_ARGS__)
 #define glFinish(...) opengl::FunctionWrapper::wrFinish(__VA_ARGS__)
+#define glFlush(...) opengl::FunctionWrapper::wrFlush(__VA_ARGS__)
 #if defined(OS_ANDROID)
 #define eglGetNativeClientBufferANDROID(...) opengl::FunctionWrapper::ewrGetNativeClientBufferANDROID(__VA_ARGS__)
 #endif
