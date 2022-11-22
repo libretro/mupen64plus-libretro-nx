@@ -379,7 +379,7 @@ int ujump_detour(int i, struct regstat *i_regs, struct regstat *regs, u_int *ba,
     }
 
     // Quake2 hook for __osDisableInterrupt
-    if (ba[i] == 0x8005BB00)
+    if (ba[i] == 0x8005BBA0)
     {
         // Call to our hook
         emit_call((intptr_t)detour_DisableInterrupt);
