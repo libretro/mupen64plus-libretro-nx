@@ -458,7 +458,7 @@ bool parallel_create_device(struct retro_vulkan_context *frontend_context, VkIns
 
 	if (!::RDP::context->init_device_from_instance(
 				instance, gpu, surface, required_device_extensions, num_required_device_extensions,
-				required_device_layers, num_required_device_layers, required_features, Vulkan::CONTEXT_CREATION_DISABLE_BINDLESS_BIT))
+				required_features, Vulkan::CONTEXT_CREATION_DISABLE_BINDLESS_BIT))
 	{
 		::RDP::context.reset();
 		return false;
