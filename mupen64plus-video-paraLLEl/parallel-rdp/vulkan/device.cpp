@@ -46,6 +46,7 @@ static unsigned get_thread_index()
 	return Util::get_current_thread_index();
 }
 #define LOCK() std::lock_guard<std::mutex> holder__{lock.lock}
+#define LOCK_MEMORY() std::lock_guard<std::mutex> holder__{lock.memory_lock}
 #define DRAIN_FRAME_LOCK() \
 	std::unique_lock<std::mutex> holder__{lock.lock}; \
 	lock.cond.wait(holder__, [&]() { \
@@ -53,6 +54,7 @@ static unsigned get_thread_index()
 	})
 #else
 #define LOCK() ((void)0)
+#define LOCK_MEMORY() ((void)0)
 #define DRAIN_FRAME_LOCK() VK_ASSERT(lock.counter == 0)
 static unsigned get_thread_index()
 {
@@ -60,7 +62,6 @@ static unsigned get_thread_index()
 }
 #endif
 
-using namespace std;
 using namespace Util;
 
 namespace Vulkan
@@ -317,7 +318,7 @@ LinearHostImageHandle Device::create_linear_host_image(const LinearHostImageCrea
 	else
 		gpu_image->set_layout(Layout::General);
 
-	return LinearHostImageHandle(handle_pool.linear_images.allocate(this, move(gpu_image), move(cpu_image), info.stages));
+	return LinearHostImageHandle(handle_pool.linear_images.allocate(this, std::move(gpu_image), std::move(cpu_image), info.stages));
 }
 
 void *Device::map_linear_host_image(const LinearHostImage &image, MemoryAccessFlags access)
@@ -679,11 +680,11 @@ void Device::init_pipeline_cache()
 #ifdef GRANITE_VULKAN_FILESYSTEM
 	if (!system_handles.filesystem)
 		return;
-	auto file = system_handles.filesystem->open("cache://pipeline_cache.bin", Granite::FileMode::ReadOnly);
+	auto file = system_handles.filesystem->open_readonly_mapping("cache://pipeline_cache.bin");
 	if (file)
 	{
 		auto size = file->get_size();
-		auto *mapped = static_cast<uint8_t *>(file->map());
+		auto *mapped = file->data<uint8_t>();
 		if (mapped && !init_pipeline_cache(mapped, size))
 			LOGE("Failed to initialize pipeline cache.\n");
 	}
@@ -752,9 +753,8 @@ void Device::flush_pipeline_cache()
 		return;
 	}
 
-	auto file = system_handles.filesystem->open(
-			"cache://pipeline_cache.bin",
-			Granite::FileMode::WriteOnlyTransactional);
+	auto file = system_handles.filesystem->open_transactional_mapping(
+			"cache://pipeline_cache.bin", size);
 
 	if (!file)
 	{
@@ -762,14 +762,7 @@ void Device::flush_pipeline_cache()
 		return;
 	}
 
-	uint8_t *data = static_cast<uint8_t *>(file->map_write(size));
-	if (!data)
-	{
-		LOGE("Failed to get pipeline cache data.\n");
-		return;
-	}
-
-	if (!get_pipeline_cache_data(data, size))
+	if (!get_pipeline_cache_data(file->mutable_data<uint8_t>(), size))
 	{
 		LOGE("Failed to get pipeline cache data.\n");
 		return;
@@ -808,6 +801,28 @@ void Device::init_workarounds()
 		workarounds.broken_pipeline_cache_control = true;
 	}
 #endif
+
+	if (ext.supports_tooling_info && vkGetPhysicalDeviceToolPropertiesEXT)
+	{
+		uint32_t count = 0;
+		vkGetPhysicalDeviceToolPropertiesEXT(gpu, &count, nullptr);
+		Util::SmallVector<VkPhysicalDeviceToolPropertiesEXT> tool_props(count);
+		for (auto &t : tool_props)
+			t = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TOOL_PROPERTIES_EXT };
+		vkGetPhysicalDeviceToolPropertiesEXT(gpu, &count, tool_props.data());
+		for (auto &t : tool_props)
+		{
+			LOGI("  Detected attached tool:\n");
+			LOGI("    Name: %s\n", t.name);
+			LOGI("    Description: %s\n", t.description);
+			LOGI("    Version: %s\n", t.version);
+			if ((t.purposes & VK_TOOL_PURPOSE_TRACING_BIT_EXT) != 0)
+			{
+				LOGI("Detected tracing tool, forcing host cached memory types for performance.\n");
+				workarounds.force_host_cached = true;
+			}
+		}
+	}
 }
 
 void Device::set_context(const Context &context)
@@ -837,11 +852,7 @@ void Device::set_context(const Context &context)
 	init_timeline_semaphores();
 	init_bindless();
 
-#ifdef ANDROID
-	init_frame_contexts(3); // Android needs a bit more ... ;)
-#else
 	init_frame_contexts(2); // By default, regular double buffer between CPU and GPU.
-#endif
 
 	managers.memory.init(this);
 	managers.semaphore.init(this);
@@ -1117,7 +1128,7 @@ void Device::submit(CommandBufferHandle &cmd, Fence *fence, unsigned semaphore_c
 	cmd->end_debug_channel();
 
 	LOCK();
-	submit_nolock(move(cmd), fence, semaphore_count, semaphores);
+	submit_nolock(std::move(cmd), fence, semaphore_count, semaphores);
 }
 
 void Device::submit_discard_nolock(CommandBufferHandle &cmd)
@@ -1181,7 +1192,7 @@ void Device::submit_nolock(CommandBufferHandle cmd, Fence *fence, unsigned semap
 	}
 
 	cmd->end();
-	submissions.push_back(move(cmd));
+	submissions.push_back(std::move(cmd));
 
 	InternalFence signalled_fence;
 
@@ -1972,7 +1983,7 @@ CommandBufferHandle Device::request_secondary_command_buffer_for_thread(unsigned
 
 void Device::set_acquire_semaphore(unsigned index, Semaphore acquire)
 {
-	wsi.acquire = move(acquire);
+	wsi.acquire = std::move(acquire);
 	wsi.index = index;
 	wsi.consumed = false;
 
@@ -1985,7 +1996,7 @@ void Device::set_acquire_semaphore(unsigned index, Semaphore acquire)
 
 Semaphore Device::consume_release_semaphore()
 {
-	auto ret = move(wsi.release);
+	auto ret = std::move(wsi.release);
 	wsi.release.reset();
 	return ret;
 }
@@ -2067,12 +2078,12 @@ void Device::init_frame_contexts(unsigned count)
 
 	for (unsigned i = 0; i < count; i++)
 	{
-		auto frame = unique_ptr<PerFrame>(new PerFrame(this, i));
-		per_frame.emplace_back(move(frame));
+		auto frame = std::unique_ptr<PerFrame>(new PerFrame(this, i));
+		per_frame.emplace_back(std::move(frame));
 	}
 }
 
-void Device::init_external_swapchain(const vector<ImageHandle> &swapchain_images)
+void Device::init_external_swapchain(const std::vector<ImageHandle> &swapchain_images)
 {
 	DRAIN_FRAME_LOCK();
 	wsi.swapchain.clear();
@@ -2110,7 +2121,7 @@ void Device::set_swapchain_queue_family_support(uint32_t queue_family_support)
 	wsi.queue_family_support_mask = queue_family_support;
 }
 
-void Device::init_swapchain(const vector<VkImage> &swapchain_images, unsigned width, unsigned height, VkFormat format,
+void Device::init_swapchain(const std::vector<VkImage> &swapchain_images, unsigned width, unsigned height, VkFormat format,
                             VkSurfaceTransformFlagBitsKHR transform, VkImageUsageFlags usage)
 {
 	DRAIN_FRAME_LOCK();
@@ -2173,7 +2184,7 @@ Device::PerFrame::PerFrame(Device *device_, unsigned frame_index_)
 void Device::keep_handle_alive(ImageHandle handle)
 {
 	LOCK();
-	frame().keep_alive_images.push_back(move(handle));
+	frame().keep_alive_images.push_back(std::move(handle));
 }
 
 void Device::free_memory_nolock(const DeviceAllocation &alloc)
@@ -2422,7 +2433,10 @@ void Device::wait_idle_nolock()
 		frame->trim_command_pools();
 	}
 
-	managers.memory.garbage_collect();
+	{
+		LOCK_MEMORY();
+		managers.memory.garbage_collect();
+	}
 }
 
 void Device::promote_read_write_caches_to_read_only()
@@ -2562,6 +2576,8 @@ void Device::init_calibrated_timestamps()
 	{
 #ifdef _WIN32
 		const auto supported_domain = VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT;
+#elif defined(ANDROID)
+		const auto supported_domain = VK_TIME_DOMAIN_CLOCK_MONOTONIC_EXT;
 #else
 		const auto supported_domain = VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_EXT;
 #endif
@@ -2649,7 +2665,7 @@ void Device::register_time_interval_nolock(std::string tid, QueryPoolHandle star
 		if (start_ts->is_signalled() && end_ts->is_signalled())
 			VK_ASSERT(end_ts->get_timestamp_ticks() >= start_ts->get_timestamp_ticks());
 #endif
-		frame().timestamp_intervals.push_back({ std::move(tid), move(start_ts), move(end_ts), timestamp_tag, std::move(extra) });
+		frame().timestamp_intervals.push_back({ std::move(tid), std::move(start_ts), std::move(end_ts), timestamp_tag, std::move(extra) });
 	}
 }
 
@@ -2778,8 +2794,15 @@ void Device::PerFrame::begin()
 		managers.semaphore.recycle(semaphore);
 	for (auto &event : recycled_events)
 		managers.event.recycle(event);
-	for (auto &alloc : allocations)
-		alloc.free_immediate(managers.memory);
+
+	if (!allocations.empty())
+	{
+#ifdef GRANITE_VULKAN_MT
+		std::lock_guard<std::mutex> holder{device.lock.memory_lock};
+#endif
+		for (auto &alloc : allocations)
+			alloc.free_immediate(managers.memory);
+	}
 
 	destroyed_framebuffers.clear();
 	destroyed_samplers.clear();
@@ -2870,6 +2893,27 @@ uint32_t Device::find_memory_type(uint32_t required, uint32_t mask) const
 uint32_t Device::find_memory_type(BufferDomain domain, uint32_t mask) const
 {
 	uint32_t prio[3] = {};
+
+	// Optimize for tracing apps by not allocating host memory that is uncached.
+	if (workarounds.force_host_cached)
+	{
+		switch (domain)
+		{
+		case BufferDomain::LinkedDeviceHostPreferDevice:
+			domain = BufferDomain::Device;
+			break;
+
+		case BufferDomain::LinkedDeviceHost:
+		case BufferDomain::Host:
+		case BufferDomain::CachedCoherentHostPreferCoherent:
+			domain = BufferDomain::CachedCoherentHostPreferCached;
+			break;
+
+		default:
+			break;
+		}
+	}
+
 	switch (domain)
 	{
 	case BufferDomain::Device:
@@ -3060,7 +3104,7 @@ public:
 	VkImageView unorm_view = VK_NULL_HANDLE;
 	VkImageView srgb_view = VK_NULL_HANDLE;
 	VkImageViewType default_view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-	vector<VkImageView> rt_views;
+	std::vector<VkImageView> rt_views;
 	DeviceAllocation allocation;
 	DeviceAllocator *allocator = nullptr;
 	bool owned = true;
@@ -3358,7 +3402,7 @@ ImageViewHandle Device::create_image_view(const ImageViewCreateInfo &create_info
 	{
 		holder.owned = false;
 		ret->set_alt_views(holder.depth_view, holder.stencil_view);
-		ret->set_render_target_views(move(holder.rt_views));
+		ret->set_render_target_views(std::move(holder.rt_views));
 		return ret;
 	}
 	else
@@ -3478,16 +3522,20 @@ DeviceAllocationOwnerHandle Device::allocate_memory(const MemoryAllocateInfo &in
 		return {};
 
 	DeviceAllocation alloc = {};
-	if (!managers.memory.allocate_generic_memory(info.requirements.size, info.requirements.alignment,
-	                                             info.mode, index, &alloc))
 	{
-		return {};
+		LOCK_MEMORY();
+		if (!managers.memory.allocate_generic_memory(info.requirements.size, info.requirements.alignment, info.mode,
+		                                             index, &alloc))
+		{
+			return {};
+		}
 	}
 	return DeviceAllocationOwnerHandle(handle_pool.allocations.allocate(this, alloc));
 }
 
 void Device::get_memory_budget(HeapBudget *budget)
 {
+	LOCK_MEMORY();
 	managers.memory.get_memory_budget(budget);
 }
 
@@ -3628,12 +3676,16 @@ bool Device::allocate_image_memory(DeviceAllocation *allocation, const ImageCrea
 		else
 			mode = tiling == VK_IMAGE_TILING_OPTIMAL ? AllocationMode::OptimalResource : AllocationMode::LinearHostMappable;
 
-		if (!managers.memory.allocate_image_memory(reqs.size, reqs.alignment, mode, memory_type,
-		                                           image, (info.misc & IMAGE_MISC_FORCE_NO_DEDICATED_BIT) != 0,
-		                                           allocation, use_external ? &external : nullptr))
 		{
-			LOGE("Failed to allocate image memory (type %u, size: %u).\n", unsigned(memory_type), unsigned(reqs.size));
-			return false;
+			LOCK_MEMORY();
+			if (!managers.memory.allocate_image_memory(reqs.size, reqs.alignment, mode, memory_type, image,
+			                                           (info.misc & IMAGE_MISC_FORCE_NO_DEDICATED_BIT) != 0, allocation,
+			                                           use_external ? &external : nullptr))
+			{
+				LOGE("Failed to allocate image memory (type %u, size: %u).\n",
+				     unsigned(memory_type), unsigned(reqs.size));
+				return false;
+			}
 		}
 
 		if (table->vkBindImageMemory(device, image, allocation->get_memory(),
@@ -3903,7 +3955,7 @@ ImageHandle Device::create_image_from_staging_buffer(const ImageCreateInfo &crea
 		if (has_view)
 		{
 			handle->get_view().set_alt_views(holder.depth_view, holder.stencil_view);
-			handle->get_view().set_render_target_views(move(holder.rt_views));
+			handle->get_view().set_render_target_views(std::move(holder.rt_views));
 			handle->get_view().set_unorm_view(holder.unorm_view);
 			handle->get_view().set_srgb_view(holder.srgb_view);
 		}
@@ -4299,14 +4351,20 @@ BufferHandle Device::create_imported_host_buffer(const BufferCreateInfo &create_
 	auto allocation = DeviceAllocation::make_imported_allocation(memory, info.size, memory_type);
 	if (table->vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&allocation.host_base)) != VK_SUCCESS)
 	{
-		allocation.free_immediate(managers.memory);
+		{
+			LOCK_MEMORY();
+			allocation.free_immediate(managers.memory);
+		}
 		table->vkDestroyBuffer(device, buffer, nullptr);
 		return BufferHandle{};
 	}
 
 	if (table->vkBindBufferMemory(device, buffer, memory, 0) != VK_SUCCESS)
 	{
-		allocation.free_immediate(managers.memory);
+		{
+			LOCK_MEMORY();
+			allocation.free_immediate(managers.memory);
+		}
 		table->vkDestroyBuffer(device, buffer, nullptr);
 		return BufferHandle{};
 	}
@@ -4412,47 +4470,53 @@ BufferHandle Device::create_buffer(const BufferCreateInfo &create_info, const vo
 
 	auto external = create_info.external;
 
-	if (!managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
-	                                            mode, memory_type, buffer, &allocation,
-	                                            use_external ? &external : nullptr))
 	{
-		if (use_external)
+		LOCK_MEMORY();
+		if (!managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
+		                                            mode, memory_type, buffer, &allocation,
+		                                            use_external ? &external : nullptr))
 		{
-			LOGE("Failed to export / import buffer memory.\n");
-			table->vkDestroyBuffer(device, buffer, nullptr);
-			return BufferHandle(nullptr);
-		}
+			if (use_external)
+			{
+				LOGE("Failed to export / import buffer memory.\n");
+				table->vkDestroyBuffer(device, buffer, nullptr);
+				return BufferHandle(nullptr);
+			}
 
-		auto fallback_domain = create_info.domain;
+			auto fallback_domain = create_info.domain;
 
-		// This memory type is rather scarce, so fallback to Host type if we've exhausted this memory.
-		if (create_info.domain == BufferDomain::LinkedDeviceHost)
-		{
-			LOGW("Exhausted LinkedDeviceHost memory, falling back to host.\n");
-			fallback_domain = BufferDomain::Host;
+			// This memory type is rather scarce, so fallback to Host type if we've exhausted this memory.
+			if (create_info.domain == BufferDomain::LinkedDeviceHost)
+			{
+				LOGW("Exhausted LinkedDeviceHost memory, falling back to host.\n");
+				fallback_domain = BufferDomain::Host;
+			}
+			else if (create_info.domain == BufferDomain::LinkedDeviceHostPreferDevice)
+			{
+				LOGW("Exhausted LinkedDeviceHostPreferDevice memory, falling back to device.\n");
+				fallback_domain = BufferDomain::Device;
+			}
 
-		}
-		else if (create_info.domain == BufferDomain::LinkedDeviceHostPreferDevice)
-		{
-			LOGW("Exhausted LinkedDeviceHostPreferDevice memory, falling back to device.\n");
-			fallback_domain = BufferDomain::Device;
-		}
+			memory_type = find_memory_type(fallback_domain, reqs.memoryRequirements.memoryTypeBits);
 
-		memory_type = find_memory_type(fallback_domain, reqs.memoryRequirements.memoryTypeBits);
-
-		if (memory_type == UINT32_MAX || fallback_domain == create_info.domain ||
-			!managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
-			                                        mode, memory_type, buffer, &allocation, nullptr))
-		{
-			LOGE("Failed to allocate fallback memory.\n");
-			table->vkDestroyBuffer(device, buffer, nullptr);
-			return BufferHandle(nullptr);
+			if (memory_type == UINT32_MAX || fallback_domain == create_info.domain ||
+			    !managers.memory.allocate_buffer_memory(reqs.memoryRequirements.size, reqs.memoryRequirements.alignment,
+			                                            mode, memory_type, buffer, &allocation, nullptr))
+			{
+				LOGE("Failed to allocate fallback memory.\n");
+				table->vkDestroyBuffer(device, buffer, nullptr);
+				return BufferHandle(nullptr);
+			}
 		}
 	}
 
 	if (table->vkBindBufferMemory(device, buffer, allocation.get_memory(), allocation.get_offset()) != VK_SUCCESS)
 	{
-		allocation.free_immediate(managers.memory);
+		{
+			LOCK_MEMORY();
+			allocation.free_immediate(managers.memory);
+		}
+
 		table->vkDestroyBuffer(device, buffer, nullptr);
 		return BufferHandle(nullptr);
 	}
@@ -4607,7 +4671,7 @@ uint64_t Device::allocate_cookie()
 {
 	// Reserve lower bits for "special purposes".
 #ifdef GRANITE_VULKAN_MT
-	return cookie.fetch_add(16, memory_order_relaxed) + 16;
+	return cookie.fetch_add(16, std::memory_order_relaxed) + 16;
 #else
 	cookie += 16;
 	return cookie;
@@ -4777,8 +4841,8 @@ RenderPassInfo Device::get_swapchain_render_pass(SwapchainRenderPass style)
 
 void Device::set_queue_lock(std::function<void()> lock_callback, std::function<void()> unlock_callback)
 {
-	queue_lock_callback = move(lock_callback);
-	queue_unlock_callback = move(unlock_callback);
+	queue_lock_callback = std::move(lock_callback);
+	queue_unlock_callback = std::move(unlock_callback);
 }
 
 void Device::set_name(const Buffer &buffer, const char *name)
@@ -4832,7 +4896,7 @@ void Device::report_checkpoints()
 
 		uint32_t count;
 		table->vkGetQueueCheckpointDataNV(queue_info.queues[i], &count, nullptr);
-		vector<VkCheckpointDataNV> checkpoint_data(count);
+		std::vector<VkCheckpointDataNV> checkpoint_data(count);
 		for (auto &data : checkpoint_data)
 			data.sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
 		table->vkGetQueueCheckpointDataNV(queue_info.queues[i], &count, checkpoint_data.data());

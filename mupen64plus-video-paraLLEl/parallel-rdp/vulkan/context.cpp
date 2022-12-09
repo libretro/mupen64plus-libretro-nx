@@ -34,16 +34,18 @@
 #include <windows.h>
 #endif
 
-//#undef VULKAN_DEBUG
+#if defined(ANDROID) && defined(HAVE_SWAPPY)
+#include "swappy/swappyVk.h"
+#endif
 
-using namespace std;
+//#undef VULKAN_DEBUG
 
 namespace Vulkan
 {
 void Context::set_application_info(const VkApplicationInfo *app_info)
 {
 	user_application_info = app_info;
-	VK_ASSERT(app_info->apiVersion >= VK_API_VERSION_1_1);
+	VK_ASSERT(!app_info || app_info->apiVersion >= VK_API_VERSION_1_1);
 }
 
 bool Context::init_instance_and_device(const char **instance_ext, uint32_t instance_ext_count, const char **device_ext,
@@ -53,7 +55,7 @@ bool Context::init_instance_and_device(const char **instance_ext, uint32_t insta
 
 	owned_instance = true;
 	owned_device = true;
-	if (!create_instance(instance_ext, instance_ext_count))
+	if (!create_instance(instance_ext, instance_ext_count, flags))
 	{
 		destroy();
 		LOGE("Failed to create Vulkan instance.\n");
@@ -61,7 +63,7 @@ bool Context::init_instance_and_device(const char **instance_ext, uint32_t insta
 	}
 
 	VkPhysicalDeviceFeatures features = {};
-	if (!create_device(VK_NULL_HANDLE, VK_NULL_HANDLE, device_ext, device_ext_count, nullptr, 0, &features, flags))
+	if (!create_device(VK_NULL_HANDLE, VK_NULL_HANDLE, device_ext, device_ext_count, &features, flags))
 	{
 		destroy();
 		LOGE("Failed to create Vulkan device.\n");
@@ -71,7 +73,7 @@ bool Context::init_instance_and_device(const char **instance_ext, uint32_t insta
 	return true;
 }
 
-static mutex loader_init_lock;
+static std::mutex loader_init_lock;
 static bool loader_init_once;
 static PFN_vkGetInstanceProcAddr instance_proc_addr;
 
@@ -82,7 +84,7 @@ PFN_vkGetInstanceProcAddr Context::get_instance_proc_addr()
 
 bool Context::init_loader(PFN_vkGetInstanceProcAddr addr)
 {
-	lock_guard<mutex> holder(loader_init_lock);
+	std::lock_guard<std::mutex> holder(loader_init_lock);
 	if (loader_init_once && !addr)
 		return true;
 
@@ -98,6 +100,8 @@ bool Context::init_loader(PFN_vkGetInstanceProcAddr addr)
 #ifdef __APPLE__
 			if (!module)
 				module = dlopen("libvulkan.1.dylib", RTLD_LOCAL | RTLD_LAZY);
+			if (!module)
+				module = dlopen("libMoltenVK.dylib", RTLD_LOCAL | RTLD_LAZY);
 #else
 			if (!module)
 				module = dlopen("libvulkan.so.1", RTLD_LOCAL | RTLD_LAZY);
@@ -163,7 +167,6 @@ bool Context::init_from_instance_and_device(VkInstance instance_, VkPhysicalDevi
 
 bool Context::init_device_from_instance(VkInstance instance_, VkPhysicalDevice gpu_, VkSurfaceKHR surface,
                                         const char **required_device_extensions, unsigned num_required_device_extensions,
-                                        const char **required_device_layers, unsigned num_required_device_layers,
                                         const VkPhysicalDeviceFeatures *required_features,
                                         ContextCreationFlags flags)
 {
@@ -173,11 +176,10 @@ bool Context::init_device_from_instance(VkInstance instance_, VkPhysicalDevice g
 	owned_instance = false;
 	owned_device = true;
 
-	if (!create_instance(nullptr, 0))
+	if (!create_instance(nullptr, 0, flags))
 		return false;
 
-	if (!create_device(gpu_, surface, required_device_extensions, num_required_device_extensions, required_device_layers,
-	                   num_required_device_layers, required_features, flags))
+	if (!create_device(gpu_, surface, required_device_extensions, num_required_device_extensions, required_features, flags))
 	{
 		destroy();
 		LOGE("Failed to create Vulkan device.\n");
@@ -198,8 +200,14 @@ void Context::destroy()
 	debug_messenger = VK_NULL_HANDLE;
 #endif
 
+#if defined(ANDROID) && defined(HAVE_SWAPPY)
+	if (device != VK_NULL_HANDLE)
+		SwappyVk_destroyDevice(device);
+#endif
+
 	if (owned_device && device != VK_NULL_HANDLE)
 		device_table.vkDestroyDevice(device, nullptr);
+
 	if (owned_instance && instance != VK_NULL_HANDLE)
 		vkDestroyInstance(instance, nullptr);
 }
@@ -223,9 +231,9 @@ void Context::notify_validation_error(const char *msg)
 		message_callback(msg);
 }
 
-void Context::set_notification_callback(function<void(const char *)> func)
+void Context::set_notification_callback(std::function<void(const char *)> func)
 {
-	message_callback = move(func);
+	message_callback = std::move(func);
 }
 
 #ifdef VULKAN_DEBUG
@@ -294,7 +302,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_messenger_cb(
 }
 #endif
 
-bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_count)
+bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_count, ContextCreationFlags flags)
 {
 	uint32_t target_instance_version = user_application_info ? user_application_info->apiVersion : VK_API_VERSION_1_1;
 	if (volkGetInstanceVersion() < target_instance_version)
@@ -306,20 +314,20 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 	VkInstanceCreateInfo info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	info.pApplicationInfo = &get_application_info();
 
-	vector<const char *> instance_exts;
-	vector<const char *> instance_layers;
+	std::vector<const char *> instance_exts;
+	std::vector<const char *> instance_layers;
 	for (uint32_t i = 0; i < instance_ext_count; i++)
 		instance_exts.push_back(instance_ext[i]);
 
 	uint32_t ext_count = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
-	vector<VkExtensionProperties> queried_extensions(ext_count);
+	std::vector<VkExtensionProperties> queried_extensions(ext_count);
 	if (ext_count)
 		vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, queried_extensions.data());
 
 	uint32_t layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-	vector<VkLayerProperties> queried_layers(layer_count);
+	std::vector<VkLayerProperties> queried_layers(layer_count);
 	if (layer_count)
 		vkEnumerateInstanceLayerProperties(&layer_count, queried_layers.data());
 
@@ -344,7 +352,7 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 		ext.supports_debug_utils = true;
 	}
 
-	auto itr = find_if(instance_ext, instance_ext + instance_ext_count, [](const char *name) {
+	auto itr = std::find_if(instance_ext, instance_ext + instance_ext_count, [](const char *name) {
 		return strcmp(name, VK_KHR_SURFACE_EXTENSION_NAME) == 0;
 	});
 	bool has_surface_extension = itr != (instance_ext + instance_ext_count);
@@ -353,6 +361,14 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 	{
 		instance_exts.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 		ext.supports_surface_capabilities2 = true;
+	}
+
+	if ((flags & CONTEXT_CREATION_ENABLE_ADVANCED_WSI_BIT) != 0 &&
+	    has_surface_extension &&
+	    has_extension(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME))
+	{
+		instance_exts.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
+		ext.supports_swapchain_colorspace = true;
 	}
 
 #ifdef VULKAN_DEBUG
@@ -417,7 +433,7 @@ bool Context::create_instance(const char **instance_ext, uint32_t instance_ext_c
 
 	volkLoadInstance(instance);
 
-#if defined(VULKAN_DEBUG) && !defined(ANDROID)
+#if defined(VULKAN_DEBUG)
 	if (ext.supports_debug_utils)
 	{
 		VkDebugUtilsMessengerCreateInfoEXT debug_info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -468,8 +484,7 @@ QueueInfo::QueueInfo()
 }
 
 bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const char **required_device_extensions,
-                            unsigned num_required_device_extensions, const char **required_device_layers,
-                            unsigned num_required_device_layers, const VkPhysicalDeviceFeatures *required_features,
+                            unsigned num_required_device_extensions, const VkPhysicalDeviceFeatures *required_features,
                             ContextCreationFlags flags)
 {
 	gpu = gpu_;
@@ -482,7 +497,7 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		if (gpu_count == 0)
 			return false;
 
-		vector<VkPhysicalDevice> gpus(gpu_count);
+		std::vector<VkPhysicalDevice> gpus(gpu_count);
 		if (vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.data()) != VK_SUCCESS)
 			return false;
 
@@ -525,23 +540,11 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		}
 	}
 
-	{
-		VkPhysicalDeviceProperties props;
-		vkGetPhysicalDeviceProperties(gpu, &props);
-		LOGI("Using Vulkan GPU: %s\n", props.deviceName);
-	}
-
 	uint32_t ext_count = 0;
 	vkEnumerateDeviceExtensionProperties(gpu, nullptr, &ext_count, nullptr);
-	vector<VkExtensionProperties> queried_extensions(ext_count);
+	std::vector<VkExtensionProperties> queried_extensions(ext_count);
 	if (ext_count)
 		vkEnumerateDeviceExtensionProperties(gpu, nullptr, &ext_count, queried_extensions.data());
-
-	uint32_t layer_count = 0;
-	vkEnumerateDeviceLayerProperties(gpu, &layer_count, nullptr);
-	vector<VkLayerProperties> queried_layers(layer_count);
-	if (layer_count)
-		vkEnumerateDeviceLayerProperties(gpu, &layer_count, queried_layers.data());
 
 	const auto has_extension = [&](const char *name) -> bool {
 		auto itr = find_if(begin(queried_extensions), end(queried_extensions), [name](const VkExtensionProperties &e) -> bool {
@@ -550,22 +553,21 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		return itr != end(queried_extensions);
 	};
 
-	const auto has_layer = [&](const char *name) -> bool {
-		auto itr = find_if(begin(queried_layers), end(queried_layers), [name](const VkLayerProperties &e) -> bool {
-			return strcmp(e.layerName, name) == 0;
-		});
-		return itr != end(queried_layers);
-	};
-
 	for (uint32_t i = 0; i < num_required_device_extensions; i++)
 		if (!has_extension(required_device_extensions[i]))
 			return false;
 
-	for (uint32_t i = 0; i < num_required_device_layers; i++)
-		if (!has_layer(required_device_layers[i]))
-			return false;
+	VkPhysicalDeviceProperties2 gpu_props2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+	if (has_extension(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+	{
+		ext.supports_driver_properties = true;
+		ext.driver_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR };
+		gpu_props2.pNext = &ext.driver_properties;
+	}
 
-	vkGetPhysicalDeviceProperties(gpu, &gpu_props);
+	vkGetPhysicalDeviceProperties2(gpu, &gpu_props2);
+	gpu_props = gpu_props2.properties;
+	LOGI("Using Vulkan GPU: %s\n", gpu_props.deviceName);
 
 	if (gpu_props.apiVersion < VK_API_VERSION_1_1)
 	{
@@ -647,12 +649,22 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 	queue_info.timestamp_valid_bits =
 			queue_props[queue_info.family_indices[QUEUE_INDEX_GRAPHICS]].queueFamilyProperties.timestampValidBits;
 
+	// Driver ends up interleaving GPU work in very bizarre ways, causing horrible GPU
+	// bubbles and completely broken pacing. Single queue works around it.
+	bool broken_async_queues =
+			ext.supports_driver_properties &&
+			ext.driver_properties.driverID == VK_DRIVER_ID_SAMSUNG_PROPRIETARY;
+
+	if (broken_async_queues)
+		LOGW("Working around broken scheduler for separate compute queues, forcing single GRAPHICS + COMPUTE queue.\n");
+
 	// Prefer another graphics queue since we can do async graphics that way.
 	// The compute queue is to be treated as high priority since we also do async graphics on it.
-	if (!find_vacant_queue(queue_info.family_indices[QUEUE_INDEX_COMPUTE], queue_indices[QUEUE_INDEX_COMPUTE],
-	                       VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, 0, 1.0f) &&
-	    !find_vacant_queue(queue_info.family_indices[QUEUE_INDEX_COMPUTE], queue_indices[QUEUE_INDEX_COMPUTE],
-	                       VK_QUEUE_COMPUTE_BIT, 0, 1.0f))
+	if (broken_async_queues ||
+	    (!find_vacant_queue(queue_info.family_indices[QUEUE_INDEX_COMPUTE], queue_indices[QUEUE_INDEX_COMPUTE],
+	                        VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, 0, 1.0f) &&
+	     !find_vacant_queue(queue_info.family_indices[QUEUE_INDEX_COMPUTE], queue_indices[QUEUE_INDEX_COMPUTE],
+	                        VK_QUEUE_COMPUTE_BIT, 0, 1.0f)))
 	{
 		// Fallback to the graphics queue if we must.
 		queue_info.family_indices[QUEUE_INDEX_COMPUTE] = queue_info.family_indices[QUEUE_INDEX_GRAPHICS];
@@ -700,24 +712,59 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 	device_info.pQueueCreateInfos = queue_infos.data();
 	device_info.queueCreateInfoCount = uint32_t(queue_infos.size());
 
-	vector<const char *> enabled_extensions;
-	vector<const char *> enabled_layers;
+	std::vector<const char *> enabled_extensions;
 
+	bool requires_swapchain = false;
 	for (uint32_t i = 0; i < num_required_device_extensions; i++)
+	{
 		enabled_extensions.push_back(required_device_extensions[i]);
-	for (uint32_t i = 0; i < num_required_device_layers; i++)
-		enabled_layers.push_back(required_device_layers[i]);
+		if (strcmp(required_device_extensions[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+			requires_swapchain = true;
+		else if (strcmp(required_device_extensions[i], VK_KHR_PRESENT_ID_EXTENSION_NAME) == 0 ||
+		         strcmp(required_device_extensions[i], VK_KHR_PRESENT_WAIT_EXTENSION_NAME) == 0 ||
+		         strcmp(required_device_extensions[i], VK_EXT_HDR_METADATA_EXTENSION_NAME) == 0)
+		{
+			flags |= CONTEXT_CREATION_ENABLE_ADVANCED_WSI_BIT;
+		}
+		else if (strcmp(required_device_extensions[i], VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0)
+		{
+			flags &= ~CONTEXT_CREATION_DISABLE_BINDLESS_BIT;
+		}
+	}
+
+#if defined(ANDROID) && defined(HAVE_SWAPPY)
+	// Enable additional extensions required by SwappyVk.
+	std::unique_ptr<char[]> swappy_str_buffer;
+	if (requires_swapchain)
+	{
+		uint32_t required_swappy_extension_count = 0;
+
+		// I'm really not sure why the API just didn't return static const char * strings here,
+		// but oh well.
+		SwappyVk_determineDeviceExtensions(gpu, uint32_t(queried_extensions.size()),
+		                                   queried_extensions.data(),
+		                                   &required_swappy_extension_count,
+		                                   nullptr);
+		swappy_str_buffer.reset(new char[required_swappy_extension_count * (VK_MAX_EXTENSION_NAME_SIZE + 1)]);
+
+		std::vector<char *> extension_buffer;
+		extension_buffer.reserve(required_swappy_extension_count);
+		for (uint32_t i = 0; i < required_swappy_extension_count; i++)
+			extension_buffer.push_back(swappy_str_buffer.get() + i * (VK_MAX_EXTENSION_NAME_SIZE + 1));
+		SwappyVk_determineDeviceExtensions(gpu, uint32_t(queried_extensions.size()),
+		                                   queried_extensions.data(),
+		                                   &required_swappy_extension_count,
+		                                   extension_buffer.data());
+
+		for (auto *required_ext : extension_buffer)
+			enabled_extensions.push_back(required_ext);
+	}
+#endif
 
 	if (has_extension(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME))
 	{
 		ext.supports_mirror_clamp_to_edge = true;
 		enabled_extensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
-	}
-
-	if (has_extension(VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME))
-	{
-		ext.supports_google_display_timing = true;
-		enabled_extensions.push_back(VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME);
 	}
 
 #ifdef _WIN32
@@ -787,6 +834,9 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		enabled_extensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 		ext.supports_shader_float_control = true;
 	}
+
+	if (has_extension(VK_EXT_TOOLING_INFO_EXTENSION_NAME))
+		ext.supports_tooling_info = true;
 
 #ifdef GRANITE_VULKAN_BETA
 	if (has_extension(VK_KHR_VIDEO_QUEUE_EXTENSION_NAME))
@@ -985,31 +1035,28 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		enabled_extensions.push_back(VK_KHR_FORMAT_FEATURE_FLAGS_2_EXTENSION_NAME);
 	}
 
-	// Validation layers don't fully support present_id/wait yet.
-	// Ignore this extension for now.
-#ifndef VULKAN_DEBUG
-	for (unsigned i = 0; i < num_required_device_extensions; i++)
+	if ((flags & CONTEXT_CREATION_ENABLE_ADVANCED_WSI_BIT) != 0 && requires_swapchain)
 	{
-		if (strcmp(required_device_extensions[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+		if (has_extension(VK_KHR_PRESENT_ID_EXTENSION_NAME))
 		{
-			if (has_extension(VK_KHR_PRESENT_ID_EXTENSION_NAME))
-			{
-				enabled_extensions.push_back(VK_KHR_PRESENT_ID_EXTENSION_NAME);
-				*ppNext = &ext.present_id_features;
-				ppNext = &ext.present_id_features.pNext;
-			}
+			enabled_extensions.push_back(VK_KHR_PRESENT_ID_EXTENSION_NAME);
+			*ppNext = &ext.present_id_features;
+			ppNext = &ext.present_id_features.pNext;
+		}
 
-			if (has_extension(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
-			{
-				enabled_extensions.push_back(VK_KHR_PRESENT_WAIT_EXTENSION_NAME);
-				*ppNext = &ext.present_wait_features;
-				ppNext = &ext.present_wait_features.pNext;
-			}
+		if (has_extension(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
+		{
+			enabled_extensions.push_back(VK_KHR_PRESENT_WAIT_EXTENSION_NAME);
+			*ppNext = &ext.present_wait_features;
+			ppNext = &ext.present_wait_features.pNext;
+		}
 
-			break;
+		if (ext.supports_swapchain_colorspace && has_extension(VK_EXT_HDR_METADATA_EXTENSION_NAME))
+		{
+			ext.supports_hdr_metadata = true;
+			enabled_extensions.push_back(VK_EXT_HDR_METADATA_EXTENSION_NAME);
 		}
 	}
-#endif
 
 	vkGetPhysicalDeviceFeatures2(gpu, &features);
 
@@ -1069,13 +1116,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 
 	device_info.pNext = &features;
 
-#ifdef VULKAN_DEBUG
-	if (!force_no_validation && has_layer("VK_LAYER_KHRONOS_validation"))
-		enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
-	else if (!force_no_validation && has_layer("VK_LAYER_LUNARG_standard_validation"))
-		enabled_layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
-
 	if (ext.supports_external && has_extension(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME))
 	{
 		ext.supports_external_memory_host = true;
@@ -1086,8 +1126,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 	VkPhysicalDeviceProperties2 props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 	ext.subgroup_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES };
 	ext.multiview_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES };
-
-	ext.driver_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR };
 
 	ext.host_memory_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT };
 	ext.subgroup_size_control_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_PROPERTIES_EXT };
@@ -1127,14 +1165,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		ppNext = &ext.conservative_rasterization_properties.pNext;
 	}
 
-	if (has_extension(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-	{
-		enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
-		ext.supports_driver_properties = true;
-		*ppNext = &ext.driver_properties;
-		ppNext = &ext.driver_properties.pNext;
-	}
-
 	if (ext.supports_shader_float_control)
 	{
 		*ppNext = &ext.float_control_properties;
@@ -1151,8 +1181,6 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 
 	device_info.enabledExtensionCount = enabled_extensions.size();
 	device_info.ppEnabledExtensionNames = enabled_extensions.empty() ? nullptr : enabled_extensions.data();
-	device_info.enabledLayerCount = enabled_layers.size();
-	device_info.ppEnabledLayerNames = enabled_layers.empty() ? nullptr : enabled_layers.data();
 
 	for (auto *enabled_extension : enabled_extensions)
 		LOGI("Enabling device extension: %s.\n", enabled_extension);
@@ -1175,6 +1203,10 @@ bool Context::create_device(VkPhysicalDevice gpu_, VkSurfaceKHR surface, const c
 		{
 			device_table.vkGetDeviceQueue(device, queue_info.family_indices[i], queue_indices[i],
 			                              &queue_info.queues[i]);
+
+#if defined(ANDROID) && defined(HAVE_SWAPPY)
+			SwappyVk_setQueueFamilyIndex(device, queue_info.queues[i], queue_info.family_indices[i]);
+#endif
 		}
 		else
 		{
