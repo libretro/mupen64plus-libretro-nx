@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-#ifdef IOS
+#if defined(IOS) || defined(OSX)
 #include <stdlib.h>
 #else
 #include <malloc.h>

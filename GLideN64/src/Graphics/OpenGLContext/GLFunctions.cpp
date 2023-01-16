@@ -5,7 +5,7 @@
 
 #include "GLFunctions.h"
 
-#define ASSIGN_PROC_ADR(proc_type, proc_name) ptr##proc_name = rgl##proc_name
+#define ASSIGN_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) rgl##proc_name
 #define ASSIGN_GL_PROC_ADR(proc_type, proc_name) ptr##proc_name = gl##proc_name
 
 #if defined(GL_USE_DLSYM)
