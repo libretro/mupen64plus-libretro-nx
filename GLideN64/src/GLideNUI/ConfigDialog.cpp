@@ -197,6 +197,11 @@ void ConfigDialog::_init(bool reInit, bool blockCustomSettings)
 	QStringList fullscreenModesList, fullscreenRatesList;
 	int fullscreenMode, fullscreenRate;
 	fillFullscreenResolutionsList(fullscreenModesList, fullscreenMode, fullscreenRatesList, fullscreenRate);
+#ifdef M64P_GLIDENUI
+	if (fullscreenModesList.isEmpty() && fullscreenRatesList.isEmpty()) {
+		ui->fullScreenResolutionFrame->setVisible(false);
+	}
+#endif
 	ui->fullScreenResolutionComboBox->clear();
 	ui->fullScreenResolutionComboBox->insertItems(0, fullscreenModesList);
 	ui->fullScreenResolutionComboBox->setCurrentIndex(fullscreenMode);
@@ -836,8 +841,8 @@ void ConfigDialog::on_buttonBox_clicked(QAbstractButton *button)
 			QMessageBox::RestoreDefaults | QMessageBox::Cancel, this
 			);
 		msgBox.setDefaultButton(QMessageBox::Cancel);
-		msgBox.setButtonText(QMessageBox::RestoreDefaults, tr("Restore Defaults"));
-		msgBox.setButtonText(QMessageBox::Cancel, tr("Cancel"));
+		msgBox.button(QMessageBox::RestoreDefaults)->setText(tr("Restore Defaults"));
+		msgBox.button(QMessageBox::Cancel)->setText(tr("Cancel"));
 		if (msgBox.exec() == QMessageBox::RestoreDefaults) {
 			const u32 enableCustomSettings = config.generalEmulation.enableCustomSettings;
 			resetSettings(m_strIniPath);
@@ -1056,7 +1061,7 @@ void ConfigDialog::setTitle()
 	setWindowTitle(tr("GLideN64 Settings"));
 }
 
-void ConfigDialog::on_profilesComboBox_currentIndexChanged(const QString &profile)
+void ConfigDialog::on_profilesComboBox_currentTextChanged(const QString &profile)
 {
 	ui->settingsDestProfileRadioButton->setChecked(true);
 	if (profile == tr("New...")) {
@@ -1125,8 +1130,8 @@ void ConfigDialog::on_removeProfilePushButton_clicked()
 	QMessageBox msgBox(QMessageBox::Warning, tr("Remove Profile"),
 		msg, QMessageBox::Yes | QMessageBox::Cancel, this);
 	msgBox.setDefaultButton(QMessageBox::Cancel);
-	msgBox.setButtonText(QMessageBox::Yes, tr("Remove"));
-	msgBox.setButtonText(QMessageBox::No, tr("Cancel"));
+	msgBox.button(QMessageBox::Yes)->setText(tr("Remove"));
+	msgBox.button(QMessageBox::Cancel)->setText(tr("Cancel"));
 	if (msgBox.exec() == QMessageBox::Yes) {
 		removeProfile(m_strIniPath, profile);
 		ui->profilesComboBox->blockSignals(true);

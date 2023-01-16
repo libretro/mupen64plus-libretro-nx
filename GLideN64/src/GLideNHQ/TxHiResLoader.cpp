@@ -30,9 +30,20 @@ TxHiResLoader::TxHiResLoader(int maxwidth,
 
 }
 
+bool TxHiResLoader::checkFolderName(const wchar_t *folderName) const
+{
+	static tx_wstring skipFolderPrefix(wst("~!~"));
+	tx_wstring folder(folderName);
+	if (folder.compare(0, 1, wst(".")) == 0)
+		/* skip hidden files */
+		return false;
+
+	return folder.compare(0, skipFolderPrefix.length(), skipFolderPrefix) != 0;
+}
+
 uint32_t TxHiResLoader::checkFileName(char* ident, char* filename,
 	uint32_t* pChksum, uint32_t* pPalchksum,
-	uint32_t* pFmt, uint32_t* pSiz)
+	uint32_t* pFmt, uint32_t* pSiz) const
 {
 #define CRCFMTSIZ_LEN 13
 #define CRCWILDCARD_LEN 15
@@ -42,7 +53,7 @@ uint32_t TxHiResLoader::checkFileName(char* ident, char* filename,
 	const char* pfilename;
 	uint32_t length = 0, filename_type = 0;
 	bool hasWildcard = false;
-	const char supported_ends[][20] = {
+	static const char supported_ends[][20] = {
 		"all.png",
 #ifdef OS_WINDOWS
 		"allcibyrgba.png",
@@ -152,10 +163,10 @@ uint32_t TxHiResLoader::checkFileName(char* ident, char* filename,
 	return length;
 }
 
-uint8_t* TxHiResLoader::loadFileInfoTex(char* fname,
+uint8_t* TxHiResLoader::loadFileInfoTex(FULLFNAME_CHARTYPE* fullfname, char* fname,
 	int siz, int* pWidth, int* pHeight,
 	uint32_t fmt,
-	ColorFormat* pFormat)
+	ColorFormat* pFormat) const
 {
 	/* Deal with the wackiness some texture packs utilize Rice format.
 	 * Read in the following order: _a.* + _rgb.*, _all.png _ciByRGBA.png,
@@ -172,6 +183,14 @@ uint8_t* TxHiResLoader::loadFileInfoTex(char* fname,
 	 * Format: 0 - RGBA, 1 - YUV, 2 - CI, 3 - IA, 4 - I
 	 * Size:   0 - 4bit, 1 - 8bit, 2 - 16bit, 3 - 32 bit
 	 */
+
+#ifdef _WIN32
+#define FOPEN _wfopen
+#define FOPEN_MODE L"rb"
+#else
+#define FOPEN fopen
+#define FOPEN_MODE "rb"
+#endif
 
 	uint8_t* tex = nullptr;
 	uint8_t* tmptex = nullptr;
@@ -204,28 +223,28 @@ uint8_t* TxHiResLoader::loadFileInfoTex(char* fname,
 		}
 		/* _a.png */
 		strcpy(pfname, "_a.png");
-		if ((fp = fopen(fname, "rb")) != nullptr) {
+		if ((fp = FOPEN(fullfname, FOPEN_MODE)) != nullptr) {
 			tmptex = _txImage->readPNG(fp, &tmpwidth, &tmpheight, &tmpformat);
 			fclose(fp);
 		}
 		if (!tmptex) {
 			/* _a.bmp */
 			strcpy(pfname, "_a.bmp");
-			if ((fp = fopen(fname, "rb")) != nullptr) {
+			if ((fp = FOPEN(fullfname, FOPEN_MODE)) != nullptr) {
 				tmptex = _txImage->readBMP(fp, &tmpwidth, &tmpheight, &tmpformat);
 				fclose(fp);
 			}
 		}
 		/* _rgb.png */
 		strcpy(pfname, "_rgb.png");
-		if ((fp = fopen(fname, "rb")) != nullptr) {
+		if ((fp = FOPEN(fullfname, FOPEN_MODE)) != nullptr) {
 			tex = _txImage->readPNG(fp, &width, &height, &format);
 			fclose(fp);
 		}
 		if (!tex) {
 			/* _rgb.bmp */
 			strcpy(pfname, "_rgb.bmp");
-			if ((fp = fopen(fname, "rb")) != nullptr) {
+			if ((fp = FOPEN(fullfname, FOPEN_MODE)) != nullptr) {
 				tex = _txImage->readBMP(fp, &width, &height, &format);
 				fclose(fp);
 			}
@@ -315,7 +334,7 @@ uint8_t* TxHiResLoader::loadFileInfoTex(char* fname,
 #endif
 				strstr(fname, "_ci.bmp")) {
 
-				if ((fp = fopen(fname, "rb")) != nullptr) {
+				if ((fp = FOPEN(fullfname, FOPEN_MODE)) != nullptr) {
 					if (strstr(fname, ".png"))
 						tex = _txImage->readPNG(fp, &width, &height, &format);
 					else
@@ -547,6 +566,8 @@ uint8_t* TxHiResLoader::loadFileInfoTex(char* fname,
 		}
 	}
 
+#undef FOPEN
+#undef FOPEN_MODE
 
 	/* last minute validations */
 	if (!tex || !width || !height || format == graphics::internalcolorFormat::NOCOLOR || width > _maxwidth || height > _maxheight) {
