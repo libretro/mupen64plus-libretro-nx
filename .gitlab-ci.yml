@@ -28,6 +28,12 @@ include:
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
+  # MacOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-x64.yml'
+  # MacOS ARM 64-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-arm64.yml'
   # Android    
   - project: 'libretro-infrastructure/ci-templates'
     file: '/android-jni.yml'
@@ -132,7 +138,7 @@ android-x86_64-gles3:
     - .libretro-android-jni-x86_64
     - .core-defs-gles3
 
-# Apple
+# iOS
 libretro-build-ios-arm64-gles3:
   variables:
     HAVE_DYNAREC: ""
@@ -147,4 +153,18 @@ libretro-build-ios-arm64-gles3:
 libretro-build-libnx-aarch64:
   extends:
     - .libretro-libnx-static-retroarch-master
+    - .core-defs
+
+# MacOS 64-bit
+libretro-build-osx-x64:
+  variables:
+    WITH_DYNAREC: ""
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs

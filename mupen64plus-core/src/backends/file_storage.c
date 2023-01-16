@@ -30,6 +30,7 @@
 #include "main/util.h"
 #include "main/netplay.h"
 
+#include <libretro_private.h>
 #include <mupen64plus-next_common.h>
 
 int open_file_storage(struct file_storage* fstorage, size_t size, const char* filename)
