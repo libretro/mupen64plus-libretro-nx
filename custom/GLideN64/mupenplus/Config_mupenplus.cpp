@@ -118,8 +118,7 @@ void LoadCustomSettings(bool internal)
 						config.graphics2D.enableNativeResTexrects = atoi(l.value);
 					else if (!strcmp(l.name, "graphics2D\\enableTexCoordBounds"))
 						config.graphics2D.enableTexCoordBounds = atoi(l.value);
-					// Inconsistent
-					else if (!strcmp(l.name, "generalEmulation\\correctTexrectCoords") || !strcmp(l.name, "graphics2D\\correctTexrectCoords"))
+					else if (!strcmp(l.name, "graphics2D\\correctTexrectCoords"))
 						config.graphics2D.correctTexrectCoords = atoi(l.value);
 					else if (!strcmp(l.name, "generalEmulation\\enableLegacyBlending"))
 						config.generalEmulation.enableLegacyBlending = atoi(l.value);
