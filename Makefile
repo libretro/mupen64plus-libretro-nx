@@ -402,6 +402,9 @@ else ifneq (,$(findstring osx,$(platform)))
       WITH_DYNAREC =
    endif
 
+   HAVE_PARALLEL_RSP = 1
+   HAVE_PARALLEL_RDP = 1
+
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 # iOS
