@@ -164,9 +164,9 @@ libretro-build-osx-x64:
     - .core-defs
 
 # MacOS ARM 64-bit
-libretro-build-osx-arm64:
-  variables:
-    WITH_DYNAREC: ""
-  extends:
-    - .libretro-osx-arm64-make-default
-    - .core-defs
+#libretro-build-osx-arm64:
+#  variables:
+#    WITH_DYNAREC: ""
+#  extends:
+#    - .libretro-osx-arm64-make-default
+#    - .core-defs
