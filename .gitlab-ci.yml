@@ -138,21 +138,21 @@ android-x86_64-gles3:
     - .libretro-android-jni-x86_64
     - .core-defs-gles3
 
+# Nintendo Switch - libnx
+libretro-build-libnx-aarch64:
+  extends:
+    - .libretro-libnx-static-retroarch-master
+    - .core-defs
+
 # iOS
 libretro-build-ios-arm64-gles3:
   variables:
-    HAVE_DYNAREC: ""
+    WITH_DYNAREC: ""
     EGL: 0
     GLES3: 1
     HAVE_NEON: 0
   extends:
     - .libretro-ios-arm64-make-default
-    - .core-defs
-
-# Nintendo Switch - libnx
-libretro-build-libnx-aarch64:
-  extends:
-    - .libretro-libnx-static-retroarch-master
     - .core-defs
 
 # MacOS 64-bit
@@ -165,6 +165,8 @@ libretro-build-osx-x64:
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64:
+  variables:
+    WITH_DYNAREC: ""
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
