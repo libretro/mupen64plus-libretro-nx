@@ -739,6 +739,10 @@ void retro_deinit(void)
        }
     }
 
+    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+
+    CoreShutdown();
+
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -1951,8 +1955,6 @@ void retro_unload_game(void)
        environ_clear_thread_waits_cb(1, NULL);
     }
 
-    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
-
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
     {
        CoreDoCommand(M64CMD_STOP, 0, NULL);
@@ -1969,6 +1971,8 @@ void retro_unload_game(void)
 
        environ_clear_thread_waits_cb(0, NULL);
     }
+
+    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
 
     cleanup_global_paths();
     
