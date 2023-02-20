@@ -40,6 +40,7 @@ extern retro_input_state_t input_cb;
 extern struct retro_rumble_interface rumble;
 extern int pad_pak_types[4];
 extern int pad_present[4];
+extern int pad_rawdata[4];
 extern int astick_deadzone;
 extern int astick_sensitivity;
 extern int r_cbutton;
@@ -399,7 +400,7 @@ EXPORT void CALL inputInitiateControllers(CONTROL_INFO ControlInfo)
     {
        controller[i].control = ControlInfo.Controls + i;
        controller[i].control->Present = pad_present[i];
-       controller[i].control->RawData = 0;
+       controller[i].control->RawData = pad_rawdata[i];
 
        if (pad_pak_types[i] == PLUGIN_MEMPAK)
           controller[i].control->Plugin = PLUGIN_MEMPAK;

@@ -59,6 +59,10 @@
 
 #include "audio_plugin.h"
 
+#ifdef HAVE_RAPHNET_INPUT
+#include "plugin_front.h"
+#endif
+
 #ifndef PRESCALE_WIDTH
 #define PRESCALE_WIDTH  640
 #endif
@@ -234,6 +238,7 @@ extern struct
 // these instead for input_plugin to read.
 int pad_pak_types[4];
 int pad_present[4] = {1, 1, 1, 1};
+int pad_rawdata[4] = {0, 0, 0, 0};
 
 static void n64DebugCallback(void* aContext, int aLevel, const char* aMessage)
 {
@@ -336,14 +341,17 @@ static void setup_variables(void)
 
     static const struct retro_controller_description port[] = {
         { "Controller", RETRO_DEVICE_JOYPAD },
+#ifdef HAVE_RAPHNET_INPUT
+        { "Raphnet", RETRO_DEVICE_RAPHNET },
+#endif
         { "RetroPad", RETRO_DEVICE_JOYPAD },
     };
 
     static const struct retro_controller_info ports[] = {
-        { port, 2 },
-        { port, 2 },
-        { port, 2 },
-        { port, 2 },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
+        { port, NUM_DEVICE_TYPES },
         { 0, 0 }
     };
 
@@ -557,16 +565,16 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             } else {
                 return false;
             }
-            
+
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            
+
             result = load_file(info[1].path, &gameBuffer, &outSize) == file_ok;
             if(result)
             {
                memcpy(&info[1].data, &gameBuffer, sizeof(void*));
                memcpy(&info[1].size, &outSize, sizeof(size_t));
                result = result && retro_load_game(&info[1]);
-               
+
                if(gameBuffer)
                {
                   free(gameBuffer);
@@ -584,7 +592,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             } else {
                 return false;
             }
-            
+
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[1].path);
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[2].path);
@@ -645,7 +653,7 @@ void retro_set_environment(retro_environment_t cb)
 
     environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
     environ_cb(RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB, &environ_clear_thread_waits_cb);
-    
+
     setup_variables();
 }
 
@@ -877,7 +885,7 @@ static void update_variables(bool startup)
                 log_cb(RETRO_LOG_INFO, "Requested Angrylion but no LLE RSP available, falling back to GLideN64!\n");
                 plugin_connect_rsp_api(RSP_PLUGIN_HLE);
                 plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
-#endif 
+#endif
              }
           }
           else if (!strcmp(var.value, "cxd4"))
@@ -905,16 +913,23 @@ static void update_variables(bool startup)
              log_cb(RETRO_LOG_INFO, "Requested Angrylion but no LLE RSP available, falling back to GLideN64!\n");
              plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
              plugin_connect_rsp_api(RSP_PLUGIN_HLE);
-#endif 
+#endif
           }
        }
+
+       setup_variables();
+#if defined(HAVE_RAPHNET_INPUT)
+       plugin_connect_input_api(INPUT_PLUGIN_RAPHNET);
+#else
+       plugin_connect_input_api(INPUT_PLUGIN_INPUT);
+#endif
 
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
        {
           unsigned poll_type_early      = 1; /* POLL_TYPE_EARLY */
           environ_cb(RETRO_ENVIRONMENT_POLL_TYPE_OVERRIDE, &poll_type_early);
        }
-       
+
        var.key = CORE_NAME "-ThreadedRenderer";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -949,7 +964,7 @@ static void update_variables(bool startup)
        {
           EnableDitheringQuantization = !strcmp(var.value, "False") ? 0 : 1;
        }
-       
+
        var.key = CORE_NAME "-RDRAMImageDitheringMode";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -963,7 +978,7 @@ static void update_variables(bool startup)
           else
              RDRAMImageDitheringMode = 0; // bdmDisable
        }
-       
+
        var.key = CORE_NAME "-FXAA";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1359,13 +1374,6 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           CountPerOp = atoi(var.value);
-       }
-       
-       var.key = CORE_NAME "-CountPerOpDenomPot";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          CountPerOpDenomPot = atoi(var.value);
        }
 
        if(EnableFullspeed)
@@ -1840,46 +1848,46 @@ bool retro_load_game(const struct retro_game_info *game)
             retro_dd_path_img = newPath;
         }
     }
-    
-    if (!retro_transferpak_rom_path && game->path)
-    {
-       gamePath = (char *)game->path;
-       newPath = (char *)calloc(1, strlen(gamePath) + 4);
-       strcpy(newPath, gamePath);
-       strcat(newPath, ".gb");
-       FILE *fileTest = fopen(newPath, "r");
-       if (!fileTest)
-       {
-          free(newPath);
-       }
-       else
-       {
-          fclose(fileTest);
-          // Free'd later in Mupen Core
-          retro_transferpak_rom_path = newPath;
- 
-          // We have a gb rom!
-          if (!retro_transferpak_ram_path)
-          {
-             gamePath = (char *)game->path;
-             newPath = (char *)calloc(1, strlen(gamePath) + 5);
-             strcpy(newPath, gamePath);
-             strcat(newPath, ".sav");
-             FILE *fileTest = fopen(newPath, "r");
-             if (!fileTest)
-             {
-                free(newPath);
-             }
-             else
-             {
-                fclose(fileTest);
-                // Free'd later in Mupen Core
-                retro_transferpak_ram_path = newPath;
-             }
-          }
-       }
-    }
- 
+
+   if (!retro_transferpak_rom_path)
+   {
+      gamePath = (char *)game->path;
+      newPath = (char *)calloc(1, strlen(gamePath) + 4);
+      strcpy(newPath, gamePath);
+      strcat(newPath, ".gb");
+      FILE *fileTest = fopen(newPath, "r");
+      if (!fileTest)
+      {
+         free(newPath);
+      }
+      else
+      {
+         fclose(fileTest);
+         // Free'd later in Mupen Core
+         retro_transferpak_rom_path = newPath;
+
+         // We have a gb rom!
+         if (!retro_transferpak_ram_path)
+         {
+            gamePath = (char *)game->path;
+            newPath = (char *)calloc(1, strlen(gamePath) + 5);
+            strcpy(newPath, gamePath);
+            strcat(newPath, ".sav");
+            FILE *fileTest = fopen(newPath, "r");
+            if (!fileTest)
+            {
+               free(newPath);
+            }
+            else
+            {
+               fclose(fileTest);
+               // Free'd later in Mupen Core
+               retro_transferpak_ram_path = newPath;
+            }
+         }
+      }
+   }
+
     // Init default vals
     retro_savestate_complete = true;
     load_game_successful = false;
@@ -1938,7 +1946,7 @@ bool retro_load_game(const struct retro_game_info *game)
        /* Additional check for vioverlay not set at start */
        update_variables(false);
     }
-    
+
     load_game_successful = true;
 
     return true;
@@ -1964,14 +1972,14 @@ void retro_unload_game(void)
           co_switch(game_thread);
        }
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
-    
+
        pthread_join(emuThread, NULL);
 
        environ_clear_thread_waits_cb(0, NULL);
     }
 
     cleanup_global_paths();
-    
+
     emu_initialized = false;
 
     // Reset savestate job var
@@ -1998,7 +2006,7 @@ void retro_run (void)
              emuThreadRunning = true;
           }
        }
-       
+
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     }
 
@@ -2008,7 +2016,7 @@ void retro_run (void)
     {
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
-    
+
     if (libretro_swap_buffer)
     {
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
@@ -2142,29 +2150,44 @@ bool retro_unserialize(const void *data, size_t size)
 //Needed to be able to detach controllers for Lylat Wars multiplayer
 //Only sets if controller struct is initialised as addon paks do.
 void retro_set_controller_port_device(unsigned in_port, unsigned device) {
+    int prefer_rawdata = 0;
+
     if (in_port < 4){
         switch(device)
         {
             case RETRO_DEVICE_NONE:
                if (controller[in_port].control){
                    controller[in_port].control->Present = 0;
+                   controller[in_port].control->RawData = 0;
                    break;
                } else {
                    pad_present[in_port] = 0;
+                   pad_rawdata[in_port] = 0;
                    break;
                }
+
+#ifdef HAVE_RAPHNET_INPUT
+            case RETRO_DEVICE_RAPHNET:
+               prefer_rawdata = 1;
+#endif
 
             case RETRO_DEVICE_JOYPAD:
             default:
                if (controller[in_port].control){
                    controller[in_port].control->Present = 1;
+                   controller[in_port].control->RawData = prefer_rawdata;
                    break;
                } else {
                    pad_present[in_port] = 1;
+                   pad_rawdata[in_port] = prefer_rawdata;
                    break;
                }
         }
     }
+
+#ifdef HAVE_RAPHNET_INPUT
+   raphnetUpdatePortMap(in_port, device);
+#endif
 }
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
