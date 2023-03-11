@@ -458,6 +458,34 @@ else ifneq (,$(findstring ios,$(platform)))
 	endif
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+# tvOS
+else ifneq (,$(findstring tvos,$(platform)))
+   ifeq ($(TVOSSDK),)
+      TVOSSDK := $(shell xcodebuild -version -sdk appletvos Path)
+   endif
+
+   TARGET := $(TARGET_NAME)_libretro_tvos.dylib
+   DEFINES += -DIOS -DTVOS
+   GLES = 1
+
+   WITH_DYNAREC=
+   GLES=1
+   GLES3=1
+   FORCE_GLES3=1
+   EGL := 0
+   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
+   PLATCFLAGS += -DIOS -DTVOS -marm -DOS_IOS -DOS_TVOS -DDONT_WANT_ARM_OPTIMIZATIONS
+   CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
+   HAVE_NEON=0
+   CC         += -mappletvos-version-min=8.0
+   CC_AS      += -mappletvos-version-min=8.0
+   CXX        += -mappletvos-version-min=8.0
+   PLATCFLAGS += -mappletvos-version-min=8.0 -Wno-error=implicit-function-declaration
+   CC = clang -arch arm64 -isysroot $(TVOSSDK)
+   CXX = clang++ -arch arm64 -isysroot $(TVOSSDK)
+
+   LDFLAGS += -dynamiclib
+   GL_LIB := -framework OpenGLES
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -556,7 +584,7 @@ endif
 ifeq ($(STATIC_LINKING), 1)
    ifneq (,$(findstring win,$(platform)))
       TARGET := $(TARGET:.dll=.lib)
-   else ifneq ($(platform), $(filter $(platform), osx ios))
+   else ifneq ($(platform), $(filter $(platform), osx ios tvos))
       TARGET := $(TARGET:.dylib=.a)            
    else
       TARGET := $(TARGET:.so=.a)

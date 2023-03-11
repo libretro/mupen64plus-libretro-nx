@@ -260,7 +260,7 @@ SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/api/vidext_libretro.c \
 	$(LIBRETRO_COMM_DIR)/glsm/glsm.c
 
-	
+
 SOURCES_CXX   += \
 	$(VIDEODIR_GLIDEN64)/src/Combiner.cpp                                                         \
     $(VIDEODIR_GLIDEN64)/src/CombinerKey.cpp                                                      \
@@ -485,12 +485,12 @@ else
 	SOURCES_CXX   += $(VIDEODIR_GLIDEN64)/src/3DMath.cpp
 endif
 
-ifneq ($(platform), ios-arm64)
+ifneq ($(platform), $(filter $(platform), ios-arm64 tvos-arm64))
 	EGL_LIB ?= -lEGL
 endif
 
 ifeq ($(GLES3),1)
-	ifeq ($(platform),ios-arm64)
+	ifeq ($(platform), $(filter $(platform), ios-arm64 tvos-arm64))
 		GLFLAGS += -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
 	else
 		GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES3 -DGLES3
@@ -505,7 +505,7 @@ else ifeq ($(GLES),1)
 	GLFLAGS += -DEGL -DHAVE_OPENGLES -DHAVE_OPENGLES2 -DGLES2
 	LDFLAGS += $(EGL_LIB)
 	SOURCES_C += $(LIBRETRO_COMM_DIR)/glsym/glsym_es2.c
-	
+
 	ifeq ($(ANDROID),1)
 		SOURCES_CXX += $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/GraphicBufferWrapper.cpp \
 		               $(VIDEODIR_GLIDEN64)/src/Graphics/OpenGLContext/GraphicBuffer/PublicApi/android_hardware_buffer_compat.cpp
