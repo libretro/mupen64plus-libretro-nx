@@ -43,6 +43,9 @@ include:
   # iOS
   - project: 'libretro-infrastructure/ci-templates'
     file: '/ios-arm64.yml'
+  # tvOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/tvos-arm64.yml'
 
 # Stages
 stages:
@@ -153,6 +156,17 @@ libretro-build-ios-arm64-gles3:
     HAVE_NEON: 0
   extends:
     - .libretro-ios-arm64-make-default
+    - .core-defs
+
+# tvOS
+libretro-build-tvos-arm64-gles3:
+  variables:
+    WITH_DYNAREC: ""
+    EGL: 0
+    GLES3: 1
+    HAVE_NEON: 0
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs
 
 # MacOS 64-bit
