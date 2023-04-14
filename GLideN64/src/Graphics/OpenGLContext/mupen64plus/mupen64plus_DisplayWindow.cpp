@@ -124,6 +124,7 @@ bool DisplayWindowMupen64plus::_resizeWindow()
 	m_bFullscreen = true;
 	m_width = m_screenWidth = m_resizeWidth;
 	m_height = m_screenHeight = m_resizeHeight;
+	_setBufferSize();
 	opengl::Utils::isGLError(); // reset GL error.
 
 	return true;

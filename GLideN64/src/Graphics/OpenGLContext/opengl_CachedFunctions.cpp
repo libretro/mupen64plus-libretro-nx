@@ -23,6 +23,7 @@ void CachedEnable::enable(bool _enable)
 		return;
 
 	if (_enable) {
+		// This is all to support macro shenanigans for the libretro glsm implementation
 		switch(GLenum(m_parameter)) {
 			case GL_BLEND:
 				if(IS_GL_FUNCTION_VALID(Enablei))

@@ -66,7 +66,7 @@ void NoiseTexture::_fillTextureData()
 	for (auto& vec : m_texData)
 		vec.resize(NOISE_TEX_WIDTH * NOISE_TEX_HEIGHT);
 
-    FillTextureData(static_cast<u32>(time(nullptr)), &m_texData, 0, static_cast<u32>(m_texData.size()));
+	FillTextureData(static_cast<u32>(time(nullptr)), &m_texData, 0, static_cast<u32>(m_texData.size()));
 
 	displayLoadProgress(L"");
 }
