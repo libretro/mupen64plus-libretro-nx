@@ -400,10 +400,6 @@ static void n64StateCallback(void *Context, m64p_core_param param_type, int new_
 
 static bool emu_step_load_data()
 {
-    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
-    if(ret && log_cb)
-        log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
-
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_OPEN\n");
 
     if(CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data))
@@ -725,6 +721,10 @@ void retro_init(void)
         retro_thread = co_active();
         game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
     }
+
+    m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
+    if(ret && log_cb)
+        log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
 }
 
 void retro_deinit(void)
@@ -736,9 +736,11 @@ void retro_deinit(void)
        {
            CoreDoCommand(M64CMD_STOP, 0, NULL);
            co_switch(game_thread); /* Let the core thread finish */
+           CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
        }
     }
 
+    CoreShutdown();
     deinit_audio_libretro();
 
     if (perf_cb.perf_log)
@@ -1951,8 +1953,6 @@ void retro_unload_game(void)
        environ_clear_thread_waits_cb(1, NULL);
     }
 
-    CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
-
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
     {
        CoreDoCommand(M64CMD_STOP, 0, NULL);
@@ -1968,6 +1968,8 @@ void retro_unload_game(void)
        pthread_join(emuThread, NULL);
 
        environ_clear_thread_waits_cb(0, NULL);
+
+       CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
     }
 
     cleanup_global_paths();
