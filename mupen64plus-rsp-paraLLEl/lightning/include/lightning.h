@@ -20,6 +20,8 @@
 #ifndef _lightning_h
 #define _lightning_h
 
+#define HAVE_MMAP 1
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
