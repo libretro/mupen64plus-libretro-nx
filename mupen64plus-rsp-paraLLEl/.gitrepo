@@ -4,8 +4,8 @@
 ; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
 ;
 [subrepo]
-	remote = git@github.com:Themaister/parallel-rsp.git
-	branch = master
+	remote = git@github.com:warmenhoven/parallel-rsp.git
+	branch = dev/warmenhoven/lightning
 	commit = ec6817fb8619d4fcc6d5d5f85f3cf7def0851246
 	parent = a3dcc7bfc8960663a34d8d1a0b96ac29b0616345
 	method = rebase
