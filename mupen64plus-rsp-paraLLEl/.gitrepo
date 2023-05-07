@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:warmenhoven/parallel-rsp.git
 	branch = dev/warmenhoven/lightning
-	commit = ec6817fb8619d4fcc6d5d5f85f3cf7def0851246
-	parent = a3dcc7bfc8960663a34d8d1a0b96ac29b0616345
+	commit = 3fd31508072777a7a1b6d9069cb0d512e93069ba
+	parent = 1ef8961093311555297875acfc3f9543577455de
 	method = rebase
-	cmdver = 0.4.0
+	cmdver = 0.4.5
