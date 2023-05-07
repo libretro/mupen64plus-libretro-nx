@@ -425,6 +425,8 @@ else ifneq (,$(findstring ios,$(platform)))
    DEFINES += -DIOS
    GLES = 1
 	ifeq ($(platform),ios-arm64)
+		HAVE_PARALLEL_RSP = 1
+		HAVE_PARALLEL_RDP = 1
 		WITH_DYNAREC=
 		GLES=1
 		GLES3=1
@@ -474,6 +476,7 @@ else ifneq (,$(findstring tvos,$(platform)))
    GLES3=1
    FORCE_GLES3=1
    EGL := 0
+   HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
    PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
    PLATCFLAGS += -DIOS -DTVOS -marm -DOS_IOS -DOS_TVOS -DDONT_WANT_ARM_OPTIMIZATIONS

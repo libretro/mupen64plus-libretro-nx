@@ -911,6 +911,24 @@ static void update_variables(bool startup)
           }
        }
        
+#ifdef IOS
+       bool can_jit = false;
+       if (!environ_cb(RETRO_ENVIRONMENT_GET_JIT_CAPABLE, &can_jit) || !can_jit)
+       {
+          if(current_rsp_type == RSP_PLUGIN_PARALLEL)
+          {
+#if defined(HAVE_LLE)
+             plugin_connect_rsp_api(RSP_PLUGIN_CXD4);
+             log_cb(RETRO_LOG_INFO, "Selected Parallel RSP without JIT, falling back to CXD4!\n");
+#else
+             log_cb(RETRO_LOG_INFO, "Selected Parallel RSP without JIT, falling back to GLideN64!\n");
+             plugin_connect_rsp_api(RSP_PLUGIN_HLE);
+             plugin_connect_rdp_api(RDP_PLUGIN_GLIDEN64);
+#endif
+          }
+       }
+#endif
+
        var.key = CORE_NAME "-ThreadedRenderer";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
