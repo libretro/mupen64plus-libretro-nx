@@ -483,6 +483,8 @@ endif
 
 ifneq ($(platform), $(filter $(platform), ios-arm64 tvos-arm64))
 	EGL_LIB ?= -lEGL
+else
+	SOURCES_C += $(ROOT_DIR)/custom/ios/compat.c
 endif
 
 ifeq ($(GLES3),1)
