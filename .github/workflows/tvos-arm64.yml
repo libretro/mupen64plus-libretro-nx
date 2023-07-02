@@ -1,0 +1,37 @@
+name: CI tvOS arm64
+
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+    types: [run_build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Compile
+      run: |
+        export platform=tvos-arm64
+        export CC=clang
+        export CXX=clang++
+        export WITH_DYNAREC=""
+        export EGL=0
+        export GLES=1
+        export HAVE_NEON=0
+        make platform=tvos-arm64
+
+    - name: Get short SHA
+      id: slug
+      run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_OUTPUT
+    
+    - uses: actions/upload-artifact@v3
+      with:
+        name: mupen64plus_next_${{ steps.slug.outputs.sha8 }}
+        path: mupen64plus_next_libretro_tvos.dylib

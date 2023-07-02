@@ -1,0 +1,46 @@
+name: CI Windows i686 (MXE)
+
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+    types: [run_build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: 
+      image: git.libretro.com:5050/libretro-infrastructure/libretro-build-mxe-win-cross-cores:gcc11
+      options: --user root
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Compile
+      run: |
+        export platform=win32
+        export ARCH=x86
+        export MSYSTEM=MINGW32
+        export AR=i686-w64-mingw32.static-ar
+        export AS=i686-w64-mingw32.static-as
+        export CC=i686-w64-mingw32.static-gcc
+        export CXX=i686-w64-mingw32.static-g++
+        export WINDRES=i686-w64-mingw32.static-windres
+        export HAVE_PARALLEL_RDP=1
+        export HAVE_PARALLEL_RSP=1
+        export HAVE_THR_ALL=1
+        export LLE=1
+        make
+        strip --strip-unneeded mupen64plus_next_libretro.dll
+
+    - name: Get short SHA
+      id: slug
+      run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_OUTPUT
+    
+    - uses: actions/upload-artifact@v3
+      with:
+        name: mupen64plus_next_${{ steps.slug.outputs.sha8 }}
+        path: mupen64plus_next_libretro.dll

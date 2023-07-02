@@ -1,0 +1,38 @@
+name: CI Mac arm64
+
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+    types: [run_build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Compile
+      run: |
+        export platform=osx
+        export arch=arm
+        export CC=clang
+        export CXX=clang++
+        export CROSS_COMPILE=1
+        export LIBRETRO_APPLE_PLATFORM=arm64-apple-macos10.15
+        export LIBRETRO_APPLE_ISYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+        export WITH_DYNAREC=""
+        make
+
+    - name: Get short SHA
+      id: slug
+      run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_OUTPUT
+    
+    - uses: actions/upload-artifact@v3
+      with:
+        name: mupen64plus_next_${{ steps.slug.outputs.sha8 }}
+        path: mupen64plus_next_libretro.dylib
