@@ -148,7 +148,7 @@ static const struct pak_interface* l_ipaks[PAK_MAX_SIZE];
 static size_t l_pak_type_idx[6];
 
 /* PRNG state - used for Mempaks ID generation */
-static struct xoshiro256pp_state l_mpk_idgen;
+struct xoshiro256pp_state l_mpk_idgen;
 
 /*********************************************************************************************************
 * static functions
@@ -351,6 +351,7 @@ static void main_set_speedlimiter(int enable)
     l_MainSpeedLimit = enable ? 1 : 0;
 }
 
+#if 0
 void main_speedlimiter_toggle(void)
 {
     if (netplay_is_init())
@@ -370,6 +371,7 @@ void main_speedlimiter_toggle(void)
     else
         main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Speed limiter disabled");
 }
+#endif
 
 static int main_is_paused(void)
 {
@@ -880,7 +882,7 @@ static void open_mpk_file(struct file_storage* storage)
         storage->data = saved_memory.mempack;
         storage->size = MEMPAK_SIZE * 4;
         // If player 1 we send, otherwise we recieve
-        netplay_read_storage("MPK.bin", storage->data, storage->size);
+        netplay_read_storage("mempak.mpk", storage->data, storage->size);
     }
 }
 
@@ -897,7 +899,7 @@ static void open_fla_file(struct file_storage* storage)
         storage->data = saved_memory.flashram;
         storage->size = FLASHRAM_SIZE;
         // If player 1 we send, otherwise we recieve
-        netplay_read_storage("FLA.bin", storage->data, storage->size);
+        netplay_read_storage("flashram.fla", storage->data, storage->size);
     }
 }
 
@@ -914,7 +916,7 @@ static void open_sra_file(struct file_storage* storage)
         storage->data = saved_memory.sram;
         storage->size = SRAM_SIZE;
         // If player 1 we send, otherwise we recieve
-        netplay_read_storage("SRA.bin", storage->data, storage->size);
+        netplay_read_storage("saveram.sra", storage->data, storage->size);
     }
 }
 
@@ -931,7 +933,7 @@ static void open_eep_file(struct file_storage* storage)
         storage->data = saved_memory.eeprom;
         storage->size = EEPROM_MAX_SIZE;
         // If player 1 we send, otherwise we recieve
-        netplay_read_storage("EEP.bin", storage->data, storage->size);
+        netplay_read_storage("eeprom.eep", storage->data, storage->size);
     }
 }
 

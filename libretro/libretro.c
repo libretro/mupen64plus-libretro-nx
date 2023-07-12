@@ -1760,10 +1760,23 @@ static void format_saved_memory(void)
     format_sram(saved_memory.sram);
     format_eeprom(saved_memory.eeprom, EEPROM_MAX_SIZE);
     format_flashram(saved_memory.flashram);
-    format_mempak(saved_memory.mempack + 0 * MEMPAK_SIZE);
-    format_mempak(saved_memory.mempack + 1 * MEMPAK_SIZE);
-    format_mempak(saved_memory.mempack + 2 * MEMPAK_SIZE);
-    format_mempak(saved_memory.mempack + 3 * MEMPAK_SIZE);
+
+    for (int i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
+    {
+      // Generate a random serial ID
+      uint32_t serial[6];
+      int k;
+      for (k = 0; k < 6; ++k)
+      {
+         serial[k] = xoshiro256pp_next(&l_mpk_idgen);
+      }
+
+    format_mempak(saved_memory.mempack + i * MEMPAK_SIZE,
+        serial,
+        DEFAULT_MEMPAK_DEVICEID,
+        DEFAULT_MEMPAK_BANKS,
+        DEFAULT_MEMPAK_VERSION);
+    }
 }
 
 void context_reset(void)

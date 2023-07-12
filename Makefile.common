@@ -54,6 +54,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/cart/is_viewer.c \
 	$(CORE_DIR)/src/device/cart/sram.c \
 	$(CORE_DIR)/src/device/controllers/game_controller.c \
+	$(CORE_DIR)/src/device/controllers/vru_controller.c \
 	$(CORE_DIR)/src/device/controllers/paks/biopak.c \
 	$(CORE_DIR)/src/device/controllers/paks/mempak.c \
 	$(CORE_DIR)/src/device/controllers/paks/rumblepak.c \
@@ -72,6 +73,7 @@ SOURCES_C = \
 	$(CORE_DIR)/src/device/r4300/cached_interp.c \
 	$(CORE_DIR)/src/device/r4300/cp0.c \
 	$(CORE_DIR)/src/device/r4300/cp1.c \
+	$(CORE_DIR)/src/device/r4300/cp2.c \
 	$(CORE_DIR)/src/device/r4300/idec.c \
 	$(CORE_DIR)/src/device/r4300/interrupt.c \
 	$(CORE_DIR)/src/device/r4300/pure_interp.c \

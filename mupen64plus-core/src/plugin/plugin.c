@@ -147,7 +147,12 @@ const input_plugin_functions dummy_input = {
     inputRomOpen,
     dummyinput_SDL_KeyDown,
     dummyinput_SDL_KeyUp,
-    dummyinput_RenderCallback
+    dummyinput_RenderCallback,
+    dummy_SendVRUWord,
+    dummy_SetMicState,
+    dummy_ReadVRUResults,
+    dummy_ClearVRUWords,
+    dummy_SetVRUWordMask
 };
 
 static AUDIO_INFO audio_info;
