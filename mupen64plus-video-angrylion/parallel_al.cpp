@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <condition_variable>
 #include <cstdint>
+#include <stdexcept>
 #include <functional>
 #include <mutex>
 #include <thread>
