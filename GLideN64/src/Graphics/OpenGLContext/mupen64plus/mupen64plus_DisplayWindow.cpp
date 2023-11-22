@@ -92,13 +92,8 @@ void DisplayWindowMupen64plus::_stop()
 void DisplayWindowMupen64plus::_restart()
 {
 #ifdef M64P_GLIDENUI
-	if (_supportsWithRateFunctions && m_bFullscreen) {
-		m_resizeWidth = config.video.fullscreenWidth;
-		m_resizeHeight = config.video.fullscreenHeight;
-	} else {
-		m_resizeWidth = config.video.windowedWidth;
-		m_resizeHeight = config.video.windowedHeight;
-	}
+	m_resizeWidth = 0;
+	m_resizeHeight = 0;
 #endif // M64P_GLIDENUI
 }
 

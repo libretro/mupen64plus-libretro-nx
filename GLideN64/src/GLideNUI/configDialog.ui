@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>597</width>
-    <height>661</height>
+    <width>590</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1021,12 +1021,6 @@
       </layout>
      </widget>
      <widget class="QWidget" name="emulationTab">
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>380</height>
-       </size>
-      </property>
       <attribute name="title">
        <string>Emulation</string>
       </attribute>
@@ -1037,7 +1031,7 @@
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_30">
          <property name="spacing">
-          <number>18</number>
+          <number>9</number>
          </property>
          <item>
           <widget class="QCheckBox" name="customSettingsCheckBox">
@@ -1156,7 +1150,7 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_56">
               <property name="spacing">
-               <number>3</number>
+               <number>4</number>
               </property>
               <item>
                <widget class="QRadioButton" name="factor0xRadioButton">
@@ -1371,6 +1365,9 @@
             <string>Dithering</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_6">
+            <property name="verticalSpacing">
+             <number>4</number>
+            </property>
             <item row="0" column="1">
              <widget class="QCheckBox" name="ditheringQuantizationCheckBox">
               <property name="toolTip">
@@ -1452,7 +1449,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_48">
             <property name="spacing">
-             <number>18</number>
+             <number>9</number>
             </property>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_31">
@@ -1542,7 +1539,7 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_5">
                  <property name="spacing">
-                  <number>3</number>
+                  <number>4</number>
                  </property>
                  <property name="leftMargin">
                   <number>0</number>
@@ -1628,7 +1625,7 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_35">
                  <property name="spacing">
-                  <number>3</number>
+                  <number>4</number>
                  </property>
                  <property name="leftMargin">
                   <number>0</number>
