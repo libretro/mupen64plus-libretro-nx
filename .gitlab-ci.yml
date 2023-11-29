@@ -154,6 +154,7 @@ libretro-build-ios-arm64-gles3:
     EGL: 0
     GLES3: 1
     HAVE_NEON: 0
+    HAVE_THR_AL: 1
   extends:
     - .libretro-ios-arm64-make-default
     - .core-defs
@@ -165,6 +166,7 @@ libretro-build-tvos-arm64-gles3:
     EGL: 0
     GLES3: 1
     HAVE_NEON: 0
+    HAVE_THR_AL: 1
   extends:
     - .libretro-tvos-arm64-make-default
     - .core-defs
@@ -173,6 +175,7 @@ libretro-build-tvos-arm64-gles3:
 libretro-build-osx-x64:
   variables:
     WITH_DYNAREC: ""
+    HAVE_THR_AL: 1
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs
@@ -181,6 +184,7 @@ libretro-build-osx-x64:
 libretro-build-osx-arm64:
   variables:
     WITH_DYNAREC: ""
+    HAVE_THR_AL: 1
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
