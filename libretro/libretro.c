@@ -124,6 +124,10 @@ int d_cbutton;
 int u_cbutton;
 bool alternate_mapping;
 
+static bool swap_pak_enabled[4] = {false};
+static int  swap_pak_hold[4]    = {0};
+static int  swap_pak_delay      = 0;
+
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
 
@@ -764,6 +768,25 @@ void update_controllers()
         else if (!strcmp(pk1var.value, "transfer"))
             p1_pak = PLUGIN_TRANSFER_PAK;
 
+        // This is for the 'Memory/Rumble Pak Swap' button that lets you swap
+        // between the Memory Pak and the Rumble Pak on-the-fly.
+        // Initialize to Memory Pak, then it's handled by pak_swapping().
+        // As long as swap_pak_enabled is true we just keep the current value
+        // from controller[port].control->Plugin, or else the Pak would be
+        // reinitialized to Memory Pak every time core options are refreshed.
+        if (!strcmp(pk1var.value, "memory/rumble (swappable)"))
+        {
+            if (swap_pak_enabled[0])
+               p1_pak = controller[0].control->Plugin;
+            else
+            {
+               swap_pak_enabled[0] = true;
+               p1_pak = PLUGIN_MEMPAK;
+            }
+        }
+        else
+            swap_pak_enabled[0] = false;
+
         // If controller struct is not initialised yet, set pad_pak_types instead
         // which will be looked at when initialising the controllers.
         if (controller[0].control)
@@ -783,6 +806,19 @@ void update_controllers()
         else if (!strcmp(pk2var.value, "transfer"))
             p2_pak = PLUGIN_TRANSFER_PAK;
 
+        if (!strcmp(pk2var.value, "memory/rumble (swappable)"))
+        {
+            if (swap_pak_enabled[1])
+               p2_pak = controller[1].control->Plugin;
+            else
+            {
+               swap_pak_enabled[1] = true;
+               p2_pak = PLUGIN_MEMPAK;
+            }
+        }
+        else
+            swap_pak_enabled[1] = false;
+
         if (controller[1].control)
             controller[1].control->Plugin = p2_pak;
         else
@@ -799,6 +835,19 @@ void update_controllers()
             p3_pak = PLUGIN_MEMPAK;
         else if (!strcmp(pk3var.value, "transfer"))
             p3_pak = PLUGIN_TRANSFER_PAK;
+
+        if (!strcmp(pk3var.value, "memory/rumble (swappable)"))
+        {
+            if (swap_pak_enabled[2])
+               p3_pak = controller[2].control->Plugin;
+            else
+            {
+               swap_pak_enabled[2] = true;
+               p3_pak = PLUGIN_MEMPAK;
+            }
+        }
+        else
+            swap_pak_enabled[2] = false;
 
         if (controller[2].control)
             controller[2].control->Plugin = p3_pak;
@@ -817,11 +866,74 @@ void update_controllers()
         else if (!strcmp(pk4var.value, "transfer"))
             p4_pak = PLUGIN_TRANSFER_PAK;
 
+        if (!strcmp(pk4var.value, "memory/rumble (swappable)"))
+        {
+            if (swap_pak_enabled[3])
+               p4_pak = controller[3].control->Plugin;
+            else
+            {
+               swap_pak_enabled[3] = true;
+               p4_pak = PLUGIN_MEMPAK;
+            }
+        }
+        else
+            swap_pak_enabled[3] = false;
+
         if (controller[3].control)
             controller[3].control->Plugin = p4_pak;
         else
             pad_pak_types[3] = p4_pak;
     }
+}
+
+static void pak_swapping(void)
+{
+   int port;
+
+   for (port = 0; port < 4; port++)
+   {
+      if (swap_pak_enabled[port] && controller[port].control->Present)
+      {
+         bool pressed;
+
+         if (alternate_mapping)
+            pressed = input_cb(port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
+         else
+            pressed = input_cb(port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT);
+
+         if (pressed)
+         {
+            if (swap_pak_hold[port] >= swap_pak_delay)
+            {
+               struct retro_message msg;
+               char swap_msg[64];
+               const char *pak_name;
+
+               swap_pak_hold[port] = -1;
+
+               if (controller[port].control->Plugin == PLUGIN_MEMPAK)
+               {
+                  controller[port].control->Plugin = PLUGIN_RAW;
+                  pak_name = "Rumble";
+               }
+               else
+               {
+                  controller[port].control->Plugin = PLUGIN_MEMPAK;
+                  pak_name = "Memory";
+               }
+
+               snprintf(swap_msg, sizeof(swap_msg), "Player %d Controller Pak: %s Pak", port + 1, pak_name);
+               msg.msg = swap_msg;
+               msg.frames = 120;
+               environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+            }
+            else if (swap_pak_hold[port] != -1)
+               swap_pak_hold[port]++;
+         }
+         else
+            swap_pak_hold[port] = 0;
+      }
+   }
 }
 
 static void update_variables(bool startup)
@@ -1731,6 +1843,18 @@ static void update_variables(bool startup)
     }
 #endif // HAVE_THR_AL
 
+    var.key = CORE_NAME "-pak-swap-delay";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+       // If startup is true then ROM infos aren't ready yet and we don't know
+       // the region of the game yet, so we just keep the seconds for now
+       // and we'll calculate in frames a bit later in retro_load_game()
+       swap_pak_delay = atoi(var.value);
+       if (!startup)
+          swap_pak_delay *= retro_get_region() == RETRO_REGION_PAL ? 50 : 60;
+    }
+
     update_controllers();
 
     // Hide irrelevant options
@@ -1931,6 +2055,10 @@ bool retro_load_game(const struct retro_game_info *game)
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 || current_rdp_type == RDP_PLUGIN_PARALLEL)
     {
        first_context_reset = true;
+
+       // Now that we know the region, we can calculate the seconds in frames
+       // for the 'Memory/Rumble Pak Swap' button hold delay
+       swap_pak_delay *= retro_get_region() == RETRO_REGION_PAL ? 50 : 60;
     }
     else
     {
@@ -1985,10 +2113,8 @@ void retro_run (void)
     libretro_swap_buffer = false;
     static bool updated = false;
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
        update_variables(false);
-       update_controllers();
-    }
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
@@ -2038,6 +2164,8 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
+
+    pak_swapping();
 }
 
 void retro_reset (void)
