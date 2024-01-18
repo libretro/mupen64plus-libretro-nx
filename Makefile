@@ -519,38 +519,19 @@ else ifneq (,$(findstring android,$(platform)))
 # emscripten
 else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
-   GLES := 1
-   WITH_DYNAREC :=
+   GLES = 1
+   GLES3 = 1
+   WITH_DYNAREC =
    CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
-   PLATCFLAGS += \
-      -Dsinc_resampler=glupen_sinc_resampler \
-      -DCC_resampler=glupen_CC_resampler \
-      -Drglgen_symbol_map=glupen_rglgen_symbol_map \
-      -Drglgen_resolve_symbols_custom=glupen_rglgen_resolve_symbols_custom \
-      -Drglgen_resolve_symbols=glupen_rglgen_resolve_symbols \
-      -Dmemalign_alloc=glupen_memalign_alloc \
-      -Dmemalign_free=glupen_memalign_free \
-      -Dmemalign_alloc_aligned=glupen_memalign_alloc_aligned \
-      -Daudio_resampler_driver_find_handle=glupen_audio_resampler_driver_find_handle \
-      -Daudio_resampler_driver_find_ident=glupen_audio_resampler_driver_find_ident \
-      -Drarch_resampler_realloc=glupen_rarch_resampler_realloc \
-      -Dconvert_float_to_s16_C=glupen_convert_float_to_s16_C \
-      -Dconvert_float_to_s16_init_simd=glupen_convert_float_to_s16_init_simd \
-      -Dconvert_s16_to_float_C=glupen_convert_s16_to_float_C \
-      -Dconvert_s16_to_float_init_simd=glupen_convert_s16_to_float_init_simd \
-      -Dcpu_features_get_perf_counter=glupen_cpu_features_get_perf_counter \
-      -Dcpu_features_get_time_usec=glupen_cpu_features_get_time_usec \
-      -Dcpu_features_get_core_amount=glupen_cpu_features_get_core_amount \
-      -Dcpu_features_get=glupen_cpu_features_get \
-      -Dffs=glupen_ffs \
-      -Dstrlcpy_retro__=glupen_strlcpy_retro__ \
-      -Dstrlcat_retro__=glupen_strlcat_retro__
    CC = emcc
    CXX = em++
+
+   CPUFLAGS += -msimd128 -ftree-vectorize
+   #CPUFLAGS += -msimd128 -mfloat-abi=hard -mfpu=neon
    HAVE_NEON = 0
 
    COREFLAGS += -DOS_LINUX
-   ASFLAGS = -f elf -d ELF_TYPE
+   STATIC_LINKING = 1
 # Windows
 else
    TARGET := $(TARGET_NAME)_libretro.dll
@@ -594,7 +575,10 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only
+   ifneq ($(platform), emscripten)
+      COREFLAGS += -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2
+   endif
 endif
 
 ifeq ($(LLE), 1)
@@ -614,8 +598,12 @@ endif
    CXXFLAGS += -fvisibility-inlines-hidden
 endif
 
-# Use -fcommon
-CPUOPTS += -fcommon
+# Use -fcommon but not in emscripten (causes build to fail)
+ifeq ($(platform), emscripten)
+   COREFLAGS += -DNOCOMMON
+else
+   CPUOPTS += -fcommon
+endif
 
 # set C/C++ standard to use
 CFLAGS += -std=gnu11 -D_CRT_SECURE_NO_WARNINGS -Wno-discarded-qualifiers

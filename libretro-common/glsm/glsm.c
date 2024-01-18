@@ -27,6 +27,10 @@
 #include <glsm/glsm.h>
 #include <mupen64plus-next_common.h>
 
+#ifdef NOCOMMON
+#include <libretro_private.h>
+#endif
+
 #if defined(HAVE_OPENGLES)
 #if !defined(IOS)
 #include <EGL/egl.h>
