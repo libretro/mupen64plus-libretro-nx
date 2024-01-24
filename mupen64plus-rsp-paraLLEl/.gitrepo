@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:libretro/parallel-rsp.git
 	branch = master
-	commit = ec6817fb8619d4fcc6d5d5f85f3cf7def0851246
-	parent = a3dcc7bfc8960663a34d8d1a0b96ac29b0616345
+	commit = aa3eddaaf0abd9e32b8a8a660a6f8a0ab8d7ad13
+	parent = 1229e1e2002d27e0b099db6159cf06ef21f1b18c
 	method = rebase
-	cmdver = 0.4.0
+	cmdver = 0.4.6
