@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/libretro-fork/libretro-common-mupen64plus-nx.git
 	branch = master
-	commit = d651af1e1c046b34a7fda6c6db7ac0a9af6e94c7
-	parent = 9e54bfbee47cd161df31c6bf429a9761ae7e005a
+	commit = b524671aab017c027e8ae7d98711a9a53ad189fb
+	parent = d908986871908e19f426bc6779fd5dc43006fd75
 	method = rebase
 	cmdver = 0.4.6
