@@ -34,10 +34,6 @@ LIBPNG_INCFLAGS  = -I$(LIBPNG_DIR)
 XXHASH_INCFLAGS  = -I$(XXHASH_DIR)
 ZLIB_INCFLAGS    = -I$(ZLIB_DIR)
 
-ifneq (,$(findstring win,$(platform)))
-	INCFLAGS += -I$(ROOT_DIR)/custom/mman-win32
-endif
-
 SOURCES_C = \
 	$(CORE_DIR)/src/asm_defines/asm_defines.c \
 	$(CORE_DIR)/src/api/callbacks.c \
@@ -463,7 +459,7 @@ endif
 
 ifneq (,$(findstring win,$(platform)))
 	SOURCES_C += $(RSPDIR_PARALLEL)/win32/mman/sys/mman.c
-	CFLAGS += -I$(RSPDIR_PARALLEL)/win32/mman
+	INCFLAGS += -I$(RSPDIR_PARALLEL)/win32/mman
 endif
 
 SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
