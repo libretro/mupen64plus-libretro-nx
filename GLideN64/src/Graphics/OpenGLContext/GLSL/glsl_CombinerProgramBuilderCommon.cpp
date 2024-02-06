@@ -37,7 +37,11 @@ public:
 		}
 		else if (_glinfo.isGLESX) {
 			std::stringstream ss;
+#ifdef EMSCRIPTEN
+			ss << "#version 300 es " << std::endl;
+#else
 			ss << "#version " << Utils::to_string(_glinfo.majorVersion) << Utils::to_string(_glinfo.minorVersion) << "0 es " << std::endl;
+#endif
 			ss << "# define IN in" << std::endl << "# define OUT out" << std::endl;
 			if (_glinfo.noPerspective) {
 				ss << "#extension GL_NV_shader_noperspective_interpolation : enable" << std::endl
@@ -208,7 +212,11 @@ public:
 			;
 		} else if (_glinfo.isGLESX) {
 			std::stringstream ss;
+#ifdef EMSCRIPTEN
+			ss << "#version 300 es " << std::endl;
+#else
 			ss << "#version " << Utils::to_string(_glinfo.majorVersion) << Utils::to_string(_glinfo.minorVersion) << "0 es " << std::endl;
+#endif
 			if (_glinfo.noPerspective)
 				ss << "#extension GL_NV_shader_noperspective_interpolation : enable" << std::endl;
 			if (_glinfo.dual_source_blending)

@@ -521,8 +521,8 @@ else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
    GLES = 1
    GLES3 = 1
-   WITH_DYNAREC :=
-   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
+   WITH_DYNAREC =
+   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1 -msimd128 -ftree-vectorize
    CC = emcc
    CXX = em++
    HAVE_NEON = 0

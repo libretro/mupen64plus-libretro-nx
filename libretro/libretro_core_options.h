@@ -170,7 +170,11 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"8", "8x"},
             { NULL, NULL },
         },
+#ifdef EMSCRIPTEN
+        "1"
+#else
         "0"
+#endif
     },
     {
         CORE_NAME "-ThreadedRenderer",
