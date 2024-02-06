@@ -68,6 +68,10 @@ ifeq ($(LLE), 1)
    COREFLAGS += -DHAVE_LLE
 endif
 
+ifeq ($(HAVE_PARALLEL_RSP), 1)
+   COREFLAGS += -DHAVE_MMAP=1
+endif
+
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")
   COREFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
