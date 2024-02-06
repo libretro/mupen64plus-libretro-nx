@@ -519,9 +519,10 @@ else ifneq (,$(findstring android,$(platform)))
 # emscripten
 else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_emscripten.bc
-   GLES := 1
+   GLES = 1
+   GLES3 = 1
    WITH_DYNAREC :=
-   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1 -s EMULATE_FUNCTION_POINTER_CASTS=1
+   CPUFLAGS += -DEMSCRIPTEN -DNO_ASM -s USE_ZLIB=1
    CC = emcc
    CXX = em++
    HAVE_NEON = 0
