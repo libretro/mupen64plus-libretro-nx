@@ -454,8 +454,6 @@ static void EmuThreadFunction(void)
     uint32_t netplay_port = 0;
     uint16_t netplay_player = 1;
 
-    initializing = false;
-
     if (netplay_port)
     {
         uint32_t version;
@@ -2077,7 +2075,8 @@ void retro_run (void)
     {
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
        {
-          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0); 
+          initializing = false;
        }
 #ifdef HAVE_THR_AL
        else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
