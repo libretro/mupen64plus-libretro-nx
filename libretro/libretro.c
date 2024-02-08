@@ -833,8 +833,10 @@ static void update_variables(bool startup)
 
     if (startup)
     {
+#ifdef EMSCRIPTEN
        bool save_state_in_background = true;
-       //environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
+       environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
+#endif // EMSCRIPTEN
 
        var.key = CORE_NAME "-rdp-plugin";
        var.value = NULL;
