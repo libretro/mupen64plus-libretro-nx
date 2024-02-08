@@ -6,7 +6,11 @@
 namespace opengl {
 
 	// Max memory pool size
+#ifndef EMSCRIPTEN
 	RingBufferPool OpenGlCommand::m_ringBufferPool(1024 * 1024 * 200 );
+#else
+	RingBufferPool OpenGlCommand::m_ringBufferPool(1024 * 1024 * 15 );
+#endif
 
 	void OpenGlCommand::performCommandSingleThreaded()
 	{

@@ -249,6 +249,8 @@ void* init_mem_base(void)
 #ifdef HAVE_LIBNX
     if (!(mem_base = memalign(MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL)))
         mem_base = NULL;
+#elif defined(EMSCRIPTEN)
+     mem_base = NULL; // Use compressed mem base mode
 #else
     if (posix_memalign(&mem_base, MB_RDRAM_DRAM_ALIGNMENT_REQUIREMENT, MB_MAX_SIZE_FULL) != 0)
         mem_base = NULL;
