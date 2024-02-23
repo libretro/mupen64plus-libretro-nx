@@ -430,6 +430,7 @@ else ifneq (,$(findstring ios,$(platform)))
 		GLES3=1
 		FORCE_GLES3=1
 		EGL := 0
+		HAVE_PARALLEL_RDP = 1
 		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
 		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
 		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
@@ -473,6 +474,7 @@ else ifneq (,$(findstring tvos,$(platform)))
    GLES3=1
    FORCE_GLES3=1
    EGL := 0
+   HAVE_PARALLEL_RDP = 1
    PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
    PLATCFLAGS += -DIOS -DTVOS -marm -DOS_IOS -DOS_TVOS -DDONT_WANT_ARM_OPTIMIZATIONS
    CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
