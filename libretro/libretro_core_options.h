@@ -1656,6 +1656,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"memory", NULL},
             {"rumble", NULL},
             {"transfer", NULL},
+            {"memory/rumble (swappable)", NULL},
             { NULL, NULL },
         },
         "memory"
@@ -1672,6 +1673,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"memory", NULL},
             {"rumble", NULL},
             {"transfer", NULL},
+            {"memory/rumble (swappable)", NULL},
             { NULL, NULL },
         },
         "none"
@@ -1688,6 +1690,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"memory", NULL},
             {"rumble", NULL},
             {"transfer", NULL},
+            {"memory/rumble (swappable)", NULL},
             { NULL, NULL },
         },
         "none"
@@ -1704,9 +1707,26 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"memory", NULL},
             {"rumble", NULL},
             {"transfer", NULL},
+            {"memory/rumble (swappable)", NULL},
             { NULL, NULL },
         },
         "none"
+    },
+    {
+        CORE_NAME "-pak-swap-delay",
+        "Memory/Rumble Pak Swap Hold Delay",
+        NULL,
+        "Select how long you have to hold the 'Memory/Rumble Pak Swap' button to perform the swap between the Memory Pak and the Rumble Pak. NOTE: only works if the player's Pak is set to 'memory/rumble (swappable)'",
+        NULL,
+        "input",
+        {
+            {"0", "0 second"},
+            {"1", "1 second"},
+            {"2", "2 seconds"},
+            {"3", "3 seconds"},
+            { NULL, NULL },
+        },
+        "0"
     },
     { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
 };
