@@ -79,7 +79,7 @@ extern char* retro_transferpak_rom_path;
 extern char* retro_transferpak_ram_path;
 
 // Threaded GL Callback
-extern void gln64_thr_gl_invoke_command_loop();
+extern void gln64_thr_gl_invoke_command_loop(void);
 extern bool threaded_gl_safe_shutdown;
 
 // Core options

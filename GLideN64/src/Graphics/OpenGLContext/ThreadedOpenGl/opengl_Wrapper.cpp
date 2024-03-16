@@ -8,7 +8,7 @@ extern "C" {
 	extern void context_reset();
 	bool threaded_gl_safe_shutdown = false;
 
-	void gln64_thr_gl_invoke_command_loop()
+	void gln64_thr_gl_invoke_command_loop(void)
 	{
 		opengl::FunctionWrapper::commandLoop();
 	}

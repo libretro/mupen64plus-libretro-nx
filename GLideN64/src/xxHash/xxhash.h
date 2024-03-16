@@ -2284,7 +2284,7 @@ XXH_PUBLIC_API XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src
 #endif
 
 
-#if XXH_VECTOR == XXH_NEON
+#if (XXH_VECTOR == XXH_NEON) && !defined(EMSCRIPTEN)
 /*
  * NEON's setup for vmlal_u32 is a little more complicated than it is on
  * SSE2, AVX2, and VSX.
@@ -3338,7 +3338,7 @@ XXH_FORCE_INLINE XXH_TARGET_SSE2 void XXH3_initCustomSecret_sse2(void* XXH_RESTR
 
 #endif
 
-#if (XXH_VECTOR == XXH_NEON)
+#if (XXH_VECTOR == XXH_NEON) && !defined(EMSCRIPTEN)
 
 XXH_FORCE_INLINE void
 XXH3_accumulate_512_neon( void* XXH_RESTRICT acc,
@@ -3622,7 +3622,7 @@ typedef void (*XXH3_f_initCustomSecret)(void* XXH_RESTRICT, xxh_u64);
 #define XXH3_scrambleAcc    XXH3_scrambleAcc_sse2
 #define XXH3_initCustomSecret XXH3_initCustomSecret_sse2
 
-#elif (XXH_VECTOR == XXH_NEON)
+#elif (XXH_VECTOR == XXH_NEON) && !defined(EMSCRIPTEN)
 
 #define XXH3_accumulate_512 XXH3_accumulate_512_neon
 #define XXH3_scrambleAcc    XXH3_scrambleAcc_neon
