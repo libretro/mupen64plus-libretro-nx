@@ -441,7 +441,7 @@ static void emu_step_initialize(void)
     plugin_connect_all();
 }
 
-static void* EmuThreadFunction(void* param)
+static void EmuThreadFunction()
 {
     uint32_t netplay_port = 0;
     uint16_t netplay_player = 1;
@@ -484,8 +484,13 @@ static void* EmuThreadFunction(void* param)
         // Unset
         emuThreadRunning = false;
     }
+}
 
-    return NULL;
+static void* EmuThreadWrapper(void* param)
+{
+	(void)param;
+	EmuThreadFunction();
+	return NULL;
 }
 
 static void reinit_gfx_plugin(void)
@@ -2014,7 +2019,7 @@ void retro_run (void)
        {
           if(!emuThreadRunning)
           {
-             pthread_create(&emuThread, NULL, &EmuThreadFunction, NULL);
+             pthread_create(&emuThread, NULL, &EmuThreadWrapper, NULL);
              emuThreadRunning = true;
           }
        }
