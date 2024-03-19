@@ -158,6 +158,7 @@ ifeq ($(SYSTEM_MINIZIP), 1)
 	CFLAGS += $(shell pkg-config --cflags minizip)
 	LDFLAGS += $(shell pkg-config --libs minizip)
 else
+	PLATCFLAGS += -DNOCRYPT -DNOUNCRYPT
 	INCFLAGS += $(MINIZIP_INCFLAGS)
 	SOURCES_C += $(MINIZIP_SOURCES_C)
 endif
