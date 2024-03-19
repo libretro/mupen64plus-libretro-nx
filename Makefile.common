@@ -176,6 +176,9 @@ ifeq ($(SYSTEM_ZLIB), 1)
 	CFLAGS += $(shell pkg-config --cflags zlib)
 	LDFLAGS += $(shell pkg-config --libs zlib)
 else
+ifneq (,$(findstring unix,$(platform)))
+	PLATCFLAGS += -DHAVE_UNISTD_H
+endif
 	INCFLAGS += $(ZLIB_INCFLAGS)
 	SOURCES_C += $(ZLIB_SOURCES_C)
 endif
