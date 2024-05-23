@@ -719,7 +719,7 @@ void retro_init(void)
         initializing = true;
 
         retro_thread = co_active();
-        game_thread = co_create(65536 * sizeof(void*) * 16, EmuThreadFunction);
+        game_thread = co_create(65536 * sizeof(void*) * 16, (void(*)(void))EmuThreadFunction);
     }
 
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);

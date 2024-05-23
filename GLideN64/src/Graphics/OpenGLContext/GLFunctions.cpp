@@ -9,6 +9,11 @@
 #define ASSIGN_GL_PROC_ADR(proc_type, proc_name) ptr##proc_name = gl##proc_name
 
 #if defined(GL_USE_DLSYM)
+
+#ifndef _DLFCN_H
+#include <dlfcn.h>
+#endif
+
 // Use dlsym() to load GL symbols from the default shared object search order
 #define GL_GET_PROC_ADR(proc_type, proc_name) ptr##proc_name = (proc_type) dlsym(RTLD_DEFAULT, "gl"#proc_name)
 #else

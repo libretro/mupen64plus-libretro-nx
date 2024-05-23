@@ -1,5 +1,6 @@
 #include "rsp_disasm.hpp"
 #include <assert.h>
+#include <cstdint>
 
 namespace RSP
 {
