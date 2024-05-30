@@ -433,10 +433,11 @@ else ifneq (,$(findstring ios,$(platform)))
 		FORCE_GLES3=1
 		EGL := 0
 		HAVE_PARALLEL_RDP = 1
-		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
-		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
-		HAVE_NEON=0
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DIOS -DOS_IOS
+		PLATCFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		COREFLAGS  += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		CPUFLAGS   += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		HAVE_NEON=1
 		CC         += -miphoneos-version-min=8.0
 		CC_AS      += -miphoneos-version-min=8.0
 		CXX        += -miphoneos-version-min=8.0
@@ -478,10 +479,11 @@ else ifneq (,$(findstring tvos,$(platform)))
    EGL := 0
    HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
-   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-   PLATCFLAGS += -DIOS -DTVOS -marm -DOS_IOS -DOS_TVOS -DDONT_WANT_ARM_OPTIMIZATIONS
-   CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
-   HAVE_NEON=0
+   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DIOS -DOS_IOS
+   PLATCFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   COREFLAGS  += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   CPUFLAGS   += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   HAVE_NEON=1
    CC         += -mappletvos-version-min=8.0
    CC_AS      += -mappletvos-version-min=8.0
    CXX        += -mappletvos-version-min=8.0
@@ -599,7 +601,10 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only
+   ifeq (,$(filter $(platform),ios-arm64 tvos-arm64))
+      COREFLAGS += -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2
+   endif
 endif
 
 ifeq ($(LLE), 1)
