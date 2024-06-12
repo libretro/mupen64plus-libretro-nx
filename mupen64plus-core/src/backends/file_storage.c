@@ -33,6 +33,10 @@
 #include <libretro_private.h>
 #include <mupen64plus-next_common.h>
 
+#ifdef NOCOMMON
+#include <libretro_private.h>
+#endif
+
 int open_file_storage(struct file_storage* fstorage, size_t size, const char* filename)
 {
     /* ! Take ownership of filename ! */
