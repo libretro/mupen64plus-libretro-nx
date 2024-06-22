@@ -63,6 +63,10 @@ ifeq (,$(ARCH))
    ARCH = $(shell uname -m)
 endif
 
+ifeq ($(shell uname -m),aarch64)
+   CPUFLAGS += -DPAGESIZE=$(or $(shell getconf PAGESIZE),4096)
+endif
+
 # Target Dynarec
 WITH_DYNAREC ?= $(ARCH)
 
