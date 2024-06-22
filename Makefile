@@ -175,6 +175,16 @@ else ifneq (,$(findstring rpi,$(platform)))
          CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
          ARM_CPUFLAGS = -mfpu=neon-fp-armv8
       endif
+   else ifneq (,$(findstring rpi5,$(platform)))
+      ifneq (,$(findstring rpi5_64,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a76 -mtune=cortex-a76
+      else
+         CPUFLAGS += -march=armv8-a+crc+crypto -mtune=cortex-a76
+         ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      endif
+      HAVE_PARALLEL_RSP = 1
+      HAVE_THR_AL = 1
+      LLE = 1
    else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=arm1176jzf-s
       ARM_CPUFLAGS = -mfpu=vfp
