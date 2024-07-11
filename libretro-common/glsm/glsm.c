@@ -2956,6 +2956,8 @@ bool isExtensionSupported(const char *extension)
 		return false;
 
 	const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+	if(extensions == NULL)
+		return false; // Some cursed drivers return NULL here
 
 	const GLubyte *start = extensions;
 	for (;;) {
