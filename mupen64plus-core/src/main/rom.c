@@ -35,6 +35,8 @@
 #include "api/config.h"
 #include "api/m64p_config.h"
 #include "api/m64p_types.h"
+#include "device/dd/disk.h"
+#include "backends/file_storage.h"
 #include "device/device.h"
 #include "main.h"
 #include "md5.h"
@@ -51,6 +53,8 @@ enum { DEFAULT_COUNT_PER_OP = 2 };
 enum { DEFAULT_DISABLE_EXTRA_MEM = 0 };
 /* Default SI DMA duration */
 enum { DEFAULT_SI_DMA_DURATION = 0x900 };
+/* Default AI DMA modifier */
+enum { DEFAULT_AI_DMA_MODIFIER = 100 };
 
 static romdatabase_entry* ini_search_by_md5(md5_byte_t* md5);
 
@@ -65,16 +69,18 @@ m64p_rom_settings ROM_SETTINGS;
 
 static m64p_system_type rom_country_code_to_system_type(uint16_t country_code);
 
+static unsigned char rom_homebrew_savetype_to_savetype(uint8_t save_type);
+
 static const uint8_t Z64_SIGNATURE[4] = { 0x80, 0x37, 0x12, 0x40 };
 static const uint8_t V64_SIGNATURE[4] = { 0x37, 0x80, 0x40, 0x12 };
 static const uint8_t N64_SIGNATURE[4] = { 0x40, 0x12, 0x37, 0x80 };
 
-/* Tests if a file is a valid N64 rom by checking the first 4 bytes. */
-static int is_valid_rom(const unsigned char *buffer)
+/* Tests if a file is a valid N64 rom by checking the first 4 bytes and size */
+static int is_valid_rom(const unsigned char *buffer, unsigned int size)
 {
-    if (memcmp(buffer, Z64_SIGNATURE, sizeof(Z64_SIGNATURE)) == 0
-     || memcmp(buffer, V64_SIGNATURE, sizeof(V64_SIGNATURE)) == 0
-     || memcmp(buffer, N64_SIGNATURE, sizeof(N64_SIGNATURE)) == 0)
+    if ((memcmp(buffer, Z64_SIGNATURE, sizeof(Z64_SIGNATURE)) == 0)
+     || (memcmp(buffer, V64_SIGNATURE, sizeof(V64_SIGNATURE)) == 0 && size % 2 == 0)
+     || (memcmp(buffer, N64_SIGNATURE, sizeof(N64_SIGNATURE)) == 0 && size % 4 == 0))
         return 1;
     else
         return 0;
@@ -139,7 +145,7 @@ m64p_error open_rom(const unsigned char* romimage, unsigned int size)
     int i;
 
     /* check input requirements */
-    if (romimage == NULL || !is_valid_rom(romimage))
+    if (romimage == NULL || !is_valid_rom(romimage, size))
     {
         DebugMessage(M64MSG_ERROR, "open_rom(): not a valid ROM image");
         return M64ERR_INPUT_INVALID;
@@ -187,14 +193,13 @@ m64p_error open_rom(const unsigned char* romimage, unsigned int size)
         ROM_SETTINGS.countperop = entry->countperop;
         ROM_SETTINGS.disableextramem = entry->disableextramem;
         ROM_SETTINGS.sidmaduration = entry->sidmaduration;
+        ROM_SETTINGS.aidmamodifier = entry->aidmamodifier;
         ROM_PARAMS.cheats = entry->cheats;
     }
     else
     {
         strcpy(ROM_SETTINGS.goodname, ROM_PARAMS.headername);
         strcat(ROM_SETTINGS.goodname, " (unknown rom)");
-        /* There's no way to guess the save type, but 4K EEPROM is better than nothing */
-        ROM_SETTINGS.savetype = SAVETYPE_EEPROM_4K;
         ROM_SETTINGS.status = 0;
         ROM_SETTINGS.players = 4;
         ROM_SETTINGS.rumble = 1;
@@ -204,7 +209,20 @@ m64p_error open_rom(const unsigned char* romimage, unsigned int size)
         ROM_SETTINGS.countperop = DEFAULT_COUNT_PER_OP;
         ROM_SETTINGS.disableextramem = DEFAULT_DISABLE_EXTRA_MEM;
         ROM_SETTINGS.sidmaduration = DEFAULT_SI_DMA_DURATION;
+        ROM_SETTINGS.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
         ROM_PARAMS.cheats = NULL;
+
+        /* check if ROM has the Advanced Homebrew ROM Header (see https://n64brew.dev/wiki/ROM_Header) */
+        if (ROM_HEADER.Cartridge_ID == 0x4445)
+        {
+            /* When current ROM has the Advanced Homebrew ROM Header, use the save type */
+            ROM_SETTINGS.savetype = rom_homebrew_savetype_to_savetype(ROM_HEADER.Version >> 4);
+        }
+        else
+        {
+            /* There's no way to guess the save type, but 4K EEPROM is better than nothing */
+            ROM_SETTINGS.savetype = SAVETYPE_EEPROM_4K;
+        }
     }
 
     /* print out a bunch of info about the ROM */
@@ -239,13 +257,139 @@ m64p_error close_rom(void)
     return M64ERR_SUCCESS;
 }
 
+m64p_error open_disk(void)
+{
+    md5_state_t state;
+    md5_byte_t digest[16];
+    romdatabase_entry* entry;
+    char buffer[256];
+    int i;
+
+    /* ask the core loader for DD disk filename */
+    char* dd_disk_filename = (g_media_loader.get_dd_disk == NULL)
+        ? NULL
+        : g_media_loader.get_dd_disk(g_media_loader.cb_data);
+
+    /* handle the no disk case */
+    if (dd_disk_filename == NULL || strlen(dd_disk_filename) == 0) {
+        goto no_disk;
+    }
+
+    /* Get DD Disk size */
+    size_t dd_size = 0;
+    if (get_file_size(dd_disk_filename, &dd_size) != file_ok) {
+        goto no_disk;
+    }
+
+    struct file_storage* fstorage = malloc(sizeof(struct file_storage));
+    if (fstorage == NULL) {
+        goto no_disk;
+    }
+
+    /* Try loading regular disk file */
+    if (open_rom_file_storage(fstorage, dd_disk_filename) != file_ok) {
+        goto free_fstorage;
+    }
+
+    /* Scan disk to deduce disk format and other parameters and expand its size for D64 */
+    unsigned int format = 0;
+    unsigned int development = 0;
+    size_t offset_sys = 0;
+    size_t offset_id = 0;
+    size_t offset_ram = 0;
+    size_t size_ram = 0;
+    uint8_t* new_data = scan_and_expand_disk_format(fstorage->data, fstorage->size, &format, &development, &offset_sys, &offset_id, &offset_ram, &size_ram);
+    if (new_data == NULL) {
+        goto wrong_disk_format;
+    }
+    else {
+        fstorage->data = new_data;
+    }
+
+    /* Calculate MD5 hash  */
+    md5_init(&state);
+    md5_append(&state, (const md5_byte_t*)(fstorage->data), fstorage->size);
+    md5_finish(&state, digest);
+    for ( i = 0; i < 16; ++i )
+        sprintf(buffer+i*2, "%02X", digest[i]);
+    buffer[32] = '\0';
+    strcpy(ROM_SETTINGS.MD5, buffer);
+
+    /* Look up this disk in the .ini file and fill in goodname, etc */
+    if ((entry=ini_search_by_md5(digest)) != NULL)
+    {
+        strncpy(ROM_SETTINGS.goodname, entry->goodname, 255);
+        ROM_SETTINGS.goodname[255] = '\0';
+        ROM_SETTINGS.savetype = entry->savetype;
+        ROM_SETTINGS.status = entry->status;
+        ROM_SETTINGS.players = entry->players;
+        ROM_SETTINGS.rumble = entry->rumble;
+        ROM_SETTINGS.transferpak = entry->transferpak;
+        ROM_SETTINGS.mempak = entry->mempak;
+        ROM_SETTINGS.biopak = entry->biopak;
+        ROM_SETTINGS.countperop = entry->countperop;
+        ROM_SETTINGS.disableextramem = entry->disableextramem;
+        ROM_SETTINGS.sidmaduration = entry->sidmaduration;
+        ROM_SETTINGS.aidmamodifier = entry->aidmamodifier;
+        ROM_PARAMS.cheats = entry->cheats;
+    }
+    else
+    {
+        strcpy(ROM_SETTINGS.goodname, "(unknown disk)");
+        /* There's no way to guess the save type, but 4K EEPROM is better than nothing */
+        ROM_SETTINGS.savetype = SAVETYPE_EEPROM_4K;
+        ROM_SETTINGS.status = 0;
+        ROM_SETTINGS.players = 4;
+        ROM_SETTINGS.rumble = 1;
+        ROM_SETTINGS.transferpak = 0;
+        ROM_SETTINGS.mempak = 1;
+        ROM_SETTINGS.biopak = 0;
+        ROM_SETTINGS.countperop = DEFAULT_COUNT_PER_OP;
+        ROM_SETTINGS.disableextramem = DEFAULT_DISABLE_EXTRA_MEM;
+        ROM_SETTINGS.sidmaduration = DEFAULT_SI_DMA_DURATION;
+        ROM_SETTINGS.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
+        ROM_PARAMS.cheats = NULL;
+    }
+
+    /* set system type */
+    ROM_PARAMS.systemtype = SYSTEM_NTSC;
+
+    /* clear rom header & size */
+    memset(&ROM_HEADER, 0, sizeof(m64p_rom_header));
+    memset(ROM_PARAMS.headername, 0, 20);
+    g_rom_size = 0;
+
+    close_file_storage(fstorage);
+    free(fstorage);
+    return M64ERR_SUCCESS;
+
+wrong_disk_format:
+    close_file_storage(fstorage);
+    dd_disk_filename = NULL; /* already freed in close_file_storage */
+free_fstorage:
+    free(fstorage);
+no_disk:
+    if (dd_disk_filename != NULL) {
+        free(dd_disk_filename);
+    }
+
+    DebugMessage(M64MSG_ERROR, "open_disk(): not a valid disk image");
+    return M64ERR_INPUT_INVALID;
+}
+
+m64p_error close_disk(void)
+{
+    DebugMessage(M64MSG_STATUS, "Disk closed.");
+    return M64ERR_SUCCESS;
+}
+
 /********************************************************************************************/
 /* ROM utility functions */
 
 // Get the system type associated to a ROM country code.
 static m64p_system_type rom_country_code_to_system_type(uint16_t country_code)
 {
-    switch (country_code & UINT16_C(0xFF))
+    switch (country_code)
     {
         // PAL codes
         case 0x44:
@@ -266,6 +410,36 @@ static m64p_system_type rom_country_code_to_system_type(uint16_t country_code)
         default: // Fallback for unknown codes
             return SYSTEM_NTSC;
     }
+}
+
+// Converts the homebrew advanced rom header savetype to a m64p_rom_save_type
+static unsigned char rom_homebrew_savetype_to_savetype(uint8_t save_type)
+{
+    unsigned char m64p_save_type;
+
+    switch (save_type)
+    {
+        default:
+        case 0: /* None */
+            m64p_save_type = SAVETYPE_NONE;
+            break;
+        case 1: /* 4K EEPROM */
+            m64p_save_type = SAVETYPE_EEPROM_4K;
+            break;
+        case 2: /* 16K EEPROM */
+            m64p_save_type = SAVETYPE_EEPROM_16KB;
+            break;
+        case 3: /* 256K SRAM */
+        case 4: /* 768K SRAM (banked) */
+        case 6: /* 1M SRAM */
+            m64p_save_type = SAVETYPE_SRAM;
+            break;
+        case 5: /* Flash RAM */
+            m64p_save_type = SAVETYPE_FLASH_RAM;
+            break;
+    }
+
+    return m64p_save_type;
 }
 
 static size_t romdatabase_resolve_round(void)
@@ -372,6 +546,12 @@ static size_t romdatabase_resolve_round(void)
             entry->entry.set_flags |= ROMDATABASE_ENTRY_SIDMADURATION;
         }
 
+        if (!isset_bitmask(entry->entry.set_flags, ROMDATABASE_ENTRY_AIDMAMODIFIER) &&
+            isset_bitmask(ref->set_flags, ROMDATABASE_ENTRY_AIDMAMODIFIER)) {
+            entry->entry.aidmamodifier = ref->aidmamodifier;
+            entry->entry.set_flags |= ROMDATABASE_ENTRY_AIDMAMODIFIER;
+        }
+
         free(entry->entry.refmd5);
         entry->entry.refmd5 = NULL;
     }
@@ -468,6 +648,7 @@ void romdatabase_open(void)
             search->entry.mempak = 1;
             search->entry.biopak = 0;
             search->entry.sidmaduration = DEFAULT_SI_DMA_DURATION;
+            search->entry.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
             search->entry.set_flags = ROMDATABASE_ENTRY_NONE;
 
             search->next_entry = NULL;
@@ -662,6 +843,15 @@ void romdatabase_open(void)
                     search->entry.set_flags |= ROMDATABASE_ENTRY_SIDMADURATION;
                 } else {
                     DebugMessage(M64MSG_WARNING, "ROM Database: Invalid SiDmaDuration on line %i", lineno);
+                }
+            }
+            else if(!strcmp(l.name, "AiDmaModifier"))
+            {
+                if (string_to_int(l.value, &value) && value >= 0 && value <= 200) {
+                    search->entry.aidmamodifier = value;
+                    search->entry.set_flags |= ROMDATABASE_ENTRY_AIDMAMODIFIER;
+                } else {
+                    DebugMessage(M64MSG_WARNING, "ROM Database: Invalid AiDmaModifier on line %i", lineno);
                 }
             }
             else

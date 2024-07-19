@@ -88,7 +88,7 @@ void init_device(struct device* dev,
     int randomize_interrupt,
     uint32_t start_address,
     /* ai */
-    void* aout, const struct audio_out_backend_interface* iaout,
+    void* aout, const struct audio_out_backend_interface* iaout, float dma_modifier,
     /* si */
     unsigned int si_dma_duration,
     /* rdram */
@@ -124,7 +124,10 @@ void init_device(struct device* dev,
         { &dev->pif,       hw2_int_handler             }, /* HW2 */
         { dev,             nmi_int_handler             }, /* NMI */
         { dev,             reset_hard_handler          }, /* reset_hard */
-        { &dev->sp,        rsp_end_of_dma_event        }
+        { &dev->sp,        rsp_end_of_dma_event        },
+        { &dev->dd,        dd_mecha_int_handler        }, /* DD MECHA */
+        { &dev->dd,        dd_bm_int_handler           }, /* DD BM */
+        { &dev->dd,        dd_dv_int_handler           }, /* DD DRIVE */
     };
 
 #define R(x) read_ ## x
@@ -135,7 +138,7 @@ void init_device(struct device* dev,
         /* clear mappings */
         { 0x00000000, 0xffffffff, M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
         /* memory map */
-        { A(MM_RDRAM_DRAM, dram_size-1), M64P_MEM_RDRAM, { &dev->rdram, RW(rdram_dram) } },
+        { A(MM_RDRAM_DRAM, 0x3efffff), M64P_MEM_RDRAM, { &dev->rdram, RW(rdram_dram) } },
         { A(MM_RDRAM_REGS, 0xfffff), M64P_MEM_RDRAMREG, { &dev->rdram, RW(rdram_regs) } },
         { A(MM_RSP_MEM, 0xffff), M64P_MEM_RSPMEM, { &dev->sp, RW(rsp_mem) } },
         { A(MM_RSP_REGS, 0xffff), M64P_MEM_RSPREG, { &dev->sp, RW(rsp_regs) } },
@@ -182,7 +185,7 @@ void init_device(struct device* dev,
             emumode, count_per_op, count_per_op_denom_pot, no_compiled_jump, randomize_interrupt, start_address);
     init_rdp(&dev->dp, &dev->sp, &dev->mi, &dev->mem, &dev->rdram, &dev->r4300);
     init_rsp(&dev->sp, mem_base_u32(base, MM_RSP_MEM), &dev->mi, &dev->dp, &dev->ri);
-    init_ai(&dev->ai, &dev->mi, &dev->ri, &dev->vi, aout, iaout);
+    init_ai(&dev->ai, &dev->mi, &dev->ri, &dev->vi, aout, iaout, dma_modifier);
     init_mi(&dev->mi, &dev->r4300);
     init_pi(&dev->pi,
             get_pi_dma_handler,
@@ -192,12 +195,12 @@ void init_device(struct device* dev,
     init_si(&dev->si, si_dma_duration, &dev->mi, &dev->pif, &dev->ri);
     init_vi(&dev->vi, vi_clock, expected_refresh_rate, &dev->mi, &dev->dp);
 
-    /* FIXME: should boot on cart, unless only a disk is present, but having no cart is not yet supported by ui/core,
-     * so use another way of selecting boot device:
-     * use CART unless DD is plugged and the plugged CART is not a combo media (cart+disk).
+    /*
+     * use CART unless DD is plugged and the plugged CART is not a combo media (cart+disk),
+     * or rom_size is 0 meaning there's no CART loaded
      */
     uint8_t media = *((uint8_t*)mem_base_u32(base, MM_CART_ROM) + (0x3b ^ S8));
-    uint32_t rom_base = (dd_rom_size > 0 && media != 'C')
+    uint32_t rom_base = (rom_size == 0 || (dd_rom_size > 0 && media != 'C'))
         ? MM_DD_ROM
         : MM_CART_ROM;
 

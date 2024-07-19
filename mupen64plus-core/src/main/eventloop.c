@@ -61,6 +61,7 @@ static m64p_handle l_CoreEventsConfig = NULL;
 #define kbdForward "Kbd Mapping Fast Forward"
 #define kbdAdvance "Kbd Mapping Frame Advance"
 #define kbdGameshark "Kbd Mapping Gameshark"
+#define kbdSpeedtoggle "Kbd Mapping Speed Limiter Toggle"
 
 typedef enum {joyFullscreen,
               joyStop,
@@ -542,6 +543,7 @@ int event_set_core_defaults(void)
     ConfigSetDefaultInt(l_CoreEventsConfig, kbdIncrease, sdl_native2keysym(SDL_SCANCODE_RIGHTBRACKET),"SDL keysym for increasing the volume");
     ConfigSetDefaultInt(l_CoreEventsConfig, kbdDecrease, sdl_native2keysym(SDL_SCANCODE_LEFTBRACKET), "SDL keysym for decreasing the volume");
     ConfigSetDefaultInt(l_CoreEventsConfig, kbdForward, sdl_native2keysym(SDL_SCANCODE_F),            "SDL keysym for temporarily going really fast");
+    ConfigSetDefaultInt(l_CoreEventsConfig, kbdSpeedtoggle, sdl_native2keysym(SDL_SCANCODE_Y),        "SDL keysym for toggling the framerate limiter");
     ConfigSetDefaultInt(l_CoreEventsConfig, kbdAdvance, sdl_native2keysym(SDL_SCANCODE_SLASH),        "SDL keysym for advancing by one frame when paused");
     ConfigSetDefaultInt(l_CoreEventsConfig, kbdGameshark, sdl_native2keysym(SDL_SCANCODE_G),          "SDL keysym for pressing the game shark button");
     /* Joystick events mapped to core functions */
@@ -611,6 +613,8 @@ void event_sdl_keydown(int keysym, int keymod)
         main_reset(0);
     else if (keysym == sdl_keysym2native(ConfigGetParamInt(l_CoreEventsConfig, kbdSpeeddown)))
         main_speeddown(5);
+    else if (keysym == sdl_keysym2native(ConfigGetParamInt(l_CoreEventsConfig, kbdSpeedtoggle)))
+        main_speedlimiter_toggle();
     else if (keysym == sdl_keysym2native(ConfigGetParamInt(l_CoreEventsConfig, kbdSpeedup)))
         main_speedup(5);
     else if (keysym == sdl_keysym2native(ConfigGetParamInt(l_CoreEventsConfig, kbdScreenshot)))

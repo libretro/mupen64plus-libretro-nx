@@ -41,6 +41,9 @@
 m64p_error open_rom(const unsigned char* romimage, unsigned int size);
 m64p_error close_rom(void);
 
+m64p_error open_disk(void);
+m64p_error close_disk(void);
+
 extern int g_rom_size;
 
 typedef struct _rom_params
@@ -113,6 +116,7 @@ typedef struct
    unsigned char mempak; /* 0 - No, 1 - Yes boolean for mempak support. */
    unsigned char biopak; /* 0 - No, 1 - Yes boolean for biopak support. */
    unsigned int sidmaduration;
+   unsigned int aidmamodifier;
    uint32_t set_flags;
 } romdatabase_entry;
 
@@ -130,6 +134,7 @@ typedef struct
 #define ROMDATABASE_ENTRY_MEMPAK        BIT(10)
 #define ROMDATABASE_ENTRY_BIOPAK        BIT(11)
 #define ROMDATABASE_ENTRY_SIDMADURATION BIT(12)
+#define ROMDATABASE_ENTRY_AIDMAMODIFIER BIT(13)
 
 typedef struct _romdatabase_search
 {

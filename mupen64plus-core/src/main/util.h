@@ -150,6 +150,41 @@ void swap_buffer(void *buffer, size_t length, size_t count);
 void to_little_endian_buffer(void *buffer, size_t length, size_t count);
 void to_big_endian_buffer(void *buffer, size_t length, size_t count);
 
+
+/* Simple serialization primitives,
+ * Loosely modeled after N2827 <stdbit.h> proposal.
+ */
+uint8_t load_beu8(const unsigned char *ptr);
+uint16_t load_beu16(const unsigned char *ptr);
+uint32_t load_beu32(const unsigned char *ptr);
+uint64_t load_beu64(const unsigned char *ptr);
+
+uint8_t load_leu8(const unsigned char *ptr);
+uint16_t load_leu16(const unsigned char *ptr);
+uint32_t load_leu32(const unsigned char *ptr);
+uint64_t load_leu64(const unsigned char *ptr);
+
+void store_beu8(uint8_t value, unsigned char *ptr);
+void store_beu16(uint16_t value, unsigned char *ptr);
+void store_beu32(uint32_t value, unsigned char *ptr);
+void store_beu64(uint64_t value, unsigned char *ptr);
+
+void store_leu8(uint8_t value, unsigned char *ptr);
+void store_leu16(uint16_t value, unsigned char *ptr);
+void store_leu32(uint32_t value, unsigned char *ptr);
+void store_leu64(uint64_t value, unsigned char *ptr);
+
+
+/**********************
+    Random utilities
+ **********************/
+
+struct xoshiro256pp_state { uint64_t s[4]; };
+
+struct xoshiro256pp_state xoshiro256pp_seed(uint64_t seed);
+
+uint64_t xoshiro256pp_next(struct xoshiro256pp_state* s);
+
 /**********************
      GUI utilities
  **********************/
@@ -173,11 +208,23 @@ char* combinepath(const char* first, const char *second);
     String utilities
  **********************/
 
+/* strpbrk_reverse
+ * Looks for an instance of ANY of the characters in 'needles' in 'haystack',
+ * starting from the end of 'haystack'. Returns a pointer to the last position
+ * of some character on 'needles' on 'haystack'. If not found, returns NULL.
+ */
+char* strpbrk_reverse(const char* needles, char* haystack, size_t haystack_len);
+
 /** trim
  *    Removes leading and trailing whitespace from str. Function modifies str
  *    and also returns modified string.
  */
 char *trim(char *str);
+
+ /* Replaces all occurences of any char in chars with r in string.
+  * returns amount of replaced chars
+  */
+int string_replace_chars(char *str, const char *chars, const char r);
 
 /* Converts an string to an integer.
  * Returns 1 on success, 0 on failure. 'result' is undefined on failure.
