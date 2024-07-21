@@ -200,6 +200,24 @@ else ifneq (,$(findstring rpi,$(platform)))
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
 
+# Windows MSVC 2010 Xbox 360
+else ifeq ($(platform), xbox360_msvc2010)
+TARGET := $(TARGET_NAME)_libretro_xdk360.lib
+MSVCBINDIRPREFIX = $(XEDK)/bin/win32
+CC  = "$(MSVCBINDIRPREFIX)/cl.exe"
+CXX  = "$(MSVCBINDIRPREFIX)/cl.exe"
+LD   = "$(MSVCBINDIRPREFIX)/lib.exe"
+
+export INCLUDE := $(XEDK)/include/xbox
+export LIB := $(XEDK)/lib/xbox
+PSS_STYLE :=2
+TILED_RENDERING=1
+ENDIANNESS_DEFINES += -DMSB_FIRST
+CFLAGS   += -D_XBOX -D_XBOX360
+CXXFLAGS += -D_XBOX -D_XBOX360
+STATIC_LINKING=1
+HAS_GCC := 0
+
 # Nintendo Switch
 else ifeq ($(platform), libnx)
    include $(DEVKITPRO)/devkitA64/base_tools
