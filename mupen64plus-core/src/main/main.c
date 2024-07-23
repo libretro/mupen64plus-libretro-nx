@@ -1703,8 +1703,6 @@ m64p_error main_run(void)
                 dd_rom_size,
                 &dd_disk, dd_idisk);
 
-    setup_libretro_memory_map();
-
     // Attach rom to plugins
     failure_rval = M64ERR_PLUGIN_FAIL;
     if (!gfx.romOpen())
@@ -1874,22 +1872,4 @@ m64p_error close_pif(void)
 {
     g_start_address = UINT32_C(0xa4000040);
     return M64ERR_SUCCESS;
-}
-
-void setup_libretro_memory_map() {
-    struct retro_memory_descriptor descs[1];
-    struct retro_memory_map retromap;
-
-    memset(descs, 0, sizeof(descs));
-
-    descs[0].flags = RETRO_MEMDESC_SYSTEM_RAM;
-    descs[0].ptr = g_dev.rdram.dram;
-    descs[0].start = 0;
-    descs[0].len = RDRAM_MAX_SIZE;
-    descs[0].select = 0;
-
-    retromap.descriptors = &descs;
-    retromap.num_descriptors = sizeof(descs) / sizeof(*descs);
-
-    environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &retromap);
 }

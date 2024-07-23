@@ -21,6 +21,12 @@
 
 #include "device.h"
 
+#include <libretro_private.h>
+
+#ifdef __LIBRETRO__
+#include <mupen64plus-next_common.h>
+#endif // __LIBRETRO__
+
 #include "memory/memory.h"
 #include "pif/pif.h"
 #include "r4300/r4300_core.h"
@@ -75,6 +81,23 @@ static void get_pi_dma_handler(struct cart* cart, struct dd_controller* dd, uint
         RW(dd, dd_dom);
     }
 #undef RW
+}
+
+void setup_retroarch_memory_map(struct device* dev) {
+    struct retro_memory_descriptor descs[1];
+    struct retro_memory_map retromap;
+
+    memset(descs, 0, sizeof(descs));
+
+    descs[0].ptr = dev->rdram.dram;
+    descs[0].start = 0;
+    descs[0].len = dev->rdram.dram_size;
+    descs[0].flags = RETRO_MEMDESC_SYSTEM_RAM;
+
+    retromap.descriptors = descs;
+    retromap.num_descriptors = sizeof(descs) / sizeof(*descs);
+
+    environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &retromap);
 }
 
 void init_device(struct device* dev,
@@ -220,6 +243,8 @@ void init_device(struct device* dev,
             flashram_type, flashram_storage, iflashram_storage,
             (const uint8_t*)dev->rdram.dram,
             sram_storage, isram_storage);
+
+    setup_retroarch_memory_map(dev);
 }
 
 void poweron_device(struct device* dev)
