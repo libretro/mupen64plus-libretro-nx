@@ -83,19 +83,38 @@ static void get_pi_dma_handler(struct cart* cart, struct dd_controller* dd, uint
 #undef RW
 }
 
-void setup_retroarch_memory_map(struct device* dev) {
-    struct retro_memory_descriptor descs[1];
+struct n64_to_retroarch_memory_map {
+    size_t start;
+    size_t len;
+    void* ptr;
+};
+
+void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_mappings, size_t m64p_mapping_count) {
+    struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
+        { m64p_mappings[1].begin,  m64p_mappings[1].end - m64p_mappings[1].begin,   dev->rdram.dram },
+        { m64p_mappings[18].begin, m64p_mappings[18].end - m64p_mappings[18].begin, dev->cart.cart_rom.rom },
+    };
+    size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
+
+    struct retro_memory_descriptor descs[n64_to_retroarch_mapping_count * 2];
     struct retro_memory_map retromap;
 
     memset(descs, 0, sizeof(descs));
 
-    descs[0].ptr = dev->rdram.dram;
-    descs[0].start = 0;
-    descs[0].len = dev->rdram.dram_size;
-    descs[0].flags = RETRO_MEMDESC_SYSTEM_RAM;
+    for (int i = 0; i < n64_to_retroarch_mapping_count; i++) {
+        struct n64_to_retroarch_memory_map mapping = n64_to_retroarch_mappings[i];
+
+        descs[i].ptr = mapping.ptr;
+        descs[i].start = R4300_KSEG0 + mapping.start;
+        descs[i].len = mapping.len;
+
+        descs[i + n64_to_retroarch_mapping_count].ptr = mapping.ptr;
+        descs[i + n64_to_retroarch_mapping_count].start = R4300_KSEG1 + mapping.start;
+        descs[i + n64_to_retroarch_mapping_count].len = mapping.len;
+    }
 
     retromap.descriptors = descs;
-    retromap.num_descriptors = sizeof(descs) / sizeof(*descs);
+    retromap.num_descriptors = ARRAY_SIZE(descs);
 
     environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &retromap);
 }
@@ -244,7 +263,7 @@ void init_device(struct device* dev,
             (const uint8_t*)dev->rdram.dram,
             sram_storage, isram_storage);
 
-    setup_retroarch_memory_map(dev);
+    setup_retroarch_memory_map(dev, mappings, ARRAY_SIZE(mappings));
 }
 
 void poweron_device(struct device* dev)
