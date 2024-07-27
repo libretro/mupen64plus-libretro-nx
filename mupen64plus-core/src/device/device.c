@@ -87,12 +87,13 @@ struct n64_to_retroarch_memory_map {
     size_t start;
     size_t len;
     void* ptr;
+    uint64_t flags;
 };
 
 void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_mappings, size_t m64p_mapping_count) {
     struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
-        { m64p_mappings[1].begin,  m64p_mappings[1].end - m64p_mappings[1].begin,   dev->rdram.dram },
-        { m64p_mappings[18].begin, m64p_mappings[18].end - m64p_mappings[18].begin, dev->cart.cart_rom.rom },
+        { m64p_mappings[1].begin,  m64p_mappings[1].end - m64p_mappings[1].begin,   dev->rdram.dram,         RETRO_MEMDESC_SYSTEM_RAM },
+        { m64p_mappings[18].begin, m64p_mappings[18].end - m64p_mappings[18].begin, dev->cart.cart_rom.rom,  RETRO_MEMDESC_CONST},
     };
     size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
 
@@ -107,10 +108,12 @@ void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_map
         descs[i].ptr = mapping.ptr;
         descs[i].start = R4300_KSEG0 + mapping.start;
         descs[i].len = mapping.len;
+        descs[i].flags = mapping.flags;
 
         descs[i + n64_to_retroarch_mapping_count].ptr = mapping.ptr;
         descs[i + n64_to_retroarch_mapping_count].start = R4300_KSEG1 + mapping.start;
         descs[i + n64_to_retroarch_mapping_count].len = mapping.len;
+        descs[i + n64_to_retroarch_mapping_count].flags = mapping.flags;
     }
 
     retromap.descriptors = descs;
