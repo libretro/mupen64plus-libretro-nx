@@ -87,15 +87,47 @@ struct n64_to_retroarch_memory_map {
     size_t start;
     size_t len;
     void* ptr;
+    bool isAccessibleCached;
     uint64_t flags;
 };
 
 void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_mappings, size_t m64p_mapping_count) {
+#define BeginEndToBeginLength(begin, end) begin, end - begin
     struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
-        { m64p_mappings[1].begin,  m64p_mappings[1].end - m64p_mappings[1].begin,   dev->rdram.dram,         RETRO_MEMDESC_SYSTEM_RAM },
-        { m64p_mappings[18].begin, m64p_mappings[18].end - m64p_mappings[18].begin, dev->cart.cart_rom.rom,  RETRO_MEMDESC_CONST},
+        { BeginEndToBeginLength(m64p_mappings[1].begin,  m64p_mappings[1].end),  dev->rdram.dram,        true,  RETRO_MEMDESC_SYSTEM_RAM },
+        { BeginEndToBeginLength(m64p_mappings[2].begin,  m64p_mappings[2].end),  dev->rdram.regs,        false },
+        { BeginEndToBeginLength(m64p_mappings[3].begin,  m64p_mappings[3].end),  dev->sp.mem,            false },
+        { BeginEndToBeginLength(m64p_mappings[4].begin,  m64p_mappings[4].end),  dev->sp.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[5].begin,  m64p_mappings[5].end),  dev->sp.regs2,          false },
+        { BeginEndToBeginLength(m64p_mappings[6].begin,  m64p_mappings[6].end),  dev->dp.dpc_regs,       false },
+        { BeginEndToBeginLength(m64p_mappings[7].begin,  m64p_mappings[7].end),  dev->dp.dps_regs,       false },
+        { BeginEndToBeginLength(m64p_mappings[8].begin,  m64p_mappings[8].end),  dev->mi.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[9].begin,  m64p_mappings[9].end),  dev->vi.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[10].begin, m64p_mappings[10].end), dev->ai.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[11].begin, m64p_mappings[11].end), dev->pi.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[12].begin, m64p_mappings[12].end), dev->ri.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[13].begin, m64p_mappings[13].end), dev->si.regs,           false },
+        { BeginEndToBeginLength(m64p_mappings[14].begin, m64p_mappings[14].end), NULL,                   false },
+        { BeginEndToBeginLength(m64p_mappings[15].begin, m64p_mappings[15].end), NULL,                   false, RETRO_MEMDESC_CONST },
+        { BeginEndToBeginLength(m64p_mappings[16].begin, m64p_mappings[16].end), NULL,                   false },
+        { BeginEndToBeginLength(m64p_mappings[18].begin, m64p_mappings[18].end), dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
+        { m64p_mappings[19].begin,                PIF_ROM_SIZE,                  dev->pif.base,          false, RETRO_MEMDESC_CONST },
+        { m64p_mappings[19].begin + PIF_ROM_SIZE, PIF_RAM_SIZE,                  dev->pif.ram,           false },
     };
     size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
+
+    if (m64p_mappings[14].handler.opaque != NULL) {
+        n64_to_retroarch_mappings[13].ptr = &dev->dd.regs;
+        n64_to_retroarch_mappings[14].ptr = &dev->dd.rom;
+    }
+
+    if (dev->cart.use_flashram == -1) {
+        n64_to_retroarch_mappings[15].ptr = &dev->cart.sram;
+    }
+    else {
+        n64_to_retroarch_mappings[14].ptr = &dev->cart.flashram;
+    }
+#undef BeginEndToBeginLength
 
     struct retro_memory_descriptor descs[n64_to_retroarch_mapping_count * 2];
     struct retro_memory_map retromap;
@@ -105,10 +137,16 @@ void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_map
     for (int i = 0; i < n64_to_retroarch_mapping_count; i++) {
         struct n64_to_retroarch_memory_map mapping = n64_to_retroarch_mappings[i];
 
-        descs[i].ptr = mapping.ptr;
-        descs[i].start = R4300_KSEG0 + mapping.start;
-        descs[i].len = mapping.len;
-        descs[i].flags = mapping.flags;
+        if (mapping.ptr == NULL) {
+            continue;
+        }
+
+        if (mapping.isAccessibleCached) {
+            descs[i].ptr = mapping.ptr;
+            descs[i].start = R4300_KSEG0 + mapping.start;
+            descs[i].len = mapping.len;
+            descs[i].flags = mapping.flags;
+        }
 
         descs[i + n64_to_retroarch_mapping_count].ptr = mapping.ptr;
         descs[i + n64_to_retroarch_mapping_count].start = R4300_KSEG1 + mapping.start;
