@@ -109,7 +109,7 @@ void setup_retroarch_memory_map(struct device* dev, size_t rom_size, size_t dd_r
         { MM_DOM2_ADDR1,             0xffffff,     NULL,                   false },
         { MM_DD_ROM,                 0x1ffffff,    NULL,                   false, RETRO_MEMDESC_CONST },
         { MM_DOM2_ADDR2,             0x1ffff,      NULL,                   false },
-        { MM_CART_ROM,               rom_size - 1, dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
+        { MM_CART_ROM,               rom_size,     dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
         { MM_PIF_MEM,                PIF_ROM_SIZE, dev->pif.base,          false, RETRO_MEMDESC_CONST },
         { MM_PIF_MEM + PIF_ROM_SIZE, PIF_RAM_SIZE, dev->pif.ram,           false },
     };
