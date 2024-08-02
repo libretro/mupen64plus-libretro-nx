@@ -91,32 +91,31 @@ struct n64_to_retroarch_memory_map {
     uint64_t flags;
 };
 
-void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_mappings, size_t m64p_mapping_count) {
-#define BeginEndToBeginLength(begin, end) begin, end - begin
+void setup_retroarch_memory_map(struct device* dev, size_t rom_size, size_t dd_rom_size) {
     struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
-        { BeginEndToBeginLength(m64p_mappings[1].begin,  m64p_mappings[1].end),  dev->rdram.dram,        true,  RETRO_MEMDESC_SYSTEM_RAM },
-        { BeginEndToBeginLength(m64p_mappings[2].begin,  m64p_mappings[2].end),  dev->rdram.regs,        false },
-        { BeginEndToBeginLength(m64p_mappings[3].begin,  m64p_mappings[3].end),  dev->sp.mem,            false },
-        { BeginEndToBeginLength(m64p_mappings[4].begin,  m64p_mappings[4].end),  dev->sp.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[5].begin,  m64p_mappings[5].end),  dev->sp.regs2,          false },
-        { BeginEndToBeginLength(m64p_mappings[6].begin,  m64p_mappings[6].end),  dev->dp.dpc_regs,       false },
-        { BeginEndToBeginLength(m64p_mappings[7].begin,  m64p_mappings[7].end),  dev->dp.dps_regs,       false },
-        { BeginEndToBeginLength(m64p_mappings[8].begin,  m64p_mappings[8].end),  dev->mi.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[9].begin,  m64p_mappings[9].end),  dev->vi.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[10].begin, m64p_mappings[10].end), dev->ai.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[11].begin, m64p_mappings[11].end), dev->pi.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[12].begin, m64p_mappings[12].end), dev->ri.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[13].begin, m64p_mappings[13].end), dev->si.regs,           false },
-        { BeginEndToBeginLength(m64p_mappings[14].begin, m64p_mappings[14].end), NULL,                   false },
-        { BeginEndToBeginLength(m64p_mappings[15].begin, m64p_mappings[15].end), NULL,                   false, RETRO_MEMDESC_CONST },
-        { BeginEndToBeginLength(m64p_mappings[16].begin, m64p_mappings[16].end), NULL,                   false },
-        { BeginEndToBeginLength(m64p_mappings[18].begin, m64p_mappings[18].end), dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
-        { m64p_mappings[19].begin,                PIF_ROM_SIZE,                  dev->pif.base,          false, RETRO_MEMDESC_CONST },
-        { m64p_mappings[19].begin + PIF_ROM_SIZE, PIF_RAM_SIZE,                  dev->pif.ram,           false },
+        { MM_RDRAM_DRAM,             0x3efffff,    dev->rdram.dram,        true,  RETRO_MEMDESC_SYSTEM_RAM },
+        { MM_RDRAM_REGS,             0xfffff,      dev->rdram.regs,        false },
+        { MM_RSP_MEM,                0xffff,       dev->sp.mem,            false },
+        { MM_RSP_REGS,               0xffff,       dev->sp.regs,           false },
+        { MM_RSP_REGS2,              0xffff,       dev->sp.regs2,          false },
+        { MM_DPC_REGS,               0xffff,       dev->dp.dpc_regs,       false },
+        { MM_DPS_REGS,               0xffff,       dev->dp.dps_regs,       false },
+        { MM_MI_REGS,                0xffff,       dev->mi.regs,           false },
+        { MM_VI_REGS,                0xffff,       dev->vi.regs,           false },
+        { MM_AI_REGS,                0xffff,       dev->ai.regs,           false },
+        { MM_PI_REGS,                0xffff,       dev->pi.regs,           false },
+        { MM_RI_REGS,                0xffff,       dev->ri.regs,           false },
+        { MM_SI_REGS,                0xffff,       dev->si.regs,           false },
+        { MM_DOM2_ADDR1,             0xffffff,     NULL,                   false },
+        { MM_DD_ROM,                 0x1ffffff,    NULL,                   false, RETRO_MEMDESC_CONST },
+        { MM_DOM2_ADDR2,             0x1ffff,      NULL,                   false },
+        { MM_CART_ROM,               rom_size - 1, dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
+        { MM_PIF_MEM,                PIF_ROM_SIZE, dev->pif.base,          false, RETRO_MEMDESC_CONST },
+        { MM_PIF_MEM + PIF_ROM_SIZE, PIF_RAM_SIZE, dev->pif.ram,           false },
     };
     size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
 
-    if (m64p_mappings[14].handler.opaque != NULL) {
+    if (dd_rom_size > 0) {
         n64_to_retroarch_mappings[13].ptr = &dev->dd.regs;
         n64_to_retroarch_mappings[14].ptr = &dev->dd.rom;
     }
@@ -125,9 +124,8 @@ void setup_retroarch_memory_map(struct device* dev, struct mem_mapping* m64p_map
         n64_to_retroarch_mappings[15].ptr = &dev->cart.sram;
     }
     else {
-        n64_to_retroarch_mappings[14].ptr = &dev->cart.flashram;
+        n64_to_retroarch_mappings[15].ptr = &dev->cart.flashram;
     }
-#undef BeginEndToBeginLength
 
     struct retro_memory_descriptor descs[n64_to_retroarch_mapping_count * 2];
     struct retro_memory_map retromap;
@@ -304,7 +302,7 @@ void init_device(struct device* dev,
             (const uint8_t*)dev->rdram.dram,
             sram_storage, isram_storage);
 
-    setup_retroarch_memory_map(dev, mappings, ARRAY_SIZE(mappings));
+    setup_retroarch_memory_map(dev, rom_size, dd_rom_size);
 }
 
 void poweron_device(struct device* dev)
