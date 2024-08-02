@@ -118,6 +118,7 @@ void setup_retroarch_memory_map(struct device* dev, size_t rom_size, size_t dd_r
     if (dd_rom_size > 0) {
         n64_to_retroarch_mappings[13].ptr = &dev->dd.regs;
         n64_to_retroarch_mappings[14].ptr = &dev->dd.rom;
+        n64_to_retroarch_mappings[14].len = dd_rom_size;
     }
 
     if (dev->cart.use_flashram == -1) {
