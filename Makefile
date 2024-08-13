@@ -408,12 +408,12 @@ else ifneq (,$(findstring osx,$(platform)))
    GL_LIB := -framework OpenGL
 
    # Target Dynarec
-   ifeq ($(ARCH), $(filter $(ARCH), ppc))
-      WITH_DYNAREC =
-   endif
+   WITH_DYNAREC =
 
    HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
+   HAVE_THR_AL = 1
+   LLE = 1
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
