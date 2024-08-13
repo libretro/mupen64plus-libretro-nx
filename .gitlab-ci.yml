@@ -162,9 +162,6 @@ libretro-build-tvos-arm64-gles3:
 # MacOS 64-bit
 libretro-build-osx-x64:
   variables:
-    WITH_DYNAREC: ""
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs
@@ -172,9 +169,6 @@ libretro-build-osx-x64:
 # MacOS ARM 64-bit
 libretro-build-osx-arm64:
   variables:
-    WITH_DYNAREC: ""
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
