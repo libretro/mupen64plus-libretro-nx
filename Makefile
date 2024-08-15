@@ -615,7 +615,7 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only -DUSE_SSE2NEON
    ifeq (,$(filter $(platform),ios-arm64 tvos-arm64))
       COREFLAGS += -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2
    endif
