@@ -1414,7 +1414,7 @@ m64p_error main_run(void)
     uint64_t mpk_seed = !netplay_is_init() ? (uint64_t)time(NULL) : 0;
     l_mpk_idgen = xoshiro256pp_seed(mpk_seed);
 
-    no_compiled_jump = ConfigGetParamBool(g_CoreConfig, "NoCompiledJump");
+    no_compiled_jump = 0; //ConfigGetParamBool(g_CoreConfig, "NoCompiledJump");
     //We disable any randomness for netplay
     //randomize_interrupt = !netplay_is_init() ? ConfigGetParamBool(g_CoreConfig, "RandomizeInterrupt") : 0;
 
