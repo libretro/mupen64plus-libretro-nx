@@ -135,6 +135,8 @@ static bool     first_context_reset  = false;
 static bool     initializing         = true;
 static bool     load_game_successful = false;
 
+static bool     context_setup_first_init = false;
+
 bool libretro_swap_buffer;
 
 uint32_t *blitter_buf = NULL;
@@ -1781,16 +1783,14 @@ static void format_saved_memory(void)
 
 void context_reset(void)
 {
-    static bool first_init = true;
-
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
        log_cb(RETRO_LOG_DEBUG, CORE_NAME ": context_reset()\n");
        glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
-       if (first_init)
+       if (!context_setup_first_init)
        {
           glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
-          first_init = false;
+          context_setup_first_init = true;
        }
     }
 
@@ -2006,6 +2006,7 @@ void retro_unload_game(void)
     cleanup_global_paths();
     
     emu_initialized = false;
+    context_setup_first_init = false;
 
     // Reset savestate job var
     retro_savestate_complete = false;
