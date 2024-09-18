@@ -18,6 +18,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifdef __MINGW32__
+#define _CRT_RAND_S
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
