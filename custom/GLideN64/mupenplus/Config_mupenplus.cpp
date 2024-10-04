@@ -29,6 +29,10 @@ std::string replaceChars(std::string myString)
 	{
 		myString.replace(pos, 1, "%27");
 	}
+	for (size_t pos = myString.find('&'); pos != std::string::npos; pos = myString.find('&', pos))
+	{
+		myString.replace(pos, 1, "%26");
+	}
 	return myString;
 }
 
