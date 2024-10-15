@@ -53,6 +53,8 @@ const char* _hotkeyDescription(u32 _idx)
 		return "Hotkey: toggle force gamma correction";
 	case Config::HotKey::hkInaccurateTexCords:
 		return "Hotkey: toggle inaccurate texture coordinates";
+	case Config::HotKey::hkStrongCRC:
+		return "Hotkey: toggle strong CRC for textures dump";
 	}
 	return "Unknown hotkey";
 }
@@ -128,7 +130,7 @@ bool Config_SetDefault()
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "FXAA", config.video.fxaa, "Toggle Fast Approximate Anti-Aliasing (FXAA).");
 	assert(res == M64ERR_SUCCESS);
-	res = ConfigSetDefaultInt(g_configVideoGliden64, "AspectRatio", config.frameBufferEmulation.aspect, "Screen aspect ratio. (0=stretch, 1=force 4:3, 2=force 16:9, 3=adjust)");
+	res = ConfigSetDefaultInt(g_configVideoGliden64, "AspectRatio", config.frameBufferEmulation.aspect, "Screen aspect ratio. (0=stretch, 1=force 4:3, 2=force 16:9, 3=adjust 4:3, 4=adjust 16:9)");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultInt(g_configVideoGliden64, "BufferSwapMode", config.frameBufferEmulation.bufferSwapMode, "Swap frame buffers. (0=On VI update call, 1=On VI origin change, 2=On buffer update)");
 	assert(res == M64ERR_SUCCESS);
@@ -256,6 +258,8 @@ bool Config_SetDefault()
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txSaveCache", config.textureFilter.txSaveCache, "Save texture cache to hard disk.");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txDump", config.textureFilter.txDump, "Dump textures");
+	assert(res == M64ERR_SUCCESS);
+	res = ConfigSetDefaultBool(g_configVideoGliden64, "txStrongCRC", config.textureFilter.txStrongCRC, "Use strong CRC for texture dump.");
 	assert(res == M64ERR_SUCCESS);
 	res = ConfigSetDefaultBool(g_configVideoGliden64, "txEnhancedTextureFileStorage", config.textureFilter.txEnhancedTextureFileStorage, "Use file storage instead of memory cache for enhanced textures.");
 	assert(res == M64ERR_SUCCESS);
@@ -465,7 +469,7 @@ void Config_LoadCustomConfig()
 	if (result == M64ERR_SUCCESS) config.textureFilter.txHiresFullAlphaChannel = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txHresAltCRC", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txHresAltCRC = atoi(value);
-	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txDump", value, sizeof(value));
+	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txForce16bpp", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txForce16bpp = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txCacheCompression", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txCacheCompression = atoi(value);
@@ -473,6 +477,8 @@ void Config_LoadCustomConfig()
 	if (result == M64ERR_SUCCESS) config.textureFilter.txSaveCache = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txDump", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txDump = atoi(value);
+	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txStrongCRC", value, sizeof(value));
+	if (result == M64ERR_SUCCESS) config.textureFilter.txStrongCRC = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txEnhancedTextureFileStorage", value, sizeof(value));
 	if (result == M64ERR_SUCCESS) config.textureFilter.txEnhancedTextureFileStorage = atoi(value);
 	result = ConfigExternalGetParameter(fileHandle, sectionName, "textureFilter\\txHiresTextureFileStorage", value, sizeof(value));
@@ -569,6 +575,7 @@ void Config_LoadConfig()
 	config.textureFilter.txCacheCompression = ConfigGetParamBool(g_configVideoGliden64, "txCacheCompression");
 	config.textureFilter.txSaveCache = ConfigGetParamBool(g_configVideoGliden64, "txSaveCache");
 	config.textureFilter.txDump = ConfigGetParamBool(g_configVideoGliden64, "txDump");
+	config.textureFilter.txStrongCRC = ConfigGetParamBool(g_configVideoGliden64, "txStrongCRC");
 	config.textureFilter.txEnhancedTextureFileStorage = ConfigGetParamBool(g_configVideoGliden64, "txEnhancedTextureFileStorage");
 	config.textureFilter.txHiresTextureFileStorage = ConfigGetParamBool(g_configVideoGliden64, "txHiresTextureFileStorage");
 	config.textureFilter.txNoTextureFileStorage = ConfigGetParamBool(g_configVideoGliden64, "txNoTextureFileStorage");

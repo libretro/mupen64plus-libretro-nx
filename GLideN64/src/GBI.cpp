@@ -12,7 +12,9 @@
 #include "RSP.h"
 #include "uCodes/F3D.h"
 #include "uCodes/F3DEX.h"
+#include "uCodes/F3DEX095.h"
 #include "uCodes/F3DEX2.h"
+#include "uCodes/F3DEX3.h"
 #include "uCodes/L3D.h"
 #include "uCodes/L3DEX.h"
 #include "uCodes/L3DEX2.h"
@@ -39,6 +41,9 @@
 #include "Graphics/Context.h"
 #include "Graphics/Parameters.h"
 
+#include <set>
+#include <sstream>
+
 u32 last_good_ucode = (u32) -1;
 
 struct SpecialMicrocodeInfo
@@ -54,7 +59,7 @@ static const
 std::vector<SpecialMicrocodeInfo> specialMicrocodes =
 {
 	{ S2DEX2,		false,	true,	false,	0x02c399dd }, // Animal Forest
-	{ F3DEX,		false,	false,	true,	0x0ace4c3f }, // Mario Kart 64
+	{ F3DEX095,		false,	false,	true,	0x0ace4c3f }, // Mario Kart 64
 	{ F3D,			true,	false,	false,	0x16c3a775 }, // AeroFighters
 	{ F3DEX2CBFD,	true,	true,	false,	0x1b4ace88 }, // Conker's Bad Fur Day
 	{ F3DPD,		true,	true,	false,	0x1c4f7869 }, // Perfect Dark
@@ -114,6 +119,7 @@ u32 G_OBJ_LOADTXTR, G_OBJ_LDTX_SPRITE, G_OBJ_LDTX_RECT, G_OBJ_LDTX_RECT_R;
 u32 G_RDPHALF_0;
 u32 G_PERSPNORM;
 u32 G_ZOBJ, G_ZRDPCMD, G_ZWAITSIGNAL, G_ZMTXCAT, G_ZMULT_MPMTX, G_ZLIGHTING;
+u32 G_TRISTRIP, G_TRIFAN, G_LIGHTTORDP, G_RELSEGMENT;
 
 
 u32 G_MTX_STACKSIZE;
@@ -146,7 +152,7 @@ GBIInfo GBI;
 
 void GBI_Unknown( u32 w0, u32 w1 )
 {
-	DebugMsg(DEBUG_NORMAL, "UNKNOWN GBI COMMAND 0x%02X", _SHIFTR(w0, 24, 8));
+	DebugMsg(DEBUG_NORMAL, "UNKNOWN GBI COMMAND 0x%02X\n", _SHIFTR(w0, 24, 8));
 	LOG(LOG_ERROR, "UNKNOWN GBI COMMAND 0x%02X", _SHIFTR(w0, 24, 8));
 }
 
@@ -204,6 +210,11 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 				F3D_Init();
 				m_hwlSupported = true;
 			break;
+			case F3DEX095:
+				F3DEX095_Init();
+				m_hwlSupported = true;
+				gSP.clipRatio = m_pCurrent->Rej ? 2U : 1U;
+				break;
 			case F3DEX:
 				F3DEX_Init();
 				m_hwlSupported = true;
@@ -290,6 +301,10 @@ void GBIInfo::_makeCurrent(MicrocodeInfo * _pCurrent)
 				m_hwlSupported = false;
 				gSP.clipRatio = 2U;
 			break;
+			case F3DEX3:
+				F3DEX3_Init();
+				m_hwlSupported = false;
+				break;
 			case F3DTEXA:
 				F3DTEXA_Init();
 				m_hwlSupported = true;
@@ -352,6 +367,18 @@ bool GBIInfo::_makeExistingMicrocodeCurrent(u32 uc_start, u32 uc_dstart, u32 uc_
 	return true;
 }
 
+// based on musl libc
+static inline int ascii_isupper(int c)
+{
+	return (unsigned)c - 'A' < 26;
+}
+
+static inline int ascii_tolower(int c)
+{
+	if (isupper(c)) return c | 32;
+	return c;
+}
+
 void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 {
 	if (_makeExistingMicrocodeCurrent(uc_start, uc_dstart, uc_dsize))
@@ -386,6 +413,47 @@ void GBIInfo::loadMicrocode(u32 uc_start, u32 uc_dstart, u16 uc_dsize)
 	UnswapCopyWrap(RDRAM, uc_dstart & 0x1FFFFFFF, (u8*)uc_data, 0, 0x7FF, 2048);
 	char uc_str[256];
 	strcpy(uc_str, "Not Found");
+
+	// Check for F3DEX3 microcode
+	{
+		static const char F3DEX3_NAME[] = "f3dex3";
+		const char* probe = &uc_data[0x138];
+		char name_buffer[sizeof(F3DEX3_NAME) - 1];
+		memcpy(name_buffer, probe, sizeof(F3DEX3_NAME) - 1);
+		std::transform(name_buffer, name_buffer + sizeof(F3DEX3_NAME) - 1, name_buffer, ascii_tolower);
+		if (0 == memcmp(name_buffer, F3DEX3_NAME, sizeof(F3DEX3_NAME) - 1))
+		{
+			current.type = F3DEX3;
+			current.NoN = true;
+			current.negativeY = false;
+			current.fast3DPersp = false;
+			current.combineMatrices = false;
+
+			std::set<std::string> features;
+			{
+				// 0x180 is absolutely an overkill but it is ok for now
+				const char* name_end = (const char*)memchr(probe, ' ', 0x180);
+				size_t name_len = name_end - probe;
+				// It will look like F3DEX3_LVP_BrZ_NOC
+				std::string feature;
+				std::string name = std::string(probe, name_len);
+				std::transform(name.begin(), name.end(), name.begin(), ascii_tolower);
+				std::stringstream name_stream(name);
+				while (std::getline(name_stream, feature, '_'))
+				{
+					features.emplace(std::move(feature));
+				}
+			}
+
+			current.f3dex3.legacyVertexPipeline = features.find("lvp") != features.end();
+			current.f3dex3.noOcclusionPlane = features.find("noc") != features.end();
+			current.f3dex3.branchOnZ = features.find("brz") != features.end();
+
+			LOG(LOG_VERBOSE, "Load microcode (%s) type: %d crc: 0x%08x romname: %s\n", uc_str, current.type, uc_crc, RSP.romname);
+			_makeCurrent(&current);
+			return;
+		}
+	}
 
 	for (u32 i = 0; i < 2046; ++i) {
 		if ((uc_data[i] == 'R') && (uc_data[i+1] == 'S') && (uc_data[i+2] == 'P')) {

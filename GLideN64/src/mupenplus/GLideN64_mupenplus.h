@@ -4,6 +4,7 @@
 #include "m64p_common.h"
 #include "m64p_config.h"
 #include "m64p_vidext.h"
+#include "m64p_frontend.h"
 
 #define PLUGIN_VERSION              0x020000
 #define VIDEO_PLUGIN_API_VERSION	0x020200
