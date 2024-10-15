@@ -116,7 +116,9 @@ void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, 
 }
 
 #else // mupen64plus
+#include <mupen64plus-next_common.h>
 #include "mupenplus/GLideN64_mupenplus.h"
+extern retro_log_printf_t log_cb;
 
 void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, ...)
 {
@@ -128,12 +130,6 @@ void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, 
 		M64MSG_VERBOSE,
 		M64MSG_VERBOSE
 	};
-
-	if (CoreDebugCallback == nullptr ||
-		_type > LOG_LEVEL)
-	{
-		return;
-	}
 
 	// initialize use of the variable argument array
 	va_list vaArgs;
@@ -159,7 +155,8 @@ void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, 
 	std::stringstream formatString;
 	formatString << _fileName << ":" << _line << ", \"" << zc.data() << "\"";
 
-	CoreDebugCallback(CoreDebugCallbackContext, logLevel[_type], formatString.str().c_str());
+	//CoreDebugCallback(CoreDebugCallbackContext, logLevel[_type], formatString.str().c_str());
+	log_cb(RETRO_LOG_INFO, formatString.str().c_str());
 }
 #endif
 
