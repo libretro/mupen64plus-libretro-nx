@@ -185,6 +185,7 @@ char customini[] =
 "Good_Name=Mario Kart 64 (E)(J)(U)\n"
 "graphics2D\\enableNativeResTexrects=1\n"
 "graphics2D\\enableTexCoordBounds=1\n"
+"frameBufferEmulation\\copyToRDRAM=2\n"
 "\n"
 "[MARIO%20STORY]\n"
 "Good_Name=Mario Story (J)\n"
