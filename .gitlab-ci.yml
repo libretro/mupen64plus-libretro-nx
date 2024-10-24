@@ -149,46 +149,24 @@ libretro-build-libnx-aarch64:
 
 # iOS
 libretro-build-ios-arm64-gles3:
-  variables:
-    WITH_DYNAREC: ""
-    EGL: 0
-    GLES3: 1
-    HAVE_NEON: 0
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-ios-arm64-make-default
     - .core-defs
 
 # tvOS
 libretro-build-tvos-arm64-gles3:
-  variables:
-    WITH_DYNAREC: ""
-    EGL: 0
-    GLES3: 1
-    HAVE_NEON: 0
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-tvos-arm64-make-default
     - .core-defs
 
 # MacOS 64-bit
 libretro-build-osx-x64:
-  variables:
-    WITH_DYNAREC: ""
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64:
-  variables:
-    WITH_DYNAREC: ""
-    HAVE_THR_AL: 1
-    LLE: 1
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs

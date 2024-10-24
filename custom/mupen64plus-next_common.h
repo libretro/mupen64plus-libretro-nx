@@ -65,6 +65,7 @@ extern bool libretro_swap_buffer;
 
 // Misc Globals
 extern CONTROL Controls[4];
+extern struct xoshiro256pp_state l_mpk_idgen;
 
 // Savestate globals
 extern bool retro_savestate_complete;

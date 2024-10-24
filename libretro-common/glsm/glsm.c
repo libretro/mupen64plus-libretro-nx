@@ -2956,6 +2956,8 @@ bool isExtensionSupported(const char *extension)
 		return false;
 
 	const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+	if(extensions == NULL)
+		return false; // Some cursed drivers return NULL here
 
 	const GLubyte *start = extensions;
 	for (;;) {
@@ -3278,6 +3280,7 @@ static void glsm_state_unbind(void)
 
 static bool glsm_state_ctx_destroy(void *data)
 {
+   window_first = 0;
    return true;
 }
 
