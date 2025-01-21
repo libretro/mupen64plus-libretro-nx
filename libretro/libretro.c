@@ -175,6 +175,7 @@ uint32_t EnableInaccurateTextureCoordinates = 0;
 uint32_t enableNativeResTexrects = 0;
 uint32_t enableLegacyBlending = 0;
 uint32_t EnableCopyColorToRDRAM = 0;
+uint32_t EnableCopyColorFromRDRAM = 0;
 uint32_t EnableCopyDepthToRDRAM = 0;
 uint32_t AspectRatio = 0;
 uint32_t MaxTxCacheSize = 0;
@@ -1059,6 +1060,13 @@ static void update_variables(bool startup)
              EnableCopyColorToRDRAM = 1;
           else
              EnableCopyColorToRDRAM = 0;
+       }
+
+       var.key = CORE_NAME "-EnableCopyColorFromRDRAM";
+       var.value = NULL;
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          EnableCopyColorFromRDRAM = !strcmp(var.value, "False") ? 0 : 1;
        }
 
        var.key = CORE_NAME "-EnableCopyDepthToRDRAM";
