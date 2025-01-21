@@ -164,6 +164,7 @@ extern "C" void Config_LoadConfig()
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 
 	// TODO: Make this a Core options or maybe only default to bsOnVerticalInterrupt on Android with Thr Renderer
 	config.frameBufferEmulation.bufferSwapMode = Config::bsOnVerticalInterrupt;

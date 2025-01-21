@@ -360,6 +360,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
 #endif // HAVE_OPENGLES2
     },
     {
+        CORE_NAME "-EnableCopyColorFromRDRAM",
+        "Enable color buffer copy from RDRAM",
+        NULL,
+        NULL,
+        NULL,
+        "gliden64",
+        {
+            {"False", NULL},
+            {"True", NULL},
+            { NULL, NULL },
+        },
+        "False",
+    },
+    {
         CORE_NAME "-EnableCopyDepthToRDRAM",
         "Depth buffer to RDRAM",
         NULL,
