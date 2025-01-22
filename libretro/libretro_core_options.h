@@ -363,8 +363,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         CORE_NAME "-EnableCopyColorFromRDRAM",
         "Enable color buffer copy from RDRAM",
         NULL,
-        NULL,
-        NULL,
+        "(GLN64) Enable color buffer copy from RDRAM.",
+        "Enable color buffer copy from RDRAM.",
         "gliden64",
         {
             {"False", NULL},
