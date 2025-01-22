@@ -72,6 +72,7 @@
 #define ISHEXDEC ((codeLine[cursor]>='0') && (codeLine[cursor]<='9')) || ((codeLine[cursor]>='a') && (codeLine[cursor]<='f')) || ((codeLine[cursor]>='A') && (codeLine[cursor]<='F'))
 
 /* Forward declarations */
+void inputGetKeys_default_descriptor(void);
 #ifdef HAVE_THR_AL
 void angrylion_set_filtering(unsigned filter_type);
 void angrylion_set_vi_blur(unsigned value);
@@ -756,15 +757,18 @@ void retro_deinit(void)
 
 void update_controllers()
 {
-    struct retro_variable pk1var = { CORE_NAME "-pak1" };
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk1var) && pk1var.value)
+    struct retro_variable var;
+
+    var.key = CORE_NAME "-pak1";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         int p1_pak = PLUGIN_NONE;
-        if (!strcmp(pk1var.value, "rumble"))
+        if (!strcmp(var.value, "rumble"))
             p1_pak = PLUGIN_RAW;
-        else if (!strcmp(pk1var.value, "memory"))
+        else if (!strcmp(var.value, "memory"))
             p1_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk1var.value, "transfer"))
+        else if (!strcmp(var.value, "transfer"))
             p1_pak = PLUGIN_TRANSFER_PAK;
 
         // If controller struct is not initialised yet, set pad_pak_types instead
@@ -775,15 +779,16 @@ void update_controllers()
             pad_pak_types[0] = p1_pak;
     }
 
-    struct retro_variable pk2var = { CORE_NAME "-pak2" };
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk2var) && pk2var.value)
+    var.key = CORE_NAME "-pak2";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         int p2_pak = PLUGIN_NONE;
-        if (!strcmp(pk2var.value, "rumble"))
+        if (!strcmp(var.value, "rumble"))
             p2_pak = PLUGIN_RAW;
-        else if (!strcmp(pk2var.value, "memory"))
+        else if (!strcmp(var.value, "memory"))
             p2_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk2var.value, "transfer"))
+        else if (!strcmp(var.value, "transfer"))
             p2_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[1].control)
@@ -792,15 +797,16 @@ void update_controllers()
             pad_pak_types[1] = p2_pak;
     }
 
-    struct retro_variable pk3var = { CORE_NAME "-pak3" };
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk3var) && pk3var.value)
+    var.key = CORE_NAME "-pak3";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         int p3_pak = PLUGIN_NONE;
-        if (!strcmp(pk3var.value, "rumble"))
+        if (!strcmp(var.value, "rumble"))
             p3_pak = PLUGIN_RAW;
-        else if (!strcmp(pk3var.value, "memory"))
+        else if (!strcmp(var.value, "memory"))
             p3_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk3var.value, "transfer"))
+        else if (!strcmp(var.value, "transfer"))
             p3_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[2].control)
@@ -809,21 +815,99 @@ void update_controllers()
             pad_pak_types[2] = p3_pak;
     }
 
-    struct retro_variable pk4var = { CORE_NAME "-pak4" };
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pk4var) && pk4var.value)
+    var.key = CORE_NAME "-pak4";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         int p4_pak = PLUGIN_NONE;
-        if (!strcmp(pk4var.value, "rumble"))
+        if (!strcmp(var.value, "rumble"))
             p4_pak = PLUGIN_RAW;
-        else if (!strcmp(pk4var.value, "memory"))
+        else if (!strcmp(var.value, "memory"))
             p4_pak = PLUGIN_MEMPAK;
-        else if (!strcmp(pk4var.value, "transfer"))
+        else if (!strcmp(var.value, "transfer"))
             p4_pak = PLUGIN_TRANSFER_PAK;
 
         if (controller[3].control)
             controller[3].control->Plugin = p4_pak;
         else
             pad_pak_types[3] = p4_pak;
+    }
+
+    var.key = CORE_NAME "-astick-deadzone";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
+
+    var.key = CORE_NAME "-astick-sensitivity";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        astick_sensitivity = atoi(var.value);
+
+    var.key = CORE_NAME "-r-cbutton";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            r_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = CORE_NAME "-l-cbutton";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            l_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = CORE_NAME "-d-cbutton";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            d_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = CORE_NAME "-u-cbutton";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "C1"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
+        else if (!strcmp(var.value, "C2"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
+        else if (!strcmp(var.value, "C3"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
+        else if (!strcmp(var.value, "C4"))
+            u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
+    }
+
+    var.key = CORE_NAME "-alt-map";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        bool alternate_mapping_prev = alternate_mapping;
+        alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
+
+        if (alternate_mapping != alternate_mapping_prev)
+            inputGetKeys_default_descriptor();
     }
 }
 
@@ -1374,16 +1458,6 @@ static void update_variables(bool startup)
        }
 #endif // HAVE_THR_AL
 
-       var.key = CORE_NAME "-astick-deadzone";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-          astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
-
-       var.key = CORE_NAME "-astick-sensitivity";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-          astick_sensitivity = atoi(var.value);
-
        var.key = CORE_NAME "-CountPerOp";
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1413,62 +1487,6 @@ static void update_variables(bool startup)
            EnableFrameDuping = 1;
        }
 #endif // HAVE_THR_AL
-
-       var.key = CORE_NAME "-r-cbutton";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "C1"))
-             r_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
-          else if (!strcmp(var.value, "C2"))
-             r_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
-          else if (!strcmp(var.value, "C3"))
-             r_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
-          else if (!strcmp(var.value, "C4"))
-             r_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
-       }
-
-       var.key = CORE_NAME "-l-cbutton";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "C1"))
-             l_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
-          else if (!strcmp(var.value, "C2"))
-             l_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
-          else if (!strcmp(var.value, "C3"))
-             l_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
-          else if (!strcmp(var.value, "C4"))
-             l_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
-       }
-
-       var.key = CORE_NAME "-d-cbutton";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "C1"))
-             d_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
-          else if (!strcmp(var.value, "C2"))
-             d_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
-          else if (!strcmp(var.value, "C3"))
-             d_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
-          else if (!strcmp(var.value, "C4"))
-             d_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
-       }
-
-       var.key = CORE_NAME "-u-cbutton";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          if (!strcmp(var.value, "C1"))
-             u_cbutton = RETRO_DEVICE_ID_JOYPAD_A;
-          else if (!strcmp(var.value, "C2"))
-             u_cbutton = RETRO_DEVICE_ID_JOYPAD_Y;
-          else if (!strcmp(var.value, "C3"))
-             u_cbutton = RETRO_DEVICE_ID_JOYPAD_B;
-          else if (!strcmp(var.value, "C4"))
-             u_cbutton = RETRO_DEVICE_ID_JOYPAD_X;
-       }
 
        var.key = CORE_NAME "-EnableOverscan";
        var.value = NULL;
@@ -1503,13 +1521,6 @@ static void update_variables(bool startup)
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
           OverscanBottom = atoi(var.value);
-       }
-
-       var.key = CORE_NAME "-alt-map";
-       var.value = NULL;
-       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-       {
-          alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
        }
 
        var.key = CORE_NAME "-ForceDisableExtraMem";
@@ -2025,10 +2036,8 @@ void retro_run (void)
     libretro_swap_buffer = false;
     static bool updated = false;
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
        update_variables(false);
-       update_controllers();
-    }
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
