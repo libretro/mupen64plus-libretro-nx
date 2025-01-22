@@ -73,7 +73,7 @@ void inputGetKeys_default( int Control, BUTTONS *Keys );
 typedef void (*get_keys_t)(int, BUTTONS*);
 static get_keys_t getKeys = inputGetKeys_default;
 
-static void inputGetKeys_default_descriptor(void)
+void inputGetKeys_default_descriptor(void)
 {
    if (alternate_mapping)
    {
