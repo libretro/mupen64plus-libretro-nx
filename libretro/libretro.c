@@ -263,6 +263,8 @@ static void free_output_audio_buffer()
 
 static void upload_output_audio_buffer()
 {
+   if (!output_audio_buffer.size)
+      return;
    audio_batch_cb(output_audio_buffer.data, output_audio_buffer.size / 2);
    output_audio_buffer.size = 0;
 }
@@ -721,9 +723,41 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
         parallel_get_geometry(&info->geometry);
 #endif
     info->timing.sample_rate = 44100.0;
-    info->timing.fps = (ROM_PARAMS.systemtype == SYSTEM_PAL)
-          ? info->timing.sample_rate / 882
-          : info->timing.sample_rate / 736;
+    info->timing.fps = (ROM_PARAMS.systemtype == SYSTEM_PAL) ? 50.00f : 59.94f;
+}
+
+void retro_set_system_av_info(unsigned GameFreq)
+{
+   struct retro_system_av_info system_av_info;
+   retro_get_system_av_info(&system_av_info);
+
+   if (ROM_PARAMS.systemtype == SYSTEM_PAL)
+      system_av_info.timing.fps = 50.00f;
+   else
+   switch (GameFreq)
+   {
+      case 21998:
+         system_av_info.timing.fps = 59.78f;
+         break;
+      case 44095:
+      case 22047:
+         system_av_info.timing.fps = 59.82f;
+         break;
+      case 22496:
+         system_av_info.timing.fps = 59.88f;
+         break;
+      case 26807:
+         system_av_info.timing.fps = 59.90f;
+         break;
+      case 32006:
+         system_av_info.timing.fps = 59.98f;
+         break;
+      default:
+         system_av_info.timing.fps = 59.94f;
+         break;
+   }
+
+   environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
 }
 
 unsigned retro_get_region (void)
