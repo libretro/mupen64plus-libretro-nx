@@ -41,6 +41,7 @@
 #include <audio/audio_resampler.h>
 
 extern void retro_audio_queue(const int16_t *data, int32_t samples);
+extern void retro_set_system_av_info(unsigned GameFreq);
 
 static unsigned MAX_AUDIO_FRAMES = 2048;
 
@@ -97,6 +98,7 @@ static void aiDacrateChanged(void *user_data, unsigned int frequency)
    CountsPerSecond = VI_INTR_TIME * 60 /* TODO/FIXME - dehardcode */;
    CountsPerByte   = CountsPerSecond / BytesPerSecond;
 
+   retro_set_system_av_info(GameFreq);
 #if 0
    printf("CountsPerByte: %d, GameFreq: %d\n", CountsPerByte, GameFreq);
 #endif
