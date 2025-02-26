@@ -157,9 +157,7 @@ static int MatchJoyCommand(const SDL_Event *event, eJoyCommand cmd)
         else if (phrase_str[1] >= '0' && phrase_str[1] <= '9')
         {
             dev_number = phrase_str[1] - '0';
-#if SDL_VERSION_ATLEAST(2,0,0)
             dev_number = l_iJoyInstanceID[dev_number];
-#endif
         }
         else
         {
@@ -280,24 +278,15 @@ static int SDLCALL event_sdl_filter(void *userdata, SDL_Event *event)
             break;
 
         case SDL_KEYDOWN:
-#if SDL_VERSION_ATLEAST(1,3,0)
             if (event->key.repeat)
                 return 0;
 
             event_sdl_keydown(event->key.keysym.scancode, event->key.keysym.mod);
-#else
-            event_sdl_keydown(event->key.keysym.sym, event->key.keysym.mod);
-#endif
             return 0;
         case SDL_KEYUP:
-#if SDL_VERSION_ATLEAST(1,3,0)
             event_sdl_keyup(event->key.keysym.scancode, event->key.keysym.mod);
-#else
-            event_sdl_keyup(event->key.keysym.sym, event->key.keysym.mod);
-#endif
             return 0;
 
-#if SDL_VERSION_ATLEAST(1,3,0)
         case SDL_WINDOWEVENT:
             switch (event->window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
@@ -313,22 +302,6 @@ static int SDLCALL event_sdl_filter(void *userdata, SDL_Event *event)
                     break;
             }
             break;
-#else
-        case SDL_VIDEORESIZE:
-            // call the video plugin.  if the video plugin supports resizing, it will resize its viewport and call
-            // VidExt_ResizeWindow to update the window manager handling our opengl output window
-            gfx.resizeVideoOutput(event->resize.w, event->resize.h);
-            return 0;  // consumed the event
-            break;
-
-#ifdef WIN32
-        case SDL_SYSWMEVENT:
-            if(event->syswm.msg->msg == WM_MOVE)
-                gfx.moveScreen(0,0); // The video plugin is responsible for getting the new window position
-            return 0;  // consumed the event
-            break;
-#endif
-#endif
 
 #ifndef NO_KEYBINDINGS
         // if joystick action is detected, check if it's mapped to a special function
@@ -452,13 +425,8 @@ void event_initialize(void)
                 {
                     if (!SDL_WasInit(SDL_INIT_JOYSTICK))
                         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-#if SDL_VERSION_ATLEAST(2,0,0)
                     SDL_Joystick *thisJoy = SDL_JoystickOpen(device);
 			        l_iJoyInstanceID[device] = SDL_JoystickInstanceID(thisJoy);
-#else
-                    if (!SDL_JoystickOpened(device))
-                        SDL_JoystickOpen(device);
-#endif
                 }
                 
                 phrase_str = strtok(NULL, ",");
@@ -469,17 +437,7 @@ void event_initialize(void)
 
 
     /* set up SDL event filter and disable key repeat */
-#if !SDL_VERSION_ATLEAST(2,0,0)
-    SDL_EnableKeyRepeat(0, 0);
-#endif
     SDL_SetEventFilter(event_sdl_filter, NULL);
-    
-#if defined(WIN32) && !SDL_VERSION_ATLEAST(1,3,0)
-    SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-
-    if (SDL_EventState(SDL_SYSWMEVENT, SDL_QUERY) != SDL_ENABLE)
-        DebugMessage(M64MSG_WARNING, "Failed to change event state: %s", SDL_GetError());
-#endif
 }
 
 int event_set_core_defaults(void)
@@ -520,11 +478,7 @@ int event_set_core_defaults(void)
     int key = SDL_SCANCODE_UNKNOWN;
     for (int slot = 0; slot < 10; slot++)
     {
-#if ! SDL_VERSION_ATLEAST(1,3,0)
-        key = SDL_SCANCODE_0 + slot;
-#else
         key = slot == 0 ? SDL_SCANCODE_0 : SDL_SCANCODE_1 + (slot - 1);
-#endif
         sprintf(kbdSaveSlotStr, "%s%i", kbdSaveSlot, slot);
         sprintf(kbdSaveSlotHelpStr, "SDL keysym for save slot %i", slot);
         ConfigSetDefaultInt(l_CoreEventsConfig, kbdSaveSlotStr, sdl_native2keysym(key), kbdSaveSlotHelpStr);
