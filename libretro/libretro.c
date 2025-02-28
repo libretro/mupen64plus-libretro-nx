@@ -118,6 +118,8 @@ cothread_t retro_thread;
 
 int astick_deadzone;
 int astick_sensitivity;
+int astick_snap_active;
+int astick_snap_max_angle;
 int r_cbutton;
 int l_cbutton;
 int d_cbutton;
@@ -1383,6 +1385,25 @@ static void update_variables(bool startup)
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
           astick_sensitivity = atoi(var.value);
+
+      var.key = CORE_NAME "-astick-snap-angle-active";
+      var.value = NULL;
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         if (!strcmp(var.value, "enabled"))
+            astick_snap_active = 1;
+         else if (!strcmp(var.value, "disabled"))
+            astick_snap_active = 0;
+      }
+
+      var.key = CORE_NAME "-astick-snap-max-angle";
+      var.value = NULL;
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         astick_snap_max_angle = (int)(atoi(var.value));
+      }
 
        var.key = CORE_NAME "-CountPerOp";
        var.value = NULL;

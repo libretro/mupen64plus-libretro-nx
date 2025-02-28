@@ -32,6 +32,10 @@
 
 #define ROUND(x)    floor((x) + 0.5)
 
+#ifndef  M_PI
+#define  M_PI  3.1415926535897932384626433
+#endif
+
 /* snprintf not available in MSVC 2010 and earlier */
 #include "api/msvc_compat.h"
 
@@ -42,6 +46,8 @@ extern int pad_pak_types[4];
 extern int pad_present[4];
 extern int astick_deadzone;
 extern int astick_sensitivity;
+extern int astick_snap_active;
+extern int astick_snap_max_angle;
 extern int r_cbutton;
 extern int l_cbutton;
 extern int d_cbutton;
@@ -277,10 +283,9 @@ EXPORT void CALL inputControllerCommand(int Control, unsigned char *Command)
 #define CSTICK_UP 0x800
 #define CSTICK_DOWN 0x400
 
-
 static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BUTTONS* Keys)
 {
-   double radius, angle;
+   double radius, angle, degrees, difference;
    //  Keys->Value |= input_cb(Control, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_XX)    ? 0x4000 : 0; // Mempak switch
    //  Keys->Value |= input_cb(Control, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_XX)    ? 0x8000 : 0; // Rumblepak switch
 
@@ -293,6 +298,14 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
 
    if (radius > astick_deadzone)
    {
+      if (astick_snap_active) {
+         degrees = (int)(ROUND(angle * (180.0/M_PI)));
+         double nearest_45 = round(degrees / 45.0) * 45.0;
+         difference = fabs(degrees - nearest_45);
+         if (difference <= astick_snap_max_angle) {
+            angle = nearest_45 * (M_PI / 180.0);
+         }
+      }
       // Re-scale analog stick range to negate deadzone (makes slow movements possible)
       radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
       // N64 Analog stick range is from -80 to 80
