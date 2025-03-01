@@ -120,6 +120,7 @@ int astick_deadzone;
 int astick_sensitivity;
 int astick_snap_active;
 int astick_snap_max_angle;
+int astick_snap_min_displacement_percent;
 int r_cbutton;
 int l_cbutton;
 int d_cbutton;
@@ -1403,6 +1404,14 @@ static void update_variables(bool startup)
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       {
          astick_snap_max_angle = (int)(atoi(var.value));
+      }
+
+      var.key = CORE_NAME "-astick-snap-min-displacement-percent";
+      var.value = NULL;
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         astick_snap_min_displacement_percent = (int)(atoi(var.value));
       }
 
        var.key = CORE_NAME "-CountPerOp";

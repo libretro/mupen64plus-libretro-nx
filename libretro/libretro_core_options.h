@@ -1628,6 +1628,33 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "15"
     },
     {
+        CORE_NAME "-astick-snap-min-displacement-percent",
+        "Which percentage of displacement causes snap to activate",
+        NULL,
+        "To closely emulate the behaviour of classic, notched controllers, angle snapping \
+        can be activated only when the analog stick is displaced far enough from the center position, zero means always, even on slow movement",
+        NULL,
+        "input",
+        {
+            {"0", NULL},
+            {"10", NULL},
+            {"20", NULL},
+            {"30", NULL},
+            {"40", NULL},
+            {"50", NULL},
+            {"60", NULL},
+            {"65", NULL},
+            {"70", NULL},
+            {"75", NULL},
+            {"80", NULL},
+            {"85", NULL},
+            {"90", NULL},
+            {"95", NULL},
+            { NULL, NULL },
+        },
+        "70"
+    },
+    {
         CORE_NAME "-r-cbutton",
         "Right C Button",
         NULL,
