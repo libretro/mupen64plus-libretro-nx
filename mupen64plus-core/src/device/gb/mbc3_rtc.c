@@ -22,6 +22,8 @@
 #include "mbc3_rtc.h"
 #include "backends/api/clock_backend.h"
 #include <string.h>
+#include "api/m64p_types.h"
+#include "api/callbacks.h"
 
 /* TODO: halt bit is not implemented */
 
@@ -30,8 +32,10 @@ static void update_rtc_regs(struct mbc3_rtc* rtc)
     /* compute elapsed time since last update */
     time_t now = rtc->iclock->get_time(rtc->clock);
     time_t diff = now - rtc->last_time;
+    DebugMessage(M64MSG_VERBOSE, "RTC: %ld seconds elapsed (now: %ld, last: %ld)", diff, now, rtc->last_time);
+    if(!rtc->last_time)
     rtc->last_time = now;
-
+    
     /* increment regs */
     if (diff > 0) {
         rtc->regs[MBC3_RTC_SECONDS] += (int)(diff % 60);
@@ -64,6 +68,7 @@ static void update_rtc_regs(struct mbc3_rtc* rtc)
 
         /* set carry bit if days overflow */
         if (days > 511) { rtc->regs[MBC3_RTC_DAYS_H] |= 0x80; }
+        rtc->last_time = now;
     }
 }
 
@@ -96,6 +101,7 @@ uint8_t read_mbc3_rtc_regs(struct mbc3_rtc* rtc, unsigned int reg)
 void write_mbc3_rtc_regs(struct mbc3_rtc* rtc, unsigned int reg, uint8_t value)
 {
     rtc->regs[reg] = value;
+    rtc->latched_regs[reg] = value;
 }
 
 void latch_mbc3_rtc_regs(struct mbc3_rtc* rtc, uint8_t data)

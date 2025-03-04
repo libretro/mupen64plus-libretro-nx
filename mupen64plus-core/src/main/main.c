@@ -1429,7 +1429,7 @@ m64p_error main_run(void)
     if (count_per_op_denom_pot > 20)
         count_per_op_denom_pot = 20;
 
-    si_dma_duration = ROM_SETTINGS.sidmaduration;
+    si_dma_duration = 100;// ROM_SETTINGS.sidmaduration;
 
     //During netplay, player 1 is the source of truth for these settings
     netplay_sync_settings(&count_per_op, &count_per_op_denom_pot, &disable_extra_mem, &si_dma_duration, &emumode, &no_compiled_jump);

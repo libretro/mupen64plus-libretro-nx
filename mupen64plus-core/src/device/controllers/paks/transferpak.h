@@ -19,35 +19,37 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef M64P_DEVICE_SI_TRANSFERPAK_H
-#define M64P_DEVICE_SI_TRANSFERPAK_H
-
-#include <stddef.h>
-#include <stdint.h>
-
-struct gb_cart;
-
-enum cart_access_mode
-{
-    CART_NOT_INSERTED = 0x40,
-    CART_ACCESS_MODE_0 = 0x80,
-    CART_ACCESS_MODE_1 = 0x89
-};
-
-struct transferpak
-{
-    unsigned int enabled;
-    unsigned int bank;
-    unsigned int access_mode;
-    unsigned int access_mode_changed;
-
-    struct gb_cart* gb_cart;
-};
-
-void init_transferpak(struct transferpak* tpk, struct gb_cart* gb_cart);
-void poweron_transferpak(struct transferpak* tpk);
-
-void change_gb_cart(struct transferpak* tpk, struct gb_cart* gb_cart);
-
-extern const struct pak_interface g_itransferpak;
-#endif
+ #ifndef M64P_DEVICE_SI_TRANSFERPAK_H
+ #define M64P_DEVICE_SI_TRANSFERPAK_H
+ 
+ #include <stddef.h>
+ #include <stdint.h>
+ 
+ struct gb_cart;
+ 
+ enum cart_access_mode
+ {
+     CART_NOT_INSERTED = 0x40,
+     CART_ACCESS_MODE_0 = 0x80,
+     CART_ACCESS_MODE_1 = 0x89
+ };
+ 
+ struct transferpak
+ {
+     unsigned int enabled;
+     unsigned int bank;
+     unsigned int access_mode;
+     unsigned int access_mode_changed;
+     unsigned int reset_state;
+ 
+     struct gb_cart *gb_cart;
+ };
+ 
+ void init_transferpak(struct transferpak *tpk, struct gb_cart *gb_cart);
+ void poweron_transferpak(struct transferpak *tpk);
+ 
+ void change_gb_cart(struct transferpak *tpk, struct gb_cart *gb_cart);
+ 
+ extern const struct pak_interface g_itransferpak;
+ #endif
+ 
