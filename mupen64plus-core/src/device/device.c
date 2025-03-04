@@ -21,6 +21,12 @@
 
 #include "device.h"
 
+#include <libretro_private.h>
+
+#ifdef __LIBRETRO__
+#include <mupen64plus-next_common.h>
+#endif // __LIBRETRO__
+
 #include "memory/memory.h"
 #include "pif/pif.h"
 #include "r4300/r4300_core.h"
@@ -75,6 +81,82 @@ static void get_pi_dma_handler(struct cart* cart, struct dd_controller* dd, uint
         RW(dd, dd_dom);
     }
 #undef RW
+}
+
+struct n64_to_retroarch_memory_map {
+    size_t start;
+    size_t len;
+    void* ptr;
+    bool isAccessibleCached;
+    uint64_t flags;
+};
+
+void setup_retroarch_memory_map(struct device* dev, size_t rom_size, size_t dd_rom_size) {
+    struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
+        { MM_RDRAM_DRAM,             0x3efffff,    dev->rdram.dram,        true,  RETRO_MEMDESC_SYSTEM_RAM },
+        { MM_RDRAM_REGS,             0xfffff,      dev->rdram.regs,        false },
+        { MM_RSP_MEM,                0xffff,       dev->sp.mem,            false },
+        { MM_RSP_REGS,               0xffff,       dev->sp.regs,           false },
+        { MM_RSP_REGS2,              0xffff,       dev->sp.regs2,          false },
+        { MM_DPC_REGS,               0xffff,       dev->dp.dpc_regs,       false },
+        { MM_DPS_REGS,               0xffff,       dev->dp.dps_regs,       false },
+        { MM_MI_REGS,                0xffff,       dev->mi.regs,           false },
+        { MM_VI_REGS,                0xffff,       dev->vi.regs,           false },
+        { MM_AI_REGS,                0xffff,       dev->ai.regs,           false },
+        { MM_PI_REGS,                0xffff,       dev->pi.regs,           false },
+        { MM_RI_REGS,                0xffff,       dev->ri.regs,           false },
+        { MM_SI_REGS,                0xffff,       dev->si.regs,           false },
+        { MM_DOM2_ADDR1,             0xffffff,     NULL,                   false },
+        { MM_DD_ROM,                 0x1ffffff,    NULL,                   false, RETRO_MEMDESC_CONST },
+        { MM_DOM2_ADDR2,             0x1ffff,      NULL,                   false },
+        { MM_CART_ROM,               rom_size,     dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
+        { MM_PIF_MEM,                PIF_ROM_SIZE, dev->pif.base,          false, RETRO_MEMDESC_CONST },
+        { MM_PIF_MEM + PIF_ROM_SIZE, PIF_RAM_SIZE, dev->pif.ram,           false },
+    };
+    size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
+
+    if (dd_rom_size > 0) {
+        n64_to_retroarch_mappings[13].ptr = dev->dd.regs;
+        n64_to_retroarch_mappings[14].ptr = dev->dd.rom;
+        n64_to_retroarch_mappings[14].len = dd_rom_size;
+    }
+
+    if (dev->cart.use_flashram == -1) {
+        n64_to_retroarch_mappings[15].ptr = &dev->cart.sram;
+    }
+    else {
+        n64_to_retroarch_mappings[15].ptr = &dev->cart.flashram;
+    }
+
+    struct retro_memory_descriptor descs[n64_to_retroarch_mapping_count * 2];
+    struct retro_memory_map retromap;
+
+    memset(descs, 0, sizeof(descs));
+
+    for (int i = 0; i < n64_to_retroarch_mapping_count; i++) {
+        struct n64_to_retroarch_memory_map mapping = n64_to_retroarch_mappings[i];
+
+        if (mapping.ptr == NULL) {
+            continue;
+        }
+
+        if (mapping.isAccessibleCached) {
+            descs[i].ptr = mapping.ptr;
+            descs[i].start = R4300_KSEG0 + mapping.start;
+            descs[i].len = mapping.len;
+            descs[i].flags = mapping.flags;
+        }
+
+        descs[i + n64_to_retroarch_mapping_count].ptr = mapping.ptr;
+        descs[i + n64_to_retroarch_mapping_count].start = R4300_KSEG1 + mapping.start;
+        descs[i + n64_to_retroarch_mapping_count].len = mapping.len;
+        descs[i + n64_to_retroarch_mapping_count].flags = mapping.flags;
+    }
+
+    retromap.descriptors = descs;
+    retromap.num_descriptors = ARRAY_SIZE(descs);
+
+    environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &retromap);
 }
 
 void init_device(struct device* dev,
@@ -220,6 +302,8 @@ void init_device(struct device* dev,
             flashram_type, flashram_storage, iflashram_storage,
             (const uint8_t*)dev->rdram.dram,
             sram_storage, isram_storage);
+
+    setup_retroarch_memory_map(dev, rom_size, dd_rom_size);
 }
 
 void poweron_device(struct device* dev)
