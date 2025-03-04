@@ -651,7 +651,7 @@ void retro_set_environment(retro_environment_t cb)
 void retro_get_system_info(struct retro_system_info *info)
 {
     info->library_name = "Mupen64Plus-Next";
-    info->library_version = "2.7" FLAVOUR_VERSION GIT_VERSION;
+    info->library_version = "2.8" FLAVOUR_VERSION GIT_VERSION;
     info->valid_extensions = "n64|v64|z64|bin|u1";
     info->need_fullpath = false;
     info->block_extract = false;
