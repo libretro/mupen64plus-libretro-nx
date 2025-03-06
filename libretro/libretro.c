@@ -18,6 +18,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifdef __MINGW32__
+#define _CRT_RAND_S
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -226,6 +230,59 @@ extern struct cheat_ctx g_cheat_ctx;
 
 static bool emuThreadRunning = false;
 static pthread_t emuThread;
+
+/* Audio output buffer */
+static struct {
+   int16_t *data;
+   int32_t size;
+   int32_t capacity;
+} output_audio_buffer = {NULL, 0, 0};
+
+static void ensure_output_audio_buffer_capacity(int32_t capacity)
+{
+   if (capacity <= output_audio_buffer.capacity) {
+      return;
+   }
+
+   output_audio_buffer.data = realloc(output_audio_buffer.data, capacity * sizeof(*output_audio_buffer.data));
+   output_audio_buffer.capacity = capacity;
+   log_cb(RETRO_LOG_DEBUG, "Output audio buffer capacity set to %d\n", capacity);
+}
+
+static void init_output_audio_buffer(int32_t capacity)
+{
+   output_audio_buffer.data = NULL;
+   output_audio_buffer.size = 0;
+   output_audio_buffer.capacity = 0;
+   ensure_output_audio_buffer_capacity(capacity);
+}
+
+static void free_output_audio_buffer()
+{
+   free(output_audio_buffer.data);
+   output_audio_buffer.data = NULL;
+   output_audio_buffer.size = 0;
+   output_audio_buffer.capacity = 0;
+}
+
+static void upload_output_audio_buffer()
+{
+   if (!output_audio_buffer.size)
+      return;
+   audio_batch_cb(output_audio_buffer.data, output_audio_buffer.size / 2);
+   output_audio_buffer.size = 0;
+}
+
+void retro_audio_queue(const int16_t *data, int32_t samples)
+{
+   if ((samples < 1) || !emu_initialized)
+      return;
+
+   if (output_audio_buffer.capacity - output_audio_buffer.size < samples)
+      ensure_output_audio_buffer_capacity((output_audio_buffer.capacity + samples) * 1.5);
+   memcpy(output_audio_buffer.data + output_audio_buffer.size, data, samples * sizeof(*output_audio_buffer.data));
+   output_audio_buffer.size += samples;
+}
 
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
@@ -669,8 +726,42 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
         parallel_get_geometry(&info->geometry);
 #endif
-    info->timing.fps = vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype);
     info->timing.sample_rate = 44100.0;
+    info->timing.fps = (ROM_PARAMS.systemtype == SYSTEM_PAL) ? 50.00f : 59.94f;
+}
+
+void retro_set_system_av_info(unsigned GameFreq)
+{
+   struct retro_system_av_info system_av_info;
+   retro_get_system_av_info(&system_av_info);
+
+   if (ROM_PARAMS.systemtype == SYSTEM_PAL)
+      system_av_info.timing.fps = 50.00f;
+   else
+   switch (GameFreq)
+   {
+      case 21998:
+         system_av_info.timing.fps = 59.78f;
+         break;
+      case 44095:
+      case 22047:
+         system_av_info.timing.fps = 59.82f;
+         break;
+      case 22496:
+         system_av_info.timing.fps = 59.88f;
+         break;
+      case 26807:
+         system_av_info.timing.fps = 59.90f;
+         break;
+      case 32006:
+         system_av_info.timing.fps = 59.98f;
+         break;
+      default:
+         system_av_info.timing.fps = 59.94f;
+         break;
+   }
+
+   environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
 }
 
 unsigned retro_get_region (void)
@@ -729,6 +820,8 @@ void retro_init(void)
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
     if(ret && log_cb)
         log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
+
+    init_output_audio_buffer(2048);
 }
 
 void retro_deinit(void)
@@ -746,6 +839,7 @@ void retro_deinit(void)
 
     CoreShutdown();
     deinit_audio_libretro();
+    free_output_audio_buffer();
 
     if (perf_cb.perf_log)
         perf_cb.perf_log();
@@ -2087,6 +2181,8 @@ void retro_run (void)
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
     }
+
+    upload_output_audio_buffer();
 }
 
 void retro_reset (void)

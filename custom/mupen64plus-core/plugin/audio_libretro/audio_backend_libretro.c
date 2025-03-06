@@ -40,7 +40,8 @@
 #include <audio/conversion/s16_to_float.h>
 #include <audio/audio_resampler.h>
 
-extern retro_audio_sample_batch_t audio_batch_cb;
+extern void retro_audio_queue(const int16_t *data, int32_t samples);
+extern void retro_set_system_av_info(unsigned GameFreq);
 
 static unsigned MAX_AUDIO_FRAMES = 2048;
 
@@ -97,6 +98,7 @@ static void aiDacrateChanged(void *user_data, unsigned int frequency)
    CountsPerSecond = VI_INTR_TIME * 60 /* TODO/FIXME - dehardcode */;
    CountsPerByte   = CountsPerSecond / BytesPerSecond;
 
+   retro_set_system_av_info(GameFreq);
 #if 0
    printf("CountsPerByte: %d, GameFreq: %d\n", CountsPerByte, GameFreq);
 #endif
@@ -162,14 +164,10 @@ audio_batch:
    resampler->process(resampler_audio_data, &data);
    convert_float_to_s16(audio_out_buffer_s16, audio_out_buffer_float, data.output_frames * 2);
 
-   out                    = audio_out_buffer_s16;
+   out               = audio_out_buffer_s16;
 
-   while (data.output_frames)
-   {
-      size_t ret          = audio_batch_cb(out, data.output_frames);
-      data.output_frames -= ret;
-      out                += ret * 2;
-   }
+   retro_audio_queue(out, data.output_frames * 2);
+
    if (remain_frames)
    {
       raw_data = raw_data + frames * 2;
