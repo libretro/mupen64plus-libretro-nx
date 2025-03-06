@@ -73,6 +73,8 @@
 
 #define PATH_SIZE 2048
 
+#define SAMPLE_RATE 44100
+
 #define ISHEXDEC ((codeLine[cursor]>='0') && (codeLine[cursor]<='9')) || ((codeLine[cursor]>='a') && (codeLine[cursor]<='f')) || ((codeLine[cursor]>='A') && (codeLine[cursor]<='F'))
 
 /* Forward declarations */
@@ -139,7 +141,7 @@ static bool     first_context_reset  = false;
 static bool     initializing         = true;
 static bool     load_game_successful = false;
 
-bool libretro_swap_buffer;
+bool libretro_swap_buffer = false;
 
 uint32_t *blitter_buf = NULL;
 uint32_t *blitter_buf_lock = NULL;
@@ -148,6 +150,7 @@ uint32_t retro_screen_height = 480;
 uint32_t screen_pitch = 0;
 
 float retro_screen_aspect = 4.0 / 3.0;
+float retro_fps = 60;
 
 static char rdp_plugin_last[32] = {0};
 
@@ -722,8 +725,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
         parallel_get_geometry(&info->geometry);
 #endif
-    info->timing.sample_rate = 44100.0;
-    info->timing.fps = (ROM_PARAMS.systemtype == SYSTEM_PAL) ? 50.00f : 59.94f;
+    info->timing.sample_rate = SAMPLE_RATE;
+    info->timing.fps = (ROM_PARAMS.systemtype == SYSTEM_PAL) ? 50 : 60;
 }
 
 void retro_set_system_av_info(unsigned GameFreq)
@@ -757,6 +760,10 @@ void retro_set_system_av_info(unsigned GameFreq)
          break;
    }
 
+   if (retro_fps == system_av_info.timing.fps)
+      return;
+
+   retro_fps = system_av_info.timing.fps;
    environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
 }
 
@@ -1995,7 +2002,7 @@ bool retro_load_game(const struct retro_game_info *game)
     }
  
     // Init default vals
-    retro_savestate_complete = true;
+    retro_savestate_complete = false;
     load_game_successful = false;
 
     glsm_ctx_params_t params = {0};
@@ -2092,10 +2099,52 @@ void retro_unload_game(void)
     retro_savestate_complete = false;
 }
 
+void retro_swap_video_buffers()
+{
+    if (libretro_swap_buffer)
+    {
+        if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
+        {
+            video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+        }
+#ifdef HAVE_THR_AL
+        else if (current_rdp_type == RDP_PLUGIN_ANGRYLION)
+        {
+            video_cb(prescale, retro_screen_width, retro_screen_height, screen_pitch);
+        }
+#endif
+#ifdef HAVE_PARALLEL_RDP
+        else if (current_rdp_type == RDP_PLUGIN_PARALLEL)
+        {
+            parallel_profile_video_refresh_begin();
+            video_cb(parallel_frame_is_valid() ? RETRO_HW_FRAME_BUFFER_VALID : NULL,
+                    parallel_frame_width(), parallel_frame_height(), 0);
+            parallel_profile_video_refresh_end();
+        }
+#endif
+    }
+    else if (EnableFrameDuping)
+    {
+        // screen_pitch will be 0 for GLN
+        video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
+    }
+
+    upload_output_audio_buffer();
+}
+
 void retro_run (void)
 {
-    libretro_swap_buffer = false;
     static bool updated = false;
+
+    if (retro_savestate_complete == true && libretro_swap_buffer == true)
+    {
+       // Swap buffers fast pass, defering after a savestate if a frame was produced while unsafe interrupt
+       retro_swap_video_buffers();
+       retro_savestate_complete = false;
+       return;
+    }
+
+    libretro_swap_buffer = false;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
        update_variables(false);
@@ -2123,35 +2172,7 @@ void retro_run (void)
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     }
     
-    if (libretro_swap_buffer)
-    {
-       if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
-       {
-          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
-       }
-#ifdef HAVE_THR_AL
-       else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
-       {
-          video_cb(prescale, retro_screen_width, retro_screen_height, screen_pitch);
-       }
-#endif // HAVE_THR_AL
-#ifdef HAVE_PARALLEL_RDP
-       else if (current_rdp_type == RDP_PLUGIN_PARALLEL)
-       {
-           parallel_profile_video_refresh_begin();
-           video_cb(parallel_frame_is_valid() ? RETRO_HW_FRAME_BUFFER_VALID : NULL,
-                   parallel_frame_width(), parallel_frame_height(), 0);
-           parallel_profile_video_refresh_end();
-       }
-#endif
-    }
-    else if(EnableFrameDuping)
-    {
-        // screen_pitch will be 0 for GLN
-        video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
-    }
-
-    upload_output_audio_buffer();
+    retro_swap_video_buffers();
 }
 
 void retro_reset (void)
