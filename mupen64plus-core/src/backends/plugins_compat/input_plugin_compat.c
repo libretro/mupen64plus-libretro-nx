@@ -115,7 +115,7 @@ static m64p_error input_plugin_get_input(void* opaque, uint32_t* input_)
         cin_compat->main_switch_pak(cin_compat->control_id);
         cin_compat->main_switch_pak = NULL;
         // If switching to Transfer Pak and if a rom path is set, Switch it
-        if(Controls[cin_compat->control_id].Plugin == PLUGIN_TRANSFER_PAK && retro_transferpak_rom_path)
+        if(Controls[cin_compat->control_id].Plugin == PLUGIN_TRANSFER_PAK && retro_transferpak_rom_path[cin_compat->control_id])
         {
             cin_compat->gb_cart_switch_enabled = 1;
         }

@@ -159,8 +159,8 @@ char* retro_dd_path_img = NULL;
 char* retro_dd_path_rom = NULL;
 
 // Other Subsystems
-char* retro_transferpak_rom_path = NULL;
-char* retro_transferpak_ram_path = NULL;
+char* retro_transferpak_rom_path[4] = { NULL };
+char* retro_transferpak_ram_path[4] = { NULL };
 
 uint32_t CoreOptionCategoriesSupported = 0;
 uint32_t CoreOptionUpdateDisplayCbSupported = 0;
@@ -380,16 +380,19 @@ static void cleanup_global_paths()
         retro_dd_path_rom = NULL;
     }
 
-    if(retro_transferpak_rom_path)
+    for (size_t id = 0; id < 4; id++)
     {
-        free(retro_transferpak_rom_path);
-        retro_transferpak_rom_path = NULL;
-    }
-
-    if(retro_transferpak_ram_path)
-    {
-        free(retro_transferpak_ram_path);
-        retro_transferpak_ram_path = NULL;
+        if(retro_transferpak_rom_path[id])
+        {
+            free(retro_transferpak_rom_path[id]);
+            retro_transferpak_rom_path[id] = NULL;
+        }
+    
+        if(retro_transferpak_ram_path[id])
+        {
+            free(retro_transferpak_ram_path[id]);
+            retro_transferpak_ram_path[id] = NULL;
+        }
     }
 }
 
@@ -579,8 +582,11 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
         case RETRO_GAME_TYPE_TRANSFERPAK:
             if(num_info == 3)
             {
-                retro_transferpak_ram_path = strdup(info[0].path);
-                retro_transferpak_rom_path = strdup(info[1].path);
+                for (size_t i = 0; i < 4; i++)
+                {
+                    retro_transferpak_ram_path[i] = strdup(info[0].path);
+                    retro_transferpak_rom_path[i] = strdup(info[1].path);
+                }
             } else {
                 return false;
             }
@@ -1895,41 +1901,89 @@ bool retro_load_game(const struct retro_game_info *game)
     
     if (!retro_transferpak_rom_path && game->path)
     {
-       gamePath = (char *)game->path;
-       newPath = (char *)calloc(1, strlen(gamePath) + 4);
-       strcpy(newPath, gamePath);
-       strcat(newPath, ".gb");
-       FILE *fileTest = fopen(newPath, "r");
-       if (!fileTest)
-       {
-          free(newPath);
-       }
-       else
-       {
-          fclose(fileTest);
-          // Free'd later in Mupen Core
-          retro_transferpak_rom_path = newPath;
- 
-          // We have a gb rom!
-          if (!retro_transferpak_ram_path)
-          {
-             gamePath = (char *)game->path;
-             newPath = (char *)calloc(1, strlen(gamePath) + 5);
-             strcpy(newPath, gamePath);
-             strcat(newPath, ".sav");
-             FILE *fileTest = fopen(newPath, "r");
-             if (!fileTest)
-             {
+        gamePath = (char *)game->path;
+        char iToStr[2];
+        iToStr[0] = '1';
+        iToStr[1] = '\0';
+        for (size_t i = 0; i < 4; i++, iToStr[0]++)
+        {
+            newPath = (char *)calloc(1, strlen(gamePath) + 10);
+            strcpy(newPath, gamePath);
+            strcat(newPath, ".pak/");
+            strcat(newPath, iToStr);
+            strcat(newPath, ".gb");
+            FILE *fileTest = fopen(newPath, "r");
+            if (!fileTest)
+            {
                 free(newPath);
-             }
-             else
-             {
+            }
+            else
+            {
                 fclose(fileTest);
                 // Free'd later in Mupen Core
-                retro_transferpak_ram_path = newPath;
-             }
-          }
-       }
+                retro_transferpak_rom_path[i] = newPath;
+        
+                // We have a gb rom!
+                if (!retro_transferpak_ram_path[i])
+                {
+                    gamePath = (char *)game->path;
+                    newPath = (char *)calloc(1, strlen(gamePath) + 11);
+                    strcpy(newPath, gamePath);
+                    strcat(newPath, ".pak/");
+                    strcat(newPath, iToStr);
+                    strcat(newPath, ".sav");
+                    FILE *fileTest = fopen(newPath, "r");
+                    if (!fileTest)
+                    {
+                        free(newPath);
+                    }
+                    else
+                    {
+                        fclose(fileTest);
+                        // Free'd later in Mupen Core
+                        retro_transferpak_ram_path[i] = newPath;
+                    }
+                }
+                goto skip_generic_gb;
+            }
+
+            newPath = (char *)calloc(1, strlen(gamePath) + 4);
+            strcpy(newPath, gamePath);
+            strcat(newPath, ".gb");
+            fileTest = fopen(newPath, "r");
+            if (!fileTest)
+            {
+                free(newPath);
+            }
+            else
+            {
+                fclose(fileTest);
+                // Free'd later in Mupen Core
+                retro_transferpak_rom_path[i] = newPath;
+        
+                // We have a gb rom!
+                if (!retro_transferpak_ram_path[i])
+                {
+                    gamePath = (char *)game->path;
+                    newPath = (char *)calloc(1, strlen(gamePath) + 5);
+                    strcpy(newPath, gamePath);
+                    strcat(newPath, ".sav");
+                    FILE *fileTest = fopen(newPath, "r");
+                    if (!fileTest)
+                    {
+                        free(newPath);
+                    }
+                    else
+                    {
+                        fclose(fileTest);
+                        // Free'd later in Mupen Core
+                        retro_transferpak_ram_path[i] = newPath;
+                    }
+                }
+            }
+
+skip_generic_gb:
+        }
     }
  
     // Init default vals
