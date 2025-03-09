@@ -1899,7 +1899,7 @@ bool retro_load_game(const struct retro_game_info *game)
         }
     }
     
-    if (!retro_transferpak_rom_path && game->path)
+    if (game->path)
     {
         gamePath = (char *)game->path;
         char iToStr[2];
@@ -1907,6 +1907,9 @@ bool retro_load_game(const struct retro_game_info *game)
         iToStr[1] = '\0';
         for (size_t i = 0; i < 4; i++, iToStr[0]++)
         {
+            if (retro_transferpak_rom_path[i])
+                continue;
+
             newPath = (char *)calloc(1, strlen(gamePath) + 10);
             strcpy(newPath, gamePath);
             strcat(newPath, ".pak/");
