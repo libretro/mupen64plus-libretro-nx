@@ -380,7 +380,7 @@ static void cleanup_global_paths()
         retro_dd_path_rom = NULL;
     }
 
-    for (size_t id = 0; id < 4; id++)
+    for (int id = 0; id < 4; id++)
     {
         if(retro_transferpak_rom_path[id])
         {
@@ -582,7 +582,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
         case RETRO_GAME_TYPE_TRANSFERPAK:
             if(num_info == 3)
             {
-                for (size_t i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     retro_transferpak_ram_path[i] = strdup(info[0].path);
                     retro_transferpak_rom_path[i] = strdup(info[1].path);
@@ -1905,7 +1905,7 @@ bool retro_load_game(const struct retro_game_info *game)
         char iToStr[2];
         iToStr[0] = '1';
         iToStr[1] = '\0';
-        for (size_t i = 0; i < 4; i++, iToStr[0]++)
+        for (int i = 0; i < 4; i++, iToStr[0]++)
         {
             if (retro_transferpak_rom_path[i])
                 continue;
