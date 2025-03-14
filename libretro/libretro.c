@@ -494,6 +494,15 @@ static void EmuThreadFunction(void)
     return;
 }
 
+#ifdef EMSCRIPTEN
+/* Emscripten is very strict about function signatures */
+static void *EmuThreadFunctionWrapper(void* param)
+{
+  EmuThreadFunction();
+  return NULL;
+}
+#endif
+
 static void reinit_gfx_plugin(void)
 {
 #ifdef HAVE_PARALLEL_RDP
@@ -2058,7 +2067,11 @@ void retro_run (void)
        {
           if(!emuThreadRunning)
           {
+             #ifdef EMSCRIPTEN
+             pthread_create(&emuThread, NULL, &EmuThreadFunctionWrapper, NULL);
+             #else
              pthread_create(&emuThread, NULL, &EmuThreadFunction, NULL);
+             #endif
              emuThreadRunning = true;
           }
        }

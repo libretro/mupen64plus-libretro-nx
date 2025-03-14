@@ -550,7 +550,10 @@ else ifeq ($(platform), emscripten)
    CC = emcc
    CXX = em++
    HAVE_NEON = 0
-
+   ifneq ($(pthread),0)
+     CPUFLAGS += -pthread
+     LDFLAGS += -lpthread
+   endif
    COREFLAGS += -DOS_LINUX
    STATIC_LINKING = 1
 # Windows
