@@ -83,74 +83,63 @@ static void get_pi_dma_handler(struct cart* cart, struct dd_controller* dd, uint
 #undef RW
 }
 
-struct n64_to_retroarch_memory_map {
-    size_t start;
-    size_t len;
-    void* ptr;
-    bool isAccessibleCached;
-    uint64_t flags;
-};
+void setup_retroarch_memory_map(struct mem_mapping mappings[], size_t mappings_count, struct device* dev) {
+    // Allocating extra space to allow for separate mappings for cached and uncached memory
+    // Also allocating one extra space for PIF RAM, as that doesn't have a separate entry in the mapping struct
+    struct retro_memory_descriptor descs[(mappings_count + 1) * 2];
+    size_t descs_count = ARRAY_SIZE(descs);
 
-void setup_retroarch_memory_map(struct device* dev, size_t rom_size, size_t dd_rom_size) {
-    struct n64_to_retroarch_memory_map n64_to_retroarch_mappings[] = {
-        { MM_RDRAM_DRAM,             0x3efffff,    dev->rdram.dram,        true,  RETRO_MEMDESC_SYSTEM_RAM },
-        { MM_RDRAM_REGS,             0xfffff,      dev->rdram.regs,        false },
-        { MM_RSP_MEM,                0xffff,       dev->sp.mem,            false },
-        { MM_RSP_REGS,               0xffff,       dev->sp.regs,           false },
-        { MM_RSP_REGS2,              0xffff,       dev->sp.regs2,          false },
-        { MM_DPC_REGS,               0xffff,       dev->dp.dpc_regs,       false },
-        { MM_DPS_REGS,               0xffff,       dev->dp.dps_regs,       false },
-        { MM_MI_REGS,                0xffff,       dev->mi.regs,           false },
-        { MM_VI_REGS,                0xffff,       dev->vi.regs,           false },
-        { MM_AI_REGS,                0xffff,       dev->ai.regs,           false },
-        { MM_PI_REGS,                0xffff,       dev->pi.regs,           false },
-        { MM_RI_REGS,                0xffff,       dev->ri.regs,           false },
-        { MM_SI_REGS,                0xffff,       dev->si.regs,           false },
-        { MM_DOM2_ADDR1,             0xffffff,     NULL,                   false },
-        { MM_DD_ROM,                 0x1ffffff,    NULL,                   false, RETRO_MEMDESC_CONST },
-        { MM_DOM2_ADDR2,             0x1ffff,      NULL,                   false },
-        { MM_CART_ROM,               rom_size,     dev->cart.cart_rom.rom, false, RETRO_MEMDESC_CONST },
-        { MM_PIF_MEM,                PIF_ROM_SIZE, dev->pif.base,          false, RETRO_MEMDESC_CONST },
-        { MM_PIF_MEM + PIF_ROM_SIZE, PIF_RAM_SIZE, dev->pif.ram,           false },
-    };
-    size_t n64_to_retroarch_mapping_count = ARRAY_SIZE(n64_to_retroarch_mappings);
-
-    if (dd_rom_size > 0) {
-        n64_to_retroarch_mappings[13].ptr = dev->dd.regs;
-        n64_to_retroarch_mappings[14].ptr = dev->dd.rom;
-        n64_to_retroarch_mappings[14].len = dd_rom_size;
-    }
-
-    if (dev->cart.use_flashram == -1) {
-        n64_to_retroarch_mappings[15].ptr = &dev->cart.sram;
-    }
-    else {
-        n64_to_retroarch_mappings[15].ptr = &dev->cart.flashram;
-    }
-
-    struct retro_memory_descriptor descs[n64_to_retroarch_mapping_count * 2];
     struct retro_memory_map retromap;
 
     memset(descs, 0, sizeof(descs));
 
-    for (int i = 0; i < n64_to_retroarch_mapping_count; i++) {
-        struct n64_to_retroarch_memory_map mapping = n64_to_retroarch_mappings[i];
+    for (int i = 0; i < mappings_count; i++) {
+        const struct mem_mapping mapping = mappings[i];
 
-        if (mapping.ptr == NULL) {
-            continue;
+        if (mapping.type == M64P_MEM_RDRAM) {
+            // RDRAM is accessible cached, map to KSEG0 as well
+            descs[i].ptr = mapping.retroarch_mapping.ptr;
+            descs[i].start = R4300_KSEG0 + mapping.begin;
+            descs[i].len = mapping.end - mapping.begin;
+            descs[i].flags = mapping.retroarch_mapping.flags;
+
+            descs[i + mappings_count].ptr = mapping.retroarch_mapping.ptr;
+            descs[i + mappings_count].start = R4300_KSEG1 + mapping.begin;
+            descs[i + mappings_count].len = mapping.end - mapping.begin;
+            descs[i + mappings_count].flags = mapping.retroarch_mapping.flags;
         }
+        else if (mapping.type == M64P_MEM_FLASHRAMSTAT) {
+            // Handle save data as a special case, can point to two different locations
+            if (dev->cart.use_flashram == -1) {
+                descs[i + mappings_count].ptr = &dev->cart.sram;
+            }
+            else {
+                descs[i + mappings_count].ptr = &dev->cart.flashram;
+            }
 
-        if (mapping.isAccessibleCached) {
-            descs[i].ptr = mapping.ptr;
-            descs[i].start = R4300_KSEG0 + mapping.start;
-            descs[i].len = mapping.len;
-            descs[i].flags = mapping.flags;
+            descs[i].start = R4300_KSEG1 + mapping.begin;
+            descs[i].len = mapping.end - mapping.begin;
+            descs[i].flags = mapping.retroarch_mapping.flags;
         }
+        else if (mapping.type == M64P_MEM_PIF) {
+            descs[i + mappings_count].ptr = dev->pif.base;
+            descs[i + mappings_count].start = R4300_KSEG1 + mapping.begin;
+            descs[i + mappings_count].len = PIF_ROM_SIZE;
+            descs[i + mappings_count].flags = RETRO_MEMDESC_CONST;
 
-        descs[i + n64_to_retroarch_mapping_count].ptr = mapping.ptr;
-        descs[i + n64_to_retroarch_mapping_count].start = R4300_KSEG1 + mapping.start;
-        descs[i + n64_to_retroarch_mapping_count].len = mapping.len;
-        descs[i + n64_to_retroarch_mapping_count].flags = mapping.flags;
+            // Put PIF ram into the extra slot at the end of the array
+            descs[descs_count - 1].ptr = dev->pif.ram;
+            descs[descs_count - 1].start = R4300_KSEG1 + mapping.begin + PIF_ROM_SIZE;
+            descs[descs_count - 1].len = PIF_RAM_SIZE;
+            descs[descs_count - 1].flags = 0;
+        }
+        else if (mapping.retroarch_mapping.ptr != NULL) {
+            // Indices of uncached mappings start at mappings_count to match uncached memory being later in the address space
+            descs[i + mappings_count].ptr = mapping.retroarch_mapping.ptr;
+            descs[i + mappings_count].start = R4300_KSEG1 + mapping.begin;
+            descs[i + mappings_count].len = mapping.end - mapping.begin;
+            descs[i + mappings_count].flags = mapping.retroarch_mapping.flags;
+        }
     }
 
     retromap.descriptors = descs;
@@ -218,33 +207,33 @@ void init_device(struct device* dev,
 #define A(x,m) (x), (x) | (m)
     struct mem_mapping mappings[] = {
         /* clear mappings */
-        { 0x00000000, 0xffffffff, M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
+        { 0x00000000, 0xffffffff, M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0 } },
         /* memory map */
-        { A(MM_RDRAM_DRAM, 0x3efffff), M64P_MEM_RDRAM, { &dev->rdram, RW(rdram_dram) } },
-        { A(MM_RDRAM_REGS, 0xfffff), M64P_MEM_RDRAMREG, { &dev->rdram, RW(rdram_regs) } },
-        { A(MM_RSP_MEM, 0xffff), M64P_MEM_RSPMEM, { &dev->sp, RW(rsp_mem) } },
-        { A(MM_RSP_REGS, 0xffff), M64P_MEM_RSPREG, { &dev->sp, RW(rsp_regs) } },
-        { A(MM_RSP_REGS2, 0xffff), M64P_MEM_RSP, { &dev->sp, RW(rsp_regs2) } },
-        { A(MM_DPC_REGS, 0xffff), M64P_MEM_DP, { &dev->dp, RW(dpc_regs) } },
-        { A(MM_DPS_REGS, 0xffff), M64P_MEM_DPS, { &dev->dp, RW(dps_regs) } },
-        { A(MM_MI_REGS, 0xffff), M64P_MEM_MI, { &dev->mi, RW(mi_regs) } },
-        { A(MM_VI_REGS, 0xffff), M64P_MEM_VI, { &dev->vi, RW(vi_regs) } },
-        { A(MM_AI_REGS, 0xffff), M64P_MEM_AI, { &dev->ai, RW(ai_regs) } },
-        { A(MM_PI_REGS, 0xffff), M64P_MEM_PI, { &dev->pi, RW(pi_regs) } },
-        { A(MM_RI_REGS, 0xffff), M64P_MEM_RI, { &dev->ri, RW(ri_regs) } },
-        { A(MM_SI_REGS, 0xffff), M64P_MEM_SI, { &dev->si, RW(si_regs) } },
-        { A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
-        { A(MM_DD_ROM, 0x1ffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) } },
-        { A(MM_DOM2_ADDR2, 0x1ffff), M64P_MEM_FLASHRAMSTAT, { &dev->cart, RW(cart_dom2)  } },
-        { A(MM_IS_VIEWER, 0xfff), M64P_MEM_NOTHING, { &dev->is, RW(is_viewer) } },
-        { A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) } },
-        { A(MM_PIF_MEM, 0xffff), M64P_MEM_PIF, { &dev->pif, RW(pif_mem) } }
+        { A(MM_RDRAM_DRAM, 0x3efffff), M64P_MEM_RDRAM, { &dev->rdram, RW(rdram_dram) }, {dev->rdram.dram, RETRO_MEMDESC_SYSTEM_RAM } },
+        { A(MM_RDRAM_REGS, 0xfffff), M64P_MEM_RDRAMREG, { &dev->rdram, RW(rdram_regs) }, { dev->rdram.regs, 0 } },
+        { A(MM_RSP_MEM, 0xffff), M64P_MEM_RSPMEM, { &dev->sp, RW(rsp_mem) }, { dev->sp.mem, 0 } },
+        { A(MM_RSP_REGS, 0xffff), M64P_MEM_RSPREG, { &dev->sp, RW(rsp_regs) }, { dev->sp.regs, 0 } },
+        { A(MM_RSP_REGS2, 0xffff), M64P_MEM_RSP, { &dev->sp, RW(rsp_regs2) }, { dev->sp.regs2, 0 } },
+        { A(MM_DPC_REGS, 0xffff), M64P_MEM_DP, { &dev->dp, RW(dpc_regs) }, { dev->dp.dpc_regs, 0 } },
+        { A(MM_DPS_REGS, 0xffff), M64P_MEM_DPS, { &dev->dp, RW(dps_regs) }, { dev->dp.dps_regs, 0 } },
+        { A(MM_MI_REGS, 0xffff), M64P_MEM_MI, { &dev->mi, RW(mi_regs) }, { dev->mi.regs, 0 } },
+        { A(MM_VI_REGS, 0xffff), M64P_MEM_VI, { &dev->vi, RW(vi_regs) }, { dev->vi.regs, 0} },
+        { A(MM_AI_REGS, 0xffff), M64P_MEM_AI, { &dev->ai, RW(ai_regs) }, { dev->ai.regs, 0} },
+        { A(MM_PI_REGS, 0xffff), M64P_MEM_PI, { &dev->pi, RW(pi_regs) }, { dev->pi.regs, 0} },
+        { A(MM_RI_REGS, 0xffff), M64P_MEM_RI, { &dev->ri, RW(ri_regs) }, { dev->ri.regs, 0} },
+        { A(MM_SI_REGS, 0xffff), M64P_MEM_SI, { &dev->si, RW(si_regs) }, { dev->si.regs, 0} },
+        { A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0 } },
+        { A(MM_DD_ROM, 0x1ffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0 } },
+        { A(MM_DOM2_ADDR2, 0x1ffff), M64P_MEM_FLASHRAMSTAT, { &dev->cart, RW(cart_dom2) }, { NULL, 0} },
+        { A(MM_IS_VIEWER, 0xfff), M64P_MEM_NOTHING, { &dev->is, RW(is_viewer) }, { NULL, 0 } },
+        { A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) }, { dev->cart.cart_rom.rom, RETRO_MEMDESC_CONST } },
+        { A(MM_PIF_MEM, 0xffff), M64P_MEM_PIF, { &dev->pif, RW(pif_mem) }, { NULL, 0 } }
     };
 
     /* init and map DD if present */
     if (dd_rom_size > 0) {
-        mappings[14] = (struct mem_mapping){ A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_NOTHING, { &dev->dd, RW(dd_regs) } };
-        mappings[15] = (struct mem_mapping){ A(MM_DD_ROM, dd_rom_size-1), M64P_MEM_NOTHING, { &dev->dd, RW(dd_rom) } };
+        mappings[14] = (struct mem_mapping){ A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_NOTHING, { &dev->dd, RW(dd_regs) }, { dev->dd.regs, 0 } };
+        mappings[15] = (struct mem_mapping){ A(MM_DD_ROM, dd_rom_size-1), M64P_MEM_NOTHING, { &dev->dd, RW(dd_rom) }, { (void*)dev->dd.rom, RETRO_MEMDESC_CONST } };
 
         init_dd(&dev->dd,
                 dd_rtc_clock, dd_rtc_iclock,
@@ -303,7 +292,7 @@ void init_device(struct device* dev,
             (const uint8_t*)dev->rdram.dram,
             sram_storage, isram_storage);
 
-    setup_retroarch_memory_map(dev, rom_size, dd_rom_size);
+    setup_retroarch_memory_map(mappings, ARRAY_SIZE(mappings), dev);
 }
 
 void poweron_device(struct device* dev)
