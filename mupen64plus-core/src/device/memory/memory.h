@@ -43,6 +43,7 @@ struct mem_handler
 
 struct retroarch_mem_mapping {
     void* ptr;
+    size_t len;
     uint64_t flags;
 };
 struct mem_mapping
