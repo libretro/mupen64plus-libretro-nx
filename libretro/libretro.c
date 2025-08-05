@@ -494,6 +494,9 @@ static void* EmuThreadFunction(void* param)
 
 static void reinit_gfx_plugin(void)
 {
+    if (log_cb)
+        log_cb(RETRO_LOG_DEBUG, "reinit_gfx_plugin called with first_context_reset = %s.\n",
+            first_context_reset ? "true" : "false");
 #ifdef HAVE_PARALLEL_RDP
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
     {
