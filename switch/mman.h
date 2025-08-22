@@ -29,7 +29,9 @@ static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, of
     (void)offset;
 
     size_t size = (len + 0xFFF) &~ 0xFFF;
-	ptr_rw = virtmemReserve(size);
+    virtmemLock();
+	ptr_rw = virtmemFindCodeMemory(size, 0);
+    virtmemUnlock();
     if (R_SUCCEEDED(svcMapProcessMemory(ptr_rw, envGetOwnProcessHandle(), (u64)addr, size)))
     {
         return ptr_rw;
