@@ -341,7 +341,7 @@ namespace glsl {
 		{
 			if (_glinfo.isGLES2) {
 				m_part =
-					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);	\n"
+					"lowp vec4 uTestColor = vec4(0.0, 0.0, 0.0, 0.0);				\n"
 					"void main()														\n"
 					"{																	\n"
 					"  gl_FragColor = uTestColor;										\n"
@@ -349,7 +349,7 @@ namespace glsl {
 				;
 			} else {
 				m_part =
-					"lowp vec4 uTestColor = vec4(4.0/255.0, 2.0/255.0, 1.0/255.0, 0.0);	\n"
+					"lowp vec4 uTestColor = vec4(0.0, 0.0, 0.0, 0.0);				\n"
 					"out lowp vec4 fragColor;													\n"
 					"void main()																\n"
 					"{																			\n"
