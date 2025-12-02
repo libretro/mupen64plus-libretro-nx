@@ -314,6 +314,8 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
       cardinalMax   = 85.0;
       diagonalMax   = 69.0;
       innerDeadzone = 7.0;
+
+      innerDeadzone += (float)astick_deadzone / ASTICK_MAX / 0.01f;
       
       double temp = innerDeadzone + diagonalMax;
       double discriminant = pow(temp, 2.0) - 2.0 * sqrt(2.0) * diagonalMax * innerDeadzone;
@@ -328,6 +330,9 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
       /* Apply inner axial dead-zone and response curve */
       ax = processDeadzoneAndResponseCurve(ax, innerDeadzone, saturationRadius, offset);
       ay = processDeadzoneAndResponseCurve(ay, innerDeadzone, saturationRadius, offset);
+
+      ax *= (astick_sensitivity / 100.0);
+      ay *= (astick_sensitivity / 100.0);
 
       scaledLength = hypot(ax - offset, ay - offset);
 
