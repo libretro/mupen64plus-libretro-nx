@@ -46,6 +46,9 @@ include:
   # tvOS
   - project: 'libretro-infrastructure/ci-templates'
     file: '/tvos-arm64.yml'
+  # webOS 32-bit (LGTV)
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/webos-make.yml'
 
 # Stages
 stages:
@@ -170,3 +173,15 @@ libretro-build-osx-arm64:
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
+
+#################################### MISC ####################################
+# webOS 32-bit
+libretro-build-webos-armv7a-gles2:
+  extends:
+    - .libretro-webos-armv7a-make-default
+    - .core-defs-gles2
+
+libretro-build-webos-armv7a-gles3:
+  extends:
+    - .libretro-webos-armv7a-make-default
+    - .core-defs-gles3

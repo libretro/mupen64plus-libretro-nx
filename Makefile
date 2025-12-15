@@ -605,6 +605,19 @@ else
    CXXFLAGS += -fpermissive
 endif
 
+# webOS
+ifneq (,$(or $(findstring webos,$(CROSS_COMPILE)),$(findstring starfish,$(CROSS_COMPILE))))
+   # gitlab-ci uses GLES3 not FORCE_GLES3
+   ifeq ($(GLES3),1)
+      TARGET := $(TARGET_NAME)_gles3_libretro.so
+   else
+      # default to GLES v2
+      GLES = 1
+   endif
+   GL_LIB := -lGLESv2
+   HAVE_NEON = 1
+endif
+
 ifeq ($(STATIC_LINKING), 1)
    ifneq (,$(findstring win,$(platform)))
       TARGET := $(TARGET:.dll=.lib)
