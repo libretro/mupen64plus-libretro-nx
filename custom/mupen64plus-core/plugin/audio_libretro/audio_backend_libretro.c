@@ -36,15 +36,20 @@
 #include <string.h>
 #include <stdarg.h>
 
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include <audio/conversion/float_to_s16.h>
 #include <audio/conversion/s16_to_float.h>
 #include <audio/audio_resampler.h>
+#endif
 
 extern retro_audio_sample_batch_t audio_batch_cb;
 
 static unsigned MAX_AUDIO_FRAMES = 2048;
 
 #define VI_INTR_TIME 500000
+#define OUTPUT_RATE 44100
 
 /* Read header for type definition */
 static int GameFreq = 33600;
@@ -52,6 +57,103 @@ static unsigned CountsPerSecond;
 static unsigned BytesPerSecond;
 static unsigned CountsPerByte;
 
+#ifdef __APPLE__
+/* Apple AudioConverter - resamples int16 to 44100 Hz.
+ * No float intermediates needed (unlike sinc resampler path). */
+static AudioConverterRef audio_converter;
+static unsigned converter_input_rate;
+static int16_t *audio_out_buffer_s16;
+
+/* Context for AudioConverter input callback */
+typedef struct
+{
+   const int16_t *data;
+   size_t frames_left;
+} converter_ctx_t;
+
+static OSStatus converter_input_cb(
+      AudioConverterRef converter,
+      UInt32 *ioNumberDataPackets,
+      AudioBufferList *ioData,
+      AudioStreamPacketDescription **outDataPacketDescription,
+      void *inUserData)
+{
+   converter_ctx_t *ctx = (converter_ctx_t *)inUserData;
+   UInt32 frames_to_provide;
+
+   if (ctx->frames_left == 0)
+   {
+      *ioNumberDataPackets = 0;
+      return noErr;
+   }
+
+   frames_to_provide = *ioNumberDataPackets;
+   if (frames_to_provide > ctx->frames_left)
+      frames_to_provide = (UInt32)ctx->frames_left;
+
+   ioData->mBuffers[0].mData           = (void *)ctx->data;
+   ioData->mBuffers[0].mDataByteSize   = frames_to_provide * 4; /* stereo int16 */
+   ioData->mBuffers[0].mNumberChannels = 2;
+
+   ctx->data        += frames_to_provide * 2; /* advance by samples */
+   ctx->frames_left -= frames_to_provide;
+   *ioNumberDataPackets = frames_to_provide;
+
+   return noErr;
+}
+
+static int create_audio_converter(unsigned input_rate)
+{
+   AudioStreamBasicDescription input_desc, output_desc;
+   OSStatus err;
+
+   if (audio_converter)
+   {
+      AudioConverterDispose(audio_converter);
+      audio_converter = NULL;
+   }
+
+   /* Input: native-endian int16 stereo at game's sample rate
+    * (byte swap is done before calling AudioConverter) */
+   memset(&input_desc, 0, sizeof(input_desc));
+   input_desc.mSampleRate       = input_rate;
+   input_desc.mFormatID         = kAudioFormatLinearPCM;
+   input_desc.mFormatFlags      = kAudioFormatFlagIsSignedInteger
+                                | kAudioFormatFlagIsPacked;
+   input_desc.mBytesPerPacket   = 4;
+   input_desc.mFramesPerPacket  = 1;
+   input_desc.mBytesPerFrame    = 4;
+   input_desc.mChannelsPerFrame = 2;
+   input_desc.mBitsPerChannel   = 16;
+
+   /* Output: little-endian int16 stereo at 44100 Hz */
+   memset(&output_desc, 0, sizeof(output_desc));
+   output_desc.mSampleRate       = OUTPUT_RATE;
+   output_desc.mFormatID         = kAudioFormatLinearPCM;
+   output_desc.mFormatFlags      = kAudioFormatFlagIsSignedInteger
+                                 | kAudioFormatFlagIsPacked;
+   output_desc.mBytesPerPacket   = 4;
+   output_desc.mFramesPerPacket  = 1;
+   output_desc.mBytesPerFrame    = 4;
+   output_desc.mChannelsPerFrame = 2;
+   output_desc.mBitsPerChannel   = 16;
+
+   err = AudioConverterNew(&input_desc, &output_desc, &audio_converter);
+   if (err != noErr)
+      return -1;
+
+   /* Set high quality resampling */
+   UInt32 quality = kAudioConverterQuality_High;
+   AudioConverterSetProperty(audio_converter,
+         kAudioConverterSampleRateConverterQuality,
+         sizeof(quality), &quality);
+
+   converter_input_rate = input_rate;
+   return 0;
+}
+
+#else
+/* Non-Apple: use libretro-common sinc resampler */
 static const retro_resampler_t *resampler;
 static void *resampler_audio_data;
 static float *audio_in_buffer_float;
@@ -62,9 +164,19 @@ void (*audio_convert_s16_to_float_arm)(float *out,
       const int16_t *in, size_t samples, float gain);
 void (*audio_convert_float_to_s16_arm)(int16_t *out,
       const float *in, size_t samples);
+#endif
 
 void deinit_audio_libretro(void)
 {
+#ifdef __APPLE__
+   if (audio_converter)
+   {
+      AudioConverterDispose(audio_converter);
+      audio_converter = NULL;
+   }
+   free(audio_out_buffer_s16);
+   audio_out_buffer_s16 = NULL;
+#else
    if (resampler && resampler_audio_data)
    {
       resampler->free(resampler_audio_data);
@@ -74,13 +186,21 @@ void deinit_audio_libretro(void)
       free(audio_out_buffer_float);
       free(audio_out_buffer_s16);
    }
+#endif
 }
 
 void init_audio_libretro(unsigned max_audio_frames)
 {
-   retro_resampler_realloc(&resampler_audio_data, &resampler, "sinc", RESAMPLER_QUALITY_DONTCARE, 1.0);
-
    MAX_AUDIO_FRAMES = max_audio_frames;
+
+#ifdef __APPLE__
+   /* Allocate output buffer - sized for maximum expansion ratio */
+   audio_out_buffer_s16 = malloc(2 * MAX_AUDIO_FRAMES * 2 * sizeof(int16_t));
+   /* Converter will be created on first use when we know the input rate */
+   audio_converter = NULL;
+   converter_input_rate = 0;
+#else
+   retro_resampler_realloc(&resampler_audio_data, &resampler, "sinc", RESAMPLER_QUALITY_DONTCARE, 1.0);
 
    audio_in_buffer_float  = malloc(2 * MAX_AUDIO_FRAMES * sizeof(float));
    audio_out_buffer_float = malloc(2 * MAX_AUDIO_FRAMES * sizeof(float));
@@ -88,6 +208,7 @@ void init_audio_libretro(unsigned max_audio_frames)
 
    convert_s16_to_float_init_simd();
    convert_float_to_s16_init_simd();
+#endif
 }
 
 static void aiDacrateChanged(void *user_data, unsigned int frequency)
@@ -122,15 +243,13 @@ void set_audio_format_via_libretro(void* user_data,
 
 static void aiLenChanged(void* user_data, const void* buffer, size_t size)
 {
-   size_t max_frames, remain_frames;
    uint32_t i;
-   double ratio;
-   struct resampler_data data = {0};
    int16_t *out      = NULL;
    int16_t *raw_data = (int16_t*)buffer;
    size_t frames     = size / 4;
    uint8_t *p        = (uint8_t*)buffer;
 
+   /* Byte swap - handles endianness and channel order from N64 format */
    for (i = 0; i < size; i += 4)
    {
       p[i ] ^= p[i + 2];
@@ -140,6 +259,57 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
       p[i + 3] ^= p[i + 1];
       p[i + 1] ^= p[i + 3];
    }
+
+#ifdef __APPLE__
+   /* Apple path: AudioConverter resamples, no float conversion needed */
+   converter_ctx_t ctx;
+   AudioBufferList output_buffer;
+   UInt32 output_frames;
+   OSStatus err;
+
+   /* Create or recreate converter if sample rate changed */
+   if (!audio_converter || converter_input_rate != (unsigned)GameFreq)
+   {
+      if (create_audio_converter(GameFreq) != 0)
+         return;
+   }
+
+   /* Reset converter to clear end-of-stream state from previous call */
+   AudioConverterReset(audio_converter);
+
+   ctx.data        = raw_data;
+   ctx.frames_left = frames;
+
+   /* Calculate expected output frames */
+   output_frames = (UInt32)((frames * OUTPUT_RATE) / GameFreq + 1);
+   if (output_frames > MAX_AUDIO_FRAMES * 2)
+      output_frames = MAX_AUDIO_FRAMES * 2;
+
+   output_buffer.mNumberBuffers = 1;
+   output_buffer.mBuffers[0].mNumberChannels = 2;
+   output_buffer.mBuffers[0].mDataByteSize   = output_frames * 4;
+   output_buffer.mBuffers[0].mData           = audio_out_buffer_s16;
+
+   err = AudioConverterFillComplexBuffer(audio_converter,
+         converter_input_cb, &ctx,
+         &output_frames, &output_buffer, NULL);
+
+   if (err != noErr && err != 1)
+      return;
+
+   out = audio_out_buffer_s16;
+   while (output_frames)
+   {
+      size_t ret     = audio_batch_cb(out, output_frames);
+      output_frames -= ret;
+      out           += ret * 2;
+   }
+
+#else
+   /* Non-Apple path: sinc resampler with float conversion */
+   size_t max_frames, remain_frames;
+   double ratio;
+   struct resampler_data data = {0};
 
 audio_batch:
    out               = NULL;
@@ -176,6 +346,7 @@ audio_batch:
       frames   = remain_frames;
       goto audio_batch;
    }
+#endif
 }
 
 /* Abuse core & audio plugin implementation details to obtain the desired effect. */
