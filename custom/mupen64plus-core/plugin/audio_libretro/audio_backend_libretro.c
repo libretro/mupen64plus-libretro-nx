@@ -63,6 +63,7 @@ static unsigned CountsPerByte;
 static AudioConverterRef audio_converter;
 static unsigned converter_input_rate;
 static int16_t *audio_out_buffer_s16;
+static bool converter_needs_reset;
 
 /* Context for AudioConverter input callback */
 typedef struct
@@ -149,6 +150,7 @@ static int create_audio_converter(unsigned input_rate)
          sizeof(quality), &quality);
 
    converter_input_rate = input_rate;
+   converter_needs_reset = false;
    return 0;
 }
 
@@ -274,9 +276,6 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
          return;
    }
 
-   /* Reset converter to clear end-of-stream state from previous call */
-   AudioConverterReset(audio_converter);
-
    ctx.data        = raw_data;
    ctx.frames_left = frames;
 
@@ -296,6 +295,32 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
 
    if (err != noErr && err != 1)
       return;
+
+   /* If converter returned 0 output while we have input, it may be stuck
+    * in "end of stream" state. Reset and retry once. */
+   if (output_frames == 0 && ctx.frames_left > 0 && !converter_needs_reset)
+   {
+      AudioConverterReset(audio_converter);
+      converter_needs_reset = true;
+
+      /* Retry with fresh context */
+      ctx.data        = raw_data;
+      ctx.frames_left = frames;
+      output_frames   = (UInt32)((frames * OUTPUT_RATE) / GameFreq + 1);
+      if (output_frames > MAX_AUDIO_FRAMES * 2)
+         output_frames = MAX_AUDIO_FRAMES * 2;
+      output_buffer.mBuffers[0].mDataByteSize = output_frames * 4;
+
+      err = AudioConverterFillComplexBuffer(audio_converter,
+            converter_input_cb, &ctx,
+            &output_frames, &output_buffer, NULL);
+
+      if (err != noErr && err != 1)
+         return;
+   }
+
+   if (output_frames > 0)
+      converter_needs_reset = false;
 
    out = audio_out_buffer_s16;
    while (output_frames)
