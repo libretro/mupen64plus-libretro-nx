@@ -53,13 +53,18 @@ void GLInfo::init() {
 	const char * strRenderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
 
 	bool isAnyAdreno = strstr(strRenderer, "Adreno") != nullptr;
+	bool isFreedreno = strstr(strRenderer, "FD") != nullptr;  // freedreno uses "FDxxx" naming
+	bool isAdrenoFamily = isAnyAdreno || isFreedreno;
 
 	if (std::regex_match(std::string(strRenderer), std::regex("Adreno.*530")))
 		renderer = Renderer::Adreno530;
 	else if (std::regex_match(std::string(strRenderer), std::regex("Adreno.*540")) ||
-		std::regex_match(std::string(strRenderer), std::regex("Adreno.*6\\d\\d")))
+		std::regex_match(std::string(strRenderer), std::regex("Adreno.*6\\d\\d")) ||
+		std::regex_match(std::string(strRenderer), std::regex(".*FD6\\d\\d.*")))  // freedreno 6xx series
 		renderer = Renderer::Adreno_no_bugs;
-	else if (strstr(strRenderer, "Adreno") != nullptr)
+	else if (std::regex_match(std::string(strRenderer), std::regex(".*FD5\\d\\d.*")))  // freedreno 5xx series
+		renderer = Renderer::Adreno;
+	else if (isAdrenoFamily)
 		renderer = Renderer::Adreno;
 	else if (strstr(strRenderer, "VideoCore IV") != nullptr)
 		renderer = Renderer::VideoCore;
