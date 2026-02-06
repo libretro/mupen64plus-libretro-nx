@@ -1811,6 +1811,15 @@ void context_reset(void)
           glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
           context_setup_first_init = true;
        }
+       // Reinitialize GLideN64's graphics context when the GL context is recreated
+       // (e.g., during fullscreen toggle). This is needed because BufferedDrawer uses
+       // persistent buffer mappings (GL_MAP_PERSISTENT_BIT) which become invalid when
+       // the GL context is destroyed and recreated.
+       if (emu_initialized)
+       {
+          gln64DestroyGfxContext();
+          gln64ReinitGfxContext();
+       }
     }
 
     reinit_gfx_plugin();
