@@ -36,7 +36,7 @@ EXPORT m64p_error CALL gln64PluginStartup(
 	void (*DebugCallback)(void *, int, const char *)
 )
 {
-	return api().PluginStartup(CoreLibHandle);
+	return api().PluginStartup(CoreLibHandle, Context, DebugCallback);
 }
 
 EXPORT m64p_error CALL gln64PluginShutdown(void)

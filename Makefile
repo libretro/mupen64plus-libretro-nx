@@ -406,6 +406,7 @@ else ifneq (,$(findstring osx,$(platform)))
 
    PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DNO_ASM -DGL_SILENCE_DEPRECATION=1
    GL_LIB := -framework OpenGL
+   LDFLAGS += -framework AudioToolbox
 
    # Target Dynarec
    WITH_DYNAREC =
@@ -474,6 +475,7 @@ else ifneq (,$(findstring ios,$(platform)))
 	endif
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # tvOS
 else ifneq (,$(findstring tvos,$(platform)))
    ifeq ($(TVOSSDK),)
@@ -507,6 +509,7 @@ else ifneq (,$(findstring tvos,$(platform)))
 
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1

@@ -29,6 +29,10 @@ std::string replaceChars(std::string myString)
 	{
 		myString.replace(pos, 1, "%27");
 	}
+	for (size_t pos = myString.find('&'); pos != std::string::npos; pos = myString.find('&', pos))
+	{
+		myString.replace(pos, 1, "%26");
+	}
 	return myString;
 }
 
@@ -164,6 +168,7 @@ extern "C" void Config_LoadConfig()
 	
 	config.frameBufferEmulation.copyDepthToRDRAM = EnableCopyDepthToRDRAM;
 	config.frameBufferEmulation.copyToRDRAM = EnableCopyColorToRDRAM;
+	config.frameBufferEmulation.copyFromRDRAM = EnableCopyColorFromRDRAM;
 
 	// TODO: Make this a Core options or maybe only default to bsOnVerticalInterrupt on Android with Thr Renderer
 	config.frameBufferEmulation.bufferSwapMode = Config::bsOnVerticalInterrupt;

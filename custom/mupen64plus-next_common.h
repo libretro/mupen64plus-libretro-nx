@@ -99,6 +99,7 @@ extern uint32_t EnableInaccurateTextureCoordinates;
 extern uint32_t enableNativeResTexrects;
 extern uint32_t enableLegacyBlending;
 extern uint32_t EnableCopyColorToRDRAM;
+extern uint32_t EnableCopyColorFromRDRAM;
 extern uint32_t EnableCopyDepthToRDRAM;
 extern uint32_t AspectRatio;
 extern uint32_t MaxTxCacheSize;
