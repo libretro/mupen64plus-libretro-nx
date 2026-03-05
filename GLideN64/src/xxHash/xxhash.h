@@ -240,7 +240,9 @@
  * @file xxhash.h
  * xxHash prototypes and implementation
  */
-
+#ifdef __wasm_simd128__
+#include <arm_neon.h>
+#endif
 #if defined (__cplusplus)
 extern "C" {
 #endif
