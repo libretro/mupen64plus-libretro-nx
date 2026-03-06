@@ -1,5 +1,19 @@
 version: 1.0.{build}
 
+image: Visual Studio 2022
+
+skip_tags: true
+
+skip_commits:
+  files:
+    - '**/*.md'
+    - .github/
+    - data/*
+    - .gitattributes
+    - .gitignore
+    - .travis.yml
+    - README
+
 configuration:
   - New_Dynarec_Release
   - Release
@@ -8,6 +22,7 @@ platform:
   - x64
 
 before_build:
+  - git tag --delete nightly-build
   - git clone --depth 1 https://github.com/mupen64plus/mupen64plus-win32-deps.git ..\mupen64plus-win32-deps
 
 build_script:

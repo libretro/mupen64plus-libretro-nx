@@ -175,6 +175,16 @@ else ifneq (,$(findstring rpi,$(platform)))
          CPUFLAGS += -march=armv8-a+crc -mtune=cortex-a72
          ARM_CPUFLAGS = -mfpu=neon-fp-armv8
       endif
+   else ifneq (,$(findstring rpi5,$(platform)))
+      ifneq (,$(findstring rpi5_64,$(platform)))
+         CPUFLAGS += -mcpu=cortex-a76 -mtune=cortex-a76
+      else
+         CPUFLAGS += -march=armv8-a+crc+crypto -mtune=cortex-a76
+         ARM_CPUFLAGS = -mfpu=neon-fp-armv8
+      endif
+      HAVE_PARALLEL_RSP = 1
+      HAVE_THR_AL = 1
+      LLE = 1
    else ifneq (,$(findstring rpi,$(platform)))
       CPUFLAGS += -mcpu=arm1176jzf-s
       ARM_CPUFLAGS = -mfpu=vfp
@@ -396,14 +406,15 @@ else ifneq (,$(findstring osx,$(platform)))
 
    PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DNO_ASM -DGL_SILENCE_DEPRECATION=1
    GL_LIB := -framework OpenGL
+   LDFLAGS += -framework AudioToolbox
 
    # Target Dynarec
-   ifeq ($(ARCH), $(filter $(ARCH), ppc))
-      WITH_DYNAREC =
-   endif
+   WITH_DYNAREC =
 
    HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
+   HAVE_THR_AL = 1
+   LLE = 1
 
    COREFLAGS += -DOS_LINUX
    ASFLAGS = -f elf -d ELF_TYPE
@@ -425,15 +436,21 @@ else ifneq (,$(findstring ios,$(platform)))
    DEFINES += -DIOS
    GLES = 1
 	ifeq ($(platform),ios-arm64)
+		HAVE_PARALLEL_RSP = 1
+		HAVE_PARALLEL_RDP = 1
+		HAVE_THR_AL = 1
+		LLE = 1
 		WITH_DYNAREC=
 		GLES=1
 		GLES3=1
 		FORCE_GLES3=1
 		EGL := 0
-		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-		PLATCFLAGS += -DIOS -marm -DOS_IOS -DDONT_WANT_ARM_OPTIMIZATIONS
-		CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
-		HAVE_NEON=0
+		HAVE_PARALLEL_RDP = 1
+		PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DIOS -DOS_IOS
+		PLATCFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		COREFLAGS  += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		CPUFLAGS   += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+		HAVE_NEON=1
 		CC         += -miphoneos-version-min=8.0
 		CC_AS      += -miphoneos-version-min=8.0
 		CXX        += -miphoneos-version-min=8.0
@@ -458,6 +475,7 @@ else ifneq (,$(findstring ios,$(platform)))
 	endif
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # tvOS
 else ifneq (,$(findstring tvos,$(platform)))
    ifeq ($(TVOSSDK),)
@@ -473,10 +491,15 @@ else ifneq (,$(findstring tvos,$(platform)))
    GLES3=1
    FORCE_GLES3=1
    EGL := 0
-   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DNO_ASM
-   PLATCFLAGS += -DIOS -DTVOS -marm -DOS_IOS -DOS_TVOS -DDONT_WANT_ARM_OPTIMIZATIONS
-   CPUFLAGS += -marm -mfpu=neon -mfloat-abi=softfp
-   HAVE_NEON=0
+   HAVE_PARALLEL_RSP = 1
+   HAVE_PARALLEL_RDP = 1
+   HAVE_THR_AL = 1
+   LLE = 1
+   PLATCFLAGS += -DHAVE_POSIX_MEMALIGN -DIOS -DOS_IOS
+   PLATCFLAGS += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   COREFLAGS  += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   CPUFLAGS   += -Ofast -ffast-math -funsafe-math-optimizations -DNO_ASM
+   HAVE_NEON=1
    CC         += -mappletvos-version-min=8.0
    CC_AS      += -mappletvos-version-min=8.0
    CXX        += -mappletvos-version-min=8.0
@@ -486,6 +509,7 @@ else ifneq (,$(findstring tvos,$(platform)))
 
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -526,7 +550,10 @@ else ifeq ($(platform), emscripten)
    CC = emcc
    CXX = em++
    HAVE_NEON = 0
-
+   ifneq ($(pthread),0)
+     CPUFLAGS += -pthread
+     LDFLAGS += -lpthread
+   endif
    COREFLAGS += -DOS_LINUX
    STATIC_LINKING = 1
 # Windows
@@ -572,7 +599,10 @@ endif
 include Makefile.common
 
 ifeq ($(HAVE_NEON), 1)
-   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2 -funsafe-math-optimizations -fno-finite-math-only
+   COREFLAGS += -DHAVE_NEON -D__ARM_NEON__ -D__NEON_OPT -ftree-vectorize -funsafe-math-optimizations -fno-finite-math-only -DUSE_SSE2NEON
+   ifeq (,$(filter $(platform),ios-arm64 tvos-arm64))
+      COREFLAGS += -mvectorize-with-neon-quad -ftree-vectorizer-verbose=2
+   endif
 endif
 
 ifeq ($(LLE), 1)

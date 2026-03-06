@@ -65,6 +65,7 @@ extern bool libretro_swap_buffer;
 
 // Misc Globals
 extern CONTROL Controls[4];
+extern struct xoshiro256pp_state l_mpk_idgen;
 
 // Savestate globals
 extern bool retro_savestate_complete;
@@ -82,6 +83,10 @@ extern char* retro_transferpak_ram_path;
 extern void gln64_thr_gl_invoke_command_loop(void);
 extern bool threaded_gl_safe_shutdown;
 
+// GLN64 context management (for libretro context_destroy/context_reset)
+extern void gln64DestroyGfxContext(void);
+extern void gln64ReinitGfxContext(void);
+
 // Core options
 extern uint32_t CoreOptionCategoriesSupported;
 extern uint32_t CoreOptionUpdateDisplayCbSupported;
@@ -98,6 +103,7 @@ extern uint32_t EnableInaccurateTextureCoordinates;
 extern uint32_t enableNativeResTexrects;
 extern uint32_t enableLegacyBlending;
 extern uint32_t EnableCopyColorToRDRAM;
+extern uint32_t EnableCopyColorFromRDRAM;
 extern uint32_t EnableCopyDepthToRDRAM;
 extern uint32_t AspectRatio;
 extern uint32_t MaxTxCacheSize;

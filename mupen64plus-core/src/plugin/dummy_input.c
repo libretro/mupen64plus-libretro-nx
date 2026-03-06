@@ -47,12 +47,12 @@ m64p_error dummyinput_PluginGetVersion(m64p_plugin_type *PluginType, int *Plugin
     return M64ERR_SUCCESS;
 }
 
-void dummyinput_InitiateControllers (CONTROL_INFO ControlInfo)
+void dummyinput_InitiateControllers(CONTROL_INFO ControlInfo)
 {
     ControlInfo.Controls[0].Present = 1;
 }
 
-void dummyinput_GetKeys(int Control, BUTTONS * Keys )
+void dummyinput_GetKeys(int Control, BUTTONS *Keys)
 {
     Keys->Value = 0x0000;
 }
@@ -83,5 +83,25 @@ void dummyinput_SDL_KeyUp(int keymod, int keysym)
 }
 
 void dummyinput_RenderCallback(void)
+{
+}
+
+void dummy_SendVRUWord(uint16_t length, uint16_t *word, uint8_t lang)
+{
+}
+
+void dummy_SetMicState(int state)
+{
+}
+
+void dummy_ReadVRUResults(uint16_t *error_flags, uint16_t *num_results, uint16_t *mic_level, uint16_t *voice_level, uint16_t *voice_length, uint16_t *matches)
+{
+}
+
+void dummy_ClearVRUWords(uint8_t length)
+{
+}
+
+void dummy_SetVRUWordMask(uint8_t length, uint8_t *mask)
 {
 }

@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h> // needed for u_int, u_char, etc
 #include <assert.h>
 #include <sys/types.h>
 
@@ -2302,7 +2303,7 @@ static void tlb_speed_hacks()
   {
     u_int addr;
     int n;
-    switch (ROM_HEADER.Country_code&0xFF)
+    switch (ROM_HEADER.Country_code)
     {
       case 0x45: // U
         addr=0x34b30;
@@ -2344,8 +2345,8 @@ static void tlb_speed_hacks()
 u_int verify_dirty(struct ll_entry * head)
 {
   void *source;
-  if((int)head->start>=0xA0000000&&(int)head->start<0xA07FFFFF) {
-    source=(void *)((uintptr_t)g_dev.rdram.dram+head->start-0xA0000000);
+  if((int)head->start>=0xa0000000&&(int)head->start<0xa07fffff) {
+    source=(void *)((uintptr_t)g_dev.rdram.dram+head->start-0xa0000000);
   }else if((int)head->start>=0xa4000000&&(int)head->start<0xa4001000) {
     source=(void *)((uintptr_t)g_dev.sp.mem+head->start-0xa4000000);
   }else if((int)head->start>=0x80000000&&(int)head->start<0x80800000) {
@@ -5415,7 +5416,7 @@ static void cop1_assemble(int i,struct regstat *i_regs)
     signed char fs=get_reg(i_regs->regmap,FSREG);
     if(tl>=0) {
       u_int copr=(source[i]>>11)&0x1f;
-      if(copr==0) emit_readword((intptr_t)&g_dev.r4300.new_dynarec_hot_state.fcr0,tl);
+      if(copr==0) emit_readword((intptr_t)&g_dev.r4300.new_dynarec_hot_state.cp1_fcr0,tl);
       if(copr==31)
       {
           if(fs>=0) emit_mov(fs,tl);
@@ -8793,9 +8794,9 @@ int new_recompile_block(int addr)
 #endif
   start = (u_int)addr&~3;
   //assert(((u_int)addr&1)==0);
-  if ((int)addr >= 0xA0000000 && (int)addr < 0xA07FFFFF) {
-    source = (u_int *)((uintptr_t)g_dev.rdram.dram+start-0xA0000000);
-    pagelimit = 0xA07FFFFF;
+  if ((int)addr >= 0xa0000000 && (int)addr < 0xa07fffff) {
+    source = (u_int *)((uintptr_t)g_dev.rdram.dram+start-0xa0000000);
+    pagelimit = 0xa07fffff;
   }
   else if ((int)addr >= 0xa4000000 && (int)addr < 0xa4001000) {
     source = (u_int *)((uintptr_t)g_dev.sp.mem+start-0xa4000000);

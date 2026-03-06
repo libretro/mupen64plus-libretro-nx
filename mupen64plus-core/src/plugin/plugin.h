@@ -43,7 +43,7 @@ extern CONTROL Controls[NUM_CONTROLLER];
 #define RSP_API_VERSION   0x20000
 #define GFX_API_VERSION   0x20200
 #define AUDIO_API_VERSION 0x20000
-#define INPUT_API_VERSION 0x20100
+#define INPUT_API_VERSION 0x20101
 
 /* video plugin function pointers */
 typedef struct _gfx_plugin_functions
@@ -106,6 +106,11 @@ typedef struct _input_plugin_functions
 	ptr_SDL_KeyDown         keyDown;
 	ptr_SDL_KeyUp           keyUp;
 	ptr_RenderCallback      renderCallback;
+	ptr_SendVRUWord         sendVRUWord;
+	ptr_SetMicState         setMicState;
+	ptr_ReadVRUResults      readVRUResults;
+	ptr_ClearVRUWords       clearVRUWords;
+	ptr_SetVRUWordMask      setVRUWordMask;
 } input_plugin_functions;
 
 extern input_plugin_functions input;
