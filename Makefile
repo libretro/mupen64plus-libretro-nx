@@ -551,8 +551,8 @@ else ifeq ($(platform), emscripten)
    CXX = em++
    HAVE_NEON = 0
    ifneq ($(pthread),0)
-     CPUFLAGS += -pthread
-     LDFLAGS += -lpthread
+     CPUFLAGS += -pthread -DEMSCRIPTEN_THREADS
+     LDFLAGS += -pthread
    endif
    COREFLAGS += -DOS_LINUX
    STATIC_LINKING = 1

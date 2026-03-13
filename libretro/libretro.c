@@ -929,10 +929,20 @@ static void update_variables(bool startup)
 
     if (startup)
     {
-#ifdef EMSCRIPTEN
+#if defined(EMSCRIPTEN) && !defined(EMSCRIPTEN_THREADS)
+      /* This is necessary when using emscripten in an environment
+         where savestate and other actions come in via exposed C
+         functions rather than the command interface.  It will not do
+         the right thing, however, if emscripten itself may use
+         threads, because then the serialize task can come in on a
+         different thread than the thread with the retroarch/emulator
+         coroutines.  So, if you are using EMSCRIPTEN with -pthread,
+         you must be sure not to call into retroarch C code from
+         JavaScript (in that case, this hack wouldn't protect you even
+         if you did). */
        bool save_state_in_background = true;
        environ_cb(RETRO_ENVIRONMENT_SET_SAVE_STATE_IN_BACKGROUND, &save_state_in_background);
-#endif // EMSCRIPTEN
+#endif // EMSCRIPTEN && !EMSCRIPTEN_THREADS
 
        var.key = CORE_NAME "-rdp-plugin";
        var.value = NULL;
