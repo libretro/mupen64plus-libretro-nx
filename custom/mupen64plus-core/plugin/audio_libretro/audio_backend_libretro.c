@@ -63,7 +63,16 @@ static unsigned CountsPerByte;
 static AudioConverterRef audio_converter;
 static unsigned converter_input_rate;
 static int16_t *audio_out_buffer_s16;
-static bool converter_needs_reset;
+
+/* Input accumulation buffer - keeps data between calls so the converter
+ * never sees end-of-stream (which would clear its filter state and
+ * cause audio pops at buffer boundaries). */
+static int16_t *converter_input_buf;
+static size_t input_buf_frames;
+
+/* Margin of input frames to always keep buffered. Ensures the
+ * converter's input callback never returns 0 (end-of-stream). */
+#define CONVERTER_MARGIN 64
 
 /* Context for AudioConverter input callback */
 typedef struct
@@ -149,8 +158,14 @@ static int create_audio_converter(unsigned input_rate)
          kAudioConverterSampleRateConverterQuality,
          sizeof(quality), &quality);
 
+   /* Disable priming - avoids initial silence/transient when the
+    * filter pipeline is empty at stream start or after rate change. */
+   UInt32 primeMethod = kConverterPrimeMethod_None;
+   AudioConverterSetProperty(audio_converter,
+         kAudioConverterPrimeMethod,
+         sizeof(primeMethod), &primeMethod);
+
    converter_input_rate = input_rate;
-   converter_needs_reset = false;
    return 0;
 }
 
@@ -178,6 +193,9 @@ void deinit_audio_libretro(void)
    }
    free(audio_out_buffer_s16);
    audio_out_buffer_s16 = NULL;
+   free(converter_input_buf);
+   converter_input_buf = NULL;
+   input_buf_frames = 0;
 #else
    if (resampler && resampler_audio_data)
    {
@@ -198,6 +216,9 @@ void init_audio_libretro(unsigned max_audio_frames)
 #ifdef __APPLE__
    /* Allocate output buffer - sized for maximum expansion ratio */
    audio_out_buffer_s16 = malloc(2 * MAX_AUDIO_FRAMES * 2 * sizeof(int16_t));
+   /* Allocate input accumulation buffer */
+   converter_input_buf = malloc(2 * MAX_AUDIO_FRAMES * 2 * sizeof(int16_t));
+   input_buf_frames = 0;
    /* Converter will be created on first use when we know the input rate */
    audio_converter = NULL;
    converter_input_rate = 0;
@@ -263,53 +284,54 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
    }
 
 #ifdef __APPLE__
-   /* Apple path: AudioConverter resamples, no float conversion needed */
-   converter_ctx_t ctx;
-   AudioBufferList output_buffer;
-   UInt32 output_frames;
-   OSStatus err;
-
    /* Create or recreate converter if sample rate changed */
    if (!audio_converter || converter_input_rate != (unsigned)GameFreq)
    {
       if (create_audio_converter(GameFreq) != 0)
          return;
+      /* Discard any data buffered at the old sample rate */
+      input_buf_frames = 0;
    }
 
-   ctx.data        = raw_data;
-   ctx.frames_left = frames;
+   /* Append byte-swapped input to accumulation buffer */
+   if (input_buf_frames + frames > MAX_AUDIO_FRAMES * 2)
+   {
+      size_t to_drop = (input_buf_frames + frames) - MAX_AUDIO_FRAMES * 2;
+      if (to_drop > input_buf_frames)
+         to_drop = input_buf_frames;
+      memmove(converter_input_buf,
+              converter_input_buf + to_drop * 2,
+              (input_buf_frames - to_drop) * 4);
+      input_buf_frames -= to_drop;
+   }
+   memcpy(converter_input_buf + input_buf_frames * 2, raw_data, frames * 4);
+   input_buf_frames += frames;
 
-   /* Calculate expected output frames */
-   output_frames = (UInt32)((frames * OUTPUT_RATE) / GameFreq + 1);
-   if (output_frames > MAX_AUDIO_FRAMES * 2)
-      output_frames = MAX_AUDIO_FRAMES * 2;
-
-   output_buffer.mNumberBuffers = 1;
-   output_buffer.mBuffers[0].mNumberChannels = 2;
-   output_buffer.mBuffers[0].mDataByteSize   = output_frames * 4;
-   output_buffer.mBuffers[0].mData           = audio_out_buffer_s16;
-
-   err = AudioConverterFillComplexBuffer(audio_converter,
-         converter_input_cb, &ctx,
-         &output_frames, &output_buffer, NULL);
-
-   if (err != noErr && err != 1)
+   /* Wait until we have enough data for the resampling filter margin */
+   if (input_buf_frames <= CONVERTER_MARGIN)
       return;
 
-   /* If converter returned 0 output while we have input, it may be stuck
-    * in "end of stream" state. Reset and retry once. */
-   if (output_frames == 0 && ctx.frames_left > 0 && !converter_needs_reset)
    {
-      AudioConverterReset(audio_converter);
-      converter_needs_reset = true;
+      converter_ctx_t ctx;
+      AudioBufferList output_buffer;
+      UInt32 output_frames;
+      OSStatus err;
+      size_t convertible = input_buf_frames - CONVERTER_MARGIN;
 
-      /* Retry with fresh context */
-      ctx.data        = raw_data;
-      ctx.frames_left = frames;
-      output_frames   = (UInt32)((frames * OUTPUT_RATE) / GameFreq + 1);
+      /* Request output for the convertible portion, leaving
+       * CONVERTER_MARGIN frames so the input callback never
+       * returns 0 (which would signal end-of-stream). */
+      output_frames = (UInt32)((convertible * OUTPUT_RATE) / GameFreq + 1);
       if (output_frames > MAX_AUDIO_FRAMES * 2)
          output_frames = MAX_AUDIO_FRAMES * 2;
-      output_buffer.mBuffers[0].mDataByteSize = output_frames * 4;
+
+      ctx.data        = converter_input_buf;
+      ctx.frames_left = input_buf_frames;
+
+      output_buffer.mNumberBuffers = 1;
+      output_buffer.mBuffers[0].mNumberChannels = 2;
+      output_buffer.mBuffers[0].mDataByteSize   = output_frames * 4;
+      output_buffer.mBuffers[0].mData           = audio_out_buffer_s16;
 
       err = AudioConverterFillComplexBuffer(audio_converter,
             converter_input_cb, &ctx,
@@ -317,17 +339,23 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
 
       if (err != noErr && err != 1)
          return;
-   }
 
-   if (output_frames > 0)
-      converter_needs_reset = false;
+      /* Remove consumed frames from accumulation buffer */
+      if (ctx.frames_left < input_buf_frames)
+      {
+         input_buf_frames = ctx.frames_left;
+         if (input_buf_frames > 0)
+            memmove(converter_input_buf, ctx.data,
+                    input_buf_frames * 4);
+      }
 
-   out = audio_out_buffer_s16;
-   while (output_frames)
-   {
-      size_t ret     = audio_batch_cb(out, output_frames);
-      output_frames -= ret;
-      out           += ret * 2;
+      out = audio_out_buffer_s16;
+      while (output_frames)
+      {
+         size_t ret     = audio_batch_cb(out, output_frames);
+         output_frames -= ret;
+         out           += ret * 2;
+      }
    }
 
 #else
