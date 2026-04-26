@@ -28,6 +28,9 @@ include:
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
+  # Linux 64-bit (ARM)
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-aarch64.yml'
   # MacOS
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-x64.yml'
@@ -95,6 +98,17 @@ libretro-build-linux-x64:
     LLE: 1
   extends:
     - .libretro-linux-x64-make-default
+    - .core-defs
+
+# Linux 64-bit (ARM)
+libretro-build-linux-aarch64:
+  variables:
+    HAVE_PARALLEL_RDP: 1
+    HAVE_PARALLEL_RSP: 1
+    HAVE_THR_AL: 1
+    LLE: 1
+  extends:
+    - .libretro-linux-aarch64-make-default
     - .core-defs
 
 # Android ARMv7a
