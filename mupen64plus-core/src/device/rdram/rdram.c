@@ -162,6 +162,12 @@ void read_rdram_regs(void* opaque, uint32_t address, uint32_t* value)
     uint32_t reg = rdram_reg(address);
     size_t module;
 
+    if (reg >= RDRAM_REGS_COUNT) {
+        DebugMessage(M64MSG_WARNING, "Reading from unsupported RDRAM reg %08x", address);
+        *value = 0;
+        return;
+    }
+
     if (address & RDRAM_BCAST_ADDRESS_MASK) {
         DebugMessage(M64MSG_WARNING, "Reading from broadcast address is unsupported %08x", address);
         return;
@@ -187,6 +193,11 @@ void write_rdram_regs(void* opaque, uint32_t address, uint32_t value, uint32_t m
     uint32_t reg = rdram_reg(address);
     size_t module;
     size_t modules = get_modules_count(rdram);
+
+    if (reg >= RDRAM_REGS_COUNT) {
+        DebugMessage(M64MSG_WARNING, "Ignoring write to unsupported RDRAM reg %08x", address);
+        return;
+    }
 
     /* HACK: Detect when current Control calibration is about to start,
      * so we can set corrupted rdram_dram handler
