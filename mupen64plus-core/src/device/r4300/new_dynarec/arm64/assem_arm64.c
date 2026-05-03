@@ -263,7 +263,17 @@ static uintptr_t jump_table_symbols[] = {
 
 static void cache_flush(char* start, char* end)
 {
-#ifndef WIN32
+#if defined(__APPLE__) && defined(__aarch64__)
+    // Apple-documented MAP_JIT pattern: switch to executable, then invalidate icache.
+    jit_write_disable();
+    sys_icache_invalidate(start, end - start);
+    jit_write_enable();
+#elif defined(__APPLE__)
+    __builtin___clear_cache(start, end);
+#elif defined(__APPLE__)
+    sys_dcache_flush(start, end - start);
+    sys_icache_invalidate(start, end - start);
+#elif !defined(WIN32)
     // Don't rely on GCC's __clear_cache implementation, as it caches
     // icache/dcache cache line sizes, that can vary between cores on
     // big.LITTLE architectures.
@@ -356,7 +366,7 @@ static void *kill_pointer(void *stub)
   int *i_ptr=(int*)((intptr_t)ptr+offset);
   assert((*i_ptr&0xfc000000)==0x14000000); //b
   set_jump_target((intptr_t)i_ptr,(intptr_t)stub);
-  
+
   intptr_t ptr_rx=((intptr_t)i_ptr-(intptr_t)base_addr)+(intptr_t)base_addr_rx;
   cache_flush((void*)ptr_rx, (void*)(ptr_rx+4));
   return i_ptr;
@@ -439,7 +449,7 @@ static void alloc_reg(struct regstat *cur,int i,signed char tr)
   // registers that have not been used recently.
   if(i>0) {
     for(hr=0;hr<HOST_REGS;hr++) {
-      if(hr!=EXCLUDE_REG&&cur->regmap[hr]==-1) {
+      if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==-1) {
         if(regs[i-1].regmap[hr]!=rs1[i-1]&&regs[i-1].regmap[hr]!=rs2[i-1]&&regs[i-1].regmap[hr]!=rt1[i-1]&&regs[i-1].regmap[hr]!=rt2[i-1]) {
           cur->regmap[hr]=tr;
           cur->dirty&=~(1<<hr);
@@ -451,7 +461,7 @@ static void alloc_reg(struct regstat *cur,int i,signed char tr)
   }
   // Try to allocate any available register
   for(hr=0;hr<HOST_REGS;hr++) {
-    if(hr!=EXCLUDE_REG&&cur->regmap[hr]==-1) {
+    if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==-1) {
       cur->regmap[hr]=tr;
       cur->dirty&=~(1<<hr);
       cur->isconst&=~(1<<hr);
@@ -603,7 +613,7 @@ static void alloc_reg64(struct regstat *cur,int i,signed char tr)
   // registers that have not been used recently.
   if(i>0) {
     for(hr=0;hr<HOST_REGS;hr++) {
-      if(hr!=EXCLUDE_REG&&cur->regmap[hr]==-1) {
+      if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==-1) {
         if(regs[i-1].regmap[hr]!=rs1[i-1]&&regs[i-1].regmap[hr]!=rs2[i-1]&&regs[i-1].regmap[hr]!=rt1[i-1]&&regs[i-1].regmap[hr]!=rt2[i-1]) {
           cur->regmap[hr]=tr|64;
           cur->dirty&=~(1<<hr);
@@ -615,7 +625,7 @@ static void alloc_reg64(struct regstat *cur,int i,signed char tr)
   }
   // Try to allocate any available register
   for(hr=0;hr<HOST_REGS;hr++) {
-    if(hr!=EXCLUDE_REG&&cur->regmap[hr]==-1) {
+    if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==-1) {
       cur->regmap[hr]=tr|64;
       cur->dirty&=~(1<<hr);
       cur->isconst&=~(1<<hr);
@@ -714,12 +724,12 @@ static void alloc_reg_temp(struct regstat *cur,int i,signed char tr)
   // see if it's already allocated
   for(hr=0;hr<HOST_REGS;hr++)
   {
-    if(hr!=EXCLUDE_REG&&cur->regmap[hr]==tr) return;
+    if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==tr) return;
   }
 
   // Try to allocate any available register
   for(hr=HOST_REGS-1;hr>=0;hr--) {
-    if(hr!=EXCLUDE_REG&&cur->regmap[hr]==-1) {
+    if(!IS_REG_EXCLUDED(hr)&&cur->regmap[hr]==-1) {
       cur->regmap[hr]=tr;
       cur->dirty&=~(1<<hr);
       cur->isconst&=~(1<<hr);
@@ -833,7 +843,7 @@ static void alloc_arm64_reg(struct regstat *cur,int i,signed char tr,int hr)
   // see if it's already allocated (and dealloc it)
   for(n=0;n<HOST_REGS;n++)
   {
-    if(n!=EXCLUDE_REG&&cur->regmap[n]==tr) {
+    if(!IS_REG_EXCLUDED(n)&&cur->regmap[n]==tr) {
       dirty=(cur->dirty>>n)&1;
       cur->regmap[n]=-1;
     }
@@ -4608,6 +4618,7 @@ static void arch_init(void) {
   ptr=(intptr_t *)jump_table_symbols;
   ptr2=(intptr_t *)((char *)base_addr+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE);
   ptr3=(intptr_t *)((char *)base_addr_rx+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE);
+  jit_write_enable();
   while((char *)ptr<(char *)jump_table_symbols+sizeof(jump_table_symbols))
   {
     int *ptr4=(int*)ptr2;
@@ -4624,6 +4635,8 @@ static void arch_init(void) {
     ptr2++;
     ptr3+=2;
   }
+  jit_write_disable();
 
-  __clear_cache((char *)base_addr+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE,(char *)base_addr+(1<<TARGET_SIZE_2));
+  // Flush icache for the RX mapping where code will actually execute
+  __clear_cache((char *)base_addr_rx+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE,(char *)base_addr_rx+(1<<TARGET_SIZE_2));
 }
