@@ -4767,7 +4767,7 @@ static void do_ccstub(int n)
       }
 #if NEW_DYNAREC==NEW_DYNAREC_ARM64
       if(r==18) {
-        // x18 is used for trampoline jumps, move it to another register (x0)
+        // x18 has no jump_vaddr_x18 thunk on arm64, move it to x0.
         emit_mov(r,0);
         r=0;
         stubs[n][2]=jump_vaddr_reg[0];
@@ -7283,7 +7283,7 @@ static void rjump_assemble(int i,struct regstat *i_regs)
   {
 #if NEW_DYNAREC==NEW_DYNAREC_ARM64
   if(rs==18) {
-    // x18 is used for trampoline jumps, move it to another register (x0)
+    // x18 has no jump_vaddr_x18 thunk on arm64, move it to x0.
     emit_mov(rs,0);
     rs=0;
   }
@@ -8644,7 +8644,7 @@ static void pagespan_ds(void)
   store_regs_bt(regs[0].regmap,regs[0].is32,regs[0].dirty,-1);
 #if NEW_DYNAREC==NEW_DYNAREC_ARM64
   if(btaddr==18) {
-    // x18 is used for trampoline jumps, move it to another register (x0)
+    // x18 has no jump_vaddr_x18 thunk on arm64, move it to x0.
     emit_mov(btaddr,0);
     btaddr=0;
   }
@@ -8869,6 +8869,7 @@ int new_recompile_block(int addr)
     else {
       assem_debug("Compile at unmapped memory address: %x ", (int)addr);
       //assem_debug("start: %x next: %x",g_dev.r4300.new_dynarec_hot_state.memory_map[start>>12],g_dev.r4300.new_dynarec_hot_state.memory_map[(start+4096)>>12]);
+      jit_write_disable();
       return 1; // Caller will invoke exception handler
     }
     //DebugMessage(M64MSG_VERBOSE, "source= %x",(intptr_t)source);
@@ -8876,7 +8877,8 @@ int new_recompile_block(int addr)
   else {
     //DebugMessage(M64MSG_VERBOSE, "Compile at bogus memory address: %x ", (int)addr);
     DebugMessage(M64MSG_ERROR, "Compile at bogus memory address: %x", (int)addr);
-    exit(1);
+    jit_write_disable();
+    return 1; // Caller will invoke exception handler
   }
 
   /* Pass 1: disassemble */

@@ -102,7 +102,7 @@ static const uintptr_t jump_vaddr_reg[32] = {
   (intptr_t)jump_vaddr_x15,
   (intptr_t)jump_vaddr_x16,
   (intptr_t)jump_vaddr_x17,
-  (intptr_t)breakpoint,     /*trampoline jumps uses x18*/
+  (intptr_t)breakpoint,     /*x18 is platform-reserved (no jump_vaddr_x18 thunk)*/
   (intptr_t)jump_vaddr_x19,
   (intptr_t)breakpoint,     /*cycle count*/
   (intptr_t)jump_vaddr_x21,
@@ -4532,7 +4532,7 @@ static void do_miniht_jump(int rs,int rh,int ht) {
   intptr_t jaddr=(intptr_t)out;
   emit_jeq(0);
   if(rs==18) {
-    // x18 is used for trampoline jumps, move it to another register (x0)
+    // x18 has no jump_vaddr_x18 thunk; move it to x0 for dispatch.
     emit_mov(rs,0);
     rs=0;
   }
@@ -4622,12 +4622,17 @@ static void arch_init(void) {
   while((char *)ptr<(char *)jump_table_symbols+sizeof(jump_table_symbols))
   {
     int *ptr4=(int*)ptr2;
+    intptr_t target = *ptr;
+    /* x18 is platform-reserved on Apple arm64.
+       Default to x17 for trampolines, but preserve x17 when the target
+       itself is jump_vaddr_x17 (it consumes w17 as input). */
+    int tramp_reg = (target == (intptr_t)jump_vaddr_x17) ? 16 : 17;
     intptr_t offset=*ptr-(intptr_t)ptr3;
     if(offset>=-134217728LL&&offset<134217728LL) {
       *ptr4=0x14000000|((offset>>2)&0x3ffffff); // direct branch
     }else{
-      *ptr4=0x58000000|((8>>2)<<5)|18; // ldr x18,[pc,#8]
-      *(ptr4+1)=0xd61f0000|(18<<5);
+      *ptr4=0x58000000|((8>>2)<<5)|tramp_reg; // ldr xN,[pc,#8]
+      *(ptr4+1)=0xd61f0000|(tramp_reg<<5);    // br xN
     }
     ptr2++;
     *ptr2=*ptr;
