@@ -218,6 +218,12 @@ void init_audio_libretro(unsigned max_audio_frames)
    audio_out_buffer_s16 = malloc(2 * MAX_AUDIO_FRAMES * 2 * sizeof(int16_t));
    /* Allocate input accumulation buffer */
    converter_input_buf = malloc(2 * MAX_AUDIO_FRAMES * 2 * sizeof(int16_t));
+   if (!audio_out_buffer_s16 || !converter_input_buf) {
+      free(audio_out_buffer_s16);
+      free(converter_input_buf);
+      audio_out_buffer_s16 = NULL;
+      converter_input_buf  = NULL;
+   }
    input_buf_frames = 0;
    /* Converter will be created on first use when we know the input rate */
    audio_converter = NULL;
@@ -228,6 +234,14 @@ void init_audio_libretro(unsigned max_audio_frames)
    audio_in_buffer_float  = malloc(2 * MAX_AUDIO_FRAMES * sizeof(float));
    audio_out_buffer_float = malloc(2 * MAX_AUDIO_FRAMES * sizeof(float));
    audio_out_buffer_s16   = malloc(2 * MAX_AUDIO_FRAMES * sizeof(int16_t));
+   if (!audio_in_buffer_float || !audio_out_buffer_float || !audio_out_buffer_s16) {
+      free(audio_in_buffer_float);
+      free(audio_out_buffer_float);
+      free(audio_out_buffer_s16);
+      audio_in_buffer_float  = NULL;
+      audio_out_buffer_float = NULL;
+      audio_out_buffer_s16   = NULL;
+   }
 
    convert_s16_to_float_init_simd();
    convert_float_to_s16_init_simd();
@@ -236,14 +250,15 @@ void init_audio_libretro(unsigned max_audio_frames)
 
 static void aiDacrateChanged(void *user_data, unsigned int frequency)
 {
+   /* Guard against a zero frequency from the N64 AI register; downstream
+    * code (and the divisions below) would otherwise blow up. */
+   if (frequency == 0)
+      return;
+
    GameFreq        = frequency;
    BytesPerSecond  = frequency * 4;
    CountsPerSecond = VI_INTR_TIME * 60 /* TODO/FIXME - dehardcode */;
    CountsPerByte   = CountsPerSecond / BytesPerSecond;
-
-#if 0
-   printf("CountsPerByte: %d, GameFreq: %d\n", CountsPerByte, GameFreq);
-#endif
 }
 
 /* A fully compliant implementation is not really possible with just the zilmar spec.
@@ -293,7 +308,16 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
       input_buf_frames = 0;
    }
 
-   /* Append byte-swapped input to accumulation buffer */
+   /* Append byte-swapped input to accumulation buffer.
+    * The buffer holds at most MAX_AUDIO_FRAMES * 2 stereo frames; if the
+    * incoming chunk is itself larger than that (extreme AI_LEN_REG value),
+    * truncate the front end of the input rather than overflowing. */
+   if (frames > MAX_AUDIO_FRAMES * 2)
+   {
+      size_t skip = frames - MAX_AUDIO_FRAMES * 2;
+      raw_data += skip * 2;
+      frames    = MAX_AUDIO_FRAMES * 2;
+   }
    if (input_buf_frames + frames > MAX_AUDIO_FRAMES * 2)
    {
       size_t to_drop = (input_buf_frames + frames) - MAX_AUDIO_FRAMES * 2;
@@ -352,7 +376,12 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
       out = audio_out_buffer_s16;
       while (output_frames)
       {
-         size_t ret     = audio_batch_cb(out, output_frames);
+         size_t ret = audio_batch_cb(out, output_frames);
+         /* If the host can't accept any frames right now (paused,
+          * fast-forward off, etc.) drop the rest rather than spin
+          * forever. */
+         if (ret == 0)
+            break;
          output_frames -= ret;
          out           += ret * 2;
       }
@@ -363,6 +392,11 @@ static void aiLenChanged(void* user_data, const void* buffer, size_t size)
    size_t max_frames, remain_frames;
    double ratio;
    struct resampler_data data = {0};
+
+   /* Defensive: aiDacrateChanged should have rejected zero, but a
+    * concurrent reset could still leave GameFreq at 0 momentarily. */
+   if (GameFreq == 0)
+      return;
 
 audio_batch:
    out               = NULL;
@@ -389,7 +423,9 @@ audio_batch:
 
    while (data.output_frames)
    {
-      size_t ret          = audio_batch_cb(out, data.output_frames);
+      size_t ret = audio_batch_cb(out, data.output_frames);
+      if (ret == 0)
+         break;
       data.output_frames -= ret;
       out                += ret * 2;
    }
@@ -416,7 +452,7 @@ void push_audio_samples_via_libretro(void* user_data, const void* buffer, size_t
 
    aiLenChanged(user_data, buffer, size);
 
-   /* restore original registers vlaues */
+   /* restore original register values */
    ai->regs[AI_LEN_REG]       = saved_ai_length;
    ai->regs[AI_DRAM_ADDR_REG] = saved_ai_dram;
 }
