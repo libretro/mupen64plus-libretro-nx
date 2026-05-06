@@ -25,6 +25,12 @@
 #include <sys/types.h> // needed for u_int, u_char, etc
 #include <assert.h>
 #include <sys/types.h>
+#if defined(__APPLE__)
+#include <pthread.h>
+#include <errno.h>
+/* Storage for the per-thread W^X nesting counter declared in new_dynarec.h. */
+_Thread_local int m64p_jit_write_depth;
+#endif
 
 #if defined(__APPLE__)
 #define MAP_ANONYMOUS MAP_ANON
@@ -8638,6 +8644,15 @@ void new_dynarec_init(void)
 {
   DebugMessage(M64MSG_INFO, "Init new dynarec");
 
+#if defined(__APPLE__) && NEW_DYNAREC == NEW_DYNAREC_ARM64
+  /* Defensively zero the W^X nesting counter for this thread. If a
+   * previous emulation cycle aborted with the counter unbalanced (e.g.
+   * an assert fired between BEGIN and END), the counter could otherwise
+   * carry over and prevent the next cycle from flipping into write
+   * mode when it tries to emit code. */
+  m64p_jit_write_depth = 0;
+#endif
+
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
   recomp_dbg_init();
 #endif
@@ -8652,6 +8667,12 @@ void new_dynarec_init(void)
 // Default to fixed cache address
 #ifdef HAVE_LIBNX
 #define CACHE_ADDR DOUBLE_CACHE_ADDR
+#elif defined(__APPLE__)
+/* Apple Silicon: only MAP_JIT pages can be both writable and executable
+ * (toggled per-thread via pthread_jit_write_protect_np). All code-write
+ * sites are wrapped with M64P_JIT_WRITE_BEGIN / M64P_JIT_WRITE_END to
+ * flip the protection. */
+#define CACHE_ADDR DYNAMIC_CACHE_ADDR
 #else
 #define CACHE_ADDR FIXED_CACHE_ADDR
 #endif
@@ -8665,13 +8686,30 @@ void new_dynarec_init(void)
   #include <sys/types.h>
   #include <fcntl.h>
 
-  int fd = shm_open("/new_dynarec", O_RDWR | O_CREAT | O_EXCL, 0600);
+  /* Use a unique shm name per call to avoid EEXIST when new_dynarec_init
+   * is invoked multiple times (cleanup + reinit on hard reset, etc.). */
+  static unsigned int shm_counter;
+  char shm_name[32];
+  snprintf(shm_name, sizeof(shm_name), "/m64p_jit_%d_%u",
+           (int)getpid(), shm_counter++);
+  int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, 0600);
   assert(fd!=-1);
-  shm_unlink("/new_dynarec");
+  shm_unlink(shm_name);
   ftruncate(fd, 1<<TARGET_SIZE_2);
+
+#if defined(__APPLE__)
+  /* MAP_FIXED at extra_memory's address fails on macOS Hardened Runtime;
+   * let the kernel pick both addresses freely. The dynarec only needs
+   * base_addr (RW) and base_addr_rx (RX) — they don't need to live at
+   * any specific virtual address. */
+  base_addr = mmap(NULL, 1<<TARGET_SIZE_2,
+                 PROT_READ | PROT_WRITE,
+                 MAP_SHARED, fd, 0);
+#else
   base_addr = mmap((u_char *)g_dev.r4300.extra_memory, 1<<TARGET_SIZE_2,
                  PROT_READ | PROT_WRITE,
                  MAP_FIXED | MAP_SHARED, fd, 0);
+#endif
 
   assert(base_addr!=(void*)-1);
 
@@ -8688,10 +8726,29 @@ void new_dynarec_init(void)
   base_addr = g_dev.r4300.extra_memory;
   base_addr_rx = base_addr;
 #else /*DYNAMIC_CACHE_ADDR*/
+#if defined(__APPLE__)
+  /* MAP_JIT requires the com.apple.security.cs.allow-jit entitlement on
+   * the host process. Page protection is then toggled per-thread via
+   * pthread_jit_write_protect_np(). Bail loudly if the kernel refuses
+   * (no entitlement, sandbox restriction, etc.) instead of letting a
+   * (void*)-1 base_addr propagate into every JIT pointer arithmetic. */
+  base_addr = mmap (NULL, 1<<TARGET_SIZE_2,
+                    PROT_READ | PROT_WRITE | PROT_EXEC,
+                    MAP_PRIVATE | MAP_ANON | MAP_JIT,
+                    -1, 0);
+  if (base_addr == MAP_FAILED) {
+    DebugMessage(M64MSG_ERROR,
+                 "MAP_JIT mmap failed (errno=%d). Host process likely "
+                 "lacks the com.apple.security.cs.allow-jit entitlement.",
+                 errno);
+    base_addr = (void*)-1;
+  }
+#else
   base_addr = mmap (NULL, 1<<TARGET_SIZE_2,
                     PROT_READ | PROT_WRITE | PROT_EXEC,
                     MAP_PRIVATE | MAP_ANONYMOUS,
                     -1, 0);
+#endif
   base_addr_rx = base_addr;
 #endif
 #elif NEW_DYNAREC == NEW_DYNAREC_ARM
@@ -8783,6 +8840,9 @@ void new_dynarec_cleanup(void)
 
 int new_recompile_block(int addr)
 {
+#if defined(__APPLE__) && NEW_DYNAREC == NEW_DYNAREC_ARM64
+  M64P_JIT_WRITE_BEGIN();
+#endif
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
   recomp_dbg_block(addr);
 #endif
