@@ -76,9 +76,9 @@ struct retro_core_option_v2_definition option_defs_us[] = {
             {"angrylion", "Angrylion"},
 #endif
 #ifdef HAVE_PARALLEL_RDP
-            {"parallel", "ParaLLEl-RDP"},
+            {"parallel", "ParaLLEl-RDP (Vulkan)"},
 #endif
-            {"gliden64", "GLideN64"},
+            {"gliden64", "GLideN64 (OpenGL)"},
             { NULL, NULL },
         },
         "gliden64"
