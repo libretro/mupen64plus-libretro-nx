@@ -464,13 +464,7 @@ static void* EmuThreadFunction(void* param)
 
             uint32_t reg_id = 0;
             while (reg_id == 0)
-            {
-#ifdef __MINGW32__
-                rand_s(&reg_id);
-#else
-                reg_id = rand();
-#endif
-            }
+		reg_id = ((unsigned)rand() << 16) ^ (unsigned)rand() ^ (unsigned)time(NULL);
             reg_id += netplay_player;
 
             if (CoreDoCommand(M64CMD_NETPLAY_CONTROL_PLAYER, netplay_player, &reg_id) == M64ERR_SUCCESS)
@@ -2100,7 +2094,7 @@ void retro_run (void)
 
 void retro_reset (void)
 {
-    CoreDoCommand(M64CMD_RESET, 0, (void*)0);
+    CoreDoCommand(M64CMD_RESET, 1, (void*)0);
 }
 
 void *retro_get_memory_data(unsigned type)
