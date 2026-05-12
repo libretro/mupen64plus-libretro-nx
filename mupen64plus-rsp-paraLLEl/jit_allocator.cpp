@@ -38,6 +38,8 @@ static size_t align_page(size_t offset)
 {
 #if defined(__APPLE__) && defined(__aarch64__)
 	size_t pagesize = sysconf(_SC_PAGESIZE) - 1;
+#elif defined(PAGESIZE)
+	size_t pagesize = PAGESIZE - 1;
 #else
 	size_t pagesize = 4095;
 #endif
