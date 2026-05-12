@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,12 +25,14 @@
 
 namespace Vulkan
 {
-Buffer::Buffer(Device *device_, VkBuffer buffer_, const DeviceAllocation &alloc_, const BufferCreateInfo &info_)
+Buffer::Buffer(Device *device_, VkBuffer buffer_, const DeviceAllocation &alloc_, const BufferCreateInfo &info_,
+               VkDeviceAddress bda_)
     : Cookie(device_)
     , device(device_)
     , buffer(buffer_)
     , alloc(alloc_)
     , info(info_)
+    , bda(bda_)
 {
 }
 

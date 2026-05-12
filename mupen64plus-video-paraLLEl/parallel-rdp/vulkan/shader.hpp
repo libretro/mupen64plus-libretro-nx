@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -47,6 +47,8 @@ enum class ShaderStage
 	Geometry = 3,
 	Fragment = 4,
 	Compute = 5,
+	Task = 6,
+	Mesh = 7,
 	Count
 };
 
@@ -58,7 +60,7 @@ struct ResourceLayout
 	uint32_t push_constant_size = 0;
 	uint32_t spec_constant_mask = 0;
 	uint32_t bindless_set_mask = 0;
-	enum { Version = 3 };
+	enum { Version = 4 };
 
 	bool unserialize(const uint8_t *data, size_t size);
 	bool serialize(uint8_t *data, size_t size) const;
@@ -81,18 +83,21 @@ struct CombinedResourceLayout
 	Util::Hash push_constant_layout_hash = 0;
 };
 
-struct ResourceBinding
+union ResourceBinding
 {
-	union {
-		VkDescriptorBufferInfo buffer;
-		struct
-		{
-			VkDescriptorImageInfo fp;
-			VkDescriptorImageInfo integer;
-		} image;
-		VkBufferView buffer_view;
-	};
-	VkDeviceSize dynamic_offset;
+	struct
+	{
+		VkDescriptorBufferInfo dynamic;
+		VkDescriptorBufferInfo push;
+	} buffer;
+
+	struct
+	{
+		VkDescriptorImageInfo fp;
+		VkDescriptorImageInfo integer;
+	} image;
+
+	VkBufferView buffer_view;
 };
 
 struct ResourceBindings
@@ -136,12 +141,18 @@ public:
 		return update_template[set];
 	}
 
+	uint32_t get_push_set_index() const
+	{
+		return push_set_index;
+	}
+
 private:
 	Device *device;
 	VkPipelineLayout pipe_layout = VK_NULL_HANDLE;
 	CombinedResourceLayout layout;
 	DescriptorSetAllocator *set_allocators[VULKAN_NUM_DESCRIPTOR_SETS] = {};
 	VkDescriptorUpdateTemplate update_template[VULKAN_NUM_DESCRIPTOR_SETS] = {};
+	uint32_t push_set_index = UINT32_MAX;
 	void create_update_templates();
 };
 
@@ -149,18 +160,12 @@ class Shader : public HashedObject<Shader>
 {
 public:
 	Shader(Util::Hash binding, Device *device, const uint32_t *data, size_t size,
-	       const ResourceLayout *layout = nullptr,
-	       const ImmutableSamplerBank *sampler_bank = nullptr);
+	       const ResourceLayout *layout = nullptr);
 	~Shader();
 
 	const ResourceLayout &get_layout() const
 	{
 		return layout;
-	}
-
-	const ImmutableSamplerBank &get_immutable_sampler_bank() const
-	{
-		return immutable_sampler_bank;
 	}
 
 	VkShaderModule get_module() const
@@ -170,13 +175,12 @@ public:
 
 	static bool reflect_resource_layout(ResourceLayout &layout, const uint32_t *spirv_data, size_t spirv_size);
 	static const char *stage_to_name(ShaderStage stage);
-	static Util::Hash hash(const uint32_t *data, size_t size, const ImmutableSamplerBank *sampler_bank);
+	static Util::Hash hash(const uint32_t *data, size_t size);
 
 private:
 	Device *device;
 	VkShaderModule module = VK_NULL_HANDLE;
 	ResourceLayout layout;
-	ImmutableSamplerBank immutable_sampler_bank;
 };
 
 struct Pipeline
@@ -185,11 +189,12 @@ struct Pipeline
 	uint32_t dynamic_mask;
 };
 
-class Program : public HashedObject<Program>, public InternalSyncEnabled
+class Program : public HashedObject<Program>
 {
 public:
-	Program(Device *device, Shader *vertex, Shader *fragment);
-	Program(Device *device, Shader *compute);
+	Program(Device *device, Shader *vertex, Shader *fragment, const ImmutableSamplerBank *sampler_bank);
+	Program(Device *device, Shader *task, Shader *mesh, Shader *fragment, const ImmutableSamplerBank *sampler_bank);
+	Program(Device *device, Shader *compute, const ImmutableSamplerBank *sampler_bank);
 	~Program();
 
 	inline const Shader *get_shader(ShaderStage stage) const
@@ -197,12 +202,12 @@ public:
 		return shaders[Util::ecast(stage)];
 	}
 
-	void set_pipeline_layout(PipelineLayout *new_layout)
+	void set_pipeline_layout(const PipelineLayout *new_layout)
 	{
 		layout = new_layout;
 	}
 
-	PipelineLayout *get_pipeline_layout() const
+	const PipelineLayout *get_pipeline_layout() const
 	{
 		return layout;
 	}
@@ -216,7 +221,7 @@ private:
 	void set_shader(ShaderStage stage, Shader *handle);
 	Device *device;
 	Shader *shaders[Util::ecast(ShaderStage::Count)] = {};
-	PipelineLayout *layout = nullptr;
+	const PipelineLayout *layout = nullptr;
 	VulkanCache<Util::IntrusivePODWrapper<Pipeline>> pipelines;
 	void destroy_pipeline(const Pipeline &pipeline);
 };

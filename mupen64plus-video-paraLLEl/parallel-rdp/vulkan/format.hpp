@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,7 +23,7 @@
 #pragma once
 
 #include "vulkan_headers.hpp"
-#include "texture_format.hpp"
+#include "texture/texture_format.hpp"
 
 namespace Vulkan
 {
@@ -251,7 +251,7 @@ static inline VkDeviceSize format_get_layer_size(VkFormat format, VkImageAspectF
 	format_num_blocks(format, blocks_x, blocks_y);
 	format_align_dim(format, width, height);
 
-	VkDeviceSize size = TextureFormatLayout::format_block_size(format, aspect) * depth * blocks_x * blocks_y;
+	VkDeviceSize size = VkDeviceSize(TextureFormatLayout::format_block_size(format, aspect)) * depth * blocks_x * blocks_y;
 	return size;
 }
 

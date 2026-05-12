@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -20,21 +20,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define NOMINMAX
 #include "command_buffer.hpp"
 #include "device.hpp"
 #include "format.hpp"
 #include "thread_id.hpp"
 #include "vulkan_prerotate.hpp"
+#include "indirect_layout.hpp"
 #include "timer.hpp"
 #include <string.h>
-
-//#define FULL_BACKTRACE_CHECKPOINTS
-#ifdef FULL_BACKTRACE_CHECKPOINTS
-#ifdef __linux__
-#include <execinfo.h>
-#endif
-#include <sstream>
-#endif
 
 using namespace Util;
 
@@ -62,16 +56,19 @@ CommandBuffer::CommandBuffer(Device *device_, VkCommandBuffer cmd_, VkPipelineCa
 	// This needs to affect hashing to make Fossilize path behave as expected.
 	auto &features = device->get_device_features();
 	pipeline_state.subgroup_size_tag =
-			(features.subgroup_size_control_properties.minSubgroupSize << 0) |
-			(features.subgroup_size_control_properties.maxSubgroupSize << 8);
+			(features.vk13_props.minSubgroupSize << 0) |
+			(features.vk13_props.maxSubgroupSize << 8);
+
+	device->lock.read_only_cache.lock_read();
 }
 
 CommandBuffer::~CommandBuffer()
 {
-	VK_ASSERT(vbo_block.mapped == nullptr);
-	VK_ASSERT(ibo_block.mapped == nullptr);
-	VK_ASSERT(ubo_block.mapped == nullptr);
-	VK_ASSERT(staging_block.mapped == nullptr);
+	VK_ASSERT(!vbo_block.is_mapped());
+	VK_ASSERT(!ibo_block.is_mapped());
+	VK_ASSERT(!ubo_block.is_mapped());
+	VK_ASSERT(!staging_block.is_mapped());
+	device->lock.read_only_cache.unlock_read();
 }
 
 void CommandBuffer::fill_buffer(const Buffer &dst, uint32_t value)
@@ -253,13 +250,8 @@ void CommandBuffer::full_barrier()
 {
 	VK_ASSERT(!actual_render_pass);
 	VK_ASSERT(!framebuffer);
-	barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-	        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT |
-	            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
-	        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-	        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-	            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-	            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT);
+	barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+	        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT);
 }
 
 void CommandBuffer::pixel_barrier()
@@ -273,58 +265,234 @@ void CommandBuffer::pixel_barrier()
 	                           VK_DEPENDENCY_BY_REGION_BIT, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
-static inline void fixup_src_stage(VkPipelineStageFlags &src_stages, bool fixup)
+void CommandBuffer::barrier(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_access,
+                            VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_access)
 {
-	// ALL_GRAPHICS_BIT waits for vertex as well which causes performance issues on some drivers.
-	// It shouldn't matter, but hey.
-	//
-	// We aren't using vertex with side-effects on relevant hardware so dropping VERTEX_SHADER_BIT is fine.
-	if ((src_stages & VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT) != 0 && fixup)
+	VkDependencyInfo dep = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+	VkMemoryBarrier2 b = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+	dep.memoryBarrierCount = 1;
+	dep.pMemoryBarriers = &b;
+	b.srcStageMask = src_stages;
+	b.dstStageMask = dst_stages;
+	b.srcAccessMask = src_access;
+	b.dstAccessMask = dst_access;
+	barrier(dep);
+}
+
+struct Sync1CompatData
+{
+	Util::SmallVector<VkMemoryBarrier> mem_barriers;
+	Util::SmallVector<VkBufferMemoryBarrier> buf_barriers;
+	Util::SmallVector<VkImageMemoryBarrier> img_barriers;
+	VkPipelineStageFlags src_stages = 0;
+	VkPipelineStageFlags dst_stages = 0;
+};
+
+static void convert_vk_dependency_info(const VkDependencyInfo &dep, Sync1CompatData &sync1)
+{
+	VkPipelineStageFlags2 src_stages = 0;
+	VkPipelineStageFlags2 dst_stages = 0;
+
+	for (uint32_t i = 0; i < dep.memoryBarrierCount; i++)
 	{
-		src_stages &= ~VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-		src_stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-		              VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		auto &mem = dep.pMemoryBarriers[i];
+		src_stages |= mem.srcStageMask;
+		dst_stages |= mem.dstStageMask;
+		VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+		barrier.srcAccessMask = convert_vk_access_flags2(mem.srcAccessMask);
+		barrier.dstAccessMask = convert_vk_access_flags2(mem.dstAccessMask);
+		sync1.mem_barriers.push_back(barrier);
+	}
+
+	for (uint32_t i = 0; i < dep.bufferMemoryBarrierCount; i++)
+	{
+		auto &buf = dep.pBufferMemoryBarriers[i];
+		src_stages |= buf.srcStageMask;
+		dst_stages |= buf.dstStageMask;
+
+		VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+		barrier.srcAccessMask = convert_vk_access_flags2(buf.srcAccessMask);
+		barrier.dstAccessMask = convert_vk_access_flags2(buf.dstAccessMask);
+		barrier.buffer = buf.buffer;
+		barrier.offset = buf.offset;
+		barrier.size = buf.size;
+		barrier.srcQueueFamilyIndex = buf.srcQueueFamilyIndex;
+		barrier.dstQueueFamilyIndex = buf.dstQueueFamilyIndex;
+		sync1.buf_barriers.push_back(barrier);
+	}
+
+	for (uint32_t i = 0; i < dep.imageMemoryBarrierCount; i++)
+	{
+		auto &img = dep.pImageMemoryBarriers[i];
+		VK_ASSERT(img.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
+		src_stages |= img.srcStageMask;
+		dst_stages |= img.dstStageMask;
+
+		VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+		barrier.srcAccessMask = convert_vk_access_flags2(img.srcAccessMask);
+		barrier.dstAccessMask = convert_vk_access_flags2(img.dstAccessMask);
+		barrier.image = img.image;
+		barrier.subresourceRange = img.subresourceRange;
+		barrier.oldLayout = img.oldLayout;
+		barrier.newLayout = img.newLayout;
+		barrier.srcQueueFamilyIndex = img.srcQueueFamilyIndex;
+		barrier.dstQueueFamilyIndex = img.dstQueueFamilyIndex;
+		sync1.img_barriers.push_back(barrier);
+	}
+
+	sync1.src_stages |= convert_vk_src_stage2(src_stages);
+	sync1.dst_stages |= convert_vk_dst_stage2(dst_stages);
+}
+
+void CommandBuffer::barrier(const VkDependencyInfo &dep)
+{
+	VK_ASSERT(!actual_render_pass);
+	VK_ASSERT(!framebuffer);
+
+#ifdef VULKAN_DEBUG
+	VkPipelineStageFlags2 stages = 0;
+	VkAccessFlags2 access = 0;
+
+	for (uint32_t i = 0; i < dep.memoryBarrierCount; i++)
+	{
+		auto &b = dep.pMemoryBarriers[i];
+		stages |= b.srcStageMask | b.dstStageMask;
+		access |= b.srcAccessMask | b.dstAccessMask;
+	}
+
+	for (uint32_t i = 0; i < dep.bufferMemoryBarrierCount; i++)
+	{
+		auto &b = dep.pBufferMemoryBarriers[i];
+		stages |= b.srcStageMask | b.dstStageMask;
+		access |= b.srcAccessMask | b.dstAccessMask;
+	}
+
+	for (uint32_t i = 0; i < dep.imageMemoryBarrierCount; i++)
+	{
+		auto &b = dep.pImageMemoryBarriers[i];
+		stages |= b.srcStageMask | b.dstStageMask;
+		access |= b.srcAccessMask | b.dstAccessMask;
+	}
+
+	if (stages & VK_PIPELINE_STAGE_TRANSFER_BIT)
+		LOGW("Using deprecated TRANSFER stage.\n");
+	if (stages & VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
+		LOGW("Using deprecated BOTTOM_OF_PIPE stage.\n");
+	if (stages & VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
+		LOGW("Using deprecated TOP_OF_PIPE stage.\n");
+
+	if (access & VK_ACCESS_SHADER_READ_BIT)
+		LOGW("Using deprecated SHADER_READ access.\n");
+	if (stages & VK_ACCESS_SHADER_WRITE_BIT)
+		LOGW("Using deprecated SHADER_WRITE access.\n");
+
+	// We cannot convert these automatically so easily to sync1 without more context.
+	for (uint32_t i = 0; i < dep.imageMemoryBarrierCount; i++)
+	{
+		VK_ASSERT(dep.pImageMemoryBarriers[i].oldLayout != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL &&
+		          dep.pImageMemoryBarriers[i].newLayout != VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
+	}
+#endif
+
+	if (device->get_device_features().vk13_features.synchronization2)
+	{
+		Util::SmallVector<VkBufferMemoryBarrier2> tmp_buffer;
+		Util::SmallVector<VkImageMemoryBarrier2> tmp_image;
+		Util::SmallVector<VkMemoryBarrier2> tmp_memory;
+		const VkDependencyInfo *final_dep = &dep;
+		VkDependencyInfo tmp_dep;
+
+		if (device->get_workarounds().force_sync1_access)
+		{
+			VkAccessFlags2 merged_access = 0;
+			for (uint32_t i = 0; i < dep.memoryBarrierCount; i++)
+				merged_access |= dep.pMemoryBarriers[i].srcAccessMask | dep.pMemoryBarriers[i].dstAccessMask;
+			for (uint32_t i = 0; i < dep.bufferMemoryBarrierCount; i++)
+				merged_access |= dep.pBufferMemoryBarriers[i].srcAccessMask | dep.pBufferMemoryBarriers[i].dstAccessMask;
+			for (uint32_t i = 0; i < dep.imageMemoryBarrierCount; i++)
+				merged_access |= dep.pImageMemoryBarriers[i].srcAccessMask | dep.pImageMemoryBarriers[i].dstAccessMask;
+
+			if ((merged_access & (VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT |
+			                      VK_ACCESS_2_SHADER_SAMPLED_READ_BIT |
+			                      VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+			                      VK_ACCESS_2_SHADER_BINDING_TABLE_READ_BIT_KHR)) != 0)
+			{
+				final_dep = &tmp_dep;
+				tmp_dep = dep;
+
+				if (dep.memoryBarrierCount != 0)
+				{
+					tmp_memory.insert(tmp_memory.end(), dep.pMemoryBarriers,
+					                  dep.pMemoryBarriers + dep.memoryBarrierCount);
+					for (auto &b : tmp_memory)
+					{
+						b.srcAccessMask = convert_vk_access_flags2(b.srcAccessMask);
+						b.dstAccessMask = convert_vk_access_flags2(b.dstAccessMask);
+					}
+					tmp_dep.pMemoryBarriers = tmp_memory.data();
+				}
+
+				if (dep.bufferMemoryBarrierCount != 0)
+				{
+					tmp_buffer.insert(tmp_buffer.end(), dep.pBufferMemoryBarriers,
+					                  dep.pBufferMemoryBarriers + dep.bufferMemoryBarrierCount);
+					for (auto &b : tmp_buffer)
+					{
+						b.srcAccessMask = convert_vk_access_flags2(b.srcAccessMask);
+						b.dstAccessMask = convert_vk_access_flags2(b.dstAccessMask);
+					}
+					tmp_dep.pBufferMemoryBarriers = tmp_buffer.data();
+				}
+
+				if (dep.imageMemoryBarrierCount != 0)
+				{
+					tmp_image.insert(tmp_image.end(), dep.pImageMemoryBarriers,
+					                 dep.pImageMemoryBarriers + dep.imageMemoryBarrierCount);
+					for (auto &b : tmp_image)
+					{
+						b.srcAccessMask = convert_vk_access_flags2(b.srcAccessMask);
+						b.dstAccessMask = convert_vk_access_flags2(b.dstAccessMask);
+					}
+					tmp_dep.pImageMemoryBarriers = tmp_image.data();
+				}
+			}
+		}
+
+		table.vkCmdPipelineBarrier2(cmd, final_dep);
+	}
+	else
+	{
+		Sync1CompatData sync1;
+		convert_vk_dependency_info(dep, sync1);
+		table.vkCmdPipelineBarrier(cmd, sync1.src_stages, sync1.dst_stages,
+		                           dep.dependencyFlags,
+		                           uint32_t(sync1.mem_barriers.size()), sync1.mem_barriers.data(),
+		                           uint32_t(sync1.buf_barriers.size()), sync1.buf_barriers.data(),
+		                           uint32_t(sync1.img_barriers.size()), sync1.img_barriers.data());
 	}
 }
 
-void CommandBuffer::barrier(VkPipelineStageFlags src_stages, VkAccessFlags src_access, VkPipelineStageFlags dst_stages,
-                            VkAccessFlags dst_access)
+void CommandBuffer::buffer_barrier(const Buffer &buffer,
+                                   VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_access,
+                                   VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_access)
 {
-	VK_ASSERT(!actual_render_pass);
-	VK_ASSERT(!framebuffer);
-	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-	barrier.srcAccessMask = src_access;
-	barrier.dstAccessMask = dst_access;
-	fixup_src_stage(src_stages, device->get_workarounds().optimize_all_graphics_barrier);
-	table.vkCmdPipelineBarrier(cmd, src_stages, dst_stages, 0, 1, &barrier, 0, nullptr, 0, nullptr);
-}
+	VkBufferMemoryBarrier2 b = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
+	VkDependencyInfo dep = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
 
-void CommandBuffer::barrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages, unsigned barriers,
-                            const VkMemoryBarrier *globals, unsigned buffer_barriers,
-                            const VkBufferMemoryBarrier *buffers, unsigned image_barriers,
-                            const VkImageMemoryBarrier *images)
-{
-	VK_ASSERT(!actual_render_pass);
-	VK_ASSERT(!framebuffer);
-	fixup_src_stage(src_stages, device->get_workarounds().optimize_all_graphics_barrier);
-	table.vkCmdPipelineBarrier(cmd, src_stages, dst_stages, 0, barriers, globals, buffer_barriers, buffers, image_barriers, images);
-}
+	b.srcAccessMask = src_access;
+	b.dstAccessMask = dst_access;
+	b.buffer = buffer.get_buffer();
+	b.offset = 0;
+	b.size = VK_WHOLE_SIZE;
+	b.srcStageMask = src_stages;
+	b.dstStageMask = dst_stages;
+	b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-void CommandBuffer::buffer_barrier(const Buffer &buffer, VkPipelineStageFlags src_stages, VkAccessFlags src_access,
-                                   VkPipelineStageFlags dst_stages, VkAccessFlags dst_access)
-{
-	VK_ASSERT(!actual_render_pass);
-	VK_ASSERT(!framebuffer);
-	VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	barrier.srcAccessMask = src_access;
-	barrier.dstAccessMask = dst_access;
-	barrier.buffer = buffer.get_buffer();
-	barrier.offset = 0;
-	barrier.size = buffer.get_create_info().size;
+	dep.bufferMemoryBarrierCount = 1;
+	dep.pBufferMemoryBarriers = &b;
 
-	fixup_src_stage(src_stages, device->get_workarounds().optimize_all_graphics_barrier);
-	table.vkCmdPipelineBarrier(cmd, src_stages, dst_stages, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	barrier(dep);
 }
 
 // Buffers are always CONCURRENT.
@@ -355,8 +523,7 @@ static uint32_t deduce_acquire_release_family_index(Device &device, const Image 
 		if (queue_info.family_indices[QUEUE_INDEX_GRAPHICS] != family)
 			return VK_QUEUE_FAMILY_IGNORED;
 
-	if (image.get_create_info().misc &
-	    (IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_GRAPHICS_BIT | IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_COMPUTE_BIT))
+	if (image.get_create_info().misc & IMAGE_MISC_CONCURRENT_QUEUE_ASYNC_COMPUTE_BIT)
 	{
 		if (queue_info.family_indices[QUEUE_INDEX_COMPUTE] != family)
 			return VK_QUEUE_FAMILY_IGNORED;
@@ -369,12 +536,13 @@ static uint32_t deduce_acquire_release_family_index(Device &device, const Image 
 	return family;
 }
 
-void CommandBuffer::release_external_image_barrier(
+void CommandBuffer::release_image_barrier(
 		const Image &image,
 		VkImageLayout old_layout, VkImageLayout new_layout,
-		VkPipelineStageFlags src_stage, VkAccessFlags src_access)
+		VkPipelineStageFlags2 src_stage, VkAccessFlags2 src_access,
+		uint32_t dst_queue_family)
 {
-	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 	uint32_t family_index = device->get_queue_info().family_indices[device->get_physical_queue_type(type)];
 
 	barrier.image = image.get_image();
@@ -385,118 +553,133 @@ void CommandBuffer::release_external_image_barrier(
 	};
 	barrier.oldLayout = old_layout;
 	barrier.newLayout = new_layout;
-	barrier.srcAccessMask = src_access;
 
 	barrier.srcQueueFamilyIndex = deduce_acquire_release_family_index(*device, image, family_index);
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-	table.vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-	                           0, 0, nullptr, 0, nullptr, 1, &barrier);
+	barrier.dstQueueFamilyIndex = dst_queue_family;
+
+	barrier.srcAccessMask = src_access;
+	barrier.srcStageMask = src_stage;
+
+	image_barriers(1, &barrier);
 }
 
-void CommandBuffer::acquire_external_image_barrier(
+void CommandBuffer::acquire_image_barrier(
 		const Image &image,
 		VkImageLayout old_layout, VkImageLayout new_layout,
-		VkPipelineStageFlags dst_stage, VkAccessFlags dst_access)
+		VkPipelineStageFlags2 dst_stage, VkAccessFlags2 dst_access,
+		uint32_t src_queue_family)
 {
-	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	VkImageMemoryBarrier2 b = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 	uint32_t family_index = device->get_queue_info().family_indices[device->get_physical_queue_type(type)];
 
-	barrier.image = image.get_image();
-	barrier.subresourceRange = {
+	b.image = image.get_image();
+	b.subresourceRange = {
 		format_to_aspect_mask(image.get_format()),
 		0, VK_REMAINING_MIP_LEVELS,
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
-	barrier.oldLayout = old_layout;
-	barrier.newLayout = new_layout;
-	barrier.dstAccessMask = dst_access;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-	barrier.dstQueueFamilyIndex = deduce_acquire_release_family_index(*device, image, family_index);
-	table.vkCmdPipelineBarrier(cmd, dst_stage, dst_stage,
-	                           0, 0, nullptr, 0, nullptr, 1, &barrier);
+	b.oldLayout = old_layout;
+	b.newLayout = new_layout;
+	b.srcQueueFamilyIndex = src_queue_family;
+	b.dstQueueFamilyIndex = deduce_acquire_release_family_index(*device, image, family_index);
+
+	b.dstStageMask = dst_stage;
+	b.dstAccessMask = dst_access;
+
+	image_barriers(1, &b);
 }
 
-void CommandBuffer::release_external_buffer_barrier(
+void CommandBuffer::release_buffer_barrier(
 		const Buffer &buffer,
-		VkPipelineStageFlags src_stage, VkAccessFlags src_access)
+		VkPipelineStageFlags2 src_stage, VkAccessFlags2 src_access,
+		uint32_t dst_queue_family)
 {
-	VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	barrier.buffer = buffer.get_buffer();
-	barrier.size = buffer.get_create_info().size;
-	barrier.srcAccessMask = src_access;
-	barrier.srcQueueFamilyIndex = deduce_acquire_release_family_index(*device);
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-	table.vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-	                           0, 0, nullptr, 1, &barrier, 0, nullptr);
+	VkBufferMemoryBarrier2 b = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
+	b.buffer = buffer.get_buffer();
+	b.size = buffer.get_create_info().size;
+	b.srcQueueFamilyIndex = deduce_acquire_release_family_index(*device);
+	b.dstQueueFamilyIndex = dst_queue_family;
+	b.srcStageMask = src_stage;
+	b.srcAccessMask = src_access;
+	buffer_barriers(1, &b);
 }
 
-void CommandBuffer::acquire_external_buffer_barrier(
+void CommandBuffer::acquire_buffer_barrier(
 		const Buffer &buffer,
-		VkPipelineStageFlags dst_stage, VkAccessFlags dst_access)
+		VkPipelineStageFlags2 dst_stage, VkAccessFlags2 dst_access,
+		uint32_t src_queue_family)
 {
-	VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	barrier.buffer = buffer.get_buffer();
-	barrier.size = buffer.get_create_info().size;
-	barrier.dstAccessMask = dst_access;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-	barrier.dstQueueFamilyIndex = deduce_acquire_release_family_index(*device);
-	table.vkCmdPipelineBarrier(cmd, dst_stage, dst_stage,
-	                           0, 0, nullptr, 1, &barrier, 0, nullptr);
+	VkBufferMemoryBarrier2 b = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
+	b.buffer = buffer.get_buffer();
+	b.size = buffer.get_create_info().size;
+	b.srcQueueFamilyIndex = src_queue_family;
+	b.dstQueueFamilyIndex = deduce_acquire_release_family_index(*device);
+	b.dstStageMask = dst_stage;
+	b.dstAccessMask = dst_access;
+	buffer_barriers(1, &b);
 }
 
-void CommandBuffer::image_barrier(const Image &image, VkImageLayout old_layout, VkImageLayout new_layout,
-                                  VkPipelineStageFlags src_stages, VkAccessFlags src_access,
-                                  VkPipelineStageFlags dst_stages, VkAccessFlags dst_access)
+void CommandBuffer::image_barrier(const Image &image,
+                                  VkImageLayout old_layout, VkImageLayout new_layout,
+                                  VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_access,
+                                  VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_access)
 {
 	VK_ASSERT(!actual_render_pass);
 	VK_ASSERT(!framebuffer);
 	VK_ASSERT(image.get_create_info().domain != ImageDomain::Transient);
 
-	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-	barrier.srcAccessMask = src_access;
-	barrier.dstAccessMask = dst_access;
-	barrier.oldLayout = old_layout;
-	barrier.newLayout = new_layout;
-	barrier.image = image.get_image();
-	barrier.subresourceRange.aspectMask = format_to_aspect_mask(image.get_create_info().format);
-	barrier.subresourceRange.levelCount = image.get_create_info().levels;
-	barrier.subresourceRange.layerCount = image.get_create_info().layers;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	VkImageMemoryBarrier2 b = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+	b.srcAccessMask = src_access;
+	b.dstAccessMask = dst_access;
+	b.oldLayout = old_layout;
+	b.newLayout = new_layout;
+	b.image = image.get_image();
+	b.subresourceRange.aspectMask = format_to_aspect_mask(image.get_create_info().format);
+	b.subresourceRange.levelCount = image.get_create_info().levels;
+	b.subresourceRange.layerCount = image.get_create_info().layers;
+	b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	b.srcStageMask = src_stages;
+	b.dstStageMask = dst_stages;
 
-	fixup_src_stage(src_stages, device->get_workarounds().optimize_all_graphics_barrier);
-	table.vkCmdPipelineBarrier(cmd, src_stages, dst_stages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	image_barriers(1, &b);
 }
 
-void CommandBuffer::buffer_barriers(VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages,
-                                    unsigned buffer_barriers, const VkBufferMemoryBarrier *buffers)
+void CommandBuffer::buffer_barriers(uint32_t buffer_barriers, const VkBufferMemoryBarrier2 *buffers)
 {
-	barrier(src_stages, dst_stages, 0, nullptr, buffer_barriers, buffers, 0, nullptr);
+	VkDependencyInfo dep = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+	dep.bufferMemoryBarrierCount = buffer_barriers;
+	dep.pBufferMemoryBarriers = buffers;
+	barrier(dep);
 }
 
-void CommandBuffer::image_barriers(VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages,
-                                   unsigned image_barriers, const VkImageMemoryBarrier *images)
+void CommandBuffer::image_barriers(uint32_t image_barriers, const VkImageMemoryBarrier2 *images)
 {
-	barrier(src_stages, dst_stages, 0, nullptr, 0, nullptr, image_barriers, images);
+	VkDependencyInfo dep = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+	dep.imageMemoryBarrierCount = image_barriers;
+	dep.pImageMemoryBarriers = images;
+	barrier(dep);
 }
 
 void CommandBuffer::barrier_prepare_generate_mipmap(const Image &image, VkImageLayout base_level_layout,
-                                                    VkPipelineStageFlags src_stage, VkAccessFlags src_access,
+                                                    VkPipelineStageFlags2 src_stage, VkAccessFlags2 src_access,
                                                     bool need_top_level_barrier)
 {
 	auto &create_info = image.get_create_info();
-	VkImageMemoryBarrier barriers[2] = {};
+	VkImageMemoryBarrier2 barriers[2] = {};
 	VK_ASSERT(create_info.levels > 1);
 	(void)create_info;
 
 	for (unsigned i = 0; i < 2; i++)
 	{
-		barriers[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barriers[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 		barriers[i].image = image.get_image();
 		barriers[i].subresourceRange.aspectMask = format_to_aspect_mask(image.get_format());
 		barriers[i].subresourceRange.layerCount = image.get_create_info().layers;
 		barriers[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barriers[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barriers[i].srcStageMask = src_stage;
+		barriers[i].dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
 
 		if (i == 0)
 		{
@@ -518,9 +701,7 @@ void CommandBuffer::barrier_prepare_generate_mipmap(const Image &image, VkImageL
 		}
 	}
 
-	barrier(src_stage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr,
-	        need_top_level_barrier ? 2 : 1,
-	        need_top_level_barrier ? barriers : barriers + 1);
+	image_barriers(need_top_level_barrier ? 2 : 1, need_top_level_barrier ? barriers : barriers + 1);
 }
 
 void CommandBuffer::generate_mipmap(const Image &image)
@@ -531,7 +712,7 @@ void CommandBuffer::generate_mipmap(const Image &image)
 
 	VK_ASSERT(image.get_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-	VkImageMemoryBarrier b = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	VkImageMemoryBarrier2 b = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 	b.image = image.get_image();
 	b.subresourceRange.levelCount = 1;
 	b.subresourceRange.layerCount = image.get_create_info().layers;
@@ -542,6 +723,8 @@ void CommandBuffer::generate_mipmap(const Image &image)
 	b.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 	b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	b.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+	b.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
 
 	for (unsigned i = 1; i < create_info.levels; i++)
 	{
@@ -554,8 +737,7 @@ void CommandBuffer::generate_mipmap(const Image &image)
 		           origin, size, origin, src_size, i, i - 1, 0, 0, create_info.layers, VK_FILTER_LINEAR);
 
 		b.subresourceRange.baseMipLevel = i;
-		barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		        0, nullptr, 0, nullptr, 1, &b);
+		image_barriers(1, &b);
 	}
 }
 
@@ -569,7 +751,6 @@ void CommandBuffer::blit_image(const Image &dst, const Image &src,
 		return { a.x + b.x, a.y + b.y, a.z + b.z };
 	};
 
-#if 0
 	const VkImageBlit blit = {
 		{ format_to_aspect_mask(src.get_create_info().format), src_level, src_base_layer, num_layers },
 		{ src_offset, add_offset(src_offset, src_extent) },
@@ -581,33 +762,16 @@ void CommandBuffer::blit_image(const Image &dst, const Image &src,
 	                     src.get_image(), src.get_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 	                     dst.get_image(), dst.get_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
 	                     1, &blit, filter);
-#else
-	// RADV workaround.
-	for (unsigned i = 0; i < num_layers; i++)
-	{
-		const VkImageBlit blit = {
-				{ format_to_aspect_mask(src.get_create_info().format), src_level, src_base_layer + i, 1 },
-				{ src_offset,                                          add_offset(src_offset, src_extent) },
-				{ format_to_aspect_mask(dst.get_create_info().format), dst_level, dst_base_layer + i, 1 },
-				{ dst_offset,                                          add_offset(dst_offset, dst_extent) },
-		};
-
-		table.vkCmdBlitImage(cmd,
-		                     src.get_image(), src.get_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
-		                     dst.get_image(), dst.get_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-		                     1, &blit, filter);
-	}
-#endif
 }
 
 void CommandBuffer::begin_context()
 {
 	dirty = ~0u;
-	dirty_sets = ~0u;
+	dirty_sets_realloc = ~0u;
 	dirty_vbos = ~0u;
 	current_pipeline = {};
 	current_pipeline_layout = VK_NULL_HANDLE;
-	current_layout = nullptr;
+	pipeline_state.layout = nullptr;
 	pipeline_state.program = nullptr;
 	pipeline_state.potential_static_state.spec_constant_mask = 0;
 	pipeline_state.potential_static_state.internal_spec_constant_mask = 0;
@@ -791,6 +955,7 @@ void CommandBuffer::begin_render_pass(const RenderPassInfo &info, VkSubpassConte
 	pipeline_state.compatible_render_pass = &framebuffer->get_compatible_render_pass();
 	actual_render_pass = &device->request_render_pass(info, false);
 	pipeline_state.subpass_index = 0;
+	framebuffer_is_multiview = info.num_layers > 1;
 
 	memset(framebuffer_attachments, 0, sizeof(framebuffer_attachments));
 	unsigned att;
@@ -906,18 +1071,21 @@ static void log_compile_time(const char *tag, Hash hash,
 Pipeline CommandBuffer::build_compute_pipeline(Device *device, const DeferredPipelineCompile &compile,
                                                CompileMode mode)
 {
+	// This can be called from outside a CommandBuffer content, so need to hold lock.
+	Util::RWSpinLockReadHolder holder{device->lock.read_only_cache};
+
 	// If we don't have pipeline creation cache control feature,
 	// we must assume compilation can be synchronous.
 	if (mode == CompileMode::FailOnCompileRequired &&
 	    (device->get_workarounds().broken_pipeline_cache_control ||
-	     !device->get_device_features().pipeline_creation_cache_control_features.pipelineCreationCacheControl))
+	     !device->get_device_features().vk13_features.pipelineCreationCacheControl))
 	{
 		return {};
 	}
 
 	auto &shader = *compile.program->get_shader(ShaderStage::Compute);
 	VkComputePipelineCreateInfo info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-	info.layout = compile.program->get_pipeline_layout()->get_layout();
+	info.layout = compile.layout->get_layout();
 	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	info.stage.module = shader.get_module();
 	info.stage.pName = "main";
@@ -925,7 +1093,7 @@ Pipeline CommandBuffer::build_compute_pipeline(Device *device, const DeferredPip
 
 	VkSpecializationInfo spec_info = {};
 	VkSpecializationMapEntry spec_entries[VULKAN_NUM_TOTAL_SPEC_CONSTANTS];
-	auto mask = compile.program->get_pipeline_layout()->get_resource_layout().combined_spec_constant_mask &
+	auto mask = compile.layout->get_resource_layout().combined_spec_constant_mask &
 	            get_combined_spec_constant_mask(compile);
 
 	uint32_t spec_constants[VULKAN_NUM_TOTAL_SPEC_CONSTANTS];
@@ -948,40 +1116,18 @@ Pipeline CommandBuffer::build_compute_pipeline(Device *device, const DeferredPip
 		spec_info.dataSize = spec_info.mapEntryCount * sizeof(uint32_t);
 	}
 
-	VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroup_size_info = {
-		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT
-	};
+	VkPipelineShaderStageRequiredSubgroupSizeCreateInfo subgroup_size_info;
 
 	if (compile.static_state.state.subgroup_control_size)
 	{
-		if (!device->supports_subgroup_size_log2(compile.static_state.state.subgroup_full_group,
-		                                         compile.static_state.state.subgroup_minimum_size_log2,
-		                                         compile.static_state.state.subgroup_maximum_size_log2))
+		if (!setup_subgroup_size_control(*device, info.stage, subgroup_size_info,
+		                                 VK_SHADER_STAGE_COMPUTE_BIT,
+		                                 compile.static_state.state.subgroup_full_group,
+		                                 compile.static_state.state.subgroup_minimum_size_log2,
+		                                 compile.static_state.state.subgroup_maximum_size_log2))
 		{
 			LOGE("Subgroup size configuration not supported.\n");
 			return {};
-		}
-		auto &features = device->get_device_features();
-
-		if (compile.static_state.state.subgroup_full_group)
-			info.stage.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT;
-
-		uint32_t min_subgroups = 1u << compile.static_state.state.subgroup_minimum_size_log2;
-		uint32_t max_subgroups = 1u << compile.static_state.state.subgroup_maximum_size_log2;
-		if (min_subgroups <= features.subgroup_size_control_properties.minSubgroupSize &&
-		    max_subgroups >= features.subgroup_size_control_properties.maxSubgroupSize)
-		{
-			info.stage.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT;
-		}
-		else
-		{
-			// Pick a fixed subgroup size. Prefer smallest subgroup size.
-			if (min_subgroups < features.subgroup_size_control_properties.minSubgroupSize)
-				subgroup_size_info.requiredSubgroupSize = features.subgroup_size_control_properties.minSubgroupSize;
-			else
-				subgroup_size_info.requiredSubgroupSize = min_subgroups;
-
-			info.stage.pNext = &subgroup_size_info;
 		}
 	}
 
@@ -993,7 +1139,7 @@ Pipeline CommandBuffer::build_compute_pipeline(Device *device, const DeferredPip
 	auto &table = device->get_device_table();
 
 	if (mode == CompileMode::FailOnCompileRequired)
-		info.flags |= VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT_EXT;
+		info.flags |= VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
 
 	auto start_ts = Util::get_current_time_nsecs();
 	VkResult vr = table.vkCreateComputePipelines(device->get_device(), compile.cache, 1, &info, nullptr, &compute_pipeline);
@@ -1026,23 +1172,65 @@ void CommandBuffer::extract_pipeline_state(DeferredPipelineCompile &compile) con
 	if (is_compute)
 		update_hash_compute_pipeline(compile);
 	else
+		update_hash_graphics_pipeline(compile, CompileMode::AsyncThread, nullptr);
+}
+
+bool CommandBuffer::setup_subgroup_size_control(
+		Vulkan::Device &device, VkPipelineShaderStageCreateInfo &stage_info,
+		VkPipelineShaderStageRequiredSubgroupSizeCreateInfo &required_info,
+		VkShaderStageFlagBits stage, bool full_group,
+		unsigned min_size_log2, unsigned max_size_log2)
+{
+	if (!device.supports_subgroup_size_log2(full_group, min_size_log2, max_size_log2, stage))
+		return false;
+
+	auto &features = device.get_device_features();
+
+	if (full_group)
+		stage_info.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT;
+
+	uint32_t min_subgroups = 1u << min_size_log2;
+	uint32_t max_subgroups = 1u << max_size_log2;
+	if (min_subgroups <= features.vk13_props.minSubgroupSize &&
+	    max_subgroups >= features.vk13_props.maxSubgroupSize)
 	{
-		uint32_t active_vbo = 0;
-		update_hash_graphics_pipeline(compile, active_vbo);
+		stage_info.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT;
 	}
+	else
+	{
+		required_info = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO };
+
+		// Pick a fixed subgroup size. Prefer smallest subgroup size.
+		if (min_subgroups < features.vk13_props.minSubgroupSize)
+			required_info.requiredSubgroupSize = features.vk13_props.minSubgroupSize;
+		else
+			required_info.requiredSubgroupSize = min_subgroups;
+
+		required_info.pNext = const_cast<void *>(stage_info.pNext);
+		stage_info.pNext = &required_info;
+	}
+
+	return true;
 }
 
 Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPipelineCompile &compile,
                                                 CompileMode mode)
 {
+	// This can be called from outside a CommandBuffer content, so need to hold lock.
+	Util::RWSpinLockReadHolder holder{device->lock.read_only_cache};
+
 	// If we don't have pipeline creation cache control feature,
 	// we must assume compilation can be synchronous.
 	if (mode == CompileMode::FailOnCompileRequired &&
 	    (device->get_workarounds().broken_pipeline_cache_control ||
-	     !device->get_device_features().pipeline_creation_cache_control_features.pipelineCreationCacheControl))
+	     !device->get_device_features().vk13_features.pipelineCreationCacheControl))
 	{
 		return {};
 	}
+
+	// Unsupported. Gets pretty complicated since if any dependent pipeline fails, we have to abort.
+	if (mode == CompileMode::FailOnCompileRequired && !compile.program_group.empty())
+		return {};
 
 	// Viewport state
 	VkPipelineViewportStateCreateInfo vp = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -1084,7 +1272,7 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 		att = {};
 
 		if (compile.compatible_render_pass->get_color_attachment(compile.subpass_index, i).attachment != VK_ATTACHMENT_UNUSED &&
-			(compile.program->get_pipeline_layout()->get_resource_layout().render_target_mask & (1u << i)))
+			(compile.layout->get_resource_layout().render_target_mask & (1u << i)))
 		{
 			att.colorWriteMask = (compile.static_state.state.write_mask >> (4 * i)) & 0xf;
 			att.blendEnable = compile.static_state.state.blend_enable;
@@ -1103,9 +1291,9 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 
 	// Depth state
 	VkPipelineDepthStencilStateCreateInfo ds = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	ds.stencilTestEnable = compile.compatible_render_pass->has_stencil(compile.subpass_index) && compile.static_state.state.stencil_test;
-	ds.depthTestEnable = compile.compatible_render_pass->has_depth(compile.subpass_index) && compile.static_state.state.depth_test;
-	ds.depthWriteEnable = compile.compatible_render_pass->has_depth(compile.subpass_index) && compile.static_state.state.depth_write;
+	ds.stencilTestEnable = compile.compatible_render_pass->has_stencil(compile.subpass_index) && compile.static_state.state.stencil_test != 0;
+	ds.depthTestEnable = compile.compatible_render_pass->has_depth(compile.subpass_index) && compile.static_state.state.depth_test != 0;
+	ds.depthWriteEnable = compile.compatible_render_pass->has_depth(compile.subpass_index) && compile.static_state.state.depth_write != 0;
 
 	if (ds.depthTestEnable)
 		ds.depthCompareOp = static_cast<VkCompareOp>(compile.static_state.state.depth_compare);
@@ -1125,26 +1313,30 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 	// Vertex input
 	VkPipelineVertexInputStateCreateInfo vi = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 	VkVertexInputAttributeDescription vi_attribs[VULKAN_NUM_VERTEX_ATTRIBS];
-	vi.pVertexAttributeDescriptions = vi_attribs;
-	uint32_t attr_mask = compile.program->get_pipeline_layout()->get_resource_layout().attribute_mask;
-	uint32_t binding_mask = 0;
-	for_each_bit(attr_mask, [&](uint32_t bit) {
-		auto &attr = vi_attribs[vi.vertexAttributeDescriptionCount++];
-		attr.location = bit;
-		attr.binding = compile.attribs[bit].binding;
-		attr.format = compile.attribs[bit].format;
-		attr.offset = compile.attribs[bit].offset;
-		binding_mask |= 1u << attr.binding;
-	});
-
 	VkVertexInputBindingDescription vi_bindings[VULKAN_NUM_VERTEX_BUFFERS];
-	vi.pVertexBindingDescriptions = vi_bindings;
-	for_each_bit(binding_mask, [&](uint32_t bit) {
-		auto &bind = vi_bindings[vi.vertexBindingDescriptionCount++];
-		bind.binding = bit;
-		bind.inputRate = compile.input_rates[bit];
-		bind.stride = compile.strides[bit];
-	});
+
+	if (compile.program->get_shader(ShaderStage::Vertex))
+	{
+		vi.pVertexAttributeDescriptions = vi_attribs;
+		uint32_t attr_mask = compile.layout->get_resource_layout().attribute_mask;
+		uint32_t binding_mask = 0;
+		for_each_bit(attr_mask, [&](uint32_t bit) {
+			auto &attr = vi_attribs[vi.vertexAttributeDescriptionCount++];
+			attr.location = bit;
+			attr.binding = compile.attribs[bit].binding;
+			attr.format = compile.attribs[bit].format;
+			attr.offset = compile.attribs[bit].offset;
+			binding_mask |= 1u << attr.binding;
+		});
+
+		vi.pVertexBindingDescriptions = vi_bindings;
+		for_each_bit(binding_mask, [&](uint32_t bit) {
+			auto &bind = vi_bindings[vi.vertexBindingDescriptionCount++];
+			bind.binding = bit;
+			bind.inputRate = compile.input_rates[bit];
+			bind.stride = compile.strides[bit];
+		});
+	}
 
 	// Input assembly
 	VkPipelineInputAssemblyStateCreateInfo ia = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
@@ -1189,14 +1381,40 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 	}
 
 	// Stages
-	VkPipelineShaderStageCreateInfo stages[static_cast<unsigned>(ShaderStage::Count)];
+	VkPipelineShaderStageCreateInfo stages[Util::ecast(ShaderStage::Count)];
 	unsigned num_stages = 0;
 
 	VkSpecializationInfo spec_info[ecast(ShaderStage::Count)] = {};
 	VkSpecializationMapEntry spec_entries[ecast(ShaderStage::Count)][VULKAN_NUM_TOTAL_SPEC_CONSTANTS];
-	uint32_t spec_constants[static_cast<unsigned>(ShaderStage::Count)][VULKAN_NUM_TOTAL_SPEC_CONSTANTS];
+	uint32_t spec_constants[Util::ecast(ShaderStage::Count)][VULKAN_NUM_TOTAL_SPEC_CONSTANTS];
 
-	for (unsigned i = 0; i < static_cast<unsigned>(ShaderStage::Count); i++)
+	VkPipelineShaderStageRequiredSubgroupSizeCreateInfo subgroup_size_info_task;
+	VkPipelineShaderStageRequiredSubgroupSizeCreateInfo subgroup_size_info_mesh;
+
+	for (int i = 0; i < Util::ecast(ShaderStage::Count); i++)
+	{
+		auto mask = compile.layout->get_resource_layout().spec_constant_mask[i] &
+		            get_combined_spec_constant_mask(compile);
+
+		if (mask)
+		{
+			spec_info[i].pData = spec_constants[i];
+			spec_info[i].pMapEntries = spec_entries[i];
+
+			for_each_bit(mask, [&](uint32_t bit)
+			{
+				auto &entry = spec_entries[i][spec_info[i].mapEntryCount];
+				entry.offset = sizeof(uint32_t) * spec_info[i].mapEntryCount;
+				entry.size = sizeof(uint32_t);
+				entry.constantID = bit;
+				spec_constants[i][spec_info[i].mapEntryCount] = compile.potential_static_state.spec_constants[bit];
+				spec_info[i].mapEntryCount++;
+			});
+			spec_info[i].dataSize = spec_info[i].mapEntryCount * sizeof(uint32_t);
+		}
+	}
+
+	for (int i = 0; i < Util::ecast(ShaderStage::Count); i++)
 	{
 		auto stage = static_cast<ShaderStage>(i);
 		if (compile.program->get_shader(stage))
@@ -1206,31 +1424,48 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 			s.module = compile.program->get_shader(stage)->get_module();
 			s.pName = "main";
 			s.stage = static_cast<VkShaderStageFlagBits>(1u << i);
-
-			auto mask = compile.program->get_pipeline_layout()->get_resource_layout().spec_constant_mask[i] &
-			            get_combined_spec_constant_mask(compile);
-
-			if (mask)
-			{
+			if (spec_info[i].mapEntryCount)
 				s.pSpecializationInfo = &spec_info[i];
-				spec_info[i].pData = spec_constants[i];
-				spec_info[i].pMapEntries = spec_entries[i];
 
-				for_each_bit(mask, [&](uint32_t bit) {
-					auto &entry = spec_entries[i][spec_info[i].mapEntryCount];
-					entry.offset = sizeof(uint32_t) * spec_info[i].mapEntryCount;
-					entry.size = sizeof(uint32_t);
-					entry.constantID = bit;
-					spec_constants[i][spec_info[i].mapEntryCount] = compile.potential_static_state.spec_constants[bit];
-					spec_info[i].mapEntryCount++;
-				});
-				spec_info[i].dataSize = spec_info[i].mapEntryCount * sizeof(uint32_t);
+			if (stage == ShaderStage::Mesh || stage == ShaderStage::Task)
+			{
+				VkPipelineShaderStageRequiredSubgroupSizeCreateInfo *required_info;
+				unsigned min_size_log2, max_size_log2;
+				bool size_enabled, full_group;
+
+				if (stage == ShaderStage::Mesh)
+				{
+					size_enabled = compile.static_state.state.subgroup_control_size;
+					full_group = compile.static_state.state.subgroup_full_group;
+					min_size_log2 = compile.static_state.state.subgroup_minimum_size_log2;
+					max_size_log2 = compile.static_state.state.subgroup_maximum_size_log2;
+					required_info = &subgroup_size_info_mesh;
+				}
+				else
+				{
+					size_enabled = compile.static_state.state.subgroup_control_size_task;
+					full_group = compile.static_state.state.subgroup_full_group_task;
+					min_size_log2 = compile.static_state.state.subgroup_minimum_size_log2_task;
+					max_size_log2 = compile.static_state.state.subgroup_maximum_size_log2_task;
+					required_info = &subgroup_size_info_task;
+				}
+
+				if (size_enabled)
+				{
+					if (!setup_subgroup_size_control(
+							*device, s, *required_info, s.stage,
+							full_group, min_size_log2, max_size_log2))
+					{
+						LOGE("Subgroup size configuration not supported.\n");
+						return {};
+					}
+				}
 			}
 		}
 	}
 
 	VkGraphicsPipelineCreateInfo pipe = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-	pipe.layout = compile.program->get_pipeline_layout()->get_layout();
+	pipe.layout = compile.layout->get_layout();
 	pipe.renderPass = compile.compatible_render_pass->get_render_pass();
 	pipe.subpass = compile.subpass_index;
 
@@ -1238,12 +1473,63 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 	pipe.pDynamicState = &dyn;
 	pipe.pColorBlendState = &blend;
 	pipe.pDepthStencilState = &ds;
-	pipe.pVertexInputState = &vi;
-	pipe.pInputAssemblyState = &ia;
+	if (compile.program->get_shader(ShaderStage::Vertex))
+	{
+		pipe.pVertexInputState = &vi;
+		pipe.pInputAssemblyState = &ia;
+	}
 	pipe.pMultisampleState = &ms;
 	pipe.pRasterizationState = &raster;
 	pipe.pStages = stages;
 	pipe.stageCount = num_stages;
+
+	VkGraphicsPipelineShaderGroupsCreateInfoNV groups_info =
+			{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_SHADER_GROUPS_CREATE_INFO_NV };
+	VkGraphicsShaderGroupCreateInfoNV self_group =
+			{ VK_STRUCTURE_TYPE_GRAPHICS_SHADER_GROUP_CREATE_INFO_NV };
+	Util::SmallVector<VkPipeline, 64> pipelines;
+
+	if (mode == CompileMode::IndirectBindable)
+		pipe.flags |= VK_PIPELINE_CREATE_INDIRECT_BINDABLE_BIT_NV;
+
+	if (!compile.program_group.empty())
+	{
+		DeferredPipelineCompile tmp_compile = compile;
+		tmp_compile.program_group.clear();
+		pipelines.reserve(compile.program_group.size());
+
+		for (auto *p : compile.program_group)
+		{
+			tmp_compile.program = p;
+			update_hash_graphics_pipeline(tmp_compile, CompileMode::IndirectBindable, nullptr);
+			auto group_pipeline = p->get_pipeline(tmp_compile.hash);
+			if (group_pipeline.pipeline == VK_NULL_HANDLE)
+				group_pipeline = build_graphics_pipeline(device, tmp_compile, CompileMode::IndirectBindable);
+
+			if (group_pipeline.pipeline == VK_NULL_HANDLE)
+			{
+				LOGE("Failed to compile group pipeline.\n");
+				return {};
+			}
+
+			pipelines.push_back(group_pipeline.pipeline);
+		}
+
+		self_group.stageCount = pipe.stageCount;
+		self_group.pStages = pipe.pStages;
+		self_group.pVertexInputState = pipe.pVertexInputState;
+
+		// Compile each program individually. Then we just link them.
+		pipe.flags |= VK_PIPELINE_CREATE_INDIRECT_BINDABLE_BIT_NV;
+
+		groups_info.pNext = pipe.pNext;
+		pipe.pNext = &groups_info;
+		// Trying to use pGroups[0] through self pPipeline reference crashes NV driver.
+		groups_info.pPipelines = pipelines.data() + 1;
+		groups_info.pipelineCount = uint32_t(pipelines.size() - 1);
+		groups_info.pGroups = &self_group;
+		groups_info.groupCount = 1;
+	}
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 #ifdef GRANITE_VULKAN_FOSSILIZE
@@ -1253,7 +1539,7 @@ Pipeline CommandBuffer::build_graphics_pipeline(Device *device, const DeferredPi
 	auto &table = device->get_device_table();
 
 	if (mode == CompileMode::FailOnCompileRequired)
-		pipe.flags |= VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT_EXT;
+		pipe.flags |= VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT;
 
 	auto start_ts = Util::get_current_time_nsecs();
 	VkResult res = table.vkCreateGraphicsPipelines(device->get_device(), compile.cache, 1, &pipe, nullptr, &pipeline);
@@ -1290,9 +1576,10 @@ void CommandBuffer::update_hash_compute_pipeline(DeferredPipelineCompile &compil
 {
 	Hasher h;
 	h.u64(compile.program->get_hash());
+	h.u64(compile.layout->get_hash());
 
 	// Spec constants.
-	auto &layout = compile.program->get_pipeline_layout()->get_resource_layout();
+	auto &layout = compile.layout->get_resource_layout();
 	uint32_t combined_spec_constant = layout.combined_spec_constant_mask;
 	combined_spec_constant &= get_combined_spec_constant_mask(compile);
 	h.u32(combined_spec_constant);
@@ -1316,11 +1603,12 @@ void CommandBuffer::update_hash_compute_pipeline(DeferredPipelineCompile &compil
 	compile.hash = h.get();
 }
 
-void CommandBuffer::update_hash_graphics_pipeline(DeferredPipelineCompile &compile, uint32_t &active_vbos)
+void CommandBuffer::update_hash_graphics_pipeline(DeferredPipelineCompile &compile,
+                                                  CompileMode mode, uint32_t *out_active_vbos)
 {
 	Hasher h;
-	active_vbos = 0;
-	auto &layout = compile.program->get_pipeline_layout()->get_resource_layout();
+	uint32_t active_vbos = 0;
+	auto &layout = compile.layout->get_resource_layout();
 	for_each_bit(layout.attribute_mask, [&](uint32_t bit) {
 		h.u32(bit);
 		active_vbos |= 1u << compile.attribs[bit].binding;
@@ -1334,9 +1622,15 @@ void CommandBuffer::update_hash_graphics_pipeline(DeferredPipelineCompile &compi
 		h.u32(compile.strides[bit]);
 	});
 
+	if (out_active_vbos)
+		*out_active_vbos = active_vbos;
+
 	h.u64(compile.compatible_render_pass->get_hash());
 	h.u32(compile.subpass_index);
 	h.u64(compile.program->get_hash());
+	for (auto *p : compile.program_group)
+		h.u64(p->get_hash());
+	h.u64(compile.layout->get_hash());
 	h.data(compile.static_state.words, sizeof(compile.static_state.words));
 
 	if (compile.static_state.state.blend_enable)
@@ -1360,20 +1654,50 @@ void CommandBuffer::update_hash_graphics_pipeline(DeferredPipelineCompile &compi
 	for_each_bit(combined_spec_constant, [&](uint32_t bit) {
 		h.u32(compile.potential_static_state.spec_constants[bit]);
 	});
+	h.s32(mode == CompileMode::IndirectBindable);
+
+	if (compile.program->get_shader(ShaderStage::Task))
+	{
+		if (compile.static_state.state.subgroup_control_size_task)
+		{
+			h.s32(1);
+			h.u32(compile.static_state.state.subgroup_minimum_size_log2_task);
+			h.u32(compile.static_state.state.subgroup_maximum_size_log2_task);
+			h.u32(compile.static_state.state.subgroup_full_group_task);
+			// Required for Fossilize since we don't know exactly how to lower these requirements to a PSO
+			// without knowing some device state.
+			h.u32(compile.subgroup_size_tag);
+		}
+		else
+			h.s32(0);
+	}
+
+	if (compile.program->get_shader(ShaderStage::Mesh))
+	{
+		if (compile.static_state.state.subgroup_control_size)
+		{
+			h.s32(1);
+			h.u32(compile.static_state.state.subgroup_minimum_size_log2);
+			h.u32(compile.static_state.state.subgroup_maximum_size_log2);
+			h.u32(compile.static_state.state.subgroup_full_group);
+			// Required for Fossilize since we don't know exactly how to lower these requirements to a PSO
+			// without knowing some device state.
+			h.u32(compile.subgroup_size_tag);
+		}
+		else
+			h.s32(0);
+	}
 
 	compile.hash = h.get();
 }
 
 bool CommandBuffer::flush_graphics_pipeline(bool synchronous)
 {
-	update_hash_graphics_pipeline(pipeline_state, active_vbos);
+	auto mode = synchronous ? CompileMode::Sync : CompileMode::FailOnCompileRequired;
+	update_hash_graphics_pipeline(pipeline_state, mode, &active_vbos);
 	current_pipeline = pipeline_state.program->get_pipeline(pipeline_state.hash);
 	if (current_pipeline.pipeline == VK_NULL_HANDLE)
-	{
-		current_pipeline = build_graphics_pipeline(
-			device, pipeline_state,
-			synchronous ? CompileMode::Sync : CompileMode::FailOnCompileRequired);
-	}
+		current_pipeline = build_graphics_pipeline(device, pipeline_state, mode);
 	return current_pipeline.pipeline != VK_NULL_HANDLE;
 }
 
@@ -1387,11 +1711,11 @@ void CommandBuffer::bind_pipeline(VkPipelineBindPoint bind_point, VkPipeline pip
 	set_dirty(static_state_clobber);
 }
 
-bool CommandBuffer::flush_compute_state(bool synchronous)
+VkPipeline CommandBuffer::flush_compute_state(bool synchronous)
 {
 	if (!pipeline_state.program)
-		return false;
-	VK_ASSERT(current_layout);
+		return VK_NULL_HANDLE;
+	VK_ASSERT(pipeline_state.layout);
 
 	if (current_pipeline.pipeline == VK_NULL_HANDLE)
 		set_dirty(COMMAND_BUFFER_DIRTY_PIPELINE_BIT);
@@ -1400,20 +1724,20 @@ bool CommandBuffer::flush_compute_state(bool synchronous)
 	{
 		VkPipeline old_pipe = current_pipeline.pipeline;
 		if (!flush_compute_pipeline(synchronous))
-			return false;
+			return VK_NULL_HANDLE;
 
 		if (old_pipe != current_pipeline.pipeline)
 			bind_pipeline(VK_PIPELINE_BIND_POINT_COMPUTE, current_pipeline.pipeline, current_pipeline.dynamic_mask);
 	}
 
 	if (current_pipeline.pipeline == VK_NULL_HANDLE)
-		return false;
+		return VK_NULL_HANDLE;
 
 	flush_descriptor_sets();
 
 	if (get_and_clear(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT))
 	{
-		auto &range = current_layout->get_resource_layout().push_constant_range;
+		auto &range = pipeline_state.layout->get_resource_layout().push_constant_range;
 		if (range.stageFlags != 0)
 		{
 			VK_ASSERT(range.offset == 0);
@@ -1423,14 +1747,14 @@ bool CommandBuffer::flush_compute_state(bool synchronous)
 		}
 	}
 
-	return true;
+	return current_pipeline.pipeline;
 }
 
-bool CommandBuffer::flush_render_state(bool synchronous)
+VkPipeline CommandBuffer::flush_render_state(bool synchronous)
 {
 	if (!pipeline_state.program)
-		return false;
-	VK_ASSERT(current_layout);
+		return VK_NULL_HANDLE;
+	VK_ASSERT(pipeline_state.layout);
 
 	if (current_pipeline.pipeline == VK_NULL_HANDLE)
 		set_dirty(COMMAND_BUFFER_DIRTY_PIPELINE_BIT);
@@ -1441,7 +1765,7 @@ bool CommandBuffer::flush_render_state(bool synchronous)
 	{
 		VkPipeline old_pipe = current_pipeline.pipeline;
 		if (!flush_graphics_pipeline(synchronous))
-			return false;
+			return VK_NULL_HANDLE;
 
 		if (old_pipe != current_pipeline.pipeline)
 			bind_pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, current_pipeline.pipeline, current_pipeline.dynamic_mask);
@@ -1450,7 +1774,7 @@ bool CommandBuffer::flush_render_state(bool synchronous)
 		if (current_framebuffer_surface_transform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
 		{
 			// Make sure that if we're using prerotate, our vertex shaders have prerotate.
-			auto spec_constant_mask = current_layout->get_resource_layout().combined_spec_constant_mask;
+			auto spec_constant_mask = pipeline_state.layout->get_resource_layout().combined_spec_constant_mask;
 			constexpr uint32_t expected_mask = 0xfu << VULKAN_NUM_USER_SPEC_CONSTANTS;
 			VK_ASSERT((spec_constant_mask & expected_mask) == expected_mask);
 		}
@@ -1458,13 +1782,13 @@ bool CommandBuffer::flush_render_state(bool synchronous)
 	}
 
 	if (current_pipeline.pipeline == VK_NULL_HANDLE)
-		return false;
+		return VK_NULL_HANDLE;
 
 	flush_descriptor_sets();
 
 	if (get_and_clear(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT))
 	{
-		auto &range = current_layout->get_resource_layout().push_constant_range;
+		auto &range = pipeline_state.layout->get_resource_layout().push_constant_range;
 		if (range.stageFlags != 0)
 		{
 			VK_ASSERT(range.offset == 0);
@@ -1518,58 +1842,79 @@ bool CommandBuffer::flush_render_state(bool synchronous)
 	});
 	dirty_vbos &= ~update_vbo_mask;
 
-	return true;
+	return current_pipeline.pipeline;
 }
 
 bool CommandBuffer::flush_pipeline_state_without_blocking()
 {
 	if (is_compute)
-		return flush_compute_state(false);
+		return flush_compute_state(false) != VK_NULL_HANDLE;
 	else
-		return flush_render_state(false);
+		return flush_render_state(false) != VK_NULL_HANDLE;
 }
 
-void CommandBuffer::wait_events(unsigned num_events, const VkEvent *events,
-                                VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages,
-                                unsigned barriers,
-                                const VkMemoryBarrier *globals, unsigned buffer_barriers,
-                                const VkBufferMemoryBarrier *buffers, unsigned image_barriers,
-                                const VkImageMemoryBarrier *images)
+VkPipeline CommandBuffer::get_current_compute_pipeline()
+{
+	return flush_compute_state(true);
+}
+
+VkPipeline CommandBuffer::get_current_graphics_pipeline()
+{
+	return flush_render_state(true);
+}
+
+void CommandBuffer::wait_events(uint32_t count, const PipelineEvent *events, const VkDependencyInfo *deps)
 {
 	VK_ASSERT(!framebuffer);
 	VK_ASSERT(!actual_render_pass);
 
-	VK_ASSERT(src_stages != 0);
-	VK_ASSERT(dst_stages != 0);
+	Util::SmallVector<VkEvent> vk_events;
+	vk_events.reserve(count);
+	for (uint32_t i = 0; i < count; i++)
+		vk_events.push_back(events[i]->get_event());
 
 	if (device->get_workarounds().emulate_event_as_pipeline_barrier)
 	{
-		barrier(src_stages, dst_stages,
-		        barriers, globals,
-		        buffer_barriers, buffers,
-		        image_barriers, images);
+		for (uint32_t i = 0; i < count; i++)
+			barrier(deps[i]);
+	}
+	else if (device->get_device_features().vk13_features.synchronization2)
+	{
+		table.vkCmdWaitEvents2(cmd, count, vk_events.data(), deps);
 	}
 	else
 	{
-		table.vkCmdWaitEvents(cmd, num_events, events, src_stages, dst_stages,
-		                      barriers, globals, buffer_barriers, buffers, image_barriers, images);
+		Sync1CompatData sync1;
+		for (uint32_t i = 0; i < count; i++)
+			convert_vk_dependency_info(deps[i], sync1);
+		table.vkCmdWaitEvents(cmd, count, vk_events.data(),
+		                      sync1.src_stages, sync1.dst_stages,
+		                      uint32_t(sync1.mem_barriers.size()), sync1.mem_barriers.data(),
+		                      uint32_t(sync1.buf_barriers.size()), sync1.buf_barriers.data(),
+		                      uint32_t(sync1.img_barriers.size()), sync1.img_barriers.data());
 	}
 }
 
-PipelineEvent CommandBuffer::signal_event(VkPipelineStageFlags stages)
-{
-	auto event = device->begin_signal_event(stages);
-	complete_signal_event(*event);
-	return event;
-}
-
-void CommandBuffer::complete_signal_event(const EventHolder &event)
+PipelineEvent CommandBuffer::signal_event(const VkDependencyInfo &dep)
 {
 	VK_ASSERT(!framebuffer);
 	VK_ASSERT(!actual_render_pass);
-	VK_ASSERT(event.get_stages() != 0);
+	auto event = device->begin_signal_event();
+
 	if (!device->get_workarounds().emulate_event_as_pipeline_barrier)
-		table.vkCmdSetEvent(cmd, event.get_event(), event.get_stages());
+	{
+		if (device->get_device_features().vk13_features.synchronization2)
+		{
+			table.vkCmdSetEvent2(cmd, event->get_event(), &dep);
+		}
+		else
+		{
+			Sync1CompatData sync1;
+			convert_vk_dependency_info(dep, sync1);
+			table.vkCmdSetEvent(cmd, event->get_event(), sync1.src_stages);
+		}
+	}
+	return event;
 }
 
 void CommandBuffer::set_vertex_attrib(uint32_t attrib, uint32_t binding, VkFormat format, VkDeviceSize offset)
@@ -1650,7 +1995,7 @@ void CommandBuffer::push_constants(const void *data, VkDeviceSize offset, VkDevi
 	set_dirty(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT);
 }
 
-#ifdef GRANITE_VULKAN_FILESYSTEM
+#ifdef GRANITE_VULKAN_SYSTEM_HANDLES
 void CommandBuffer::set_program(const std::string &compute, const std::vector<std::pair<std::string, int>> &defines)
 {
 	auto *p = device->get_shader_manager().register_compute(compute);
@@ -1675,7 +2020,50 @@ void CommandBuffer::set_program(const std::string &vertex, const std::string &fr
 	else
 		set_program(nullptr);
 }
+
+void CommandBuffer::set_program(const std::string &task, const std::string &mesh, const std::string &fragment,
+                                const std::vector<std::pair<std::string, int>> &defines)
+{
+	auto *p = device->get_shader_manager().register_graphics(task, mesh, fragment);
+	if (p)
+	{
+		auto *variant = p->register_variant(defines);
+		set_program(variant->get_program());
+	}
+	else
+		set_program(nullptr);
+}
 #endif
+
+void CommandBuffer::set_program_group(Program *const *programs, unsigned num_programs,
+                                      const PipelineLayout *layout)
+{
+	pipeline_state.program = num_programs ? programs[0] : nullptr;
+	pipeline_state.program_group = { programs, programs + num_programs };
+	current_pipeline = {};
+	set_dirty(COMMAND_BUFFER_DIRTY_PIPELINE_BIT);
+
+	VK_ASSERT(device->get_device_features().device_generated_commands_features.deviceGeneratedCommands);
+
+	if (!num_programs)
+		return;
+
+	VK_ASSERT(framebuffer && pipeline_state.program->get_shader(ShaderStage::Fragment));
+#ifdef VULKAN_DEBUG
+	for (unsigned i = 0; i < num_programs; i++)
+		VK_ASSERT(pipeline_state.program_group[i]->get_shader(ShaderStage::Fragment));
+#endif
+
+	if (!layout && pipeline_state.program)
+	{
+		CombinedResourceLayout combined_layout = programs[0]->get_pipeline_layout()->get_resource_layout();
+		for (unsigned i = 1; i < num_programs; i++)
+			device->merge_combined_resource_layout(combined_layout, *programs[i]);
+		layout = device->request_pipeline_layout(combined_layout, nullptr);
+	}
+
+	set_program_layout(layout);
+}
 
 void CommandBuffer::set_program(Program *program)
 {
@@ -1683,51 +2071,79 @@ void CommandBuffer::set_program(Program *program)
 		return;
 
 	pipeline_state.program = program;
+	pipeline_state.program_group.clear();
 	current_pipeline = {};
 
 	set_dirty(COMMAND_BUFFER_DIRTY_PIPELINE_BIT);
 	if (!program)
 		return;
 
-	VK_ASSERT((framebuffer && pipeline_state.program->get_shader(ShaderStage::Vertex)) ||
+	VK_ASSERT((framebuffer && pipeline_state.program->get_shader(ShaderStage::Fragment)) ||
 	          (!framebuffer && pipeline_state.program->get_shader(ShaderStage::Compute)));
 
-	if (!current_layout)
-	{
-		dirty_sets = ~0u;
-		set_dirty(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT);
+	set_program_layout(program->get_pipeline_layout());
+}
 
-		current_layout = program->get_pipeline_layout();
-		current_pipeline_layout = current_layout->get_layout();
-	}
-	else if (program->get_pipeline_layout()->get_hash() != current_layout->get_hash())
+void CommandBuffer::set_program_layout(const PipelineLayout *layout)
+{
+	VK_ASSERT(layout);
+	if (!pipeline_state.layout)
 	{
-		auto &new_layout = program->get_pipeline_layout()->get_resource_layout();
-		auto &old_layout = current_layout->get_resource_layout();
+		dirty_sets_realloc = ~0u;
+		set_dirty(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT);
+	}
+	else if (layout->get_hash() != pipeline_state.layout->get_hash())
+	{
+		auto &new_layout = layout->get_resource_layout();
+		auto &old_layout = pipeline_state.layout->get_resource_layout();
+
+		uint32_t first_invalidated_set_index = VULKAN_NUM_DESCRIPTOR_SETS;
+		uint32_t new_push_set = layout->get_push_set_index();
+		uint32_t old_push_set = pipeline_state.layout->get_push_set_index();
+		if (new_push_set == old_push_set)
+		{
+			new_push_set = UINT32_MAX;
+			old_push_set = UINT32_MAX;
+		}
 
 		// If the push constant layout changes, all descriptor sets
 		// are invalidated.
 		if (new_layout.push_constant_layout_hash != old_layout.push_constant_layout_hash)
 		{
-			dirty_sets = ~0u;
+			first_invalidated_set_index = 0;
 			set_dirty(COMMAND_BUFFER_DIRTY_PUSH_CONSTANTS_BIT);
 		}
 		else
 		{
 			// Find the first set whose descriptor set layout differs.
-			auto *new_pipe_layout = program->get_pipeline_layout();
 			for (unsigned set = 0; set < VULKAN_NUM_DESCRIPTOR_SETS; set++)
 			{
-				if (new_pipe_layout->get_allocator(set) != current_layout->get_allocator(set))
+				if (layout->get_allocator(set) != pipeline_state.layout->get_allocator(set) ||
+				    set == new_push_set || set == old_push_set)
 				{
-					dirty_sets |= ~((1u << set) - 1);
+					first_invalidated_set_index = set;
 					break;
 				}
 			}
 		}
-		current_layout = program->get_pipeline_layout();
-		current_pipeline_layout = current_layout->get_layout();
+
+		if (first_invalidated_set_index < VULKAN_NUM_DESCRIPTOR_SETS)
+		{
+			dirty_sets_rebind |= ~((1u << first_invalidated_set_index) - 1u);
+
+			for (unsigned set = first_invalidated_set_index; set < VULKAN_NUM_DESCRIPTOR_SETS; set++)
+			{
+				if (layout->get_allocator(set) != pipeline_state.layout->get_allocator(set) ||
+				    set == new_push_set || set == old_push_set)
+				{
+					dirty_sets_realloc |= 1u << set;
+				}
+			}
+		}
 	}
+
+	pipeline_state.layout = layout;
+	current_pipeline_layout = pipeline_state.layout->get_layout();
 }
 
 void *CommandBuffer::allocate_constant_data(unsigned set, unsigned binding, VkDeviceSize size)
@@ -1739,7 +2155,7 @@ void *CommandBuffer::allocate_constant_data(unsigned set, unsigned binding, VkDe
 		device->request_uniform_block(ubo_block, size);
 		data = ubo_block.allocate(size);
 	}
-	set_uniform_buffer(set, binding, *ubo_block.gpu, data.offset, data.padded_size);
+	set_uniform_buffer(set, binding, *data.buffer, data.offset, data.padded_size);
 	return data.host;
 }
 
@@ -1751,14 +2167,14 @@ void *CommandBuffer::allocate_index_data(VkDeviceSize size, VkIndexType index_ty
 		device->request_index_block(ibo_block, size);
 		data = ibo_block.allocate(size);
 	}
-	set_index_buffer(*ibo_block.gpu, data.offset, index_type);
+	set_index_buffer(*data.buffer, data.offset, index_type);
 	return data.host;
 }
 
-void *CommandBuffer::update_buffer(const Buffer &buffer, VkDeviceSize offset, VkDeviceSize size)
+BufferBlockAllocation CommandBuffer::request_scratch_buffer_memory(VkDeviceSize size)
 {
 	if (size == 0)
-		return nullptr;
+		return {};
 
 	auto data = staging_block.allocate(size);
 	if (!data.host)
@@ -1766,7 +2182,15 @@ void *CommandBuffer::update_buffer(const Buffer &buffer, VkDeviceSize offset, Vk
 		device->request_staging_block(staging_block, size);
 		data = staging_block.allocate(size);
 	}
-	copy_buffer(buffer, offset, *staging_block.cpu, data.offset, size);
+
+	return data;
+}
+
+void *CommandBuffer::update_buffer(const Buffer &buffer, VkDeviceSize offset, VkDeviceSize size)
+{
+	auto data = request_scratch_buffer_memory(size);
+	if (data.host)
+		copy_buffer(buffer, offset, *data.buffer, data.offset, size);
 	return data.host;
 }
 
@@ -1779,18 +2203,18 @@ void *CommandBuffer::update_image(const Image &image, const VkOffset3D &offset, 
 	uint32_t height = image.get_height(subresource.mipLevel);
 	uint32_t depth = image.get_depth(subresource.mipLevel);
 
+	if ((subresource.aspectMask & (VK_IMAGE_ASPECT_PLANE_0_BIT |
+	                               VK_IMAGE_ASPECT_PLANE_1_BIT |
+	                               VK_IMAGE_ASPECT_PLANE_2_BIT)) != 0)
+	{
+		format_ycbcr_downsample_dimensions(create_info.format, subresource.aspectMask, width, height);
+	}
+
 	if (!row_length)
 		row_length = width;
 
 	if (!image_height)
 		image_height = height;
-
-	if ((subresource.aspectMask & (VK_IMAGE_ASPECT_PLANE_0_BIT |
-	                               VK_IMAGE_ASPECT_PLANE_1_BIT |
-	                               VK_IMAGE_ASPECT_PLANE_2_BIT)) != 0)
-	{
-		format_ycbcr_downsample_dimensions(create_info.format, subresource.aspectMask, row_length, image_height);
-	}
 
 	uint32_t blocks_x = row_length;
 	uint32_t blocks_y = image_height;
@@ -1806,7 +2230,7 @@ void *CommandBuffer::update_image(const Image &image, const VkOffset3D &offset, 
 		data = staging_block.allocate(size);
 	}
 
-	copy_buffer_to_image(image, *staging_block.cpu, data.offset, offset, extent, row_length, image_height, subresource);
+	copy_buffer_to_image(image, *data.buffer, data.offset, offset, extent, row_length, image_height, subresource);
 	return data.host;
 }
 
@@ -1829,7 +2253,7 @@ void *CommandBuffer::allocate_vertex_data(unsigned binding, VkDeviceSize size, V
 		data = vbo_block.allocate(size);
 	}
 
-	set_vertex_binding(binding, *vbo_block.gpu, data.offset, stride, step_rate);
+	set_vertex_binding(binding, *data.buffer, data.offset, stride, step_rate);
 	return data.host;
 }
 
@@ -1841,21 +2265,21 @@ void CommandBuffer::set_uniform_buffer(unsigned set, unsigned binding, const Buf
 	VK_ASSERT(buffer.get_create_info().usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	auto &b = bindings.bindings[set][binding];
 
-	if (buffer.get_cookie() == bindings.cookies[set][binding] && b.buffer.range == range)
+	if (buffer.get_cookie() == bindings.cookies[set][binding] && b.buffer.dynamic.range == range)
 	{
-		if (b.dynamic_offset != offset)
+		if (b.buffer.push.offset != offset)
 		{
-			dirty_sets_dynamic |= 1u << set;
-			b.dynamic_offset = offset;
+			dirty_sets_rebind |= 1u << set;
+			b.buffer.push.offset = offset;
 		}
 	}
 	else
 	{
-		b.buffer = { buffer.get_buffer(), 0, range };
-		b.dynamic_offset = offset;
+		b.buffer.dynamic = { buffer.get_buffer(), 0, range };
+		b.buffer.push = { buffer.get_buffer(), offset, range };
 		bindings.cookies[set][binding] = buffer.get_cookie();
 		bindings.secondary_cookies[set][binding] = 0;
-		dirty_sets |= 1u << set;
+		dirty_sets_realloc |= 1u << set;
 	}
 }
 
@@ -1867,14 +2291,14 @@ void CommandBuffer::set_storage_buffer(unsigned set, unsigned binding, const Buf
 	VK_ASSERT(buffer.get_create_info().usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	auto &b = bindings.bindings[set][binding];
 
-	if (buffer.get_cookie() == bindings.cookies[set][binding] && b.buffer.offset == offset && b.buffer.range == range)
+	if (buffer.get_cookie() == bindings.cookies[set][binding] && b.buffer.dynamic.offset == offset && b.buffer.dynamic.range == range)
 		return;
 
-	b.buffer = { buffer.get_buffer(), offset, range };
-	b.dynamic_offset = 0;
+	b.buffer.dynamic = { buffer.get_buffer(), offset, range };
+	b.buffer.push = b.buffer.dynamic;
 	bindings.cookies[set][binding] = buffer.get_cookie();
 	bindings.secondary_cookies[set][binding] = 0;
-	dirty_sets |= 1u << set;
+	dirty_sets_realloc |= 1u << set;
 }
 
 void CommandBuffer::set_uniform_buffer(unsigned set, unsigned binding, const Buffer &buffer)
@@ -1897,7 +2321,7 @@ void CommandBuffer::set_sampler(unsigned set, unsigned binding, const Sampler &s
 	auto &b = bindings.bindings[set][binding];
 	b.image.fp.sampler = sampler.get_sampler();
 	b.image.integer.sampler = sampler.get_sampler();
-	dirty_sets |= 1u << set;
+	dirty_sets_realloc |= 1u << set;
 	bindings.secondary_cookies[set][binding] = sampler.get_cookie();
 }
 
@@ -1911,7 +2335,7 @@ void CommandBuffer::set_buffer_view_common(unsigned set, unsigned binding, const
 	b.buffer_view = view.get_view();
 	bindings.cookies[set][binding] = view.get_cookie();
 	bindings.secondary_cookies[set][binding] = 0;
-	dirty_sets |= 1u << set;
+	dirty_sets_realloc |= 1u << set;
 }
 
 void CommandBuffer::set_buffer_view(unsigned set, unsigned binding, const BufferView &view)
@@ -1953,7 +2377,7 @@ void CommandBuffer::set_input_attachments(unsigned set, unsigned start_binding)
 		b.image.fp.imageView = view->get_float_view();
 		b.image.integer.imageView = view->get_integer_view();
 		bindings.cookies[set][start_binding + i] = view->get_cookie();
-		dirty_sets |= 1u << set;
+		dirty_sets_realloc |= 1u << set;
 	}
 }
 
@@ -1974,14 +2398,14 @@ void CommandBuffer::set_texture(unsigned set, unsigned binding,
 	b.image.integer.imageLayout = layout;
 	b.image.integer.imageView = integer_view;
 	bindings.cookies[set][binding] = cookie;
-	dirty_sets |= 1u << set;
+	dirty_sets_realloc |= 1u << set;
 }
 
 void CommandBuffer::set_bindless(unsigned set, VkDescriptorSet desc_set)
 {
 	VK_ASSERT(set < VULKAN_NUM_DESCRIPTOR_SETS);
 	bindless_sets[set] = desc_set;
-	dirty_sets |= 1u << set;
+	dirty_sets_realloc |= 1u << set;
 }
 
 void CommandBuffer::set_texture(unsigned set, unsigned binding, const ImageView &view)
@@ -2052,188 +2476,233 @@ void CommandBuffer::set_unorm_storage_texture(unsigned set, unsigned binding, co
 	            view.get_image().get_layout(VK_IMAGE_LAYOUT_GENERAL), view.get_cookie() | COOKIE_BIT_UNORM);
 }
 
-void CommandBuffer::rebind_descriptor_set(uint32_t set)
+void CommandBuffer::flush_descriptor_binds(const VkDescriptorSet *sets,
+                                           uint32_t &first_set, uint32_t &set_count,
+                                           uint32_t *dynamic_offsets, uint32_t &num_dynamic_offsets)
 {
-	auto &layout = current_layout->get_resource_layout();
-	if (layout.bindless_descriptor_set_mask & (1u << set))
-	{
-		VK_ASSERT(bindless_sets[set]);
-		table.vkCmdBindDescriptorSets(cmd, actual_render_pass ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
-		                              current_pipeline_layout, set, 1, &bindless_sets[set], 0, nullptr);
+	if (!set_count)
 		return;
-	}
 
-	auto &set_layout = layout.sets[set];
-	uint32_t num_dynamic_offsets = 0;
-	uint32_t dynamic_offsets[VULKAN_NUM_BINDINGS];
+	table.vkCmdBindDescriptorSets(
+	    cmd, actual_render_pass ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
+	    current_pipeline_layout, first_set, set_count, sets, num_dynamic_offsets, dynamic_offsets);
 
-	// UBOs
-	for_each_bit(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			VK_ASSERT(num_dynamic_offsets < VULKAN_NUM_BINDINGS);
-			dynamic_offsets[num_dynamic_offsets++] = bindings.bindings[set][binding + i].dynamic_offset;
-		}
-	});
-
-	table.vkCmdBindDescriptorSets(cmd, actual_render_pass ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
-	                              current_pipeline_layout, set, 1, &allocated_sets[set], num_dynamic_offsets, dynamic_offsets);
+	set_count = 0;
+	num_dynamic_offsets = 0;
 }
 
-void CommandBuffer::flush_descriptor_set(uint32_t set)
+void CommandBuffer::rebind_descriptor_set(uint32_t set, VkDescriptorSet *sets, uint32_t &first_set, uint32_t &set_count,
+                                          uint32_t *dynamic_offsets, uint32_t &num_dynamic_offsets)
 {
-	auto &layout = current_layout->get_resource_layout();
+	if (set_count == 0)
+		first_set = set;
+	else if (first_set + set_count != set)
+	{
+		flush_descriptor_binds(sets, first_set, set_count, dynamic_offsets, num_dynamic_offsets);
+		first_set = set;
+	}
+
+	auto &layout = pipeline_state.layout->get_resource_layout();
 	if (layout.bindless_descriptor_set_mask & (1u << set))
 	{
 		VK_ASSERT(bindless_sets[set]);
-		table.vkCmdBindDescriptorSets(cmd, actual_render_pass ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
-		                              current_pipeline_layout, set, 1, &bindless_sets[set], 0, nullptr);
+		sets[set_count++] = bindless_sets[set];
 		return;
 	}
 
 	auto &set_layout = layout.sets[set];
-	uint32_t num_dynamic_offsets = 0;
-	uint32_t dynamic_offsets[VULKAN_NUM_BINDINGS];
-	Hasher h;
-
-	h.u32(set_layout.fp_mask);
 
 	// UBOs
 	for_each_bit(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
 		unsigned array_size = set_layout.array_size[binding];
 		for (unsigned i = 0; i < array_size; i++)
 		{
-			h.u64(bindings.cookies[set][binding + i]);
-			h.u32(bindings.bindings[set][binding + i].buffer.range);
-			VK_ASSERT(bindings.bindings[set][binding + i].buffer.buffer != VK_NULL_HANDLE);
-
-			VK_ASSERT(num_dynamic_offsets < VULKAN_NUM_BINDINGS);
-			dynamic_offsets[num_dynamic_offsets++] = bindings.bindings[set][binding + i].dynamic_offset;
+			VK_ASSERT(num_dynamic_offsets < VULKAN_NUM_DYNAMIC_UBOS);
+			dynamic_offsets[num_dynamic_offsets++] = bindings.bindings[set][binding + i].buffer.push.offset;
 		}
 	});
+
+	sets[set_count++] = allocated_sets[set];
+}
+
+void CommandBuffer::validate_descriptor_binds(uint32_t set)
+{
+#ifdef VULKAN_DEBUG
+	auto &layout = pipeline_state.layout->get_resource_layout();
+	auto &set_layout = layout.sets[set];
+
+	for_each_bit(set_layout.uniform_buffer_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].buffer.dynamic.buffer != VK_NULL_HANDLE);
+	             });
 
 	// SSBOs
-	for_each_bit(set_layout.storage_buffer_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			h.u32(bindings.bindings[set][binding + i].buffer.offset);
-			h.u32(bindings.bindings[set][binding + i].buffer.range);
-			VK_ASSERT(bindings.bindings[set][binding + i].buffer.buffer != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.storage_buffer_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].buffer.dynamic.buffer != VK_NULL_HANDLE);
+	             });
 
 	// Texel buffers
-	for_each_bit(set_layout.sampled_texel_buffer_mask | set_layout.storage_texel_buffer_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			VK_ASSERT(bindings.bindings[set][binding + i].buffer_view != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.sampled_texel_buffer_mask | set_layout.storage_texel_buffer_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].buffer_view != VK_NULL_HANDLE);
+	             });
 
 	// Sampled images
-	for_each_bit(set_layout.sampled_image_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			if ((set_layout.immutable_sampler_mask & (1u << (binding + i))) == 0)
-			{
-				h.u64(bindings.secondary_cookies[set][binding + i]);
-				VK_ASSERT(bindings.bindings[set][binding + i].image.fp.sampler != VK_NULL_HANDLE);
-			}
-			h.u32(bindings.bindings[set][binding + i].image.fp.imageLayout);
-			VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.sampled_image_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+		             {
+			             if ((set_layout.immutable_sampler_mask & (1u << (binding + i))) == 0)
+				             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.sampler != VK_NULL_HANDLE);
+			             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
+		             }
+	             });
 
 	// Separate images
-	for_each_bit(set_layout.separate_image_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			h.u32(bindings.bindings[set][binding + i].image.fp.imageLayout);
-			VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.separate_image_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
+	             });
 
 	// Separate samplers
-	for_each_bit(set_layout.sampler_mask & ~set_layout.immutable_sampler_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.secondary_cookies[set][binding + i]);
-			VK_ASSERT(bindings.bindings[set][binding + i].image.fp.sampler != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.sampler_mask & ~set_layout.immutable_sampler_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.sampler != VK_NULL_HANDLE);
+	             });
 
 	// Storage images
-	for_each_bit(set_layout.storage_image_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			h.u32(bindings.bindings[set][binding + i].image.fp.imageLayout);
-			VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.storage_image_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
+	             });
 
 	// Input attachments
-	for_each_bit(set_layout.input_attachment_mask, [&](uint32_t binding) {
-		unsigned array_size = set_layout.array_size[binding];
-		for (unsigned i = 0; i < array_size; i++)
-		{
-			h.u64(bindings.cookies[set][binding + i]);
-			h.u32(bindings.bindings[set][binding + i].image.fp.imageLayout);
-			VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
-		}
-	});
+	for_each_bit(set_layout.input_attachment_mask,
+	             [&](uint32_t binding)
+	             {
+		             unsigned array_size = set_layout.array_size[binding];
+		             for (unsigned i = 0; i < array_size; i++)
+			             VK_ASSERT(bindings.bindings[set][binding + i].image.fp.imageView != VK_NULL_HANDLE);
+	             });
+#else
+	(void)set;
+#endif
+}
 
-	Hash hash = h.get();
-	auto allocated = current_layout->get_allocator(set)->find(thread_index, hash);
+void CommandBuffer::push_descriptor_set(uint32_t set)
+{
+#ifdef VULKAN_DEBUG
+	validate_descriptor_binds(set);
+#endif
 
-	// The descriptor set was not successfully cached, rebuild.
-	if (!allocated.second)
+	VkDescriptorUpdateTemplate update_template = pipeline_state.layout->get_update_template(set);
+	VK_ASSERT(update_template);
+	table.vkCmdPushDescriptorSetWithTemplateKHR(
+		cmd, update_template,
+		pipeline_state.layout->get_layout(), set, bindings.bindings[set]);
+}
+
+void CommandBuffer::flush_descriptor_set(uint32_t set, VkDescriptorSet *sets,
+                                         uint32_t &first_set, uint32_t &set_count,
+                                         uint32_t *dynamic_offsets, uint32_t &num_dynamic_offsets)
+{
+	if (set_count == 0)
+		first_set = set;
+	else if (first_set + set_count != set)
 	{
-		auto update_template = current_layout->get_update_template(set);
-		VK_ASSERT(update_template);
-		table.vkUpdateDescriptorSetWithTemplate(device->get_device(), allocated.first,
-		                                        update_template, bindings.bindings[set]);
+		flush_descriptor_binds(sets, first_set, set_count, dynamic_offsets, num_dynamic_offsets);
+		first_set = set;
 	}
 
-	table.vkCmdBindDescriptorSets(cmd, actual_render_pass ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
-	                              current_pipeline_layout, set, 1, &allocated.first, num_dynamic_offsets, dynamic_offsets);
-	allocated_sets[set] = allocated.first;
+	auto &layout = pipeline_state.layout->get_resource_layout();
+	if (layout.bindless_descriptor_set_mask & (1u << set))
+	{
+		VK_ASSERT(bindless_sets[set]);
+		sets[set_count++] = bindless_sets[set];
+		return;
+	}
+
+	auto &set_layout = layout.sets[set];
+
+#ifdef VULKAN_DEBUG
+	validate_descriptor_binds(set);
+#endif
+
+	// UBOs
+	for_each_bit(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
+		unsigned array_size = set_layout.array_size[binding];
+		for (unsigned i = 0; i < array_size; i++)
+			dynamic_offsets[num_dynamic_offsets++] = bindings.bindings[set][binding + i].buffer.push.offset;
+	});
+
+	auto vk_set = pipeline_state.layout->get_allocator(set)->request_descriptor_set(thread_index, device->frame_context_index);
+
+	VkDescriptorUpdateTemplate update_template = pipeline_state.layout->get_update_template(set);
+	VK_ASSERT(update_template);
+	table.vkUpdateDescriptorSetWithTemplate(device->get_device(), vk_set, update_template, bindings.bindings[set]);
+	sets[set_count++] = vk_set;
+	allocated_sets[set] = vk_set;
 }
 
 void CommandBuffer::flush_descriptor_sets()
 {
-	auto &layout = current_layout->get_resource_layout();
+	auto &layout = pipeline_state.layout->get_resource_layout();
 
-	uint32_t set_update = layout.descriptor_set_mask & dirty_sets;
-	for_each_bit(set_update, [&](uint32_t set) { flush_descriptor_set(set); });
-	dirty_sets &= ~set_update;
+	uint32_t first_set = 0;
+	uint32_t set_count = 0;
+	VkDescriptorSet sets[VULKAN_NUM_DESCRIPTOR_SETS];
+	uint32_t dynamic_offsets[VULKAN_NUM_DYNAMIC_UBOS];
+	uint32_t num_dynamic_offsets = 0;
 
-	// If we update a set, we also bind dynamically.
-	dirty_sets_dynamic &= ~set_update;
+	dirty_sets_rebind |= dirty_sets_realloc;
+	uint32_t set_update_mask = layout.descriptor_set_mask & dirty_sets_rebind;
 
-	// If we only rebound UBOs, we might get away with just rebinding descriptor sets, no hashing and lookup required.
-	uint32_t dynamic_set_update = layout.descriptor_set_mask & dirty_sets_dynamic;
-	for_each_bit(dynamic_set_update, [&](uint32_t set) { rebind_descriptor_set(set); });
-	dirty_sets_dynamic &= ~dynamic_set_update;
+	uint32_t push_set_index = pipeline_state.layout->get_push_set_index();
+	if (push_set_index != UINT32_MAX && (dirty_sets_rebind & (1u << push_set_index)) != 0)
+	{
+		push_descriptor_set(push_set_index);
+		set_update_mask &= ~(1u << push_set_index);
+	}
+
+	for_each_bit(set_update_mask, [&](uint32_t set) {
+		if ((dirty_sets_realloc & (1u << set)) != 0)
+			flush_descriptor_set(set, sets, first_set, set_count, dynamic_offsets, num_dynamic_offsets);
+		else
+			rebind_descriptor_set(set, sets, first_set, set_count, dynamic_offsets, num_dynamic_offsets);
+	});
+
+	dirty_sets_realloc = 0;
+	dirty_sets_rebind = 0;
+	flush_descriptor_binds(sets, first_set, set_count, dynamic_offsets, num_dynamic_offsets);
 }
 
 void CommandBuffer::draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
 {
 	VK_ASSERT(!is_compute);
-	if (flush_render_state(true))
+	if (flush_render_state(true) != VK_NULL_HANDLE)
 	{
-		set_backtrace_checkpoint();
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
 		table.vkCmdDraw(cmd, vertex_count, instance_count, first_vertex, first_instance);
 	}
 	else
@@ -2245,103 +2714,234 @@ void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t instance_count, 
 {
 	VK_ASSERT(!is_compute);
 	VK_ASSERT(index_state.buffer != VK_NULL_HANDLE);
-	if (flush_render_state(true))
+	if (flush_render_state(true) != VK_NULL_HANDLE)
 	{
-		set_backtrace_checkpoint();
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
 		table.vkCmdDrawIndexed(cmd, index_count, instance_count, first_index, vertex_offset, first_instance);
 	}
 	else
 		LOGE("Failed to flush render state, draw call will be dropped.\n");
 }
 
-void CommandBuffer::draw_indirect(const Vulkan::Buffer &buffer,
-                                  uint32_t offset, uint32_t draw_count, uint32_t stride)
+void CommandBuffer::draw_mesh_tasks(uint32_t tasks_x, uint32_t tasks_y, uint32_t tasks_z)
 {
 	VK_ASSERT(!is_compute);
-	if (flush_render_state(true))
+
+	if (framebuffer_is_multiview && !get_device().get_device_features().mesh_shader_features.multiviewMeshShader)
 	{
-		set_backtrace_checkpoint();
+		LOGE("meshShader not supported in multiview, dropping draw call.\n");
+		return;
+	}
+
+	if (flush_render_state(true) != VK_NULL_HANDLE)
+	{
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Mesh) != nullptr);
+		table.vkCmdDrawMeshTasksEXT(cmd, tasks_x, tasks_y, tasks_z);
+	}
+	else
+		LOGE("Failed to flush render state, draw call will be dropped.\n");
+}
+
+void CommandBuffer::draw_mesh_tasks_indirect(const Buffer &buffer, VkDeviceSize offset,
+                                             uint32_t draw_count, uint32_t stride)
+{
+	VK_ASSERT(!is_compute);
+
+	if (framebuffer_is_multiview && !get_device().get_device_features().mesh_shader_features.multiviewMeshShader)
+	{
+		LOGE("meshShader not supported in multiview, dropping draw call.\n");
+		return;
+	}
+
+	if (flush_render_state(true) != VK_NULL_HANDLE)
+	{
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Mesh) != nullptr);
+		table.vkCmdDrawMeshTasksIndirectEXT(cmd, buffer.get_buffer(), offset, draw_count, stride);
+	}
+	else
+		LOGE("Failed to flush render state, draw call will be dropped.\n");
+}
+
+void CommandBuffer::draw_mesh_tasks_multi_indirect(const Buffer &buffer, VkDeviceSize offset,
+                                                   uint32_t draw_count, uint32_t stride,
+                                                   const Buffer &count, VkDeviceSize count_offset)
+{
+	VK_ASSERT(!is_compute);
+
+	if (framebuffer_is_multiview && !get_device().get_device_features().mesh_shader_features.multiviewMeshShader)
+	{
+		LOGE("meshShader not supported in multiview, dropping draw call.\n");
+		return;
+	}
+
+	if (flush_render_state(true) != VK_NULL_HANDLE)
+	{
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Mesh) != nullptr);
+		table.vkCmdDrawMeshTasksIndirectCountEXT(cmd, buffer.get_buffer(), offset,
+		                                         count.get_buffer(), count_offset,
+		                                         draw_count, stride);
+	}
+	else
+		LOGE("Failed to flush render state, draw call will be dropped.\n");
+}
+
+void CommandBuffer::draw_indirect(const Vulkan::Buffer &buffer,
+                                  VkDeviceSize offset, uint32_t draw_count, uint32_t stride)
+{
+	VK_ASSERT(!is_compute);
+	if (flush_render_state(true) != VK_NULL_HANDLE)
+	{
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
 		table.vkCmdDrawIndirect(cmd, buffer.get_buffer(), offset, draw_count, stride);
 	}
 	else
 		LOGE("Failed to flush render state, draw call will be dropped.\n");
 }
 
-void CommandBuffer::draw_multi_indirect(const Buffer &buffer, uint32_t offset, uint32_t draw_count, uint32_t stride,
-                                        const Buffer &count, uint32_t count_offset)
+void CommandBuffer::draw_multi_indirect(const Buffer &buffer, VkDeviceSize offset, uint32_t draw_count, uint32_t stride,
+                                        const Buffer &count, VkDeviceSize count_offset)
 {
 	VK_ASSERT(!is_compute);
-	if (!get_device().get_device_features().supports_draw_indirect_count)
+	if (!get_device().get_device_features().vk12_features.drawIndirectCount)
 	{
 		LOGE("VK_KHR_draw_indirect_count not supported, dropping draw call.\n");
 		return;
 	}
 
-	if (flush_render_state(true))
+	if (flush_render_state(true) != VK_NULL_HANDLE)
 	{
-		set_backtrace_checkpoint();
-		table.vkCmdDrawIndirectCountKHR(cmd, buffer.get_buffer(), offset,
-		                                count.get_buffer(), count_offset,
-		                                draw_count, stride);
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
+		table.vkCmdDrawIndirectCount(cmd, buffer.get_buffer(), offset,
+		                             count.get_buffer(), count_offset,
+		                             draw_count, stride);
 	}
 	else
 		LOGE("Failed to flush render state, draw call will be dropped.\n");
 }
 
-void CommandBuffer::draw_indexed_multi_indirect(const Buffer &buffer, uint32_t offset, uint32_t draw_count, uint32_t stride,
-                                                const Buffer &count, uint32_t count_offset)
+void CommandBuffer::draw_indexed_multi_indirect(const Buffer &buffer, VkDeviceSize offset, uint32_t draw_count, uint32_t stride,
+                                                const Buffer &count, VkDeviceSize count_offset)
 {
 	VK_ASSERT(!is_compute);
-	if (!get_device().get_device_features().supports_draw_indirect_count)
+	if (!get_device().get_device_features().vk12_features.drawIndirectCount)
 	{
 		LOGE("VK_KHR_draw_indirect_count not supported, dropping draw call.\n");
 		return;
 	}
 
-	if (flush_render_state(true))
+	if (flush_render_state(true) != VK_NULL_HANDLE)
 	{
-		set_backtrace_checkpoint();
-		table.vkCmdDrawIndexedIndirectCountKHR(cmd, buffer.get_buffer(), offset,
-		                                       count.get_buffer(), count_offset,
-		                                       draw_count, stride);
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
+		table.vkCmdDrawIndexedIndirectCount(cmd, buffer.get_buffer(), offset,
+		                                    count.get_buffer(), count_offset,
+		                                    draw_count, stride);
 	}
 	else
 		LOGE("Failed to flush render state, draw call will be dropped.\n");
 }
 
 void CommandBuffer::draw_indexed_indirect(const Vulkan::Buffer &buffer,
-                                          uint32_t offset, uint32_t draw_count, uint32_t stride)
+                                          VkDeviceSize offset, uint32_t draw_count, uint32_t stride)
 {
 	VK_ASSERT(!is_compute);
-	if (flush_render_state(true))
+	if (flush_render_state(true) != VK_NULL_HANDLE)
 	{
+		VK_ASSERT(pipeline_state.program->get_shader(ShaderStage::Vertex) != nullptr);
 		table.vkCmdDrawIndexedIndirect(cmd, buffer.get_buffer(), offset, draw_count, stride);
-		set_backtrace_checkpoint();
 	}
 	else
 		LOGE("Failed to flush render state, draw call will be dropped.\n");
 }
 
-void CommandBuffer::dispatch_indirect(const Buffer &buffer, uint32_t offset)
+void CommandBuffer::dispatch_indirect(const Buffer &buffer, VkDeviceSize offset)
 {
 	VK_ASSERT(is_compute);
-	if (flush_compute_state(true))
+	if (flush_compute_state(true) != VK_NULL_HANDLE)
 	{
-		set_backtrace_checkpoint();
 		table.vkCmdDispatchIndirect(cmd, buffer.get_buffer(), offset);
 	}
 	else
 		LOGE("Failed to flush render state, dispatch will be dropped.\n");
 }
 
+void CommandBuffer::execute_indirect_commands(
+		const IndirectLayout *indirect_layout, uint32_t sequences,
+		const Vulkan::Buffer &indirect, VkDeviceSize offset,
+		const Vulkan::Buffer *count, size_t count_offset)
+{
+	VK_ASSERT((is_compute && indirect_layout->get_bind_point() == VK_PIPELINE_BIND_POINT_COMPUTE) ||
+	          (!is_compute && indirect_layout->get_bind_point() == VK_PIPELINE_BIND_POINT_GRAPHICS));
+	VK_ASSERT(device->get_device_features().device_generated_commands_features.deviceGeneratedCommands);
+	VK_ASSERT(!is_compute || device->get_device_features().device_generated_commands_compute_features.deviceGeneratedCompute);
+
+	if (is_compute)
+	{
+		if (flush_compute_state(true) == VK_NULL_HANDLE)
+		{
+			LOGE("Failed to flush compute state, dispatch will be dropped.\n");
+			return;
+		}
+	}
+	else
+	{
+		if (flush_render_state(true) == VK_NULL_HANDLE)
+		{
+			LOGE("Failed to flush render state, draw call will be dropped.\n");
+			return;
+		}
+	}
+
+	// TODO: Linearly allocate these, but big indirect commands like these
+	// should only be done once per render pass anyways.
+	VkGeneratedCommandsMemoryRequirementsInfoNV generated =
+			{ VK_STRUCTURE_TYPE_GENERATED_COMMANDS_MEMORY_REQUIREMENTS_INFO_NV };
+	VkMemoryRequirements2 reqs = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
+
+	generated.pipeline = current_pipeline.pipeline;
+	generated.pipelineBindPoint = indirect_layout->get_bind_point();
+	generated.indirectCommandsLayout = indirect_layout->get_layout();
+	generated.maxSequencesCount = sequences;
+
+	table.vkGetGeneratedCommandsMemoryRequirementsNV(device->get_device(), &generated, &reqs);
+
+	BufferCreateInfo bufinfo = {};
+	bufinfo.size = reqs.memoryRequirements.size;
+	bufinfo.domain = BufferDomain::Device;
+	bufinfo.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+	bufinfo.allocation_requirements = reqs.memoryRequirements;
+	auto preprocess_buffer = device->create_buffer(bufinfo);
+
+	VkIndirectCommandsStreamNV stream = {};
+	stream.buffer = indirect.get_buffer();
+	stream.offset = offset;
+
+	VkGeneratedCommandsInfoNV exec_info = { VK_STRUCTURE_TYPE_GENERATED_COMMANDS_INFO_NV };
+	exec_info.indirectCommandsLayout = indirect_layout->get_layout();
+	exec_info.pipelineBindPoint = indirect_layout->get_bind_point();
+	exec_info.streamCount = 1;
+	exec_info.pStreams = &stream;
+	exec_info.preprocessSize = reqs.memoryRequirements.size;
+	exec_info.preprocessBuffer = preprocess_buffer->get_buffer();
+	exec_info.sequencesCount = sequences;
+	exec_info.pipeline = current_pipeline.pipeline;
+	if (count)
+	{
+		exec_info.sequencesCountBuffer = count->get_buffer();
+		exec_info.sequencesCountOffset = count_offset;
+	}
+	table.vkCmdExecuteGeneratedCommandsNV(cmd, VK_FALSE, &exec_info);
+
+	// Everything is nuked after execute generated commands.
+	set_dirty(COMMAND_BUFFER_DYNAMIC_BITS |
+	          COMMAND_BUFFER_DIRTY_STATIC_STATE_BIT |
+	          COMMAND_BUFFER_DIRTY_PIPELINE_BIT);
+}
+
 void CommandBuffer::dispatch(uint32_t groups_x, uint32_t groups_y, uint32_t groups_z)
 {
 	VK_ASSERT(is_compute);
-	if (flush_compute_state(true))
-	{
-		set_backtrace_checkpoint();
+	if (flush_compute_state(true) != VK_NULL_HANDLE)
 		table.vkCmdDispatch(cmd, groups_x, groups_y, groups_z);
-	}
 	else
 		LOGE("Failed to flush render state, dispatch will be dropped.\n");
 }
@@ -2436,7 +3036,7 @@ void CommandBuffer::restore_state(const CommandBufferSavedState &state)
 				memcpy(bindings.bindings[i], state.bindings.bindings[i], sizeof(bindings.bindings[i]));
 				memcpy(bindings.cookies[i], state.bindings.cookies[i], sizeof(bindings.cookies[i]));
 				memcpy(bindings.secondary_cookies[i], state.bindings.secondary_cookies[i], sizeof(bindings.secondary_cookies[i]));
-				dirty_sets |= 1u << i;
+				dirty_sets_realloc |= 1u << i;
 			}
 		}
 	}
@@ -2514,31 +3114,9 @@ void CommandBuffer::save_state(CommandBufferSaveStateFlags flags, CommandBufferS
 	state.flags = flags;
 }
 
-QueryPoolHandle CommandBuffer::write_timestamp(VkPipelineStageFlagBits stage)
+QueryPoolHandle CommandBuffer::write_timestamp(VkPipelineStageFlags2 stage)
 {
 	return device->write_timestamp(cmd, stage);
-}
-
-void CommandBuffer::add_checkpoint(const char *tag)
-{
-	if (device->get_device_features().supports_nv_device_diagnostic_checkpoints)
-		table.vkCmdSetCheckpointNV(cmd, tag);
-}
-
-void CommandBuffer::set_backtrace_checkpoint()
-{
-#if defined(FULL_BACKTRACE_CHECKPOINTS) && defined(__linux__)
-	void *arr[1024];
-	int ret = backtrace(arr, 1024);
-
-	ostringstream str;
-	for (int i = 0; i < ret; i++)
-		str << arr[i] << endl;
-	auto s = str.str();
-
-	// Never free the duped string for now.
-	add_checkpoint(strdup(s.c_str()));
-#endif
 }
 
 void CommandBuffer::end_threaded_recording()
@@ -2567,45 +3145,62 @@ void CommandBuffer::end()
 {
 	end_threaded_recording();
 
-	if (vbo_block.mapped)
+	if (vbo_block.is_mapped())
 		device->request_vertex_block_nolock(vbo_block, 0);
-	if (ibo_block.mapped)
+	if (ibo_block.is_mapped())
 		device->request_index_block_nolock(ibo_block, 0);
-	if (ubo_block.mapped)
+	if (ubo_block.is_mapped())
 		device->request_uniform_block_nolock(ubo_block, 0);
-	if (staging_block.mapped)
+	if (staging_block.is_mapped())
 		device->request_staging_block_nolock(staging_block, 0);
+}
+
+void CommandBuffer::insert_label(const char *name, const float *color)
+{
+	if (!device->ext.supports_debug_utils || !vkCmdInsertDebugUtilsLabelEXT)
+		return;
+
+	VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+	if (color)
+	{
+		for (unsigned i = 0; i < 4; i++)
+			info.color[i] = color[i];
+	}
+	else
+	{
+		for (unsigned i = 0; i < 4; i++)
+			info.color[i] = 1.0f;
+	}
+
+	info.pLabelName = name;
+	vkCmdInsertDebugUtilsLabelEXT(cmd, &info);
 }
 
 void CommandBuffer::begin_region(const char *name, const float *color)
 {
-	if (device->ext.supports_debug_utils)
-	{
-		VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
-		if (color)
-		{
-			for (unsigned i = 0; i < 4; i++)
-				info.color[i] = color[i];
-		}
-		else
-		{
-			for (unsigned i = 0; i < 4; i++)
-				info.color[i] = 1.0f;
-		}
+	if (!device->ext.supports_debug_utils || !vkCmdBeginDebugUtilsLabelEXT)
+		return;
 
-		info.pLabelName = name;
-		if (vkCmdBeginDebugUtilsLabelEXT)
-			vkCmdBeginDebugUtilsLabelEXT(cmd, &info);
+	VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+	if (color)
+	{
+		for (unsigned i = 0; i < 4; i++)
+			info.color[i] = color[i];
 	}
+	else
+	{
+		for (unsigned i = 0; i < 4; i++)
+			info.color[i] = 1.0f;
+	}
+
+	info.pLabelName = name;
+	vkCmdBeginDebugUtilsLabelEXT(cmd, &info);
 }
 
 void CommandBuffer::end_region()
 {
-	if (device->ext.supports_debug_utils)
-	{
-		if (vkCmdEndDebugUtilsLabelEXT)
-			vkCmdEndDebugUtilsLabelEXT(cmd);
-	}
+	if (device->ext.supports_debug_utils && vkCmdEndDebugUtilsLabelEXT)
+		vkCmdEndDebugUtilsLabelEXT(cmd);
 }
 
 void CommandBuffer::enable_profiling()
@@ -2633,9 +3228,10 @@ void CommandBuffer::begin_debug_channel(DebugChannelInterface *iface, const char
 	debug_channel_buffer = device->create_buffer(info);
 
 	fill_buffer(*debug_channel_buffer, 0);
-	barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-	        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-	        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+	buffer_barrier(*debug_channel_buffer,
+	               VK_PIPELINE_STAGE_2_CLEAR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+	               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+	               VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT);
 
 	set_storage_buffer(VULKAN_NUM_DESCRIPTOR_SETS - 1, VULKAN_NUM_BINDINGS - 1, *debug_channel_buffer);
 }
@@ -2651,9 +3247,9 @@ void CommandBuffer::end_debug_channel()
 	info.domain = BufferDomain::CachedHost;
 	auto debug_channel_readback = device->create_buffer(info);
 	barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_SHADER_WRITE_BIT,
-	        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+	        VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 	copy_buffer(*debug_channel_readback, *debug_channel_buffer);
-	barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+	barrier(VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
 	        VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
 
 	debug_channel_buffer.reset();
@@ -2663,7 +3259,7 @@ void CommandBuffer::end_debug_channel()
 	debug_channel_interface = nullptr;
 }
 
-#ifdef GRANITE_VULKAN_FILESYSTEM
+#ifdef GRANITE_VULKAN_SYSTEM_HANDLES
 void CommandBufferUtil::set_quad_vertex_state(CommandBuffer &cmd)
 {
 #ifdef __APPLE__

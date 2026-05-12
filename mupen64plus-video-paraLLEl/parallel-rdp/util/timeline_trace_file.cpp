@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -148,5 +148,38 @@ TimelineTraceFile::~TimelineTraceFile()
 	submit_event(nullptr);
 	if (thr.joinable())
 		thr.join();
+}
+
+TimelineTraceFile::ScopedEvent::ScopedEvent(TimelineTraceFile *file_, const char *tag, uint32_t pid)
+	: file(file_)
+{
+	if (file && tag && *tag != '\0')
+		event = file->begin_event(tag, pid);
+}
+
+TimelineTraceFile::ScopedEvent::~ScopedEvent()
+{
+	if (event)
+		file->end_event(event);
+}
+
+TimelineTraceFile::ScopedEvent &
+TimelineTraceFile::ScopedEvent::operator=(TimelineTraceFile::ScopedEvent &&other) noexcept
+{
+	if (this != &other)
+	{
+		if (event)
+			file->end_event(event);
+		event = other.event;
+		file = other.file;
+		other.event = nullptr;
+		other.file = nullptr;
+	}
+	return *this;
+}
+
+TimelineTraceFile::ScopedEvent::ScopedEvent(TimelineTraceFile::ScopedEvent &&other) noexcept
+{
+	*this = std::move(other);
 }
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -196,7 +196,8 @@ private:
 	// Implements curious recurring template pattern calls.
 	bool allocate_backing_heap(DeviceAllocation *allocation);
 	void free_backing_heap(DeviceAllocation *allocation);
-	void prepare_allocation(DeviceAllocation *allocation, MiniHeap &heap, const SuballocationResult &suballoc);
+	void prepare_allocation(DeviceAllocation *allocation, Util::IntrusiveList<MiniHeap>::Iterator heap_itr,
+	                        const Util::SuballocationResult &suballoc);
 };
 
 class Allocator

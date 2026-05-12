@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -26,8 +26,8 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
-#if defined(GRANITE_VULKAN_BETA) && !defined(VK_ENABLE_BETA_EXTENSIONS)
-#define VK_ENABLE_BETA_EXTENSIONS
+#if defined(VULKAN_H_) || defined(VULKAN_CORE_H_)
+#error "Must include vulkan_headers.hpp before Vulkan headers"
 #endif
 
 #include "volk.h"
@@ -35,10 +35,15 @@
 #include "logging.hpp"
 #include <utility>
 
-#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
 // Workaround silly Xlib headers that define macros for these globally :(
+#ifdef None
 #undef None
+#endif
+#ifdef Bool
 #undef Bool
+#endif
+#ifdef Status
+#undef Status
 #endif
 
 #ifdef VULKAN_DEBUG

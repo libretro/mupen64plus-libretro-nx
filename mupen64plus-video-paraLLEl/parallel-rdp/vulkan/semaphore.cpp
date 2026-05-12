@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -46,18 +46,57 @@ void SemaphoreHolder::recycle_semaphore()
 
 	if (internal_sync)
 	{
-		if (semaphore_type == VK_SEMAPHORE_TYPE_TIMELINE_KHR || external_compatible_features || is_signalled())
+		if (semaphore_type == VK_SEMAPHORE_TYPE_TIMELINE || external_compatible_features)
+		{
 			device->destroy_semaphore_nolock(semaphore);
+		}
+		else if (is_signalled())
+		{
+			// We can't just destroy a semaphore if we don't know who signals it (e.g. WSI).
+			// Have to consume it by waiting then recycle.
+			if (signal_is_foreign_queue)
+				device->consume_semaphore_nolock(semaphore);
+			else
+				device->destroy_semaphore_nolock(semaphore);
+		}
 		else
 			device->recycle_semaphore_nolock(semaphore);
 	}
 	else
 	{
-		if (semaphore_type == VK_SEMAPHORE_TYPE_TIMELINE_KHR || external_compatible_features || is_signalled())
+		if (semaphore_type == VK_SEMAPHORE_TYPE_TIMELINE || external_compatible_features)
+		{
 			device->destroy_semaphore(semaphore);
+		}
+		else if (is_signalled())
+		{
+			// We can't just destroy a semaphore if we don't know who signals it (e.g. WSI).
+			// Have to consume it by waiting then recycle.
+			if (signal_is_foreign_queue)
+				device->consume_semaphore(semaphore);
+			else
+				device->destroy_semaphore(semaphore);
+		}
 		else
 			device->recycle_semaphore(semaphore);
 	}
+}
+
+bool SemaphoreHolder::wait_timeline_timeout(uint64_t value, uint64_t timeout)
+{
+	VK_ASSERT(semaphore_type == VK_SEMAPHORE_TYPE_TIMELINE);
+	VK_ASSERT(is_proxy_timeline());
+
+	VkSemaphoreWaitInfo wait_info = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+	wait_info.pSemaphores = &semaphore;
+	wait_info.semaphoreCount = 1;
+	wait_info.pValues = &value;
+	return device->get_device_table().vkWaitSemaphores(device->get_device(), &wait_info, timeout) == VK_SUCCESS;
+}
+
+void SemaphoreHolder::wait_timeline(uint64_t value)
+{
+	wait_timeline_timeout(value, UINT64_MAX);
 }
 
 SemaphoreHolder &SemaphoreHolder::operator=(SemaphoreHolder &&other) noexcept
@@ -102,7 +141,7 @@ ExternalHandle SemaphoreHolder::export_to_handle()
 
 	// Technically we can export early with reference transference, but it's a bit dubious.
 	// We want to remain compatible with copy transference for later, e.g. SYNC_FD.
-	if (!signalled && semaphore_type == VK_SEMAPHORE_TYPE_BINARY_KHR)
+	if (!signalled && semaphore_type == VK_SEMAPHORE_TYPE_BINARY)
 	{
 		LOGE("Cannot export payload from a semaphore that is not queued up for signal.\n");
 		return h;

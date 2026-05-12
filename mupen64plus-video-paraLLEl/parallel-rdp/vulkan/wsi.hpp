@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -29,6 +29,16 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <memory>
+
+#ifdef HAVE_WSI_DXGI_INTEROP
+#include "wsi_dxgi.hpp"
+#endif
+
+namespace Granite
+{
+class InputTrackerHandler;
+}
 
 namespace Vulkan
 {
@@ -63,7 +73,6 @@ public:
 		resize = false;
 		current_swapchain_width = width;
 		current_swapchain_height = height;
-		swapchain_dimension_update_timestamp++;
 	}
 
 	virtual uint32_t get_surface_width() = 0;
@@ -76,6 +85,7 @@ public:
 
 	virtual bool alive(WSI &wsi) = 0;
 	virtual void poll_input() = 0;
+	virtual void poll_input_async(Granite::InputTrackerHandler *handler) = 0;
 	virtual bool has_external_swapchain()
 	{
 		return false;
@@ -108,6 +118,7 @@ public:
 	                                     float aspect_ratio, size_t num_swapchain_images,
 	                                     VkFormat format, VkColorSpaceKHR color_space,
 	                                     VkSurfaceTransformFlagBitsKHR pre_rotate);
+	virtual void destroy_swapchain_resources(VkSwapchainKHR swapchain);
 	virtual void event_swapchain_destroyed();
 	virtual void event_frame_tick(double frame, double elapsed);
 	virtual void event_swapchain_index(Device *device, unsigned index);
@@ -115,13 +126,18 @@ public:
 	virtual void set_window_title(const std::string &title);
 
 	virtual uintptr_t get_fullscreen_monitor();
+	virtual uintptr_t get_native_window();
 
 	virtual const VkApplicationInfo *get_application_info();
+
+	virtual void begin_drop_event();
+
+	enum class MessageType { Error, Warning, Info };
+	virtual void show_message_box(const std::string &str, MessageType type);
 
 protected:
 	unsigned current_swapchain_width = 0;
 	unsigned current_swapchain_height = 0;
-	uint64_t swapchain_dimension_update_timestamp = 0;
 	bool resize = false;
 
 private:
@@ -140,7 +156,9 @@ enum class BackbufferFormat
 {
 	UNORM,
 	sRGB,
-	HDR10
+	HDR10,
+	DisplayP3,
+	UNORMPassthrough
 };
 
 class WSI
@@ -150,6 +168,11 @@ public:
 	void set_platform(WSIPlatform *platform);
 	void set_present_mode(PresentMode mode);
 	void set_backbuffer_format(BackbufferFormat format);
+
+	// Latency is normally pretty low, but this aims to target
+	// really low latency. Only suitable for cases where rendering loads are extremely simple.
+	void set_low_latency_mode(bool enable);
+
 	inline BackbufferFormat get_backbuffer_format() const
 	{
 		return backbuffer_format;
@@ -243,6 +266,8 @@ public:
 	void set_external_frame(unsigned index, Semaphore acquire_semaphore, double frame_time);
 	Semaphore consume_external_release_semaphore();
 
+	CommandBuffer::Type get_current_present_queue_type() const;
+
 	// Equivalent to calling destructor.
 	void teardown();
 
@@ -280,6 +305,12 @@ private:
 	VkSurfaceFormatKHR swapchain_surface_format = { VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	PresentMode current_present_mode = PresentMode::SyncToVBlank;
 	PresentMode present_mode = PresentMode::SyncToVBlank;
+	bool low_latency_mode_enable = false;
+
+	VkPresentModeKHR active_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+	std::vector<VkPresentModeKHR> present_mode_compat_group;
+	bool update_active_presentation_mode(PresentMode mode);
+
 	VkImageUsageFlags current_extra_usage = 0;
 	VkImageUsageFlags extra_usage = 0;
 	bool swapchain_is_suboptimal = false;
@@ -322,11 +353,27 @@ private:
 	unsigned present_frame_latency = 0;
 
 	void tear_down_swapchain();
-	void drain_swapchain();
+	void drain_swapchain(bool in_tear_down);
 	void wait_swapchain_latency();
 
 	VkHdrMetadataEXT hdr_metadata = { VK_STRUCTURE_TYPE_HDR_METADATA_EXT };
 
+	struct DeferredDeletion
+	{
+		VkSwapchainKHR swapchain;
+		Fence fence;
+	};
+	Util::SmallVector<DeferredDeletion> deferred_swapchains;
+	Vulkan::Fence last_present_fence;
+	void nonblock_delete_swapchains();
+
 	VkSurfaceFormatKHR find_suitable_present_format(const std::vector<VkSurfaceFormatKHR> &formats, BackbufferFormat desired_format) const;
+
+#ifdef HAVE_WSI_DXGI_INTEROP
+	std::unique_ptr<DXGIInteropSwapchain> dxgi;
+	bool init_surface_swapchain_dxgi(unsigned width, unsigned height);
+	bool begin_frame_dxgi();
+	bool end_frame_dxgi();
+#endif
 };
 }

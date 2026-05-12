@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -95,6 +95,12 @@ public:
 		signalled = true;
 	}
 
+	void set_signal_is_foreign_queue()
+	{
+		VK_ASSERT(signalled);
+		signal_is_foreign_queue = true;
+	}
+
 	void set_pending_wait()
 	{
 		pending_wait = true;
@@ -152,6 +158,9 @@ public:
 
 	SemaphoreHolder &operator=(SemaphoreHolder &&other) noexcept;
 
+	void wait_timeline(uint64_t value);
+	bool wait_timeline_timeout(uint64_t value, uint64_t timeout);
+
 private:
 	friend class Util::ObjectPool<SemaphoreHolder>;
 	SemaphoreHolder(Device *device_, VkSemaphore semaphore_, bool signalled_, bool owned_)
@@ -171,7 +180,6 @@ private:
 		, semaphore_type(VK_SEMAPHORE_TYPE_TIMELINE_KHR)
 		, owned(owned_)
 	{
-		VK_ASSERT((owned && timeline == 0) || (!owned && timeline != 0));
 	}
 
 	explicit SemaphoreHolder(Device *device_)
@@ -189,6 +197,7 @@ private:
 	bool pending_wait = false;
 	bool owned = false;
 	bool proxy_timeline = false;
+	bool signal_is_foreign_queue = false;
 	VkExternalSemaphoreHandleTypeFlagBits external_compatible_handle_type = {};
 	VkExternalSemaphoreFeatureFlags external_compatible_features = 0;
 };

@@ -1,7 +1,7 @@
 # For use in standalone implementations.
 
 PARALLEL_RDP_CFLAGS :=
-PARALLEL_RDP_CXXFLAGS := -DGRANITE_VULKAN_MT
+PARALLEL_RDP_CXXFLAGS :=
 
 PARALLEL_RDP_SOURCES_CXX := \
         $(wildcard $(PARALLEL_RDP_IMPLEMENTATION)/parallel-rdp/*.cpp) \
@@ -17,6 +17,7 @@ PARALLEL_RDP_SOURCES_CXX := \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/fence.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/fence_manager.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/image.cpp \
+        $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/indirect_layout.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/memory_allocator.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/pipeline_event.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/query_pool.cpp \
@@ -25,13 +26,14 @@ PARALLEL_RDP_SOURCES_CXX := \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/semaphore.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/semaphore_manager.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/shader.cpp \
-        $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/texture_format.cpp \
+        $(PARALLEL_RDP_IMPLEMENTATION)/vulkan/texture/texture_format.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/arena_allocator.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/logging.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/thread_id.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/aligned_alloc.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/timer.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/timeline_trace_file.cpp \
+        $(PARALLEL_RDP_IMPLEMENTATION)/util/environment.cpp \
         $(PARALLEL_RDP_IMPLEMENTATION)/util/thread_name.cpp
 
 PARALLEL_RDP_SOURCES_C := \

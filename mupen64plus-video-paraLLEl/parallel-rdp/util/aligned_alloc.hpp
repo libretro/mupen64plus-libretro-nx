@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -40,14 +40,18 @@ struct AlignedAllocation
     static void *operator new(size_t size)
     {
         void *ret = ::Util::memalign_alloc(alignof(T), size);
+#ifdef __EXCEPTIONS
         if (!ret) throw std::bad_alloc();
+#endif
         return ret;
     }
 
     static void *operator new[](size_t size)
     {
         void *ret = ::Util::memalign_alloc(alignof(T), size);
+#ifdef __EXCEPTIONS
         if (!ret) throw std::bad_alloc();
+#endif
         return ret;
     }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -107,7 +107,7 @@ int64_t get_current_time_nsecs()
 	return int64_t(double(li.QuadPart) * static_qpc_freq.inv_freq);
 #else
 	struct timespec ts = {};
-#ifdef ANDROID
+#if defined(ANDROID) || defined(__FreeBSD__)
 	constexpr auto timebase = CLOCK_MONOTONIC;
 #else
 	constexpr auto timebase = CLOCK_MONOTONIC_RAW;

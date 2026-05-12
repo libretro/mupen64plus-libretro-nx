@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -44,7 +44,7 @@ public:
 		if (vacants.empty())
 		{
 			unsigned num_objects = 64u << memory.size();
-			T *ptr = static_cast<T *>(memalign_alloc(std::max(size_t(64), alignof(T)),
+			T *ptr = static_cast<T *>(memalign_alloc(std::max<size_t>(64, alignof(T)),
 			                                         num_objects * sizeof(T)));
 			if (!ptr)
 				return nullptr;

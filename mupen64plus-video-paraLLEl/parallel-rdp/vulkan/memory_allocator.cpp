@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2023 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -21,6 +21,7 @@
  */
 
 #include "memory_allocator.hpp"
+#include "timeline_trace_file.hpp"
 #include "device.hpp"
 #include <algorithm>
 
@@ -33,6 +34,22 @@
 
 namespace Vulkan
 {
+static bool allocation_mode_supports_bda(AllocationMode mode)
+{
+	switch (mode)
+	{
+	case AllocationMode::LinearDevice:
+	case AllocationMode::LinearHostMappable:
+	case AllocationMode::LinearDeviceHighPriority:
+		return true;
+
+	default:
+		break;
+	}
+
+	return false;
+}
+
 void DeviceAllocation::free_immediate()
 {
 	if (!alloc)
@@ -106,8 +123,11 @@ void DeviceAllocation::free_global(DeviceAllocator &allocator, uint32_t size_, u
 	}
 }
 
-void ClassAllocator::prepare_allocation(DeviceAllocation *alloc, MiniHeap &heap, const SuballocationResult &suballoc)
+void ClassAllocator::prepare_allocation(DeviceAllocation *alloc, Util::IntrusiveList<MiniHeap>::Iterator heap_itr,
+                                        const Util::SuballocationResult &suballoc)
 {
+	auto &heap = *heap_itr;
+	alloc->heap = heap_itr;
 	alloc->base = heap.allocation.base;
 	alloc->offset = suballoc.offset + heap.allocation.offset;
 	alloc->mask = suballoc.mask;
@@ -633,6 +653,7 @@ bool DeviceAllocator::internal_allocate(
 	VkMemoryDedicatedAllocateInfo dedicated = { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO };
 	VkExportMemoryAllocateInfo export_info = { VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO };
 	VkMemoryPriorityAllocateInfoEXT priority_info = { VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT };
+	VkMemoryAllocateFlagsInfo flags_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
 #ifdef _WIN32
 	VkImportMemoryWin32HandleInfoKHR import_info = { VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
 #else
@@ -696,8 +717,20 @@ bool DeviceAllocator::internal_allocate(
 		info.pNext = &priority_info;
 	}
 
+	if (device->get_device_features().vk12_features.bufferDeviceAddress &&
+	    allocation_mode_supports_bda(mode))
+	{
+		flags_info.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+		flags_info.pNext = info.pNext;
+		info.pNext = &flags_info;
+	}
+
 	VkDeviceMemory device_memory;
-	VkResult res = table->vkAllocateMemory(device->get_device(), &info, nullptr, &device_memory);
+	VkResult res;
+	{
+		GRANITE_SCOPED_TIMELINE_EVENT_FILE(device->get_system_handles().timeline_trace_file, "vkAllocateMemory");
+		res = table->vkAllocateMemory(device->get_device(), &info, nullptr, &device_memory);
+	}
 
 	// If we're importing, make sure we consume the native handle.
 	if (external && bool(*external) &&
@@ -736,7 +769,11 @@ bool DeviceAllocator::internal_allocate(
 		{
 			table->vkFreeMemory(device->get_device(), block_itr->memory, nullptr);
 			heap.size -= block_itr->size;
-			res = table->vkAllocateMemory(device->get_device(), &info, nullptr, &device_memory);
+			{
+				GRANITE_SCOPED_TIMELINE_EVENT_FILE(device->get_system_handles().timeline_trace_file,
+				                                   "vkAllocateMemory");
+				res = table->vkAllocateMemory(device->get_device(), &info, nullptr, &device_memory);
+			}
 			++block_itr;
 		}
 
