@@ -229,6 +229,11 @@ void GLInfo::init() {
 
 	eglImageFramebuffer = eglImage && !isGLES2;
 
+#ifdef WEBOS
+	eglImage = false;
+	eglImageFramebuffer = false;
+#endif
+
 	if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
 		if (config.frameBufferEmulation.N64DepthCompare == Config::dcFast) {
 			if (!imageTexturesInterlock && !n64DepthWithFbFetch) {

@@ -614,8 +614,15 @@ ifneq (,$(or $(findstring webos,$(CROSS_COMPILE)),$(findstring starfish,$(CROSS_
       # default to GLES v2
       GLES = 1
    endif
+   CPUFLAGS += -DWEBOS
    GL_LIB := -lGLESv2
-   HAVE_NEON = 1
+   ifneq (,$(findstring aarch64,$(CROSS_COMPILE)))
+      WITH_DYNAREC=aarch64
+      HAVE_NEON = 0
+   else
+      WITH_DYNAREC=arm
+      HAVE_NEON = 1
+   endif
 endif
 
 ifeq ($(STATIC_LINKING), 1)
