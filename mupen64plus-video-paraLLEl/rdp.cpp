@@ -37,6 +37,7 @@ bool native_tex_rect = true;
 bool synchronous = true, divot_filter = true, gamma_dither = true;
 bool vi_aa = true, vi_scale = true, dither_filter = true;
 bool interlacing = true, super_sampled_read_back = false, super_sampled_dither = true;
+unsigned deinterlace_mode = PARALLEL_DEINTERLACE_BOB;
 
 static const unsigned cmd_len_lut[64] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 4, 6, 12, 14, 12, 14, 20, 22,
@@ -368,8 +369,13 @@ void complete_frame()
 	opts.vi.dither_filter = dither_filter;
 	opts.vi.divot_filter = divot_filter;
 	opts.vi.gamma_dither = gamma_dither;
-	opts.blend_previous_frame = interlacing;
-	opts.upscale_deinterlacing = !interlacing;
+	opts.deinterlace_mode = static_cast<ScanoutOptions::DeinterlaceMode>(deinterlace_mode);
+
+	// Weave keeps ParaLLEl-RDP's historical previous-field path.
+	// Bob and Blend are progressive-output paths; Blend averages the Bob output
+	// with the previous scanout to reduce flicker.
+	opts.blend_previous_frame = deinterlace_mode == PARALLEL_DEINTERLACE_WEAVE;
+	opts.upscale_deinterlacing = !opts.blend_previous_frame;
 	opts.downscale_steps = downscaling_steps;
 	opts.crop_overscan_pixels = overscan;
 	auto image = frontend->scanout(opts);

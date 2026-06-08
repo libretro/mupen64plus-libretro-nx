@@ -25,6 +25,16 @@ void parallel_set_vi_scale(bool enable);
 void parallel_set_dither_filter(bool enable);
 void parallel_set_interlacing(bool enable);
 
+enum parallel_deinterlace_mode
+{
+   PARALLEL_DEINTERLACE_BOB = 0,
+   PARALLEL_DEINTERLACE_BOB_SHARP = 1,
+   PARALLEL_DEINTERLACE_BLEND = 2,
+   PARALLEL_DEINTERLACE_WEAVE = 3
+};
+
+void parallel_set_deinterlace_mode(enum parallel_deinterlace_mode mode);
+
 void parallel_set_upscaling(unsigned factor, bool super_sampled_read_back);
 void parallel_set_super_sampled_read_back_dither(bool enable);
 void parallel_set_downscaling_steps(unsigned steps);

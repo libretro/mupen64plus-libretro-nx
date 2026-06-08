@@ -186,6 +186,11 @@ void parallel_set_interlacing(bool enable)
 	RDP::interlacing = enable;
 }
 
+void parallel_set_deinterlace_mode(enum parallel_deinterlace_mode mode)
+{
+	RDP::deinterlace_mode = mode;
+}
+
 void parallel_profile_video_refresh_begin(void)
 {
 	RDP::profile_refresh_begin();

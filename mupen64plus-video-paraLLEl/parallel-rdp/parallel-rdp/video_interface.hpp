@@ -58,10 +58,19 @@ struct ScanoutOptions
 	// Not hardware accurate, but needed for weave interlace mode.
 	bool blend_previous_frame = false;
 
+	enum class DeinterlaceMode
+	{
+		Bob = 0,
+		BobSharp = 1,
+		Blend = 2,
+		Weave = 3
+	};
+
 	// Upscale deinterlacing deinterlaces by upscaling in Y, with an Y coordinate offset matching the field.
 	// If disabled, weave interlacing is used.
 	// Weave deinterlacing should *not* be used, except to run test suite!
 	bool upscale_deinterlacing = true;
+	DeinterlaceMode deinterlace_mode = DeinterlaceMode::Bob;
 
 	struct
 	{

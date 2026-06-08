@@ -1111,6 +1111,10 @@ Vulkan::ImageHandle VideoInterface::upscale_deinterlace(Vulkan::CommandBuffer &c
 	{
 		float y_offset;
 	} push = {};
+
+	// Bob keeps ParaLLEl-RDP's historical quarter-line field compensation.
+	// Bob - Sharp uses the same field placement, but nearest sampling avoids
+	// mixing neighbouring lines when the internal scale is already x2/x4.
 	push.y_offset = (float(scaling_factor) * (field_select ? -0.25f : +0.25f)) / float(scale_image.get_height());
 	cmd.push_constants(&push, 0, sizeof(push));
 
@@ -1121,7 +1125,9 @@ Vulkan::ImageHandle VideoInterface::upscale_deinterlace(Vulkan::CommandBuffer &c
 #else
 	cmd.set_program(device->request_program(shader_bank->vi_deinterlace_vert, shader_bank->vi_deinterlace_frag));
 #endif
-	cmd.set_texture(0, 0, scale_image.get_view(), Vulkan::StockSampler::LinearClamp);
+	cmd.set_texture(0, 0, scale_image.get_view(),
+	                options.deinterlace_mode == ScanoutOptions::DeinterlaceMode::BobSharp ?
+	                Vulkan::StockSampler::NearestClamp : Vulkan::StockSampler::LinearClamp);
 	cmd.draw(3);
 	cmd.end_render_pass();
 	return deinterlaced_image;
@@ -1354,9 +1360,14 @@ Vulkan::ImageHandle VideoInterface::scanout(VkImageLayout target_layout, const S
 	else
 		divot_image = std::move(aa_image);
 
-	// Scale pass
-	bool is_final_pass = !downscale_steps || scaling_factor <= 1;
+	// Scale pass.
 	bool serrate = (regs.status & VI_CONTROL_SERRATE_BIT) != 0;
+	bool needs_downscale = downscale_steps && scaling_factor > 1;
+	bool needs_upscale_deinterlace = serrate && options.upscale_deinterlacing;
+	bool needs_blend_deinterlace = serrate &&
+	                                options.deinterlace_mode == ScanoutOptions::DeinterlaceMode::Blend &&
+	                                prev_scanout_image;
+	bool is_final_pass = !needs_downscale && !needs_upscale_deinterlace && !needs_blend_deinterlace;
 
 	auto scale_image = scale_stage(*cmd, divot_image.get(),
 	                               regs, lines,
@@ -1364,22 +1375,24 @@ Vulkan::ImageHandle VideoInterface::scanout(VkImageLayout target_layout, const S
 	                               is_final_pass);
 
 	auto src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	unsigned output_scaling_factor = scaling_factor;
 
-	if (!is_final_pass && scale_image)
+	if (needs_downscale && scale_image)
 	{
 		cmd->image_barrier(*scale_image, src_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		                   layout_to_stage(src_layout), layout_to_access(src_layout),
 		                   VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-		is_final_pass = !serrate || !options.upscale_deinterlacing;
+		is_final_pass = !needs_upscale_deinterlace && !needs_blend_deinterlace;
 
 		scale_image = downscale_stage(*cmd, *scale_image, scaling_factor, downscale_steps,
-									  options, is_final_pass);
+		                              options, is_final_pass);
+		output_scaling_factor = std::max(1, scaling_factor >> downscale_steps);
 
 		src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
-	if (!is_final_pass && scale_image)
+	if (needs_upscale_deinterlace && scale_image)
 	{
 		cmd->image_barrier(*scale_image, src_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		                   layout_to_stage(src_layout), layout_to_access(src_layout),
@@ -1387,9 +1400,52 @@ Vulkan::ImageHandle VideoInterface::scanout(VkImageLayout target_layout, const S
 
 		bool field_state = regs.v_current_line == 0;
 		scale_image = upscale_deinterlace(*cmd, *scale_image,
-		                                  std::max(1, scaling_factor >> downscale_steps),
+		                                  output_scaling_factor,
 		                                  field_state, options);
 		src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+
+	if (needs_blend_deinterlace && scale_image)
+	{
+		if (src_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		{
+			cmd->image_barrier(*scale_image, src_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			                   layout_to_stage(src_layout), layout_to_access(src_layout),
+			                   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			                   VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+			src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
+
+		Vulkan::RenderPassInfo rp;
+		rp.color_attachments[0] = &scale_image->get_view();
+		rp.num_color_attachments = 1;
+		rp.load_attachments = 1;
+		rp.store_attachments = 1;
+
+		cmd->begin_render_pass(rp);
+		cmd->set_opaque_state();
+		cmd->set_blend_enable(true);
+		cmd->set_blend_factors(VK_BLEND_FACTOR_CONSTANT_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA);
+		cmd->set_color_write_mask(0x7);
+		const float blend_constants[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+		cmd->set_blend_constants(blend_constants);
+
+		struct Push
+		{
+			float y_offset;
+		} push = {};
+		cmd->push_constants(&push, 0, sizeof(push));
+
+#ifdef PARALLEL_RDP_SHADER_DIR
+		cmd->set_program("rdp://vi_deinterlace.vert", "rdp://vi_deinterlace.frag", {
+			{ "DEBUG_ENABLE", debug_channel ? 1 : 0 },
+		});
+#else
+		cmd->set_program(device->request_program(shader_bank->vi_deinterlace_vert, shader_bank->vi_deinterlace_frag));
+#endif
+		cmd->set_texture(0, 0, prev_scanout_image->get_view(), Vulkan::StockSampler::LinearClamp);
+		cmd->draw(3);
+		cmd->end_render_pass();
 	}
 
 	if (scale_image)

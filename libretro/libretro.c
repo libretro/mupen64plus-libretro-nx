@@ -1655,9 +1655,29 @@ static void update_variables(bool startup)
         var.key = CORE_NAME "-parallel-rdp-deinterlace-method";
         var.value = NULL;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-            parallel_set_interlacing(!strcmp(var.value, "Weave"));
+        {
+            if (!strcmp(var.value, "Weave"))
+            {
+                parallel_set_interlacing(true);
+                parallel_set_deinterlace_mode(PARALLEL_DEINTERLACE_WEAVE);
+            }
+            else
+            {
+                parallel_set_interlacing(false);
+
+                if (!strcmp(var.value, "Bob_Sharp"))
+                    parallel_set_deinterlace_mode(PARALLEL_DEINTERLACE_BOB_SHARP);
+                else if (!strcmp(var.value, "Blend"))
+                    parallel_set_deinterlace_mode(PARALLEL_DEINTERLACE_BLEND);
+                else
+                    parallel_set_deinterlace_mode(PARALLEL_DEINTERLACE_BOB);
+            }
+        }
         else
+        {
             parallel_set_interlacing(false);
+            parallel_set_deinterlace_mode(PARALLEL_DEINTERLACE_BOB);
+        }
     }
 #endif
 
