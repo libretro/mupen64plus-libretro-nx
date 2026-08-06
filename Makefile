@@ -404,12 +404,17 @@ else ifneq (,$(findstring osx,$(platform)))
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
-   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DNO_ASM -DGL_SILENCE_DEPRECATION=1
+   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DGL_SILENCE_DEPRECATION=1
    GL_LIB := -framework OpenGL
    LDFLAGS += -framework AudioToolbox
 
    # Target Dynarec
-   WITH_DYNAREC =
+   ifeq ($(ARCH), arm64)
+      WITH_DYNAREC = aarch64
+   else
+      WITH_DYNAREC =
+      PLATCFLAGS += -DNO_ASM
+   endif
 
    HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
