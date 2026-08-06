@@ -124,6 +124,14 @@ int l_cbutton;
 int d_cbutton;
 int u_cbutton;
 bool alternate_mapping;
+bool mouse_mode;
+int mouse_sensitivity_x;
+int mouse_sensitivity_y;
+int mouse_left_btn;
+int mouse_right_btn;
+int mouse_middle_btn;
+int mouse_wheel_up_btn;
+int mouse_wheel_down_btn;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -842,6 +850,60 @@ void update_controllers()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         astick_sensitivity = atoi(var.value);
+
+    var.key = CORE_NAME "-mouse-mode";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_mode = !strcmp(var.value, "True");
+
+    var.key = CORE_NAME "-mouse-sensitivity-x";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int val = atoi(var.value);
+        mouse_sensitivity_x = (val < -500) ? -500 : (val > 500) ? 500 : val;
+    }
+
+    var.key = CORE_NAME "-mouse-sensitivity-y";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int val = atoi(var.value);
+        mouse_sensitivity_y = (val < -500) ? -500 : (val > 500) ? 500 : val;
+    }
+
+    #define PARSE_MOUSE_BTN(val) \
+        (!strcmp(val, "None") ? 0 : !strcmp(val, "Z") ? 1 : !strcmp(val, "A") ? 2 : \
+         !strcmp(val, "B") ? 3 : !strcmp(val, "L") ? 4 : !strcmp(val, "R") ? 5 : \
+         !strcmp(val, "Start") ? 6 : !strcmp(val, "C-Up") ? 7 : !strcmp(val, "C-Down") ? 8 : \
+         !strcmp(val, "C-Left") ? 9 : !strcmp(val, "C-Right") ? 10 : 0)
+
+    var.key = CORE_NAME "-mouse-left";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_left_btn = PARSE_MOUSE_BTN(var.value);
+
+    var.key = CORE_NAME "-mouse-right";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_right_btn = PARSE_MOUSE_BTN(var.value);
+
+    var.key = CORE_NAME "-mouse-middle";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_middle_btn = PARSE_MOUSE_BTN(var.value);
+
+    var.key = CORE_NAME "-mouse-wheel-up";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_wheel_up_btn = PARSE_MOUSE_BTN(var.value);
+
+    var.key = CORE_NAME "-mouse-wheel-down";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        mouse_wheel_down_btn = PARSE_MOUSE_BTN(var.value);
+
+    #undef PARSE_MOUSE_BTN
 
     var.key = CORE_NAME "-r-cbutton";
     var.value = NULL;
