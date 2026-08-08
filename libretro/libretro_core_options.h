@@ -1235,11 +1235,13 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         CORE_NAME "-parallel-rdp-deinterlace-method",
         "(ParaLLEl-RDP) Deinterlacing method",
         "Deinterlacing method",
-        "Weave should only be used with 1x scaling factor and special CRT shaders.",
+        "Select how ParaLLEl-RDP handles interlaced VI output. Bob - Sharp uses nearest sampling for cleaner x2/x4 output.",
         NULL,
         "parallel_rdp",
         {
             { "Bob", NULL },
+            { "Bob_Sharp", "Bob - Sharp" },
+            { "Blend", NULL },
             { "Weave", NULL },
             { NULL, NULL },
         }
