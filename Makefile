@@ -148,6 +148,10 @@ else ifneq (,$(findstring rpi,$(platform)))
       GLES3 = 1
       MESA = 1
    endif
+   ifneq (,$(findstring rpi5,$(platform)))
+      GLES3 = 1
+      MESA = 1
+   endif
    ifeq ($(MESA), 1)
       GL_LIB := -lGLESv2
    else
