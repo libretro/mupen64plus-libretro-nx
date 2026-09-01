@@ -1,0 +1,217 @@
+# Build the retroXR mupen64plus-next core for Windows and Android and publish it
+# as a release, so retroXR's CoreDownloadManager can fetch it.
+#
+# This fork makes the core boot a BARE 64DD disk image -- Mario Artist, Kyojin
+# no Doshin, everything that shipped on a disk and no cartridge. The core could
+# always do it; none of it was reachable, because emu_step_load_data() always
+# issued M64CMD_ROM_OPEN, so is_valid_rom() rejected a disk and M64CMD_DISK_OPEN
+# was never sent. A disk is now detected in retro_load_game (by .ndd, by the two
+# canonical dump sizes, or by the region word in either endianness, with carts
+# ruled out first), g_media_loader.get_dd_disk is supplied, and a close on the
+# disk path sends DISK_CLOSE rather than a ROM_CLOSE the core refuses.
+#
+# It also fixes an out-of-bounds read on the num_info == 1 branch of
+# RETRO_GAME_TYPE_DD, a NULL/SIZE_MAX memory descriptor exported when there is no
+# cartridge, and a block-number/loop-index mix-up in the disk format scan.
+#
+#   Windows  mupen64plus_next_libretro.dll.zip
+#              containing mupen64plus_next_libretro.dll
+#   Android  mupen64plus_next_gles3_libretro_android.so.zip
+#              containing mupen64plus_next_gles3_libretro_android.so
+#
+# The two platforms carry DIFFERENT core names, and that is the buildbot's doing
+# rather than ours: it publishes only plain mupen64plus_next for Windows and only
+# the _gles2 and _gles3 variants for Android. retroXR replaces the stock build in
+# place and so has to match those names exactly -- which is why the Android job
+# passes GLES3=1 and names its asset for the gles3 core. Measured on a Quest, the
+# gles2 build runs at full speed and never draws a pixel.
+#
+# Windows is cross-compiled from Ubuntu with mingw-w64. Two variables have to be
+# passed explicitly and neither can be inferred from the host:
+#
+#   platform=win     the makefile picks its platform from uname, so a Linux host
+#                    silently produces a unix target.
+#   MSYSTEM=MINGW64  the Windows branch keys WITH_DYNAREC, ASFLAGS and -DWIN64
+#                    off MSYSTEM, an MSYS2 environment variable that does not
+#                    exist on a plain Ubuntu runner. Unset, NEITHER sub-branch is
+#                    taken: no dynarec, no -f win64 for nasm, no WIN64 define.
+#
+# The release must NOT be a prerelease: the download URL is the /releases/latest/
+# form so shipping a build needs no app update, and GitHub's `latest` skips
+# prereleases. Anything else cut on this fork should be marked prerelease.
+name: retroXR core release
+
+on:
+  push:
+    tags:
+      - 'retroxr-mupen64plus-next-libretro-v*'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or SHA to build'
+        required: true
+        default: 'retroxr'
+      tag:
+        description: 'Release tag to publish as (leave blank to build without publishing)'
+        required: false
+        default: ''
+
+jobs:
+  windows:
+    name: Windows x86_64 (mingw-w64)
+    runs-on: ubuntu-latest
+    steps:
+      # nasm builds the x86_64 dynarec's .asm sources, and binutils `strings`
+      # feeds tools/gen_asm_defines.awk the defines it scrapes out of a compiled
+      # object. Neither is pulled in by g++-mingw-w64.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-mingw-w64-x86-64 nasm binutils make zip
+
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      # CC/CXX are passed on the command line rather than left to the makefile's
+      # `CC ?= x86_64-w64-mingw32-gcc`, which never fires: make defines CC as a
+      # built-in, so `?=` sees it already set and the build runs the host gcc.
+      - name: Build
+        run: |
+          make platform=win MSYSTEM=MINGW64 \
+            CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
+            -j$(nproc)
+
+      - name: Package
+        run: |
+          mapfile -t hits < <(find . -maxdepth 2 -name 'mupen64plus_next_libretro.dll' -type f)
+          if [ "${#hits[@]}" -ne 1 ]; then
+            echo "expected exactly one mupen64plus_next_libretro.dll, found ${#hits[@]}:"
+            printf '  %s\n' "${hits[@]}"
+            exit 1
+          fi
+          mkdir -p stage
+          cp "${hits[0]}" stage/mupen64plus_next_libretro.dll
+          (cd stage && zip -q -X ../mupen64plus_next_libretro.dll.zip mupen64plus_next_libretro.dll)
+          file stage/mupen64plus_next_libretro.dll
+          ls -lh mupen64plus_next_libretro.dll.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: mupen64plus_next_libretro.dll.zip
+          if-no-files-found: error
+
+  android:
+    name: Android arm64-v8a (GLES3)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip zip
+          # Into RUNNER_TEMP, NOT the workspace. This step runs before
+          # actions/checkout, and checkout clears the workspace it checks into --
+          # so an NDK unpacked at $PWD here exists at the end of this step and is
+          # gone by the time the build runs. The failure is a bare
+          # "ndk-build: command not found", which says nothing about why.
+          wget -q -O "$RUNNER_TEMP/ndk.zip" https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          unzip -q "$RUNNER_TEMP/ndk.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/android-ndk-r27d" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      # GLES3=1 is the whole difference between the two Android cores the
+      # buildbot publishes: it links GLESv3 instead of GLESv2 and leaves the
+      # makefile's GLES fallback unset. Application.mk says APP_ABI := all, so
+      # arm64-v8a is named to build the one ABI retroXR ships. That ABI also
+      # turns on the ParaLLEl RSP and RDP, which is the renderer a cartridge-less
+      # 64DD boot needs -- GLideN64 reaches the IPL logo and then draws nothing.
+      - name: Build
+        run: |
+          cd libretro/jni
+          ndk-build GLES3=1 APP_ABI=arm64-v8a -j$(nproc)
+
+      # LOCAL_MODULE is `retro`, so ndk-build emits libretro.so -- a name that
+      # says nothing about which core it is. It is renamed on the way into the
+      # zip to the name the asset advertises and the installer expects.
+      - name: Package
+        run: |
+          # libs/, not obj/. ndk-build leaves an unstripped copy in
+          # obj/local/<abi>/ and INSTALLS the deliverable to libs/<abi>/, so a
+          # search for the bare name finds two and the bigger one is the wrong
+          # one. The exactly-one check below is what turned that into a failed
+          # run rather than a core shipped with its debug info attached.
+          mapfile -t hits < <(find libretro -path '*/libs/arm64-v8a/*' -name 'libretro.so' -type f)
+          if [ "${#hits[@]}" -ne 1 ]; then
+            echo "expected exactly one arm64-v8a libretro.so, found ${#hits[@]}:"
+            printf '  %s\n' "${hits[@]}"
+            exit 1
+          fi
+          mkdir -p stage
+          cp "${hits[0]}" stage/mupen64plus_next_gles3_libretro_android.so
+          (cd stage && zip -q -X ../mupen64plus_next_gles3_libretro_android.so.zip mupen64plus_next_gles3_libretro_android.so)
+          file stage/mupen64plus_next_gles3_libretro_android.so
+          ls -lh mupen64plus_next_gles3_libretro_android.so.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: mupen64plus_next_gles3_libretro_android.so.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [windows, android]
+    if: github.event_name == 'push' || github.event.inputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          ls -lh dist
+          cat > notes.md <<EOF
+          mupen64plus-next libretro core built for retroXR, from \`$GITHUB_SHA\`.
+
+          Windows x86_64 and Android arm64-v8a. The source for these binaries is
+          this tag.
+
+          Over the stock buildbot build this boots a bare 64DD disk image -- a
+          disk with no cartridge, which the core could always run and no
+          frontend could ever ask it to, because the load path issued
+          M64CMD_ROM_OPEN unconditionally and is_valid_rom() rejected a disk.
+          A disk is now detected at load, g_media_loader.get_dd_disk is
+          supplied, and the disk path closes with DISK_CLOSE.
+
+          It also fixes an out-of-bounds read on the one-ROM branch of
+          RETRO_GAME_TYPE_DD, a NULL/SIZE_MAX memory descriptor exported when no
+          cartridge is present, and a block-number/loop-index mix-up in the disk
+          format scan.
+
+          The Android asset is the gles3 core, matching the buildbot's naming:
+          it publishes no plain mupen64plus_next for Android, and the gles2
+          build runs at full speed on a Quest without drawing a pixel.
+          EOF
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "mupen64plus-next (retroXR build) $TAG" \
+              --notes-file notes.md
+          fi
+          gh release upload "$TAG" \
+            dist/mupen64plus_next_libretro.dll.zip \
+            dist/mupen64plus_next_gles3_libretro_android.so.zip \
+            --repo "$GITHUB_REPOSITORY" --clobber
