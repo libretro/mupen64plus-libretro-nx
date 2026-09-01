@@ -69,9 +69,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y g++-mingw-w64-x86-64 nasm binutils make zip
 
+      # No `submodules: recursive`, unlike the other retroXR core forks. This
+      # repository has no .gitmodules at all -- everything it vendors came in
+      # through git subrepo, which commits the trees -- and it carries one
+      # leftover gitlink, mupen64plus-rsp-paraLLEl/lightning/gnulib, with no
+      # entry to match. Asking for submodules therefore cannot succeed on any
+      # ref: `fatal: No url found for submodule path ... in .gitmodules`,
+      # exit 128, before a line is compiled. Nothing is missing without it.
       - uses: actions/checkout@v6
         with:
-          submodules: recursive
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       # CC/CXX are passed on the command line rather than left to the makefile's
@@ -120,9 +126,15 @@ jobs:
           unzip -q "$RUNNER_TEMP/ndk.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/android-ndk-r27d" >> $GITHUB_PATH
 
+      # No `submodules: recursive`, unlike the other retroXR core forks. This
+      # repository has no .gitmodules at all -- everything it vendors came in
+      # through git subrepo, which commits the trees -- and it carries one
+      # leftover gitlink, mupen64plus-rsp-paraLLEl/lightning/gnulib, with no
+      # entry to match. Asking for submodules therefore cannot succeed on any
+      # ref: `fatal: No url found for submodule path ... in .gitmodules`,
+      # exit 128, before a line is compiled. Nothing is missing without it.
       - uses: actions/checkout@v6
         with:
-          submodules: recursive
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       # GLES3=1 is the whole difference between the two Android cores the
