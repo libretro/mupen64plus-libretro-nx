@@ -29,6 +29,7 @@
 
 #include "GLideN64_libretro.h"
 #include "mupen64plus-next_common.h"
+#include "transferpak_interface.h"
 
 #include <libco.h>
 
@@ -176,6 +177,13 @@ static void close_content(void)
 // Other Subsystems
 char* retro_transferpak_rom_path = NULL;
 char* retro_transferpak_ram_path = NULL;
+
+/* Per-port Transfer Pak media, when the frontend answers for it. The two paths
+ * above are ONE cartridge shared by every port and fixed at load; these are four
+ * independent paks whose cartridges can be changed while the game runs. */
+static struct retro_transfer_pak_interface transferpak_iface;
+static bool transferpak_iface_ok = false;
+static unsigned transferpak_generation[RETRO_TRANSFER_PAK_PORTS] = {0};
 
 uint32_t CoreOptionCategoriesSupported = 0;
 uint32_t CoreOptionUpdateDisplayCbSupported = 0;
@@ -446,6 +454,58 @@ static char* media_loader_get_dd_disk(void* cb_data)
     return retro_dd_path_img ? strdup(retro_dd_path_img) : NULL;
 }
 
+/* The frontend owns the string it hands back and may reuse the buffer, while
+ * main.c takes ownership of what these return: open_rom_file_storage keeps it
+ * and close_file_storage frees it, and the no-cart path frees it directly. So
+ * every answer is copied, and an empty answer becomes NULL rather than a "" that
+ * would later be free()d as a string literal. */
+static char* media_loader_get_gb_cart_rom(void* cb_data, int controller_num)
+{
+    const char* path;
+    (void)cb_data;
+    if (!transferpak_iface_ok || !transferpak_iface.get_rom)
+        return NULL;
+    if (controller_num < 0 || controller_num >= RETRO_TRANSFER_PAK_PORTS)
+        return NULL;
+    path = transferpak_iface.get_rom(transferpak_iface.frontend_data, (unsigned)controller_num);
+    return (path && *path) ? strdup(path) : NULL;
+}
+
+static char* media_loader_get_gb_cart_ram(void* cb_data, int controller_num)
+{
+    const char* path;
+    (void)cb_data;
+    if (!transferpak_iface_ok || !transferpak_iface.get_ram)
+        return NULL;
+    if (controller_num < 0 || controller_num >= RETRO_TRANSFER_PAK_PORTS)
+        return NULL;
+    path = transferpak_iface.get_ram(transferpak_iface.frontend_data, (unsigned)controller_num);
+    return (path && *path) ? strdup(path) : NULL;
+}
+
+/* Re-read a port's cartridge when the frontend says it changed under a pak that
+ * never left the controller.
+ *
+ * main_change_gb_cart only runs off a pak-TYPE transition, so without this a
+ * cartridge swapped in place is never noticed. Rather than add a second state
+ * machine, this raises the flag the existing delayed eject/insert path already
+ * watches, so a swap takes the same two delays a pak change does. */
+static void transferpak_poll_generation(void)
+{
+    int i;
+    if (!transferpak_iface_ok || !transferpak_iface.generation)
+        return;
+    for (i = 0; i < RETRO_TRANSFER_PAK_PORTS; ++i)
+    {
+        unsigned gen = transferpak_iface.generation(transferpak_iface.frontend_data, (unsigned)i);
+        if (gen == transferpak_generation[i])
+            continue;
+        transferpak_generation[i] = gen;
+        if (Controls[i].Plugin == PLUGIN_TRANSFER_PAK)
+            main_request_gb_cart_switch(i);
+    }
+}
+
 static void cleanup_global_paths()
 {
     load_as_disk = false;
@@ -614,6 +674,20 @@ const char* retro_get_system_directory(void)
 {
     const char* dir;
     environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir);
+
+    return dir ? dir : ".";
+}
+
+/* Where the core may write a file the frontend did not name for it.
+ *
+ * Only the Game Boy cartridge save uses this: every other save in this core goes
+ * through saved_memory, which the frontend persists itself. A frontend that
+ * refuses the call gets the working directory, which is what the system
+ * directory helper above already falls back to. */
+const char* retro_get_save_directory(void)
+{
+    const char* dir = NULL;
+    environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir);
 
     return dir ? dir : ".";
 }
@@ -828,10 +902,27 @@ void retro_init(void)
         game_thread = co_create(65536 * sizeof(void*) * 16, (void (*)(void))EmuThreadFunction);
     }
 
-    /* Only get_dd_disk: load_dd_rom() ignores get_dd_rom, and leaving
-     * get_gb_cart_rom/ram NULL keeps the transferpak fallback intact. */
+    /* load_dd_rom() ignores get_dd_rom, so only get_dd_disk is wired for the
+     * disk drive. */
     memset(&g_media_loader, 0, sizeof(g_media_loader));
     g_media_loader.get_dd_disk = media_loader_get_dd_disk;
+
+    /* The GB cart hooks go in ONLY when a frontend answers for them. Left NULL
+     * the core falls back to retro_transferpak_{rom,ram}_path — one cartridge
+     * shared by every port, from the `gb` subsystem or the <rom>.gb sidecar —
+     * which is what every existing frontend expects and must keep getting. */
+    memset(&transferpak_iface, 0, sizeof(transferpak_iface));
+    memset(transferpak_generation, 0, sizeof(transferpak_generation));
+    transferpak_iface_ok =
+        environ_cb(RETRO_ENVIRONMENT_GET_TRANSFER_PAK_INTERFACE, &transferpak_iface)
+        || environ_cb(RETRO_ENVIRONMENT_GET_TRANSFER_PAK_INTERFACE_FINAL, &transferpak_iface);
+    if (transferpak_iface_ok)
+    {
+        g_media_loader.get_gb_cart_rom = media_loader_get_gb_cart_rom;
+        g_media_loader.get_gb_cart_ram = media_loader_get_gb_cart_ram;
+        if (log_cb)
+            log_cb(RETRO_LOG_INFO, CORE_NAME ": frontend serves Transfer Pak media per port\n");
+    }
 
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
     if(ret && log_cb)
@@ -1878,6 +1969,10 @@ static void update_variables(bool startup)
 #endif // HAVE_THR_AL
 
     update_controllers();
+    /* After update_controllers, so a port that has only just become a Transfer
+     * Pak is seen as one. A cartridge changed under a pak that never left the
+     * controller is invisible to the pak-type transition above. */
+    transferpak_poll_generation();
 
     // Hide irrelevant options
     set_variable_visibility();

@@ -147,6 +147,12 @@ static void* l_paks[GAME_CONTROLLERS_COUNT][PAK_MAX_SIZE];
 static const struct pak_interface* l_ipaks[PAK_MAX_SIZE];
 static size_t l_pak_type_idx[6];
 
+/* Moved out of main_run's frame so the libretro layer can raise a port's GB cart
+ * switch from outside the emulation loop. It was a local, and a pointer to a
+ * local would dangle the moment main_run returned; there is one core per process
+ * here, so file scope costs nothing. */
+static struct controller_input_compat l_cin_compats[GAME_CONTROLLERS_COUNT];
+
 /* PRNG state - used for Mempaks ID generation */
 struct xoshiro256pp_state l_mpk_idgen;
 
@@ -203,9 +209,25 @@ static char *get_flashram_path(void)
     return "";
 }
 
+/* A default file for a Game Boy cartridge's battery save, when the frontend did
+ * not name one.
+ *
+ * This returned "" like every other path helper here, and unlike them that was
+ * not harmless. The rest of this core's saves live in saved_memory, which the
+ * frontend persists itself, so their stubs are never reached for anything real.
+ * A GB cartridge's save is the one thing the core writes to a FILE of its own:
+ * with an empty name every write failed silently, so a Transfer Pak game's save
+ * was simply discarded -- and close_file_storage then called free() on a string
+ * literal when the cartridge was ejected.
+ *
+ * Composed against the frontend's save directory rather than get_savesrampath(),
+ * which is itself one of the stubs. */
 static char *get_gb_ram_path(const char* gbrom, unsigned int control_id)
 {
-    return "";
+    const char* dir = retro_get_save_directory();
+    size_t len = strlen(dir);
+    const char* sep = (len > 0 && (dir[len - 1] == '/' || dir[len - 1] == '\\')) ? "" : "/";
+    return formatstr("%s%s%s.%u.sav", dir, sep, gbrom, control_id);
 }
 
 const char *get_savestatepath(void)
@@ -1319,6 +1341,21 @@ static void release_gb_ram(void* opaque)
     memset(&data->ram_fstorage, 0, sizeof(data->ram_fstorage));
 }
 
+/* Ask for a port's Game Boy cartridge to be read again.
+ *
+ * For a cartridge swapped while the Transfer Pak itself stayed in the
+ * controller: main_change_gb_cart only ever runs off a pak-TYPE transition, so
+ * without this the core keeps serving the cartridge it first saw for the rest of
+ * the session. Raising the flag rather than reloading here on the spot means the
+ * swap goes through the same delayed eject/insert the pak change does, and the
+ * game sees the cartridge leave before it sees another arrive. */
+void main_request_gb_cart_switch(int control_id)
+{
+    if (control_id < 0 || control_id >= GAME_CONTROLLERS_COUNT)
+        return;
+    l_cin_compats[control_id].gb_cart_switch_enabled = 1;
+}
+
 void main_change_gb_cart(int control_id)
 {
     struct transferpak* tpk = &g_dev.transferpaks[control_id];
@@ -1382,7 +1419,6 @@ m64p_error main_run(void)
     struct audio_out_backend_interface audio_out_backend_libretro;
 
     int control_ids[GAME_CONTROLLERS_COUNT];
-    struct controller_input_compat cin_compats[GAME_CONTROLLERS_COUNT];
 
     struct file_storage mpk_storages[GAME_CONTROLLERS_COUNT];
     struct file_storage mpk;
@@ -1522,9 +1558,9 @@ m64p_error main_run(void)
 
     memset(&g_dev.gb_carts, 0, GAME_CONTROLLERS_COUNT*sizeof(*g_dev.gb_carts));
     memset(&l_gb_carts_data, 0, GAME_CONTROLLERS_COUNT*sizeof(*l_gb_carts_data));
-    memset(cin_compats, 0, GAME_CONTROLLERS_COUNT*sizeof(*cin_compats));
+    memset(l_cin_compats, 0, GAME_CONTROLLERS_COUNT*sizeof(*l_cin_compats));
 
-    netplay_read_registration(cin_compats);
+    netplay_read_registration(l_cin_compats);
 
     for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
 
@@ -1543,19 +1579,19 @@ m64p_error main_run(void)
             joybus_devices[i] = &g_dev.controllers[i];
             ijoybus_devices[i] = &g_ijoybus_vru_controller;
 
-            cin_compats[i].control_id = (int)i;
-            cin_compats[i].cont = &g_dev.controllers[i];
-            cin_compats[i].last_pak_type = Controls[i].Plugin;
-            cin_compats[i].last_input = 0;
-            cin_compats[i].netplay_count = 0;
-            cin_compats[i].event_first = NULL;
+            l_cin_compats[i].control_id = (int)i;
+            l_cin_compats[i].cont = &g_dev.controllers[i];
+            l_cin_compats[i].last_pak_type = Controls[i].Plugin;
+            l_cin_compats[i].last_input = 0;
+            l_cin_compats[i].netplay_count = 0;
+            l_cin_compats[i].event_first = NULL;
 
             Controls[i].Plugin = PLUGIN_NONE;
 
             /* init vru_controller */
             init_game_controller(&g_dev.controllers[i],
                     cont_flavor,
-                    &cin_compats[i], &g_icontroller_input_backend_plugin_compat,
+                    &l_cin_compats[i], &g_icontroller_input_backend_plugin_compat,
                     NULL, NULL);
         }
         /* otherwise let the core do the processing */
@@ -1570,13 +1606,13 @@ m64p_error main_run(void)
             joybus_devices[i] = &g_dev.controllers[i];
             ijoybus_devices[i] = &g_ijoybus_device_controller;
 
-            cin_compats[i].control_id = (int)i;
-            cin_compats[i].cont = &g_dev.controllers[i];
-            cin_compats[i].tpk = &g_dev.transferpaks[i];
-            cin_compats[i].last_pak_type = Controls[i].Plugin;
-            cin_compats[i].last_input = 0;
-            cin_compats[i].netplay_count = 0;
-            cin_compats[i].event_first = NULL;
+            l_cin_compats[i].control_id = (int)i;
+            l_cin_compats[i].cont = &g_dev.controllers[i];
+            l_cin_compats[i].tpk = &g_dev.transferpaks[i];
+            l_cin_compats[i].last_pak_type = Controls[i].Plugin;
+            l_cin_compats[i].last_input = 0;
+            l_cin_compats[i].netplay_count = 0;
+            l_cin_compats[i].event_first = NULL;
 
             l_gb_carts_data[i].control_id = (int)i;
 
@@ -1643,7 +1679,7 @@ m64p_error main_run(void)
                     }
 
                     /* enable GB cart switch */
-                    // cin_compats[i].gb_cart_switch_enabled = 1;
+                    // l_cin_compats[i].gb_cart_switch_enabled = 1;
                 }
                 /* No Pak */
                 else {
@@ -1661,7 +1697,7 @@ m64p_error main_run(void)
             /* init game_controller */
             init_game_controller(&g_dev.controllers[i],
                     cont_flavor,
-                    &cin_compats[i], &g_icontroller_input_backend_plugin_compat,
+                    &l_cin_compats[i], &g_icontroller_input_backend_plugin_compat,
                     l_paks[i][l_paks_idx[i]], l_ipaks[l_paks_idx[i]]);
 
             if (l_ipaks[l_paks_idx[i]] != NULL) {

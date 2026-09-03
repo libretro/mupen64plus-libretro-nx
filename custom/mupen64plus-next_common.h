@@ -79,6 +79,10 @@ extern char* retro_dd_path_rom;
 extern char* retro_transferpak_rom_path;
 extern char* retro_transferpak_ram_path;
 
+/* Where the core may write a file the frontend did not name. Only the Game Boy
+ * cartridge save needs one; see get_gb_ram_path. */
+const char* retro_get_save_directory(void);
+
 // Threaded GL Callback
 extern void gln64_thr_gl_invoke_command_loop();
 extern bool threaded_gl_safe_shutdown;

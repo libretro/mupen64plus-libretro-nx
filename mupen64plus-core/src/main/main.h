@@ -65,6 +65,7 @@ void new_vi(void);
 void main_switch_next_pak(int control_id);
 void main_switch_plugin_pak(int control_id);
 void main_change_gb_cart(int control_id);
+void main_request_gb_cart_switch(int control_id);
 
 int  main_set_core_defaults(void);
 void main_message(m64p_msg_level level, unsigned int osd_corner, const char *format, ...) ATTR_FMT(3, 4);
