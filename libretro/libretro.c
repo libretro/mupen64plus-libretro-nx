@@ -268,6 +268,23 @@ static void n64DebugCallback(void* aContext, int aLevel, const char* aMessage)
     snprintf(buffer, 1024, CORE_NAME ": %s\n", aMessage);
     if (log_cb)
         log_cb(RETRO_LOG_INFO, buffer);
+
+    /* Everything the core has to say arrives here at RETRO_LOG_INFO, which
+     * frontends routinely drop -- so the warnings that matter when something is
+     * wrong (out-of-bound reads, unknown devices, unimplemented paths) are
+     * invisible, and diagnosing anything meant rebuilding with fprintf added by
+     * hand. Mirror to stderr when M64P_VERBOSE is set; opt-in, so normal runs
+     * stay quiet. */
+    {
+        static int verbose = -1;
+        if (verbose < 0)
+            verbose = (getenv("M64P_VERBOSE") != NULL) ? 1 : 0;
+        if (verbose)
+        {
+            fprintf(stderr, "[m64p:%d] %s", aLevel, buffer);
+            fflush(stderr);
+        }
+    }
 }
 
 extern m64p_rom_header ROM_HEADER;

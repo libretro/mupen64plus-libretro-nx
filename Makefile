@@ -679,6 +679,7 @@ else
 endif
 
 OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o) $(SOURCES_NASM:.asm=.o)
+DEPFLAGS     = -MMD -MP
 CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(PLATCFLAGS) $(fpic) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
 
@@ -693,6 +694,11 @@ else
 endif
 
 -include $(OBJECTS:.o=.d)
+# Pinned explicitly: the dependency include at the end of this file otherwise
+# displaces the default goal onto whichever object it mentions first, which
+# silently builds one .o and no library at all.
+.DEFAULT_GOAL := all
+
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
 
@@ -714,13 +720,13 @@ $(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
 	$(CC_AS) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
 $(RSPDIR_PARALLEL)/lightning/lib/lightning.o: $(RSPDIR_PARALLEL)/lightning/lib/lightning.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -DHAVE_MMAP=1 -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -DHAVE_MMAP=1 -c $< -o $@
 
 %.o: %.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 clean:
 	find $(ROOT_DIR) -name "*.o" -type f -delete
@@ -728,3 +734,10 @@ clean:
 	rm -f $(TARGET)
 
 .PHONY: clean
+
+# Header dependency tracking, last in the file so it cannot affect the default
+# goal. Without it, editing a header rebuilds nothing that includes it and
+# objects end up compiled against different layouts of the same struct -- which
+# already cost a session a segfault that looked like a bad branch. `clean` was
+# always deleting *.d; only the flag was missing.
+-include $(OBJECTS:.o=.d)
