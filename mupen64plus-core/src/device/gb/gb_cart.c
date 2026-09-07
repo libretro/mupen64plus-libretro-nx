@@ -54,7 +54,14 @@ enum gbcart_extra_devices
 /* various helper functions for ram, rom, or MBC uses */
 
 
-static void read_rom(const void* rom_storage, const struct storage_backend_interface* irom_storage, uint16_t address, uint8_t* data, size_t size)
+/* `address` is a ROM OFFSET, not a Game Boy address: every caller passes
+ * (address - 0x4000) + rom_bank * 0x4000, which for bank 4 is already 0x10000.
+ * Declared uint16_t it wrapped, so a 1 MB cartridge read banks 0-3 correctly
+ * and returned bank & 3 for everything above -- the header checksummed, the
+ * whole ROM streamed, and the game rejected the cart at the end because its
+ * global checksum could not match. Pokemon Stadium reports that as "The
+ * Transfer Pak is not set properly". */
+static void read_rom(const void* rom_storage, const struct storage_backend_interface* irom_storage, uint32_t address, uint8_t* data, size_t size)
 {
     assert(size > 0);
 
