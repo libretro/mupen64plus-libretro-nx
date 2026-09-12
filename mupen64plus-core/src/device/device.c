@@ -247,6 +247,12 @@ void init_device(struct device* dev,
 #define W(x) write_ ## x
 #define RW(x) R(x), W(x)
 #define A(x,m) (x), (x) | (m)
+    /* Indices patched below. Keep in sync with mappings[]. */
+    enum {
+        MAPPING_DOM2_ADDR1 = 14,
+        MAPPING_DD_ROM     = 15,
+        MAPPING_CART_ROM   = 18
+    };
     struct mem_mapping mappings[] = {
         /* clear mappings */
         { 0x00000000, 0xffffffff, M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0, 0 } },
@@ -268,14 +274,20 @@ void init_device(struct device* dev,
         { A(MM_DD_ROM, 0x1ffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0x1ffffff, 0 } },
         { A(MM_DOM2_ADDR2, 0x1ffff), M64P_MEM_FLASHRAMSTAT, { &dev->cart, RW(cart_dom2) }, { NULL, 0x1ffff, 0} },
         { A(MM_IS_VIEWER, 0xfff), M64P_MEM_NOTHING, { &dev->is, RW(is_viewer) }, { NULL, 0xfff, 0 } },
-        { A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) }, { NULL, rom_size-1, RETRO_MEMDESC_CONST } },
+        { A(MM_CART_ROM, 0xfffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0xfffffff, 0 } },
         { A(MM_PIF_MEM, 0xffff), M64P_MEM_PIF, { &dev->pif, RW(pif_mem) }, { NULL, 0xffff, 0 } }
     };
 
+    /* init and map CART ROM if present. With no cartridge rom_size-1 would
+     * underflow to SIZE_MAX, so the table leaves it as open bus. */
+    if (rom_size > 0) {
+        mappings[MAPPING_CART_ROM] = (struct mem_mapping){ A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) }, { NULL, rom_size-1, RETRO_MEMDESC_CONST } };
+    }
+
     /* init and map DD if present */
     if (dd_rom_size > 0) {
-        mappings[14] = (struct mem_mapping){ A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_DDREG, { &dev->dd, RW(dd_regs) }, { NULL, 0xffffff, 0 } };
-        mappings[15] = (struct mem_mapping){ A(MM_DD_ROM, dd_rom_size-1), M64P_MEM_DDROM, { &dev->dd, RW(dd_rom) }, { NULL, dd_rom_size-1, RETRO_MEMDESC_CONST } };
+        mappings[MAPPING_DOM2_ADDR1] = (struct mem_mapping){ A(MM_DOM2_ADDR1, 0xffffff), M64P_MEM_DDREG, { &dev->dd, RW(dd_regs) }, { NULL, 0xffffff, 0 } };
+        mappings[MAPPING_DD_ROM] = (struct mem_mapping){ A(MM_DD_ROM, dd_rom_size-1), M64P_MEM_DDROM, { &dev->dd, RW(dd_rom) }, { NULL, dd_rom_size-1, RETRO_MEMDESC_CONST } };
 
         init_dd(&dev->dd,
                 dd_rtc_clock, dd_rtc_iclock,

@@ -405,7 +405,7 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
 {
     /* Search for good System Data */
     const unsigned int blocks[8] = { 0, 1, 2, 3, 8, 9, 10, 11 };
-    int isValidDisk = -1;
+    int sys_data_block = -1;
     int isValidDiskID = -1;
     unsigned int isDevelopment = 0;
 
@@ -416,7 +416,7 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
 
         if ((offset + 0x20) >= size || (size < MAME_FORMAT_DUMP_SIZE && size < SDK_FORMAT_DUMP_SIZE && i > 0))
         {
-            isValidDisk = -1;
+            sys_data_block = -1;
             break;
         }
 
@@ -438,7 +438,7 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
         case DD_REGION_JP:
         case DD_REGION_US:
         case DD_REGION_DV:
-            isValidDisk = i;
+            sys_data_block = blocks[i];
             break;
         default:
             continue;
@@ -457,24 +457,24 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
             {
                 if (memcmp(&data[offset + ((j - 1) * sectorsize)], &data[offset + (j * sectorsize)], sectorsize) != 0)
                 {
-                    isValidDisk = -1;
+                    sys_data_block = -1;
                     break;
                 }
                 else
                 {
-                    isValidDisk = i;
+                    sys_data_block = blocks[i];
                 }
             }
         }
 
-        if (isValidDisk != -1)
+        if (sys_data_block != -1)
             break;
     }
 
-    if (isValidDisk == 2 || isValidDisk == 3 || isValidDisk == 10 || isValidDisk == 11)
+    if (sys_data_block == 2 || sys_data_block == 3 || sys_data_block == 10 || sys_data_block == 11)
         isDevelopment = 1;
 
-    if (isValidDisk == -1)
+    if (sys_data_block == -1)
     {
         DebugMessage(M64MSG_ERROR, "Invalid DD Disk System Data.");
         return NULL;
@@ -534,12 +534,12 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
 
         if (ram_lba_start != (RAM_START_LBA[disk_type] - 24) && ram_lba_start != 0xFFFF)
         {
-            isValidDisk = -1;
+            sys_data_block = -1;
             DebugMessage(M64MSG_ERROR, "Invalid D64 Disk RAM Start Info (expected %04X)", (RAM_START_LBA[disk_type] - SYSTEM_LBAS));
         }
         else if (size != d64_size)
         {
-            isValidDisk = -1;
+            sys_data_block = -1;
             DebugMessage(M64MSG_ERROR, "Invalid D64 Disk size %zu (calculated 0x200 + 0x%zx + 0x%zx = %zu).", size, rom_size, ram_size, d64_size);
         }
         else
@@ -582,14 +582,14 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
     case MAME_FORMAT_DUMP_SIZE:
         *format = DISK_FORMAT_MAME;
         *development = isDevelopment;
-        *offset_sys = 0x4D08 * isValidDisk;
+        *offset_sys = 0x4D08 * sys_data_block;
         *offset_id = 0x4D08 * isValidDiskID;
         break;
 
     case SDK_FORMAT_DUMP_SIZE: {
         *format = DISK_FORMAT_SDK;
         *development = isDevelopment;
-        *offset_sys = 0x4D08 * isValidDisk;
+        *offset_sys = 0x4D08 * sys_data_block;
         *offset_id = 0x4D08 * isValidDiskID;
         const struct dd_sys_data* sys_data = (void*)(&data[*offset_sys]);
         *offset_ram = LBAToByteA(sys_data->type & 0xF, 0, RAM_START_LBA[sys_data->type & 0xF]);
@@ -597,7 +597,7 @@ uint8_t* scan_and_expand_disk_format(uint8_t* data, size_t size,
         } break;
 
     default:
-        if (isValidDisk == -1)
+        if (sys_data_block == -1)
         {
             DebugMessage(M64MSG_ERROR, "Invalid DD Disk size %zu.", size);
             return NULL;

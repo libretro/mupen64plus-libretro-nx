@@ -52,10 +52,14 @@
 #include "api/m64p_config.h"
 #include "osal_files.h"
 #include "main/rom.h"
+#include "device/dd/disk.h"
 #include "plugin/plugin.h"
 #include "device/rcp/pi/pi_controller.h"
 #include "device/pif/pif.h"
 #include "libretro_memory.h"
+
+#include <file/file_path.h>
+#include <string/stdstring.h>
 
 #include "audio_plugin.h"
 
@@ -157,6 +161,17 @@ int  retro_savestate_result = 0;
 // 64DD globals
 char* retro_dd_path_img = NULL;
 char* retro_dd_path_rom = NULL;
+
+/* Content is a bare 64DD disk booting from the IPL, with no cartridge. */
+static bool load_as_disk = false;
+
+static bool load_game_internal(const struct retro_game_info *game, bool is_disk);
+
+/* The core refuses ROM_CLOSE with no ROM open, leaving the disk open. */
+static void close_content(void)
+{
+    CoreDoCommand(load_as_disk ? M64CMD_DISK_CLOSE : M64CMD_ROM_CLOSE, 0, NULL);
+}
 
 // Other Subsystems
 char* retro_transferpak_rom_path = NULL;
@@ -365,8 +380,76 @@ static void setup_variables(void)
     environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
+/* Mirrors is_valid_rom() in main/rom.c. */
+static bool content_is_n64_cart(const uint8_t* data, size_t size)
+{
+    uint32_t word;
+
+    if (data == NULL || size < 4)
+        return false;
+
+    word = load_beu32(data);
+
+    return (word == UINT32_C(0x80371240)   /* big endian    (.z64) */
+         || word == UINT32_C(0x37804012)   /* byte swapped  (.v64) */
+         || word == UINT32_C(0x40123780)); /* little endian (.n64) */
+}
+
+/* Carts are ruled out first, so a cart with a .ndd sidecar keeps its old path.
+ * No single positive test suffices: frontends rename content, game->path is
+ * NULL for archives, DD_REGION_DV is 0x00000000, and MAME dumps need not carry
+ * the region at word 0. */
+static bool content_is_dd_disk(const struct retro_game_info* game)
+{
+    const uint8_t* data;
+    size_t size;
+    uint32_t word;
+
+    if (game == NULL)
+        return false;
+
+    data = (const uint8_t*)game->data;
+    size = game->size;
+
+    if (content_is_n64_cart(data, size))
+        return false;
+
+    if (game->path && string_is_equal_noncase(path_get_extension(game->path), "ndd"))
+        return true;
+
+    if (size == MAME_FORMAT_DUMP_SIZE || size == SDK_FORMAT_DUMP_SIZE)
+        return true;
+
+    if (data != NULL && size >= 4)
+    {
+        word = load_beu32(data);
+
+        if (word == DD_REGION_JP || word == DD_REGION_US)
+            return true;
+
+        /* .v64 order: bytes swapped within each halfword */
+        word = ((uint32_t)m64p_swap16((unsigned short)(word >> 16)) << 16)
+             |  (uint32_t)m64p_swap16((unsigned short)(word & 0xffff));
+
+        if (word == DD_REGION_JP || word == DD_REGION_US)
+            return true;
+    }
+
+    return false;
+}
+
+/* open_disk() and load_dd_disk() ask the media loader for the disk filename;
+ * only the latter has its own fallback. Both free the returned string. */
+static char* media_loader_get_dd_disk(void* cb_data)
+{
+    (void)cb_data;
+    return retro_dd_path_img ? strdup(retro_dd_path_img) : NULL;
+}
+
 static void cleanup_global_paths()
 {
+    load_as_disk = false;
+
     // Ensure potential leftovers are cleaned up
     if(retro_dd_path_img)
     {
@@ -404,12 +487,18 @@ static void n64StateCallback(void *Context, m64p_core_param param_type, int new_
 
 static bool emu_step_load_data()
 {
-    log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_OPEN\n");
+    /* DISK_OPEN takes no data; open_disk() reads the disk from its path. */
+    log_cb(RETRO_LOG_INFO, CORE_NAME ": [EmuThread] %s\n",
+           load_as_disk ? "M64CMD_DISK_OPEN (booting a 64DD disk, no cartridge)"
+                        : "M64CMD_ROM_OPEN (booting a cartridge)");
 
-    if(CoreDoCommand(M64CMD_ROM_OPEN, game_size, (void*)game_data))
+    if(CoreDoCommand(load_as_disk ? M64CMD_DISK_OPEN : M64CMD_ROM_OPEN,
+                     load_as_disk ? 0 : game_size,
+                     load_as_disk ? NULL : (void*)game_data))
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load ROM\n");
+            log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to load %s\n",
+                   load_as_disk ? "64DD disk" : "ROM");
         goto load_fail;
     }
 
@@ -418,6 +507,7 @@ static bool emu_step_load_data()
 
     log_cb(RETRO_LOG_DEBUG, CORE_NAME ": [EmuThread] M64CMD_ROM_GET_HEADER\n");
 
+    /* With no cartridge the core returns a zeroed header. */
     if(CoreDoCommand(M64CMD_ROM_GET_HEADER, sizeof(ROM_HEADER), &ROM_HEADER))
     {
         if (log_cb)
@@ -548,7 +638,19 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
         case RETRO_GAME_TYPE_DD:
             if(num_info == 1)
             {
+                /* info[] has one element; nothing below may touch info[1]. */
+                struct retro_game_info disk_info;
+
                 retro_dd_path_img = strdup(info[0].path);
+
+                log_cb(RETRO_LOG_INFO, "Loading 64DD disk %s (no cartridge)...\n", info[0].path);
+
+                memset(&disk_info, 0, sizeof(disk_info));
+                disk_info.path = info[0].path;
+
+                /* The frontend already told us this is a disk, so don't sniff. */
+                result = load_game_internal(&disk_info, true);
+                break;
             }
             else if(num_info == 2)
             {
@@ -557,9 +659,9 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
             } else {
                 return false;
             }
-            
+
             log_cb(RETRO_LOG_INFO, "Loading %s...\n", info[0].path);
-            
+
             result = load_file(info[1].path, &gameBuffer, &outSize) == file_ok;
             if(result)
             {
@@ -653,7 +755,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
     info->library_name = "Mupen64Plus-Next";
     info->library_version = "2.8" FLAVOUR_VERSION GIT_VERSION;
-    info->valid_extensions = "n64|v64|z64|bin|u1";
+    info->valid_extensions = "n64|v64|z64|bin|u1|ndd";
     info->need_fullpath = false;
     info->block_extract = false;
 }
@@ -726,6 +828,11 @@ void retro_init(void)
         game_thread = co_create(65536 * sizeof(void*) * 16, (void (*)(void))EmuThreadFunction);
     }
 
+    /* Only get_dd_disk: load_dd_rom() ignores get_dd_rom, and leaving
+     * get_gb_cart_rom/ram NULL keeps the transferpak fallback intact. */
+    memset(&g_media_loader, 0, sizeof(g_media_loader));
+    g_media_loader.get_dd_disk = media_loader_get_dd_disk;
+
     m64p_error ret = CoreStartup(FRONTEND_API_VERSION, ".", ".", NULL, n64DebugCallback, 0, n64StateCallback);
     if(ret && log_cb)
         log_cb(RETRO_LOG_ERROR, CORE_NAME ": failed to initialize core (err=%i)\n", ret);
@@ -740,7 +847,7 @@ void retro_deinit(void)
        {
            CoreDoCommand(M64CMD_STOP, 0, NULL);
            co_switch(game_thread); /* Let the core thread finish */
-           CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+           close_content();
        }
     }
 
@@ -1878,14 +1985,37 @@ static bool retro_init_vulkan(void)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
+    return load_game_internal(game, content_is_dd_disk(game));
+}
+
+/* is_disk is settled before the sidecar probe, so a disk is never handed its
+ * own name with a second ".ndd" appended. */
+static bool load_game_internal(const struct retro_game_info *game, bool is_disk)
+{
     char* gamePath;
     char* newPath;
+
+    load_as_disk = is_disk;
+
+    if(load_as_disk)
+    {
+        /* open_disk() and load_dd_disk() take a filename, not a buffer. */
+        if(!game->path)
+        {
+            if (log_cb)
+                log_cb(RETRO_LOG_ERROR, CORE_NAME ": 64DD disk images must be loaded from a real file path, not from an archive\n");
+            return false;
+        }
+
+        if(!retro_dd_path_img)
+            retro_dd_path_img = strdup(game->path);
+    }
 
     // Workaround for broken subsystem on static platforms
     // Note: game->path can be NULL if loading from a archive
     // Current impl. uses mupen internals so that wouldn't work either way for dd/tpak
     // So we just sanity check
-    if(!retro_dd_path_img && game->path)
+    if(!load_as_disk && !retro_dd_path_img && game->path)
     {
         gamePath = (char*)game->path;
         newPath = (char*)calloc(1, strlen(gamePath)+5);
@@ -1980,9 +2110,16 @@ bool retro_load_game(const struct retro_game_info *game)
     }
 #endif
 
-    game_data = malloc(game->size);
-    memcpy(game_data, game->data, game->size);
-    game_size = game->size;
+    /* Unused on the disk path; don't copy a whole disk image for nothing. */
+    game_data = NULL;
+    game_size = 0;
+
+    if (!load_as_disk)
+    {
+        game_data = malloc(game->size);
+        memcpy(game_data, game->data, game->size);
+        game_size = game->size;
+    }
 
     if (!emu_step_load_data())
         return false;
@@ -2028,7 +2165,7 @@ void retro_unload_game(void)
 
        environ_clear_thread_waits_cb(0, NULL);
 
-       CoreDoCommand(M64CMD_ROM_CLOSE, 0, NULL);
+       close_content();
     }
 
     cleanup_global_paths();
