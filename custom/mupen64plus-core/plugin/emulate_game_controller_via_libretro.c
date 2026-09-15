@@ -47,6 +47,7 @@ extern int l_cbutton;
 extern int d_cbutton;
 extern int u_cbutton;
 extern bool alternate_mapping;
+extern bool scale_modern_analog;
 static bool libretro_supports_bitmasks = false;
 
 extern m64p_rom_header ROM_HEADER;
@@ -286,25 +287,103 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
 
    analogX = input_cb(Control, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
    analogY = input_cb(Control, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
-
-   // Convert cartesian coordinate analog stick to polar coordinates
-   radius = sqrt(analogX * analogX + analogY * analogY);
-   angle = atan2(analogY, analogX);
-
-   if (radius > astick_deadzone)
+   
+   if(scale_modern_analog)
    {
-      // Re-scale analog stick range to negate deadzone (makes slow movements possible)
-      radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
-      // N64 Analog stick range is from -80 to 80
-      radius *= 80.0 / ASTICK_MAX * (astick_sensitivity / 100.0);
-      // Convert back to cartesian coordinates
-      Keys->X_AXIS = +(int32_t)ROUND(radius * cos(angle));
-      Keys->Y_AXIS = -(int32_t)ROUND(radius * sin(angle));
+      double setOperatingRange(int16_t position, double saturationRadius, double offset);
+      double processDeadzoneAndResponseCurve(double position, double innerDeadzone, double cardinalMax, double offset);
+      double revisePosition(double position, double length, double saturationRadius, double offset);
+      void applyGateBoundaries(double innerDeadzone, double cardinalMax, double diagonalMax, double positionX, double positionY, double offset,double* boundedPositionX, double* boundedPositionY);
+      double clampAxisToNearestBoundary(double position, double offset, double cardinalMax);
+      double counteractPrecisionError(double position);
+
+      // Assuming x_value and y_value are int16_t inputs:
+      int16_t x_value = analogX;
+      int16_t y_value = analogY;
+
+      double cardinalMax;
+      double diagonalMax;
+      double innerDeadzone;
+      double saturationRadius;
+      double offset;
+
+      double ax, ay;
+      double scaledLength;
+      double axBounded, ayBounded;
+
+      cardinalMax   = 85.0;
+      diagonalMax   = 69.0;
+      innerDeadzone = 7.0;
+
+      innerDeadzone += (float)astick_deadzone / ASTICK_MAX / 0.01f;
+      
+      double temp = innerDeadzone + diagonalMax;
+      double discriminant = pow(temp, 2.0) - 2.0 * sqrt(2.0) * diagonalMax * innerDeadzone;
+      saturationRadius = (temp + sqrt(discriminant)) / sqrt(2.0);
+
+      offset = 0.0;
+
+      /* Scale input values */
+      ax = setOperatingRange(x_value, saturationRadius, offset);
+      ay = setOperatingRange(y_value, saturationRadius, offset);
+
+      /* Apply inner axial dead-zone and response curve */
+      ax = processDeadzoneAndResponseCurve(ax, innerDeadzone, saturationRadius, offset);
+      ay = processDeadzoneAndResponseCurve(ay, innerDeadzone, saturationRadius, offset);
+
+      ax *= (astick_sensitivity / 100.0);
+      ay *= (astick_sensitivity / 100.0);
+
+      scaledLength = hypot(ax - offset, ay - offset);
+
+      if (scaledLength > saturationRadius)
+      {
+         ax = revisePosition(ax, scaledLength, saturationRadius, offset);
+         ay = revisePosition(ay, scaledLength, saturationRadius, offset);
+      }
+
+      axBounded = 0.0;
+      ayBounded = 0.0;
+
+      applyGateBoundaries(innerDeadzone, cardinalMax, diagonalMax, ax, ay, offset, &axBounded, &ayBounded);
+
+      ax = axBounded;
+      ay = ayBounded;
+
+      ax = clampAxisToNearestBoundary(ax, offset, cardinalMax);
+      ay = clampAxisToNearestBoundary(ay, offset, cardinalMax);
+
+      ax = counteractPrecisionError(ax);
+      ay = counteractPrecisionError(ay);
+    
+      analogX = ax;
+      analogY = ay;
+
+      /* ax and ay now hold the processed values */
+      Keys->X_AXIS = analogX;
+      Keys->Y_AXIS = -analogY;
    }
    else
    {
-      Keys->X_AXIS = 0;
-      Keys->Y_AXIS = 0;
+      // Convert cartesian coordinate analog stick to polar coordinates
+      radius = sqrt(analogX * analogX + analogY * analogY);
+      angle = atan2(analogY, analogX);
+
+      if (radius > astick_deadzone)
+      {
+         // Re-scale analog stick range to negate deadzone (makes slow movements possible)
+         radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
+         // N64 Analog stick range is from -80 to 80
+         radius *= 80.0 / ASTICK_MAX * (astick_sensitivity / 100.0);
+         // Convert back to cartesian coordinates
+         Keys->X_AXIS = +(int32_t)ROUND(radius * cos(angle));
+         Keys->Y_AXIS = -(int32_t)ROUND(radius * sin(angle));
+      }
+      else
+      {
+         Keys->X_AXIS = 0;
+         Keys->Y_AXIS = 0;
+      }
    }
 }
 

@@ -124,6 +124,7 @@ int l_cbutton;
 int d_cbutton;
 int u_cbutton;
 bool alternate_mapping;
+bool scale_modern_analog;
 
 static uint8_t* game_data = NULL;
 static uint32_t game_size = 0;
@@ -907,6 +908,17 @@ void update_controllers()
         alternate_mapping = !strcmp(var.value, "False") ? 0 : 1;
 
         if (alternate_mapping != alternate_mapping_prev)
+            inputGetKeys_default_descriptor();
+    }
+
+    var.key = CORE_NAME "-scale-modern-analog";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        bool scale_modern_analog_prev = scale_modern_analog;
+        scale_modern_analog = !strcmp(var.value, "False") ? 0 : 1;
+
+        if (scale_modern_analog != scale_modern_analog_prev)
             inputGetKeys_default_descriptor();
     }
 }
