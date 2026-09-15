@@ -261,9 +261,19 @@ static uintptr_t jump_table_symbols[] = {
   (intptr_t)breakpoint
 };
 
+#if defined(__APPLE__)
+#include <libkern/OSCacheControl.h>
+#endif
+
 static void cache_flush(char* start, char* end)
 {
-#ifndef WIN32
+#if defined(__APPLE__)
+    /* Make freshly-written instructions visible and flip the JIT page
+     * back to execute mode (it was writable while we emitted the
+     * block). */
+    sys_icache_invalidate(start, (size_t)(end - start));
+    M64P_JIT_WRITE_END();
+#elif !defined(WIN32)
     // Don't rely on GCC's __clear_cache implementation, as it caches
     // icache/dcache cache line sizes, that can vary between cores on
     // big.LITTLE architectures.
@@ -304,6 +314,12 @@ static void set_jump_target(intptr_t addr,uintptr_t target)
   if(!ptr) // Indiana Jones is weird
     return;
 
+  /* This patches an instruction inside an already-emitted JIT block;
+   * on Apple Silicon the page is in execute mode, so flip to write
+   * before the store and back to execute (with icache invalidate)
+   * after. The macros are no-ops on non-Apple platforms. */
+  M64P_JIT_WRITE_BEGIN();
+
   if((*ptr&0xFC000000)==0x14000000) {
     assert(offset>=-134217728LL&&offset<134217728LL);
     *ptr=(*ptr&0xFC000000)|((offset>>2)&0x3ffffff);
@@ -323,6 +339,12 @@ static void set_jump_target(intptr_t addr,uintptr_t target)
   }
   else
     assert(0); /*Should not happen*/
+
+  M64P_JIT_WRITE_END();
+#if defined(__APPLE__)
+  /* Make the patched instruction visible to the icache. */
+  sys_icache_invalidate((void *)addr, 4);
+#endif
 }
 
 /* Literal pool */
@@ -4582,6 +4604,11 @@ static void invalidate_addr(u_int addr)
 // CPU-architecture-specific initialization
 static void arch_init(void) {
 
+#if defined(__APPLE__)
+  /* The trampolines below are emitted into the JIT cache; cache_flush()
+   * at the end of this function will flip them back to execute mode. */
+  M64P_JIT_WRITE_BEGIN();
+#endif
   assert((fp_memory_map&7)==0);
   g_dev.r4300.new_dynarec_hot_state.rounding_modes[0]=0x0<<22; // round
   g_dev.r4300.new_dynarec_hot_state.rounding_modes[1]=0x3<<22; // trunc
@@ -4625,5 +4652,8 @@ static void arch_init(void) {
     ptr3+=2;
   }
 
-  __clear_cache((char *)base_addr+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE,(char *)base_addr+(1<<TARGET_SIZE_2));
+  /* Use our cache_flush helper rather than __clear_cache so that on
+   * Apple Silicon the JIT page is flipped from write to execute mode
+   * before the trampoline jumps are first invoked. */
+  cache_flush((char *)base_addr+(1<<TARGET_SIZE_2)-JUMP_TABLE_SIZE,(char *)base_addr+(1<<TARGET_SIZE_2));
 }
