@@ -3318,7 +3318,7 @@ static bool glsm_state_ctx_init(glsm_ctx_params_t *params)
    hw_render.stencil            = params->stencil;
    hw_render.depth              = true;
    hw_render.bottom_left_origin = true;
-   hw_render.cache_context      = true;
+   hw_render.cache_context      = !params->no_cache_context;
 
    if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
       return false;
@@ -3378,6 +3378,14 @@ bool glsm_ctl(enum glsm_state_ctl state, void *data)
          break;
       case GLSM_CTL_STATE_CONTEXT_DESTROY:
          glsm_state_ctx_destroy(data);
+         break;
+      /* CONTEXT_RESET's reset branch without retroChangeWindow(), for a
+       * core that rebuilds its own objects on the new context */
+      case GLSM_CTL_STATE_CONTEXT_RESTORE:
+         resetting_context = 1;
+         glsm_state_setup();
+         glsm_state_unbind();
+         resetting_context = 0;
          break;
       case GLSM_CTL_STATE_CONTEXT_INIT:
          return glsm_state_ctx_init((glsm_ctx_params_t*)data);
