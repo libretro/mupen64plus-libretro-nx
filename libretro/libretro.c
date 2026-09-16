@@ -227,6 +227,18 @@ extern struct cheat_ctx g_cheat_ctx;
 static bool emuThreadRunning = false;
 static pthread_t emuThread;
 
+// Threaded renderer across a GL context loss, see context_destroy()
+enum
+{
+    GFX_CONTEXT_LIVE,
+    GFX_CONTEXT_LOSE,
+    GFX_CONTEXT_LOST,
+    GFX_CONTEXT_RESTORE
+};
+static int gfx_context_state = GFX_CONTEXT_LIVE;
+static pthread_mutex_t gfx_context_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t gfx_context_cond = PTHREAD_COND_INITIALIZER;
+
 // after the controller's CONTROL* member has been assigned we can update
 // them straight from here...
 extern struct
@@ -1800,6 +1812,64 @@ static void format_saved_memory(void)
     }
 }
 
+static int gfx_context_get_state(void)
+{
+    int state;
+    pthread_mutex_lock(&gfx_context_lock);
+    state = gfx_context_state;
+    pthread_mutex_unlock(&gfx_context_lock);
+    return state;
+}
+
+static void gfx_context_set_state(int state)
+{
+    pthread_mutex_lock(&gfx_context_lock);
+    gfx_context_state = state;
+    pthread_cond_signal(&gfx_context_cond);
+    pthread_mutex_unlock(&gfx_context_lock);
+}
+
+// Executes the emu thread's GL commands here until it reaches state
+static void gfx_context_pump(int state, bool drain)
+{
+    glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+    threaded_gl_yield_per_command = true;
+    while (!threaded_gl_safe_shutdown
+          && (gfx_context_get_state() != state || (drain && !gln64_thr_gl_queue_empty())))
+    {
+       co_switch(game_thread);
+    }
+    threaded_gl_yield_per_command = false;
+    glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+}
+
+// Emu thread, at the VI where the non-threaded path yields to the frontend
+static void gfx_context_check(void)
+{
+    if (gfx_context_get_state() != GFX_CONTEXT_LOSE)
+       return;
+
+    gln64DestroyGfxContext();
+
+    pthread_mutex_lock(&gfx_context_lock);
+    gfx_context_state = GFX_CONTEXT_LOST;
+    while (gfx_context_state == GFX_CONTEXT_LOST)
+       pthread_cond_wait(&gfx_context_cond, &gfx_context_lock);
+    pthread_mutex_unlock(&gfx_context_lock);
+
+    gln64ReinitGfxContext();
+    gfx_context_set_state(GFX_CONTEXT_LIVE);
+}
+
+static void gfx_context_restore(void)
+{
+    if (gfx_context_get_state() != GFX_CONTEXT_LOST)
+       return;
+
+    gfx_context_set_state(GFX_CONTEXT_RESTORE);
+    gfx_context_pump(GFX_CONTEXT_LIVE, false);
+}
+
 void context_reset(void)
 {
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
@@ -1817,8 +1887,18 @@ void context_reset(void)
        // the GL context is destroyed and recreated.
        if (emu_initialized)
        {
-          gln64DestroyGfxContext();
-          gln64ReinitGfxContext();
+          if (EnableThreadedRenderer)
+          {
+             // Always a new context: context_destroy() cleared glsm's
+             // window_first, so CONTEXT_RESET above skipped setup
+             glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESTORE, NULL);
+             gfx_context_restore();
+          }
+          else
+          {
+             gln64DestroyGfxContext();
+             gln64ReinitGfxContext();
+          }
        }
     }
 
@@ -1829,6 +1909,18 @@ static void context_destroy(void)
 {
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
     {
+       // The emu thread is mid-frame and its queued commands and buffer
+       // mappings belong to this context: stop it at the next VI and let it
+       // delete its objects while the context still exists
+       if (EnableThreadedRenderer && emuThreadRunning
+             && gfx_context_get_state() == GFX_CONTEXT_LIVE)
+       {
+          // Like retro_serialize(): the emu thread must reach that VI without
+          // blocking on audio
+          environ_clear_thread_waits_cb(1, NULL);
+          gfx_context_set_state(GFX_CONTEXT_LOSE);
+          gfx_context_pump(GFX_CONTEXT_LOST, true);
+       }
        glsm_ctl(GLSM_CTL_STATE_CONTEXT_DESTROY, NULL);
     }
 #ifdef HAVE_PARALLEL_RDP
@@ -1963,6 +2055,8 @@ bool retro_load_game(const struct retro_game_info *game)
     params.context_destroy       = context_destroy;
     params.environ_cb            = environ_cb;
     params.stencil               = false;
+    // The threaded renderer needs context_destroy() before the context goes away
+    params.no_cache_context      = current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer;
 
     params.framebuffer_lock      = context_framebuffer_lock;
     if (current_rdp_type == RDP_PLUGIN_GLIDEN64 && !glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params))
@@ -2014,6 +2108,10 @@ void retro_unload_game(void)
 
     if(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer)
     {
+       // If the frontend called context_destroy() first, the emu thread has
+       // to rebuild before it can run on to the stop
+       gfx_context_restore();
+
        CoreDoCommand(M64CMD_STOP, 0, NULL);
 
        // Run one more frame to unlock it
@@ -2025,6 +2123,8 @@ void retro_unload_game(void)
        glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
     
        pthread_join(emuThread, NULL);
+       // Don't carry a loss cut short by the shutdown into the next game
+       gfx_context_set_state(GFX_CONTEXT_LIVE);
 
        environ_clear_thread_waits_cb(0, NULL);
 
@@ -2280,6 +2380,10 @@ void retro_return(void)
     if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {
        co_switch(retro_thread);
+    }
+    else
+    {
+       gfx_context_check();
     }
 }
 

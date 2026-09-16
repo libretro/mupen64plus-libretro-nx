@@ -81,7 +81,9 @@ extern char* retro_transferpak_ram_path;
 
 // Threaded GL Callback
 extern void gln64_thr_gl_invoke_command_loop();
+extern bool gln64_thr_gl_queue_empty();
 extern bool threaded_gl_safe_shutdown;
+extern bool threaded_gl_yield_per_command;
 
 // GLN64 context management (for libretro context_destroy/context_reset)
 extern void gln64DestroyGfxContext(void);
