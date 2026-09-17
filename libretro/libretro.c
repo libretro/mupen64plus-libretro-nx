@@ -705,6 +705,8 @@ void retro_init(void)
 
     struct retro_log_callback log;
     unsigned colorMode = RETRO_PIXEL_FORMAT_XRGB8888;
+    uint64_t serialization_quirks =
+        RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
         log_cb = log.log;
@@ -717,6 +719,8 @@ void retro_init(void)
         perf_get_cpu_features_cb = NULL;
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
+    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS,
+          &serialization_quirks);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
     if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {
