@@ -59,6 +59,13 @@ static uint8_t l_plugin[4];
 static uint8_t l_buffer_target;
 static uint8_t l_player_lag[4];
 
+//UDP packets
+static UDPpacket *l_request_input_packet;
+static UDPpacket *l_send_input_packet;
+static UDPpacket *l_process_packet;
+static UDPpacket *l_check_sync_packet;
+static const int32_t l_check_sync_packet_size = (CP0_REGS_COUNT * 4) + 5;
+
 //UDP packet formats
 #define UDP_SEND_KEY_INFO 0
 #define UDP_RECEIVE_KEY_INFO 1
@@ -124,6 +131,31 @@ m64p_error netplay_start(const char* host, int port)
         return M64ERR_SYSTEM_FAIL;
     }
 
+    l_request_input_packet = SDLNet_AllocPacket(12);
+    l_send_input_packet = SDLNet_AllocPacket(11);
+    l_process_packet = SDLNet_AllocPacket(512);
+    l_check_sync_packet = SDLNet_AllocPacket(l_check_sync_packet_size);
+    if (l_request_input_packet == NULL ||
+        l_send_input_packet == NULL ||
+        l_process_packet == NULL ||
+        l_check_sync_packet == NULL)
+    {
+        DebugMessage(M64MSG_ERROR, "Netplay: could not allocate UDP packets");
+        SDLNet_UDP_Close(l_udpSocket);
+        l_udpSocket = NULL;
+        SDLNet_TCP_Close(l_tcpSocket);
+        l_tcpSocket = NULL;
+        SDLNet_FreePacket(l_request_input_packet);
+        l_request_input_packet = NULL;
+        SDLNet_FreePacket(l_send_input_packet);
+        l_send_input_packet = NULL;
+        SDLNet_FreePacket(l_process_packet);
+        l_process_packet = NULL;
+        SDLNet_FreePacket(l_check_sync_packet);
+        l_check_sync_packet = NULL;
+        return M64ERR_NO_MEMORY;
+    }
+
     for (int i = 0; i < 4; ++i)
     {
         l_netplay_control[i] = -1;
@@ -174,6 +206,16 @@ m64p_error netplay_stop()
         l_tcpSocket = NULL;
         l_udpSocket = NULL;
         l_udpChannel = -1;
+
+        SDLNet_FreePacket(l_request_input_packet);
+        SDLNet_FreePacket(l_send_input_packet);
+        SDLNet_FreePacket(l_process_packet);
+        SDLNet_FreePacket(l_check_sync_packet);
+        l_request_input_packet = NULL;
+        l_send_input_packet = NULL;
+        l_process_packet = NULL;
+        l_check_sync_packet = NULL;
+    
         l_netplay_is_init = 0;
         SDLNet_Quit();
         return M64ERR_SUCCESS;
@@ -200,16 +242,14 @@ static uint8_t buffer_size(uint8_t control_id)
 
 static void netplay_request_input(uint8_t control_id)
 {
-    UDPpacket *packet = SDLNet_AllocPacket(12);
-    packet->data[0] = UDP_REQUEST_KEY_INFO;
-    packet->data[1] = control_id; //The player we need input for
-    SDLNet_Write32(l_reg_id, &packet->data[2]); //our registration ID
-    SDLNet_Write32(l_cin_compats[control_id].netplay_count, &packet->data[6]); //the current event count
-    packet->data[10] = l_spectator; //whether we are a spectator
-    packet->data[11] = buffer_size(control_id); //our local buffer size
-    packet->len = 12;
-    SDLNet_UDP_Send(l_udpSocket, l_udpChannel, packet);
-    SDLNet_FreePacket(packet);
+    l_request_input_packet->data[0] = UDP_REQUEST_KEY_INFO;
+    l_request_input_packet->data[1] = control_id; //The player we need input for
+    SDLNet_Write32(l_reg_id, &l_request_input_packet->data[2]); //our registration ID
+    SDLNet_Write32(l_cin_compats[control_id].netplay_count, &l_request_input_packet->data[6]); //the current event count
+    l_request_input_packet->data[10] = l_spectator; //whether we are a spectator
+    l_request_input_packet->data[11] = buffer_size(control_id); //our local buffer size
+    l_request_input_packet->len = 12;
+    SDLNet_UDP_Send(l_udpSocket, l_udpChannel, l_request_input_packet);
 }
 
 static int check_valid(uint8_t control_id, uint32_t count)
@@ -249,21 +289,20 @@ static int netplay_require_response(void* opaque)
 static void netplay_process()
 {
     //In this function we process data we have received from the server
-    UDPpacket *packet = SDLNet_AllocPacket(512);
     uint32_t curr, count, keys;
     uint8_t plugin, player, current_status;
-    while (SDLNet_UDP_Recv(l_udpSocket, packet) == 1)
+    while (SDLNet_UDP_Recv(l_udpSocket, l_process_packet) == 1)
     {
-        switch (packet->data[0])
+        switch (l_process_packet->data[0])
         {
             case UDP_RECEIVE_KEY_INFO:
             case UDP_RECEIVE_KEY_INFO_GRATUITOUS:
-                player = packet->data[1];
+                player = l_process_packet->data[1];
                 //current_status is a status update from the server
                 //it will let us know if another player has disconnected, or the games have desynced
-                current_status = packet->data[2];
-                if (packet->data[0] == UDP_RECEIVE_KEY_INFO)
-                    l_player_lag[player] = packet->data[3];
+                current_status = l_process_packet->data[2];
+                if (l_process_packet->data[0] == UDP_RECEIVE_KEY_INFO)
+                    l_player_lag[player] = l_process_packet->data[3];
                 if (current_status != l_status)
                 {
                     if (((current_status & 0x1) ^ (l_status & 0x1)) != 0)
@@ -278,9 +317,9 @@ static void netplay_process()
                 curr = 5;
                 //this loop processes input data from the server, inserting new events into the linked list for each player
                 //it skips events that we have already recorded, or if we receive data for an event that has already happened
-                for (uint8_t i = 0; i < packet->data[4]; ++i)
+                for (uint8_t i = 0; i < l_process_packet->data[4]; ++i)
                 {
-                    count = SDLNet_Read32(&packet->data[curr]);
+                    count = SDLNet_Read32(&l_process_packet->data[curr]);
                     curr += 4;
 
                     if (((count - l_cin_compats[player].netplay_count) > (UINT32_MAX / 2)) || (check_valid(player, count))) //event doesn't need to be recorded
@@ -289,9 +328,9 @@ static void netplay_process()
                         continue;
                     }
 
-                    keys = SDLNet_Read32(&packet->data[curr]);
+                    keys = SDLNet_Read32(&l_process_packet->data[curr]);
                     curr += 4;
-                    plugin = packet->data[curr];
+                    plugin = l_process_packet->data[curr];
                     curr += 1;
 
                     //insert new event at beginning of linked list
@@ -308,7 +347,6 @@ static void netplay_process()
                 break;
         }
     }
-    SDLNet_FreePacket(packet);
 }
 
 static int netplay_ensure_valid(uint8_t control_id)
@@ -407,15 +445,13 @@ static uint32_t netplay_get_input(uint8_t control_id)
 
 static void netplay_send_input(uint8_t control_id, uint32_t keys)
 {
-    UDPpacket *packet = SDLNet_AllocPacket(11);
-    packet->data[0] = UDP_SEND_KEY_INFO;
-    packet->data[1] = control_id; //player number
-    SDLNet_Write32(l_cin_compats[control_id].netplay_count, &packet->data[2]); // current event count
-    SDLNet_Write32(keys, &packet->data[6]); //key data
-    packet->data[10] = l_plugin[control_id]; //current plugin
-    packet->len = 11;
-    SDLNet_UDP_Send(l_udpSocket, l_udpChannel, packet);
-    SDLNet_FreePacket(packet);
+    l_send_input_packet->data[0] = UDP_SEND_KEY_INFO;
+    l_send_input_packet->data[1] = control_id; //player number
+    SDLNet_Write32(l_cin_compats[control_id].netplay_count, &l_send_input_packet->data[2]); // current event count
+    SDLNet_Write32(keys, &l_send_input_packet->data[6]); //key data
+    l_send_input_packet->data[10] = l_plugin[control_id]; //current plugin
+    l_send_input_packet->len = 11;
+    SDLNet_UDP_Send(l_udpSocket, l_udpChannel, l_send_input_packet);
 }
 
 uint8_t netplay_register_player(uint8_t player, uint8_t plugin, uint8_t rawdata, uint32_t reg_id)
@@ -566,22 +602,20 @@ void netplay_check_sync(struct cp0* cp0)
     if (!netplay_is_init())
         return;
 
-    const uint32_t* cp0_regs = r4300_cp0_regs(cp0);
-
     if (l_vi_counter % 600 == 0)
     {
-        uint32_t packet_len = (CP0_REGS_COUNT * 4) + 5;
-        UDPpacket *packet = SDLNet_AllocPacket(packet_len);
-        packet->data[0] = UDP_SYNC_DATA;
-        SDLNet_Write32(l_vi_counter, &packet->data[1]); //current VI count
+        const uint32_t* cp0_regs = r4300_cp0_regs(cp0);
+
+        l_check_sync_packet->data[0] = UDP_SYNC_DATA;
+        SDLNet_Write32(l_vi_counter, &l_check_sync_packet->data[1]); //current VI count
         for (int i = 0; i < CP0_REGS_COUNT; ++i)
         {
-            SDLNet_Write32(cp0_regs[i], &packet->data[(i * 4) + 5]);
+            SDLNet_Write32(cp0_regs[i], &l_check_sync_packet->data[(i * 4) + 5]);
         }
-        packet->len = packet_len;
-        SDLNet_UDP_Send(l_udpSocket, l_udpChannel, packet);
-        SDLNet_FreePacket(packet);
+        l_check_sync_packet->len = l_check_sync_packet_size;
+        SDLNet_UDP_Send(l_udpSocket, l_udpChannel, l_check_sync_packet);
     }
+
     ++l_vi_counter;
 }
 
@@ -606,6 +640,9 @@ void netplay_read_registration(struct controller_input_compat* cin_compats)
     {
         reg_id = SDLNet_Read32(&input_data[curr]);
         curr += 4;
+
+        Controls[i].Type = CONT_TYPE_STANDARD; //make sure VRU is disabled
+
         if (reg_id == 0) //No one registered to control this player
         {
             Controls[i].Present = 0;

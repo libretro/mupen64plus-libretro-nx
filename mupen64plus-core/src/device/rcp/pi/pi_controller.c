@@ -110,7 +110,7 @@ static void dma_pi_write(struct pi_controller* pi)
     if (length >= 0x7f && (length & 1))
         length += 1;
     if (length <= 0x80)
-        length -= dram_addr & 0x7;
+        length = length >= (dram_addr & 0x7) ? length - (dram_addr & 0x7) : 0;
     unsigned int cycles = handler->dma_write(opaque, dram, dram_addr, cart_addr, length);
 
     post_framebuffer_write(&pi->dp->fb, dram_addr, length);
@@ -153,7 +153,8 @@ void read_pi_regs(void* opaque, uint32_t address, uint32_t* value)
     struct pi_controller* pi = (struct pi_controller*)opaque;
     uint32_t reg = pi_reg(address);
 
-    *value = pi->regs[reg];
+    if (reg < PI_REGS_COUNT)
+        *value = pi->regs[reg];
 
     if (reg == PI_WR_LEN_REG || reg == PI_RD_LEN_REG)
         *value = 0x7F;
@@ -209,7 +210,10 @@ void write_pi_regs(void* opaque, uint32_t address, uint32_t value, uint32_t mask
         return;
     }
 
-    masked_write(&pi->regs[reg], value, mask);
+    if (reg < PI_REGS_COUNT)
+    {
+        masked_write(&pi->regs[reg], value, mask);
+    }
 }
 
 void pi_end_of_dma_event(void* opaque)

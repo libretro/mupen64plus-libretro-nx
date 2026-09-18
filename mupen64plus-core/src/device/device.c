@@ -27,6 +27,7 @@
 #include <mupen64plus-next_common.h>
 #endif // __LIBRETRO__
 
+#include "main/util.h"
 #include "memory/memory.h"
 #include "pif/pif.h"
 #include "r4300/r4300_core.h"
@@ -63,7 +64,7 @@ static void get_pi_dma_handler(struct cart* cart, struct dd_controller* dd, uint
 
     if (address >= MM_CART_ROM) {
         if (address >= MM_CART_DOM3) {
-            /* 0x1fd00000 - 0x7fffffff : dom3 addr2, cart rom (Paper Mario (U)) ??? */
+            /* 0x1fd00000 - 0x7fffffff : dom3 addr2, cart rom */
             RW(cart, cart_dom3);
         }
         else {
@@ -268,7 +269,7 @@ void init_device(struct device* dev,
         { A(MM_DD_ROM, 0x1ffffff), M64P_MEM_NOTHING, { NULL, RW(open_bus) }, { NULL, 0x1ffffff, 0 } },
         { A(MM_DOM2_ADDR2, 0x1ffff), M64P_MEM_FLASHRAMSTAT, { &dev->cart, RW(cart_dom2) }, { NULL, 0x1ffff, 0} },
         { A(MM_IS_VIEWER, 0xfff), M64P_MEM_NOTHING, { &dev->is, RW(is_viewer) }, { NULL, 0xfff, 0 } },
-        { A(MM_CART_ROM, rom_size-1), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) }, { NULL, rom_size-1, RETRO_MEMDESC_CONST } },
+        { A(MM_CART_ROM, min(rom_size-1, 0xfbfffff)), M64P_MEM_ROM, { &dev->cart.cart_rom, RW(cart_rom) }, { NULL, rom_size-1, RETRO_MEMDESC_CONST } },
         { A(MM_PIF_MEM, 0xffff), M64P_MEM_PIF, { &dev->pif, RW(pif_mem) }, { NULL, 0xffff, 0 } }
     };
 
@@ -312,7 +313,7 @@ void init_device(struct device* dev,
      * use CART unless DD is plugged and the plugged CART is not a combo media (cart+disk),
      * or rom_size is 0 meaning there's no CART loaded
      */
-    uint8_t media = *((uint8_t*)mem_base_u32(base, MM_CART_ROM) + (0x3b ^ S8));
+    uint8_t media = rom_size == 0 ? 0 : *((uint8_t*)mem_base_u32(base, MM_CART_ROM) + (0x3b ^ S8));
     uint32_t rom_base = (rom_size == 0 || (dd_rom_size > 0 && media != 'C'))
         ? MM_DD_ROM
         : MM_CART_ROM;

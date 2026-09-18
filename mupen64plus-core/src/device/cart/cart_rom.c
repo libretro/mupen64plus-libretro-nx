@@ -28,11 +28,12 @@
 #include "device/memory/memory.h"
 #include "device/r4300/r4300_core.h"
 #include "device/rcp/pi/pi_controller.h"
+#include "device/rdram/rdram.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#define CART_ROM_ADDR_MASK UINT32_C(0x03ffffff);
+#define CART_ROM_ADDR_MASK UINT32_C(0xefffffff);
 
 
 void init_cart_rom(struct cart_rom* cart_rom,
@@ -62,9 +63,13 @@ void read_cart_rom(void* opaque, uint32_t address, uint32_t* value)
     {
         *value = cart_rom->last_write;
     }
-    else
+    else if (addr < cart_rom->rom_size)
     {
         *value = *(uint32_t*)(cart_rom->rom + addr);
+    }
+    else
+    {
+        *value = 0;
     }
 }
 
@@ -101,7 +106,7 @@ unsigned int cart_rom_dma_write(void* opaque, uint8_t* dram, uint32_t dram_addr,
 
     if (cart_addr + length < cart_rom->rom_size)
     {
-        for(i = 0; i < length; ++i) {
+        for(i = 0; i < length && (dram_addr+i) < cart_rom->r4300->rdram->dram_size; ++i) {
             dram[(dram_addr+i)^S8] = mem[(cart_addr+i)^S8];
         }
     }
@@ -111,10 +116,10 @@ unsigned int cart_rom_dma_write(void* opaque, uint8_t* dram, uint32_t dram_addr,
             ? 0
             : cart_rom->rom_size - cart_addr;
 
-        for (i = 0; i < diff; ++i) {
+        for (i = 0; i < diff && (dram_addr+i) < cart_rom->r4300->rdram->dram_size; ++i) {
             dram[(dram_addr+i)^S8] = mem[(cart_addr+i)^S8];
         }
-        for (; i < length; ++i) {
+        for (; i < length && (dram_addr+i) < cart_rom->r4300->rdram->dram_size; ++i) {
             dram[(dram_addr+i)^S8] = 0;
         }
     }
