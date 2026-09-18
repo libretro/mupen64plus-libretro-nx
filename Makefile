@@ -399,17 +399,22 @@ else ifneq (,$(findstring RK,$(platform)))
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
    LDFLAGS += -dynamiclib
+   SYSTEM_ZLIB = 1
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
         LDFLAGS += -mmacosx-version-min=10.7
    LDFLAGS += -stdlib=libc++
 
-   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DNO_ASM -DGL_SILENCE_DEPRECATION=1
+   PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DGL_SILENCE_DEPRECATION=1
    GL_LIB := -framework OpenGL
    LDFLAGS += -framework AudioToolbox
 
    # Target Dynarec
-   WITH_DYNAREC =
+   ifeq ($(ARCH), $(filter $(ARCH), arm64 aarch64))
+      WITH_DYNAREC = aarch64
+   else
+      WITH_DYNAREC =
+   endif
 
    HAVE_PARALLEL_RSP = 1
    HAVE_PARALLEL_RDP = 1
