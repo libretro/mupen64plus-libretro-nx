@@ -56,6 +56,7 @@
 #include "device/rcp/pi/pi_controller.h"
 #include "device/pif/pif.h"
 #include "libretro_memory.h"
+#include "libretro_vfs.h"
 
 #include "audio_plugin.h"
 
@@ -646,6 +647,13 @@ void retro_set_environment(retro_environment_t cb)
     environ_cb(RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO, (void*)subsystems);
     environ_cb(RETRO_ENVIRONMENT_GET_CLEAR_ALL_THREAD_WAITS_CB, &environ_clear_thread_waits_cb);
     
+    struct retro_vfs_interface_info vfs_iface_info;
+    vfs_iface_info.required_interface_version = 3;
+    vfs_iface_info.iface = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_iface_info))
+        vfs_interface = vfs_iface_info.iface;
+
     setup_variables();
 }
 
@@ -1891,12 +1899,11 @@ bool retro_load_game(const struct retro_game_info *game)
         newPath = (char*)calloc(1, strlen(gamePath)+5);
         strcpy(newPath, gamePath);
         strcat(newPath, ".ndd");
-        FILE* fileTest = fopen(newPath, "r");
-        if(!fileTest)
+
+        if (!vfs_file_exists(newPath))
         {
             free(newPath);
         } else {
-            fclose(fileTest);
             // Free'd later in Mupen Core
             retro_dd_path_img = newPath;
         }
@@ -1908,14 +1915,12 @@ bool retro_load_game(const struct retro_game_info *game)
        newPath = (char *)calloc(1, strlen(gamePath) + 4);
        strcpy(newPath, gamePath);
        strcat(newPath, ".gb");
-       FILE *fileTest = fopen(newPath, "r");
-       if (!fileTest)
+       if (!vfs_file_exists(newPath))
        {
           free(newPath);
        }
        else
        {
-          fclose(fileTest);
           // Free'd later in Mupen Core
           retro_transferpak_rom_path = newPath;
  
@@ -1926,14 +1931,12 @@ bool retro_load_game(const struct retro_game_info *game)
              newPath = (char *)calloc(1, strlen(gamePath) + 5);
              strcpy(newPath, gamePath);
              strcat(newPath, ".sav");
-             FILE *fileTest = fopen(newPath, "r");
-             if (!fileTest)
+             if (!vfs_file_exists(newPath))
              {
                 free(newPath);
              }
              else
              {
-                fclose(fileTest);
                 // Free'd later in Mupen Core
                 retro_transferpak_ram_path = newPath;
              }
