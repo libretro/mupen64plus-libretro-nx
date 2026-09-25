@@ -19,7 +19,7 @@ SOURCES_ASM  :=
 SOURCES_NASM :=
 ANDROID      := 1
 AWK          ?= awk
-STRINGS      ?= strings
+STRINGS      ?= $(NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strings
 TR           ?= tr
 HAVE_PARALLEL_RSP ?= 0
 HAVE_PARALLEL_RDP ?= 0
@@ -31,26 +31,22 @@ WITH_DYNAREC :=
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
   WITH_DYNAREC := arm
   HAVE_NEON := 1
-  STRINGS := arm-linux-androideabi-$(STRINGS)
   LLE = 1
   HAVE_PARALLEL_RSP = 1
   HAVE_PARALLEL_RDP = 1
   HAVE_THR_AL = 1
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
   WITH_DYNAREC := aarch64
-  STRINGS := aarch64-linux-android-$(STRINGS)
   LLE = 1
   HAVE_PARALLEL_RSP = 1
   HAVE_PARALLEL_RDP = 1
   HAVE_THR_AL = 1
 else ifeq ($(TARGET_ARCH_ABI),x86)
   WITH_DYNAREC := x86
-  STRINGS := i686-linux-android-$(STRINGS)
   COREASMFLAGS := -f elf -d ELF_TYPE -DPIC
   COREFLAGS := -fPIC
 else ifeq ($(TARGET_ARCH_ABI),x86_64)
   WITH_DYNAREC := x86_64
-  STRINGS := x86_64-linux-android-$(STRINGS)
 endif
 
 ifeq ($(GLES3),1)
@@ -61,6 +57,21 @@ else
 endif
 
 include $(ROOT_DIR)/Makefile.common
+
+ASM_DEFINES_C    := $(AWK_DEST_DIR)/asm_defines.c
+ASM_DEFINES_OBJ  := $(AWK_DEST_DIR)/asm_defines.o
+ASM_DEFINES_NASM := $(AWK_DEST_DIR)/asm_defines_nasm.h
+ASM_DEFINES_GAS  := $(AWK_DEST_DIR)/asm_defines_gas.h
+
+$(ASM_DEFINES_OBJ): $(ASM_DEFINES_C)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(COREFLAGS) -c $< -o $@
+
+$(ASM_DEFINES_NASM): $(ASM_DEFINES_OBJ)
+	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) \
+		-v dest_dir="$(AWK_DEST_DIR)" \
+		-f $(CORE_DIR)/tools/gen_asm_defines.awk
+
+$(ASM_DEFINES_GAS): $(ASM_DEFINES_NASM)
 
 COREFLAGS += -D__LIBRETRO__ -DOS_ANDROID -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT $(INCFLAGS) $(GLFLAGS) $(DYNAFLAGS) -DANDROID -DEGL_EGLEXT_PROTOTYPES -DHAVE_POSIX_MEMALIGN=1
 
@@ -82,7 +93,7 @@ include $(CLEAR_VARS)
 include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
 LOCAL_SRC_FILES        := $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
-LOCAL_ASMFLAGS         := $(COREASMFLAGS)
+LOCAL_ASMFLAGS         := $(COREASMFLAGS) -I$(AWK_DEST_DIR)/
 LOCAL_CPPFLAGS         := -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
 LOCAL_CFLAGS           := $(CFLAGS) $(COREFLAGS)
 LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
@@ -94,3 +105,6 @@ LOCAL_ARM_NEON         := true
 LOCAL_CONLYFLAGS       := -std=gnu11
 
 include $(BUILD_SHARED_LIBRARY)
+
+$(foreach src,$(SOURCES_ASM),$(eval $(LOCAL_OBJS_DIR)/$(call get-object-name,$(src)) : $(ASM_DEFINES_GAS)))
+$(foreach src,$(SOURCES_NASM),$(eval $(LOCAL_OBJS_DIR)/$(call get-object-name,$(src)) : $(ASM_DEFINES_NASM)))
