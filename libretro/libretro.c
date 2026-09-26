@@ -134,6 +134,8 @@ static unsigned audio_buffer_size   = 2048;
 static unsigned retro_filtering      = 0;
 static bool     first_context_reset  = false;
 static bool     initializing         = true;
+static void    *pending_state_data   = NULL;
+static size_t   pending_state_size   = 0;
 static bool     load_game_successful = false;
 
 static bool     context_setup_first_init = false;
@@ -2038,6 +2040,9 @@ void retro_unload_game(void)
 
     // Reset savestate job var
     retro_savestate_complete = false;
+
+    free(pending_state_data);
+    pending_state_data = NULL;
 }
 
 void retro_run (void)
@@ -2095,6 +2100,17 @@ void retro_run (void)
     {
         // screen_pitch will be 0 for GLN
         video_cb(NULL, retro_screen_width, retro_screen_height, screen_pitch);
+    }
+
+    // Apply a state that was requested before the emu thread was running
+    if (pending_state_data && !initializing)
+    {
+       void *data = pending_state_data;
+       pending_state_data = NULL;
+       if (log_cb)
+          log_cb(RETRO_LOG_INFO, CORE_NAME ": applying deferred savestate load\n");
+       retro_unserialize(data, pending_state_size);
+       free(data);
     }
 }
 
@@ -2169,7 +2185,17 @@ bool retro_serialize(void *data, size_t size)
 bool retro_unserialize(const void *data, size_t size)
 {
    if (initializing)
-      return false;
+   {
+      // Frontend auto-load runs before the first retro_run, when the emu
+      // thread hasn't started yet. Keep a copy and apply it on the first frame.
+      free(pending_state_data);
+      pending_state_data = malloc(size);
+      if (!pending_state_data)
+         return false;
+      memcpy(pending_state_data, data, size);
+      pending_state_size = size;
+      return true;
+   }
 
    retro_savestate_complete = false;
    retro_savestate_result = 0;
