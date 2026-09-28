@@ -116,10 +116,13 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "Select Render Viewport dimensions for wider resolutions.",
         "gliden64",
         {
+            {"427x240",    "427x240 (16:9 Integer Scale)"},
             {"640x360",    "640x360 (16:9)"},
+            {"854x480",    "854x480 (16:9 Integer Scale)"},
             {"960x540",    "960x540 (16:9)"},
             {"1280x720",   "1280x720 (16:9)"},
             {"1706x720",   "1706x720 (64:27)"},
+            {"1707x960",   "1707x960 (16:9 Integer Scale)"},
             {"1366x768",   "1366x768 (16:9)"},
             {"1920x810",   "1920x810 (64:27)"},
             {"1920x1080",  "1920x1080 (16:9)"},
