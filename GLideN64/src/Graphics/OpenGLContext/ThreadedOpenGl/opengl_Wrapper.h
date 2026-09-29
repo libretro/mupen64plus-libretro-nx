@@ -19,6 +19,7 @@ namespace opengl {
 	{
     public:
 		static void commandLoop();
+		static bool queueEmpty();
 	private:
 		static void executeCommand(std::shared_ptr<OpenGlCommand> _command);
 
