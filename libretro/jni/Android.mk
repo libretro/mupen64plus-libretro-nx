@@ -58,20 +58,9 @@ endif
 
 include $(ROOT_DIR)/Makefile.common
 
-ASM_DEFINES_C    := $(AWK_DEST_DIR)/asm_defines.c
-ASM_DEFINES_OBJ  := $(AWK_DEST_DIR)/asm_defines.o
+AWK_DEST_DIR    := $(NDK_APP_OUT)/local/$(TARGET_ARCH_ABI)/asm_defines
 ASM_DEFINES_NASM := $(AWK_DEST_DIR)/asm_defines_nasm.h
 ASM_DEFINES_GAS  := $(AWK_DEST_DIR)/asm_defines_gas.h
-
-$(ASM_DEFINES_OBJ): $(ASM_DEFINES_C)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(COREFLAGS) -c $< -o $@
-
-$(ASM_DEFINES_NASM): $(ASM_DEFINES_OBJ)
-	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) \
-		-v dest_dir="$(AWK_DEST_DIR)" \
-		-f $(CORE_DIR)/tools/gen_asm_defines.awk
-
-$(ASM_DEFINES_GAS): $(ASM_DEFINES_NASM)
 
 COREFLAGS += -D__LIBRETRO__ -DOS_ANDROID -DUSE_FILE32API -DM64P_PLUGIN_API -DM64P_CORE_PROTOTYPES -D_ENDUSER_RELEASE -DSINC_LOWER_QUALITY -DMUPENPLUSAPI -DTXFILTER_LIB -D__VEC4_OPT $(INCFLAGS) $(GLFLAGS) $(DYNAFLAGS) -DANDROID -DEGL_EGLEXT_PROTOTYPES -DHAVE_POSIX_MEMALIGN=1
 
@@ -93,6 +82,7 @@ include $(CLEAR_VARS)
 include $(CLEAR_VARS)
 LOCAL_MODULE           := retro
 LOCAL_SRC_FILES        := $(SOURCES_CXX) $(SOURCES_C) $(SOURCES_ASM) $(SOURCES_NASM)
+LOCAL_C_INCLUDES       := $(AWK_DEST_DIR)
 LOCAL_ASMFLAGS         := $(COREASMFLAGS) -I$(AWK_DEST_DIR)/
 LOCAL_CPPFLAGS         := -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
 LOCAL_CFLAGS           := $(CFLAGS) $(COREFLAGS)
@@ -105,6 +95,17 @@ LOCAL_ARM_NEON         := true
 LOCAL_CONLYFLAGS       := -std=gnu11
 
 include $(BUILD_SHARED_LIBRARY)
+
+# Use the core's NDK-compiled object so offsets match its ABI and flags.
+ASM_DEFINES_OBJ := $(LOCAL_OBJS_DIR)/$(call get-object-name,$(CORE_DIR)/src/asm_defines/asm_defines.c)
+
+$(ASM_DEFINES_NASM): $(ASM_DEFINES_OBJ) $(CORE_DIR)/tools/gen_asm_defines.awk
+	@mkdir -p $(dir $@)
+	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) \
+		-v dest_dir="$(dir $@)" \
+		-f $(CORE_DIR)/tools/gen_asm_defines.awk
+
+$(ASM_DEFINES_GAS): $(ASM_DEFINES_NASM)
 
 $(foreach src,$(SOURCES_ASM),$(eval $(LOCAL_OBJS_DIR)/$(call get-object-name,$(src)) : $(ASM_DEFINES_GAS)))
 $(foreach src,$(SOURCES_NASM),$(eval $(LOCAL_OBJS_DIR)/$(call get-object-name,$(src)) : $(ASM_DEFINES_NASM)))
