@@ -50,7 +50,7 @@ bool Utils::isExtensionSupported(const opengl::GLInfo & _glinfo, const char *ext
 
 bool Utils::isEGLExtensionSupported(const char * extension)
 {
-#ifdef EGL
+#if defined(EGL) && defined(OS_ANDROID)
 	const char* where = strchr(extension, ' ');
 	if (where || *extension == '\0')
 		return false;
