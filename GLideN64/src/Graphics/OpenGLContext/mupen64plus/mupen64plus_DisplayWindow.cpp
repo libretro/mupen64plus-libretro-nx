@@ -77,7 +77,9 @@ bool DisplayWindowMupen64plus::_start()
 	_setBufferSize();
 
 #ifdef EGL
-	eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
+	// A frontend that made its own display current owns it
+	if (eglGetCurrentDisplay() == EGL_NO_DISPLAY)
+		eglInitialize(eglGetDisplay(EGL_DEFAULT_DISPLAY), nullptr, nullptr);
 #endif // EGL
 
 	LOG(LOG_VERBOSE, "[GlideN64]: Create setting videomode %dx%d", m_screenWidth, m_screenHeight);
