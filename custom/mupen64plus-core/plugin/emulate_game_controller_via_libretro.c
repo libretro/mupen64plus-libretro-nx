@@ -47,6 +47,14 @@ extern int l_cbutton;
 extern int d_cbutton;
 extern int u_cbutton;
 extern bool alternate_mapping;
+extern bool mouse_mode;
+extern int mouse_sensitivity_x;
+extern int mouse_sensitivity_y;
+extern int mouse_left_btn;
+extern int mouse_right_btn;
+extern int mouse_middle_btn;
+extern int mouse_wheel_up_btn;
+extern int mouse_wheel_down_btn;
 static bool libretro_supports_bitmasks = false;
 
 extern m64p_rom_header ROM_HEADER;
@@ -278,6 +286,24 @@ EXPORT void CALL inputControllerCommand(int Control, unsigned char *Command)
 #define CSTICK_DOWN 0x400
 
 
+static void apply_mouse_button(BUTTONS* Keys, int btn_mapping)
+{
+   switch (btn_mapping)
+   {
+      case 1: Keys->Z_TRIG = 1; break;
+      case 2: Keys->A_BUTTON = 1; break;
+      case 3: Keys->B_BUTTON = 1; break;
+      case 4: Keys->L_TRIG = 1; break;
+      case 5: Keys->R_TRIG = 1; break;
+      case 6: Keys->START_BUTTON = 1; break;
+      case 7: Keys->U_CBUTTON = 1; break;
+      case 8: Keys->D_CBUTTON = 1; break;
+      case 9: Keys->L_CBUTTON = 1; break;
+      case 10: Keys->R_CBUTTON = 1; break;
+      default: break;
+   }
+}
+
 static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BUTTONS* Keys)
 {
    double radius, angle;
@@ -305,6 +331,26 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
    {
       Keys->X_AXIS = 0;
       Keys->Y_AXIS = 0;
+   }
+
+   if (mouse_mode && Control == 0 && Keys->X_AXIS == 0 && Keys->Y_AXIS == 0)  // Only player 1
+   {
+      int32_t stickX = (int32_t)(input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X) * mouse_sensitivity_x / 50.0f);
+      int32_t stickY = (int32_t)(input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y) * mouse_sensitivity_y / 50.0f);
+
+      Keys->X_AXIS = (stickX > 80.0f) ? 80 : (stickX < -80.0f) ? -80 : (int32_t)stickX;
+      Keys->Y_AXIS = (stickY > 80.0f) ? 80 : (stickY < -80.0f) ? -80 : (int32_t)stickY;
+
+      if (input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT))
+         apply_mouse_button(Keys, mouse_left_btn);
+      if (input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT))
+         apply_mouse_button(Keys, mouse_right_btn);
+      if (input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE))
+         apply_mouse_button(Keys, mouse_middle_btn);
+      if (input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELUP))
+         apply_mouse_button(Keys, mouse_wheel_up_btn);
+      if (input_cb(Control, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELDOWN))
+         apply_mouse_button(Keys, mouse_wheel_down_btn);
    }
 }
 
