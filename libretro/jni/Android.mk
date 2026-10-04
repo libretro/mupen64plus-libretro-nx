@@ -86,7 +86,7 @@ LOCAL_C_INCLUDES       := $(AWK_DEST_DIR)
 LOCAL_ASMFLAGS         := $(COREASMFLAGS) -I$(AWK_DEST_DIR)/
 LOCAL_CPPFLAGS         := -std=gnu++11 $(CXXFLAGS) $(COREFLAGS)
 LOCAL_CFLAGS           := $(CFLAGS) $(COREFLAGS)
-LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T
+LOCAL_LDFLAGS          := -Wl,-version-script=$(LIBRETRO_DIR)/link.T,-z,max-page-size=16384
 LOCAL_LDLIBS           := -llog -lEGL $(GLLIB) $(CORELDLIBS)
 LOCAL_STATIC_LIBRARIES := 
 LOCAL_CPP_FEATURES     := exceptions
