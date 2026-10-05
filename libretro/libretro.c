@@ -2145,15 +2145,14 @@ bool retro_serialize(void *data, size_t size)
 
    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
 
+   /* Advancing to a state boundary can emit audio with any RDP plugin.
+    * The menu may have stopped the frontend audio driver, so unblock it
+    * before switching to the emulation coroutine. */
+   if (environ_clear_thread_waits_cb)
+      environ_clear_thread_waits_cb(1, NULL);
+
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      if(EnableThreadedRenderer)
-      {
-         // Ensure the Audio driver is on (f.e. menu sounds off)
-         environ_clear_thread_waits_cb(1, NULL);
-      }
       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-   }
 
    while (!retro_savestate_complete)
    {
@@ -2178,15 +2177,14 @@ bool retro_unserialize(const void *data, size_t size)
 
    savestates_set_job(savestates_job_load, savestates_type_m64p, data);
 
+   /* Advancing to a state boundary can emit audio with any RDP plugin.
+    * The menu may have stopped the frontend audio driver, so unblock it
+    * before switching to the emulation coroutine. */
+   if (environ_clear_thread_waits_cb)
+      environ_clear_thread_waits_cb(1, NULL);
+
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
-   {
-      if(EnableThreadedRenderer)
-      {
-         // Ensure the Audio driver is on (f.e. menu sounds off)
-         environ_clear_thread_waits_cb(1, NULL);
-      }
       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-   }
 
    while (!retro_savestate_complete)
    {
