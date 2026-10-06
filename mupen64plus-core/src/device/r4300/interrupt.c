@@ -33,10 +33,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifdef __LIBRETRO__
-#include <libretro_private.h>
-#endif
-
 #include "api/callbacks.h"
 #include "api/m64p_types.h"
 #include "device/pif/bootrom_hle.h"
@@ -50,7 +46,9 @@
 #include "main/main.h"
 #include "main/savestates.h"
 
-
+#ifdef __LIBRETRO__
+#include <libretro_private.h>
+#endif
 
 /***************************************************************************
  * Pool of Single Linked List Nodes
@@ -668,20 +666,18 @@ void gen_interrupt(struct r4300_core* r4300)
             break;
     }
 
-    if (savestates_get_job() == savestates_job_save)
+    if (!r4300->cp0.interrupt_unsafe_state)
     {
-        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: before savestates_save");
+        if (savestates_get_job() == savestates_job_save)
+        {
+            savestates_save();
 
-        savestates_save();
+#ifdef __LIBRETRO__
+            retro_return();
+#endif
 
-        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: after savestates_save");
-
-    #ifdef __LIBRETRO__
-        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: yielding after completed save");
-        retro_return();
-    #endif
-
-        return;
+            return;
+        }
     }
 }
 
