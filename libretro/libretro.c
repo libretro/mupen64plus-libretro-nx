@@ -403,6 +403,7 @@ static void n64StateCallback(void *Context, m64p_core_param param_type, int new_
     {
         retro_savestate_complete = true;
         retro_savestate_result = new_value;
+
     }
 }
 

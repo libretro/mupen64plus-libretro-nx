@@ -33,6 +33,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __LIBRETRO__
+#include <libretro_private.h>
+#endif
+
 #include "api/callbacks.h"
 #include "api/m64p_types.h"
 #include "device/pif/bootrom_hle.h"
@@ -45,6 +49,7 @@
 #include "device/rcp/vi/vi_controller.h"
 #include "main/main.h"
 #include "main/savestates.h"
+
 
 
 /***************************************************************************
@@ -670,6 +675,12 @@ void gen_interrupt(struct r4300_core* r4300)
         savestates_save();
 
         DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: after savestates_save");
+
+    #ifdef __LIBRETRO__
+        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: yielding after completed save");
+        retro_return();
+    #endif
+
         return;
     }
 }
