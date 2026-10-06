@@ -46,6 +46,10 @@
 
 extern retro_audio_sample_batch_t audio_batch_cb;
 
+extern retro_log_printf_t log_cb;
+extern bool issue574_serialize_active;
+extern unsigned issue574_audio_log_count;
+
 static unsigned MAX_AUDIO_FRAMES = 2048;
 
 #define VI_INTR_TIME 500000
@@ -389,7 +393,25 @@ audio_batch:
 
    while (data.output_frames)
    {
-      size_t ret          = audio_batch_cb(out, data.output_frames);
+      bool issue574_trace =
+         issue574_serialize_active &&
+         issue574_audio_log_count < 8;
+
+      if (issue574_trace && log_cb)
+         log_cb(RETRO_LOG_INFO,
+               "[ISSUE574] audio_batch: BEFORE frames=%zu\n",
+               data.output_frames);
+
+      size_t ret = audio_batch_cb(out, data.output_frames);
+
+      if (issue574_trace && log_cb)
+         log_cb(RETRO_LOG_INFO,
+               "[ISSUE574] audio_batch: AFTER ret=%zu\n",
+               ret);
+
+      if (issue574_trace)
+         issue574_audio_log_count++;
+
       data.output_frames -= ret;
       out                += ret * 2;
    }

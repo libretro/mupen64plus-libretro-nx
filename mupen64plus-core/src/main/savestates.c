@@ -2295,6 +2295,8 @@ int savestates_save(void)
     int ret = 0;
     const struct device* dev = &g_dev;
 
+    DebugMessage(M64MSG_INFO, "[ISSUE574] savestates_save: ENTER");
+
 #ifndef __LIBRETRO__
     char *filepath;
 
@@ -2329,17 +2331,40 @@ int savestates_save(void)
 #else
     if(fname)
     {
+        DebugMessage(M64MSG_INFO,
+                     "[ISSUE574] savestates_save: before savestates_save_m64p");
+
         ret = savestates_save_m64p(dev, fname);
+
+        DebugMessage(M64MSG_INFO,
+                     "[ISSUE574] savestates_save: after savestates_save_m64p ret=%d",
+                     ret);
+
         fname = NULL;
-    } else {
+    }
+    else
+    {
+        DebugMessage(M64MSG_INFO,
+                     "[ISSUE574] savestates_save: fname NULL");
         ret = 0;
     }
 
-    // deliver callback to indicate completion of state saving operation
+    DebugMessage(M64MSG_INFO,
+                 "[ISSUE574] savestates_save: before StateChanged");
+
     StateChanged(M64CORE_STATE_SAVECOMPLETE, ret);
+
+    DebugMessage(M64MSG_INFO,
+                 "[ISSUE574] savestates_save: after StateChanged");
 #endif // __LIBRETRO__
 
+    DebugMessage(M64MSG_INFO,
+                "[ISSUE574] savestates_save: before clear_job");
+
     savestates_clear_job();
+
+    DebugMessage(M64MSG_INFO,
+                "[ISSUE574] savestates_save: RETURN");
 
     return ret;
 }

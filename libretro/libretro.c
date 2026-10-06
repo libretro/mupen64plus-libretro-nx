@@ -154,6 +154,10 @@ static char rdp_plugin_last[32] = {0};
 bool retro_savestate_complete = false;
 int  retro_savestate_result = 0;
 
+// ISSUE574 debug
+bool issue574_serialize_active = false;
+unsigned issue574_audio_log_count = 0;
+
 // 64DD globals
 char* retro_dd_path_img = NULL;
 char* retro_dd_path_rom = NULL;
@@ -2137,33 +2141,103 @@ size_t retro_serialize_size (void)
 
 bool retro_serialize(void *data, size_t size)
 {
+   int switch_count = 0;
+
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: ENTER\n");
+
    if (initializing)
+   {
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: initializing, abort\n");
       return false;
+   }
+
+   issue574_serialize_active = true;
+   issue574_audio_log_count = 0;
 
    retro_savestate_complete = false;
    retro_savestate_result = 0;
 
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: before savestates_set_job\n");
+
    savestates_set_job(savestates_job_save, savestates_type_m64p, data);
+
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: after savestates_set_job\n");
 
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
    {
-      if(EnableThreadedRenderer)
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO,
+               "[ISSUE574] serialize: GLideN64, threaded=%d\n",
+               EnableThreadedRenderer);
+
+      if (EnableThreadedRenderer)
       {
-         // Ensure the Audio driver is on (f.e. menu sounds off)
+         if (log_cb)
+            log_cb(RETRO_LOG_INFO,
+                  "[ISSUE574] serialize: before clear_thread_waits\n");
+
          environ_clear_thread_waits_cb(1, NULL);
+
+         if (log_cb)
+            log_cb(RETRO_LOG_INFO,
+                  "[ISSUE574] serialize: after clear_thread_waits\n");
       }
+
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: before GLSM bind\n");
+
       glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: after GLSM bind\n");
    }
+
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: entering wait loop\n");
 
    while (!retro_savestate_complete)
    {
+      if (switch_count < 10 && log_cb)
+         log_cb(RETRO_LOG_INFO,
+               "[ISSUE574] serialize: co_switch BEGIN #%d\n",
+               switch_count);
+
       co_switch(game_thread);
+
+      if (switch_count < 10 && log_cb)
+         log_cb(RETRO_LOG_INFO,
+               "[ISSUE574] serialize: co_switch END #%d complete=%d\n",
+               switch_count,
+               retro_savestate_complete);
+
+      switch_count++;
    }
+
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO,
+            "[ISSUE574] serialize: savestate complete result=%d switches=%d\n",
+            retro_savestate_result,
+            switch_count);
 
    if (current_rdp_type == RDP_PLUGIN_GLIDEN64)
    {
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: before GLSM unbind\n");
+
       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: after GLSM unbind\n");
    }
+
+   if (log_cb)
+      log_cb(RETRO_LOG_INFO, "[ISSUE574] serialize: RETURN\n");
+
+   issue574_serialize_active = false;
 
    return !!retro_savestate_result;
 }
@@ -2279,6 +2353,10 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
 
 void retro_return(void)
 {
+    if (issue574_serialize_active && log_cb)
+       log_cb(RETRO_LOG_INFO,
+             "[ISSUE574] retro_return: reached, before co_switch\n");
+
     if(!(current_rdp_type == RDP_PLUGIN_GLIDEN64 && EnableThreadedRenderer))
     {
        co_switch(retro_thread);

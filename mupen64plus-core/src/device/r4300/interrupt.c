@@ -663,13 +663,14 @@ void gen_interrupt(struct r4300_core* r4300)
             break;
     }
 
-    if (!r4300->cp0.interrupt_unsafe_state)
+    if (savestates_get_job() == savestates_job_save)
     {
-        if (savestates_get_job() == savestates_job_save)
-        {
-            savestates_save();
-            return;
-        }
+        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: before savestates_save");
+
+        savestates_save();
+
+        DebugMessage(M64MSG_INFO, "[ISSUE574] interrupt: after savestates_save");
+        return;
     }
 }
 
