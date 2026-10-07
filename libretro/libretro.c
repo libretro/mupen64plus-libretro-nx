@@ -466,7 +466,7 @@ static void* EmuThreadFunction(void* param)
             uint32_t reg_id = 0;
             while (reg_id == 0)
             {
-#ifdef __MINGW32__
+#if defined(__MINGW32__) && defined(_CRT_RAND_S)
                 rand_s(&reg_id);
 #else
                 reg_id = rand();
