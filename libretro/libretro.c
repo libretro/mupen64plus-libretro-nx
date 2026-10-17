@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <compat/strl.h>
 
 #include "libretro.h"
@@ -212,6 +213,37 @@ uint32_t OverscanTop = 0;
 uint32_t OverscanLeft = 0;
 uint32_t OverscanRight = 0;
 uint32_t OverscanBottom = 0;
+
+// VR Options
+uint32_t VRMode = VR_MODE_OFF;
+float VRSeparation = 0.03f;
+float VRDepthBoost = 0.0f;
+float VRImmersiveDistance = 0.0f;
+float VRImmersiveWorldScale = 1.0f;
+float VRImmersiveHudScale = 1.0f;
+
+// VR state
+static uint32_t vr_eye_width = 640;
+static unsigned vr_views_status = 0;
+static bool vr_views_sent = false;
+static pthread_mutex_t vr_pose_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool vr_pose_valid = false;
+static int vr_pose_id = 0;
+static float vr_pose_rotation[2][9];
+static float vr_pose_tangents[2][4];
+static bool vr_reference_set = false;
+static float vr_reference_yaw = 0.0f;
+static bool vr_pose_consumed = false;
+static int vr_presented_pose = 0;
+
+// VR laser pointer aim options
+static int vr_aim_hand  = -1;
+static bool vr_aim_valid = false;
+static float vr_aim_x = 0.0f;
+static float vr_aim_y = 0.0f;
+#define VR_AIM_DISTANCE 2.0f
+#define VR_AIM_RANGE (30.0f * 0.01745329252f)
+static bool  vr_aim_invert_y = false;
 
 uint32_t EnableFullspeed = 0;
 uint32_t CountPerOp = 0;
@@ -667,6 +699,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.max_width    = retro_screen_width;
     info->geometry.max_height   = retro_screen_height;
     info->geometry.aspect_ratio = retro_screen_aspect;
+    if (VRMode != VR_MODE_OFF)
+        info->geometry.aspect_ratio *= 2.0f; // both eyes side by side
 #ifdef HAVE_PARALLEL_RDP
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
         parallel_get_geometry(&info->geometry);
@@ -911,6 +945,224 @@ void update_controllers()
         if (alternate_mapping != alternate_mapping_prev)
             inputGetKeys_default_descriptor();
     }
+}
+
+// Yaw of an orientation's forward direction (-Z), as a rotation around +Y
+static float vr_forward_yaw(const float q[4])
+{
+    const float fx = -2.0f * (q[0] * q[2] + q[1] * q[3]);
+    const float fz = -(1.0f - 2.0f * (q[0] * q[0] + q[1] * q[1]));
+    return atan2f(-fx, -fz);
+}
+
+// Reads the eye poses for immersive mode.
+static void vr_read_pose(void)
+{
+    struct retro_vr_frame_state frame;
+    bool valid = false;
+
+    if (VRMode == VR_MODE_IMMERSIVE && (vr_views_status & RETRO_VIDEO_VIEWS_STATUS_HMD) &&
+        environ_cb(RETRO_ENVIRONMENT_GET_VR_FRAME_STATE, &frame))
+    {
+        int eye;
+        if (frame.flags & RETRO_VR_FRAME_RECENTERED)
+            vr_reference_set = false;
+        if (!vr_reference_set)
+        {
+            vr_reference_yaw = vr_forward_yaw(frame.eyes[RETRO_VR_EYE_LEFT].orientation);
+            vr_reference_set = true;
+        }
+
+        for (eye = 0; eye < 2; ++eye)
+        {
+            const float *o = frame.eyes[eye].orientation;
+            const float half = -0.5f * vr_reference_yaw;
+            const float ry = sinf(half), rw = cosf(half);
+            float x, y, z, w;
+            int row, column;
+            /* The eye's orientation relative to the reference: yaw(-reference) * eye */
+            x = rw * o[0] + ry * o[2];
+            y = rw * o[1] + ry * o[3];
+            z = rw * o[2] - ry * o[0];
+            w = rw * o[3] - ry * o[1];
+            {
+                /* Maps the eye's directions to the reference; GLideN64 wants the transpose */
+                const float r[3][3] = {
+                    {1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)},
+                    {2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)},
+                    {2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)}};
+                for (row = 0; row < 3; ++row)
+                    for (column = 0; column < 3; ++column)
+                        vr_pose_rotation[eye][row * 3 + column] = r[column][row];
+            }
+            memcpy(vr_pose_tangents[eye], frame.eyes[eye].fov_tan, sizeof(vr_pose_tangents[eye]));
+        }
+        if (++vr_pose_id <= 0)
+            vr_pose_id = 1;
+        valid = true;
+    }
+    vr_pose_valid = valid;
+    vr_pose_consumed = false;
+}
+
+static void vr_begin_frame(void)
+{
+    unsigned status = 0;
+
+    if (!environ_cb(RETRO_ENVIRONMENT_GET_VIDEO_VIEWS_STATUS, &status))
+        status = 0;
+    vr_views_status = status;
+
+    // The threaded renderer draws on its own thread
+    if (EnableThreadedRenderer)
+    {
+        pthread_mutex_lock(&vr_pose_mutex);
+        if (vr_pose_consumed || !vr_pose_valid)
+            vr_read_pose();
+        pthread_mutex_unlock(&vr_pose_mutex);
+    }
+}
+
+static int vr_get_presented_pose(void)
+{
+    int pose;
+    pthread_mutex_lock(&vr_pose_mutex);
+    pose = vr_presented_pose;
+    pthread_mutex_unlock(&vr_pose_mutex);
+    return pose;
+}
+
+// Whether the picture GLideN64 just presented must be a dupe.
+static bool vr_present_as_dupe(void)
+{
+    const int presented = vr_get_presented_pose();
+    const bool tracked = VRMode == VR_MODE_IMMERSIVE &&
+        (vr_views_status & RETRO_VIDEO_VIEWS_STATUS_HMD) && presented > 0;
+
+    // The threaded renderer's poses are read ahead and cannot be matched
+    return tracked && !EnableThreadedRenderer && presented != vr_pose_id;
+}
+
+// Describes the side by side frame
+static void vr_set_views(void)
+{
+    struct retro_video_view views[2];
+    struct retro_video_views map;
+    const bool tracked = VRMode == VR_MODE_IMMERSIVE &&
+        (vr_views_status & RETRO_VIDEO_VIEWS_STATUS_HMD) && vr_get_presented_pose() > 0;
+
+    memset(&map, 0, sizeof(map));
+    map.reference_space = RETRO_VR_REFERENCE_SPACE_LOCAL;
+
+    if (!(vr_views_status & RETRO_VIDEO_VIEWS_STATUS_PRESENTS))
+    {
+        // No views here: the packed side by side frame is shown as it is
+        if (vr_views_sent)
+            environ_cb(RETRO_ENVIRONMENT_SET_VIDEO_VIEWS, &map);
+        vr_views_sent = false;
+        return;
+    }
+
+    memset(views, 0, sizeof(views));
+    views[0].x = 0;
+    views[0].eye = RETRO_VIDEO_VIEW_EYE_LEFT;
+    views[1].x = vr_eye_width;
+    views[1].eye = RETRO_VIDEO_VIEW_EYE_RIGHT;
+    views[0].width = views[1].width = vr_eye_width;
+    views[0].height = views[1].height = retro_screen_height;
+    views[0].aspect_ratio = views[1].aspect_ratio = tracked ? 0.0f : retro_screen_aspect;
+
+    map.views = views;
+    map.num_views = 2;
+    map.flags = tracked ? RETRO_VIDEO_VIEWS_FLAG_TRACKED : 0;
+    vr_views_sent = environ_cb(RETRO_ENVIRONMENT_SET_VIDEO_VIEWS, &map);
+}
+
+// Called by GLideN64 once per frame it draws in immersive mode
+int libretro_vr_immersive_pose(float rotation[2][9], float tangents[2][4])
+{
+    int id = 0;
+    pthread_mutex_lock(&vr_pose_mutex);
+    if (!EnableThreadedRenderer)
+        vr_read_pose();
+    else
+        vr_pose_consumed = true;
+    if (vr_pose_valid)
+    {
+        memcpy(rotation, vr_pose_rotation, sizeof(vr_pose_rotation));
+        memcpy(tangents, vr_pose_tangents, sizeof(vr_pose_tangents));
+        id = vr_pose_id;
+    }
+    pthread_mutex_unlock(&vr_pose_mutex);
+    return id;
+}
+
+// Called by GLideN64 before each swap: the pose the picture was drawn for
+void libretro_vr_immersive_present(int pose)
+{
+    pthread_mutex_lock(&vr_pose_mutex);
+    vr_presented_pose = pose;
+    pthread_mutex_unlock(&vr_pose_mutex);
+}
+
+/* The controllers's ray is cast onto a plane VR_AIM_DISTANCE in front of the head. */
+static void vr_aim_update(void)
+{
+   static struct retro_vr_controller_poses poses;
+   struct retro_vr_head_pose head;
+   const struct retro_vr_hand_state *hand;
+   const float *q, *p;
+   float dx, dy, dz, t, x, y;
+
+   vr_aim_valid = false;
+   if (vr_aim_hand < 0 ||
+       !environ_cb(RETRO_ENVIRONMENT_GET_VR_CONTROLLER_POSES, &poses))
+      return;
+
+   hand = &poses.hands[vr_aim_hand];
+   if (!(hand->flags & RETRO_VR_HAND_ACTIVE) ||
+       !(hand->aim.flags & RETRO_VR_POSE_ORIENTATION_VALID) ||
+       !(hand->aim.flags & RETRO_VR_POSE_POSITION_VALID))
+      return;
+
+   if (!environ_cb(RETRO_ENVIRONMENT_GET_VR_HEAD_POSE, &head) ||
+       !(head.flags & RETRO_VR_HEAD_POSE_POSITION_VALID))
+      return;
+
+   /* ray direction: -Z rotated by the aim orientation (x, y, z, w) */
+   q  = hand->aim.orientation;
+   p  = hand->aim.position;
+   dx = -2.0f * (q[0] * q[2] + q[1] * q[3]);
+   dy = -2.0f * (q[1] * q[2] - q[0] * q[3]);
+   dz = -(1.0f - 2.0f * (q[0] * q[0] + q[1] * q[1]));
+
+   if (dz > -0.05f)   /* pointing sideways or backwards */
+      return;
+
+   /* the plane is z = head.z - distance */
+   t = (head.position[2] - VR_AIM_DISTANCE - p[2]) / dz;
+   if (t <= 0.0f)
+      return;
+
+   x = atan2f(p[0] + t * dx - head.position[0], VR_AIM_DISTANCE) / VR_AIM_RANGE;
+   y = atan2f(p[1] + t * dy - head.position[1], VR_AIM_DISTANCE) / VR_AIM_RANGE;
+
+   if (vr_aim_invert_y)
+      y = -y;
+
+   vr_aim_x = (x >  1.0f) ?  1.0f : (x < -1.0f) ? -1.0f : x;
+   vr_aim_y = (y >  1.0f) ?  1.0f : (y < -1.0f) ? -1.0f : y;
+   vr_aim_valid = true;
+}
+
+/* For the input plugin: true when a laser aim sample exists this frame */
+bool libretro_vr_aim_stick(float *x, float *y)
+{
+   if (!vr_aim_valid)
+      return false;
+   *x = vr_aim_x;
+   *y = vr_aim_y;
+   return true;
 }
 
 static void update_variables(bool startup)
@@ -1431,17 +1683,23 @@ static void update_variables(bool startup)
        var.value = NULL;
        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
        {
-          sscanf(var.value, "%dx%d", &retro_screen_width, &retro_screen_height);
+          unsigned width, height;
+          if (sscanf(var.value, "%ux%u", &width, &height) == 2 &&
+              width > 0 && width <= UINT32_MAX / 2 && height > 0)
+          {
+             vr_eye_width = width;
+             retro_screen_height = height;
+          }
           if (AspectRatio != 1) // Calculate the correct aspect ratio when using a ratio different than 4:3.
           {
-             retro_screen_aspect = (float)retro_screen_width / (float)retro_screen_height;
+             retro_screen_aspect = (float)vr_eye_width / (float)retro_screen_height;
           }
 
           // Sanity check... not optimal since we will render at a higher res, but otherwise
           // GLideN64 might blit a bigger image onto a smaller framebuffer
           // This is a recent regression.
-          if((retro_screen_width == 320 && retro_screen_height == 240) ||
-             (retro_screen_width == 640 && retro_screen_height == 360))
+          if((vr_eye_width == 320 && retro_screen_height == 240) ||
+             (vr_eye_width == 640 && retro_screen_height == 360))
           {
              // Force factor to 1 for low resolutions, unless set manually
              EnableNativeResFactor = !EnableNativeResFactor ? 1 : EnableNativeResFactor;
@@ -1453,12 +1711,29 @@ static void update_variables(bool startup)
 #ifdef HAVE_THR_AL
        if(current_rdp_type == RDP_PLUGIN_ANGRYLION)
        {
-          retro_screen_width = 640;
+          vr_eye_width = 640;
           retro_screen_height = 480;
           retro_screen_aspect = 4.0 / 3.0;
           AspectRatio = 1; // Aspect::a43
        }
 #endif // HAVE_THR_AL
+
+       VRMode = VR_MODE_OFF;
+#ifndef HAVE_OPENGLES2
+       var.key = CORE_NAME "-vr-mode";
+       var.value = NULL;
+       if (current_rdp_type == RDP_PLUGIN_GLIDEN64 &&
+           environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       {
+          if (!strcmp(var.value, "stereoscopic"))
+             VRMode = VR_MODE_STEREOSCOPIC;
+          else if (!strcmp(var.value, "immersive"))
+             VRMode = VR_MODE_IMMERSIVE;
+       }
+#endif // !HAVE_OPENGLES2
+
+       // VR draws both eyes side by side, each at the selected resolution
+       retro_screen_width = vr_eye_width * (VRMode != VR_MODE_OFF ? 2 : 1);
 
        var.key = CORE_NAME "-CountPerOp";
        var.value = NULL;
@@ -1544,6 +1819,53 @@ static void update_variables(bool startup)
              IgnoreTLBExceptions = 2;
        }
     }
+
+#ifndef HAVE_OPENGLES2
+    var.key = CORE_NAME "-vr-separation";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       VRSeparation = atoi(var.value) / 1000.0f;
+
+    var.key = CORE_NAME "-vr-depth-boost";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       VRDepthBoost = atoi(var.value) / 100.0f;
+
+    var.key = CORE_NAME "-vr-immersive-world-scale";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       VRImmersiveWorldScale = atoi(var.value) / 100.0f;
+
+    var.key = CORE_NAME "-vr-immersive-hud-scale";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       VRImmersiveHudScale = atoi(var.value) / 100.0f;
+
+    var.key = CORE_NAME "-vr-immersive-distance";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+       VRImmersiveDistance = atoi(var.value) / 100.0f;
+
+    var.key = CORE_NAME "-vr-aim-controller";
+    var.value = NULL;
+    vr_aim_hand = -1;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "left"))
+            vr_aim_hand = RETRO_VR_HAND_LEFT;
+        else if (!strcmp(var.value, "right"))
+            vr_aim_hand = RETRO_VR_HAND_RIGHT;
+    }
+
+    var.key = CORE_NAME "-vr-aim-invert-y";
+    var.value = NULL;
+    vr_aim_invert_y = false;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        vr_aim_invert_y = !strcmp(var.value, "on");
+
+    if (!startup && current_rdp_type == RDP_PLUGIN_GLIDEN64)
+       gln64_vr_update_config();
+#endif // !HAVE_OPENGLES2
 
 #ifdef HAVE_PARALLEL_RDP
     if (current_rdp_type == RDP_PLUGIN_PARALLEL)
@@ -2034,7 +2356,13 @@ void retro_unload_game(void)
     }
 
     cleanup_global_paths();
-    
+
+    vr_views_sent = false;
+    vr_reference_set = false;
+    libretro_vr_immersive_present(0);
+    vr_pose_valid = false;
+    vr_aim_valid = false;
+
     emu_initialized = false;
     context_setup_first_init = false;
 
@@ -2062,7 +2390,14 @@ void retro_run (void)
        }
        
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
+
+       if (VRMode != VR_MODE_OFF)
+          vr_begin_frame();
     }
+
+#ifndef HAVE_OPENGLES2
+    vr_aim_update();
+#endif // !HAVE_OPENGLES2
 
     co_switch(game_thread);
 
@@ -2075,7 +2410,16 @@ void retro_run (void)
     {
        if(current_rdp_type == RDP_PLUGIN_GLIDEN64)
        {
-          video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+          if (VRMode != VR_MODE_OFF && vr_present_as_dupe())
+          {
+             video_cb(NULL, retro_screen_width, retro_screen_height, 0);
+          }
+          else
+          {
+             if (VRMode != VR_MODE_OFF)
+                vr_set_views();
+             video_cb(RETRO_HW_FRAME_BUFFER_VALID, retro_screen_width, retro_screen_height, 0);
+          }
        }
 #ifdef HAVE_THR_AL
        else if(current_rdp_type == RDP_PLUGIN_ANGRYLION)

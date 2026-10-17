@@ -202,6 +202,24 @@ void gSPSetDMATexOffset(u32 _addr);
 void gSPSetVertexColorBase( u32 base );
 void gSPCombineMatrices(u32 _mode);
 
+/** Stereo rendering. */
+void gSPStereoBeginFrame();
+void gSPSetStereoEye(u32 _eye);
+void gSPApplyStereo(f32 matrix[4][4]);
+
+// Immersive mode
+struct RectVertex;
+bool gSPImmersiveActive();
+bool gSPImmersiveBackground();
+bool gSPImmersiveClearsShownBuffers();
+void gSPImmersiveFrameDrawn(u32 _address);
+void gSPImmersivePresent(u32 _address);
+bool gSPImmersiveIsFlat();
+void gSPImmersiveRect(RectVertex * _vertices, u32 _count, bool _fullScreen);
+void gSPImmersiveScreenTriangles(SPVertex * _vertices, u32 _count);
+void gSPImmersiveWorldSprite(bool _world);
+
+
 void gSPTriangle(u32 v0, u32 v1, u32 v2);
 void gSP1Triangle(u32 v0, u32 v1, u32 v2);
 void gSP2Triangles(const u32 v00, const u32 v01, const u32 v02, const u32 flag0,
