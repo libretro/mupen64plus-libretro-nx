@@ -55,7 +55,11 @@ bool Utils::isEGLExtensionSupported(const char * extension)
 	if (where || *extension == '\0')
 		return false;
 
-	const char* extensions = eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS);
+	EGLDisplay display = eglGetCurrentDisplay();
+	if (display == EGL_NO_DISPLAY)
+		display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+	const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
 	if (extensions == nullptr) {
 		LOG(LOG_WARNING, "Could not query EGL extensions on this device");
 		return false;
