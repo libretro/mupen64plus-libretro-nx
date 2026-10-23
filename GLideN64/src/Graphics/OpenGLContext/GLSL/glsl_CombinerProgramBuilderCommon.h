@@ -102,6 +102,7 @@ private:
 
 	u32 m_combinerOptionsBits;
 
+	const opengl::GLInfo & m_glinfo;
 	mutable GLuint m_vertexShaderRect = 0u;
 	mutable GLuint m_vertexShaderTriangle = 0u;
 	mutable GLuint m_vertexShaderTexturedRect = 0u;

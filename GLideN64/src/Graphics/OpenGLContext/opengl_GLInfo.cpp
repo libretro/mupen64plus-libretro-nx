@@ -37,6 +37,15 @@ void GLInfo::init() {
 	} else {
 		glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
 		glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+		if (majorVersion == 0 && strDriverVersion != nullptr) {
+			const char * gles = strstr(strDriverVersion, "OpenGL ES ");
+			if (gles != nullptr) {
+				sscanf(gles + 10, "%d.%d", &majorVersion, &minorVersion);
+			} else if (strstr(strDriverVersion, "WebGL 2") != nullptr) {
+				majorVersion = 3;
+				minorVersion = 0;
+			}
+		}
 	}
 
 #if defined(HAVE_OPENGLES2) // Overwrite
