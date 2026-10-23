@@ -46,6 +46,9 @@
 #include "main/main.h"
 #include "main/savestates.h"
 
+#ifdef __LIBRETRO__
+#include <libretro_private.h>
+#endif
 
 /***************************************************************************
  * Pool of Single Linked List Nodes
@@ -668,6 +671,11 @@ void gen_interrupt(struct r4300_core* r4300)
         if (savestates_get_job() == savestates_job_save)
         {
             savestates_save();
+
+#ifdef __LIBRETRO__
+            retro_return();
+#endif
+
             return;
         }
     }
