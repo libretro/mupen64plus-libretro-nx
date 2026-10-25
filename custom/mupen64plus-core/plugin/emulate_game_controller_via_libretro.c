@@ -47,6 +47,7 @@ extern int l_cbutton;
 extern int d_cbutton;
 extern int u_cbutton;
 extern bool alternate_mapping;
+extern bool libretro_vr_aim_stick(float *x, float *y);
 static bool libretro_supports_bitmasks = false;
 
 extern m64p_rom_header ROM_HEADER;
@@ -305,6 +306,24 @@ static void inputGetKeys_reuse(int16_t analogX, int16_t analogY, int Control, BU
    {
       Keys->X_AXIS = 0;
       Keys->Y_AXIS = 0;
+   }
+
+   /* VR laser - the controller's pointer drives the stick */
+   if (Control == 0 && Keys->X_AXIS == 0 && Keys->Y_AXIS == 0)
+   {
+      float ax, ay, len2;
+      if (libretro_vr_aim_stick(&ax, &ay))
+      {
+         len2 = ax * ax + ay * ay;
+         if (len2 > 1.0f)
+         {
+            float inv = 1.0f / sqrtf(len2);
+            ax *= inv;
+            ay *= inv;
+         }
+         Keys->X_AXIS = (int)(ax * 80.0f);
+         Keys->Y_AXIS = (int)(ay * 80.0f);
+      }
    }
 }
 
