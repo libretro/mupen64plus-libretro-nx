@@ -76,8 +76,8 @@ extern char* retro_dd_path_img;
 extern char* retro_dd_path_rom;
 
 // Other Subsystems
-extern char* retro_transferpak_rom_path;
-extern char* retro_transferpak_ram_path;
+extern char* retro_transferpak_rom_path[4];
+extern char* retro_transferpak_ram_path[4];
 
 // Threaded GL Callback
 extern void gln64_thr_gl_invoke_command_loop();
