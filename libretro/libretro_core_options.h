@@ -1661,6 +1661,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
         "False"
     },
     {
+        CORE_NAME "-scale-modern-analog",
+        "Scale Modern Analog Range",
+        NULL,
+        "Scale the range of analog sticks from modern controllers to match the N64's peculiar analog stick characteristics",
+        NULL,
+        "input",
+        {
+            {"False", NULL},
+            {"True", NULL},
+            { NULL, NULL },
+        },
+        "False"
+    },
+    {
         CORE_NAME "-pak1",
         "Player 1 Pak",
         NULL,
