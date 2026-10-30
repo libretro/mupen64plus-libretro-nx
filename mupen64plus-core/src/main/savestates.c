@@ -646,8 +646,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
 
             unsigned int enabled = ALIGNED_GETDATA(curr, uint32_t);
             unsigned int bank = ALIGNED_GETDATA(curr, uint32_t);
-            unsigned int access_mode = ALIGNED_GETDATA(curr, uint32_t);
-            unsigned int access_mode_changed = ALIGNED_GETDATA(curr, uint32_t);
+            unsigned int cart_enabled = ALIGNED_GETDATA(curr, uint32_t);
+            unsigned int reset_state = ALIGNED_GETDATA(curr, uint32_t);
             COPYARRAY(gb_fingerprint, curr, uint8_t, GB_CART_FINGERPRINT_SIZE);
             if (gb_fingerprint[0] != 0) {
                 rom_bank = ALIGNED_GETDATA(curr, uint32_t);
@@ -666,8 +666,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
                 /* init transferpak state if enabled and not controlled by input plugin */
                 dev->transferpaks[i].enabled = enabled;
                 dev->transferpaks[i].bank = bank;
-                dev->transferpaks[i].access_mode = access_mode;
-                dev->transferpaks[i].access_mode_changed = access_mode_changed;
+                dev->transferpaks[i].cart_enabled = cart_enabled;
+                dev->transferpaks[i].reset_state = reset_state;
 
                 /* if it holds a valid cartridge init gbcart */
                 if (dev->transferpaks[i].gb_cart != NULL
@@ -791,8 +791,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
 
             unsigned int enabled = GETDATA(curr, uint32_t);
             unsigned int bank = GETDATA(curr, uint32_t);
-            unsigned int access_mode = GETDATA(curr, uint32_t);
-            unsigned int access_mode_changed = GETDATA(curr, uint32_t);
+            unsigned int cart_enabled = GETDATA(curr, uint32_t);
+            unsigned int reset_state = GETDATA(curr, uint32_t);
             COPYARRAY(gb_fingerprint, curr, uint8_t, GB_CART_FINGERPRINT_SIZE);
             if (gb_fingerprint[0] != 0) {
                 rom_bank = GETDATA(curr, uint32_t);
@@ -811,8 +811,8 @@ int savestates_load_m64p(struct device* dev, const void *data)
                 /* init transferpak state if enabled and not controlled by input plugin */
                 dev->transferpaks[i].enabled = enabled;
                 dev->transferpaks[i].bank = bank;
-                dev->transferpaks[i].access_mode = access_mode;
-                dev->transferpaks[i].access_mode_changed = access_mode_changed;
+                dev->transferpaks[i].cart_enabled = cart_enabled;
+                dev->transferpaks[i].reset_state = reset_state;
 
                 /* if it holds a valid cartridge init gbcart */
                 if (dev->transferpaks[i].gb_cart != NULL
@@ -1026,7 +1026,7 @@ int savestates_load_m64p(struct device* dev, const void *data)
          */
         for (i = 0; i < RDRAM_MAX_MODULES_COUNT; ++i) {
             memcpy(dev->rdram.regs[i], dev->rdram.regs[0], RDRAM_REGS_COUNT*sizeof(dev->rdram.regs[0][0]));
-            dev->rdram.regs[i][RDRAM_DEVICE_ID_REG] = ri_address_to_id_field(i * 0x200000) << 2;
+            dev->rdram.regs[i][RDRAM_DEVICE_ID_REG] = ri_address_to_id_field(ri_address(i * 0x200000), 0) << 2;
         }
 
         /* dd state */
@@ -1383,7 +1383,7 @@ static int savestates_load_pj64(struct device* dev,
      */
     for (i = 0; i < (SaveRDRAMSize / 0x200000); ++i) {
         memcpy(dev->rdram.regs[i], dev->rdram.regs[0], RDRAM_REGS_COUNT*sizeof(dev->rdram.regs[0][0]));
-        dev->rdram.regs[i][RDRAM_DEVICE_ID_REG] = ri_address_to_id_field(i * 0x200000) << 2;
+        dev->rdram.regs[i][RDRAM_DEVICE_ID_REG] = ri_address_to_id_field(ri_address(i * 0x200000), 0) << 2;
     }
 
     /* dd state */
@@ -1546,7 +1546,8 @@ int savestates_load(void)
             fPtr = fopen(filepath, "rb"); // can I open this?
         if (fPtr == NULL)
         {
-            main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to open savestate file %s", filepath);
+            if (filepath != NULL)
+                main_message(M64MSG_STATUS, OSD_BOTTOM_LEFT, "Failed to open savestate file %s", filepath);
             if (filepath != NULL)
                 free(filepath);
             filepath = NULL;
@@ -1925,8 +1926,8 @@ int savestates_save_m64p(const struct device* dev, void *data)
     for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i) {
         PUTDATA(curr, uint32_t, dev->transferpaks[i].enabled);
         PUTDATA(curr, uint32_t, dev->transferpaks[i].bank);
-        PUTDATA(curr, uint32_t, dev->transferpaks[i].access_mode);
-        PUTDATA(curr, uint32_t, dev->transferpaks[i].access_mode_changed);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].cart_enabled);
+        PUTDATA(curr, uint32_t, dev->transferpaks[i].reset_state);
 
         if (dev->transferpaks[i].gb_cart == NULL) {
             uint8_t gb_fingerprint[GB_CART_FINGERPRINT_SIZE];

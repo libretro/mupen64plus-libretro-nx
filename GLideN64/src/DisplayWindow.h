@@ -10,6 +10,8 @@ public:
 	bool start();
 	void stop();
 	void restart();
+	void destroyGfxContext();
+	void reinitGfxContext();
 	void swapBuffers();
 	void saveScreenshot();
 	void saveBufferContent(FrameBuffer * _pBuffer);

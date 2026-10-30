@@ -26,6 +26,16 @@
 #include <assert.h>
 #include <sys/types.h>
 
+#if defined(WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #if defined(__APPLE__)
 #define MAP_ANONYMOUS MAP_ANON
 #endif
@@ -71,6 +81,56 @@ void recomp_dbg_block(int addr);
 #else
 #error Unsupported dynarec architecture
 #endif
+
+#if ((1u << TARGET_SIZE_2) != NEW_DYNAREC_CACHE_SIZE)
+#error "NEW_DYNAREC_CACHE_SIZE must match TARGET_SIZE_2"
+#endif
+
+static size_t dynarec_host_page_size(void)
+{
+#if defined(WIN32)
+  SYSTEM_INFO sys_info;
+  GetSystemInfo(&sys_info);
+  size_t page_size = (size_t) sys_info.dwPageSize;
+#else
+  long result = sysconf(_SC_PAGESIZE);
+  size_t page_size = result > 0 ? (size_t) result : 0;
+#endif
+  return page_size != 0 ? page_size : 4096u;
+}
+
+static void* dynarec_align_cache_buffer(void* buffer, size_t buffer_size)
+{
+  const size_t cache_size = (size_t) NEW_DYNAREC_CACHE_SIZE;
+  const size_t page_size = dynarec_host_page_size();
+  const uintptr_t base = (uintptr_t) buffer;
+  const uintptr_t end = base + buffer_size;
+  uintptr_t aligned = ((base + page_size - 1) / page_size) * page_size;
+
+  if (aligned + cache_size > end) {
+    const uintptr_t max_start = end - cache_size;
+    const uintptr_t fallback = (max_start / page_size) * page_size;
+    if (fallback < base) {
+      DebugMessage(M64MSG_ERROR,
+          "Unable to align dynarec cache to host page size (%zu). "
+          "Execution may fail.", page_size);
+      return (void*) base;
+    }
+    aligned = fallback;
+  }
+
+  return (void*) aligned;
+}
+
+static void ensure_dynarec_cache_alignment(void)
+{
+  if (g_dev.r4300.extra_memory != NULL)
+    return;
+
+  g_dev.r4300.extra_memory = (unsigned char*)
+      dynarec_align_cache_buffer(g_dev.r4300.extra_memory_buffer,
+                                 sizeof(g_dev.r4300.extra_memory_buffer));
+}
 
 /* debug */
 #define ASSEM_DEBUG 0
@@ -249,7 +309,9 @@ unsigned int stop_after_jal;
 static u_int start;
 static u_int *source;
 static u_int pagelimit;
+#ifndef NDEBUG
 static char insn[MAXBLOCK][10];
+#endif
 static u_char itype[MAXBLOCK];
 static u_char opcode[MAXBLOCK];
 static u_char opcode2[MAXBLOCK];
@@ -2344,7 +2406,7 @@ static void tlb_speed_hacks()
 /**** Linker ****/
 u_int verify_dirty(struct ll_entry * head)
 {
-  void *source;
+  void *source = NULL;
   if((int)head->start>=0xa0000000&&(int)head->start<0xa07fffff) {
     source=(void *)((uintptr_t)g_dev.rdram.dram+head->start-0xa0000000);
   }else if((int)head->start>=0xa4000000&&(int)head->start<0xa4001000) {
@@ -2822,7 +2884,7 @@ void invalidate_block(u_int block)
 {
   u_int page;
   page=block^0x80000;
-  if(page>262143&&g_dev.r4300.cp0.tlb.LUT_r[block]) page=(g_dev.r4300.cp0.tlb.LUT_r[block]^0x80000000)>>12;
+  if(block<0x100000&&page>262143&&g_dev.r4300.cp0.tlb.LUT_r[block]) page=(g_dev.r4300.cp0.tlb.LUT_r[block]^0x80000000)>>12;
   if(page>2048) page=2048+(page&2047);
   inv_debug("INVALIDATE: %x (%d)\n",block<<12,page);
   u_int first,last;
@@ -2878,9 +2940,11 @@ void invalidate_block(u_int block)
   #endif
 
   // Don't trap writes
-  g_dev.r4300.cached_interp.invalid_code[block]=1;
+  if(block<0x100000) {
+    g_dev.r4300.cached_interp.invalid_code[block]=1;
+  }
   // If there is a valid TLB entry for this page, remove write protect
-  if(g_dev.r4300.cp0.tlb.LUT_w[block]) {
+  if(block<0x100000&&g_dev.r4300.cp0.tlb.LUT_w[block]) {
     assert(g_dev.r4300.cp0.tlb.LUT_r[block]==g_dev.r4300.cp0.tlb.LUT_w[block]);
     g_dev.r4300.new_dynarec_hot_state.memory_map[block]=((uintptr_t)g_dev.rdram.dram+(uintptr_t)((g_dev.r4300.cp0.tlb.LUT_w[block]&0xFFFFF000)-0x80000000)-(block<<12))>>2;
     u_int real_block=g_dev.r4300.cp0.tlb.LUT_w[block]>>12;
@@ -2975,7 +3039,9 @@ void clean_blocks(u_int page)
             }
           }
           else if((signed int)head->vaddr>=(signed int)0xC0000000) {
+#ifndef NDEBUG
             uintptr_t map_value=g_dev.r4300.new_dynarec_hot_state.memory_map[head->vaddr>>12];
+#endif
             start=head->start>>12;
             end=(head->start+head->length-1)>>12;
             for(i=start;i<=end;i++) {
@@ -4279,6 +4345,7 @@ static void loop_preload(signed char pre[],signed char entry[])
 // Generate address for load/store instruction
 static void address_generation(int i,struct regstat *i_regs,signed char entry[])
 {
+  if(i>=MAXBLOCK) return;
   if(itype[i]==LOAD||itype[i]==LOADLR||itype[i]==STORE||itype[i]==STORELR||itype[i]==C1LS) {
     int ra=0;
     int agr=AGEN1+(i&1);
@@ -4385,6 +4452,7 @@ static void address_generation(int i,struct regstat *i_regs,signed char entry[])
     }
   }
   // Preload constants for next instruction
+  if(i+1>=MAXBLOCK) return;
   if(itype[i+1]==LOAD||itype[i+1]==LOADLR||itype[i+1]==STORE||itype[i+1]==STORELR||itype[i+1]==C1LS) {
     int agr,ra;
     #if (NEW_DYNAREC!=NEW_DYNAREC_X86) && (NEW_DYNAREC!=NEW_DYNAREC_X64)
@@ -4571,7 +4639,7 @@ static void do_ccstub(int n)
           emit_loadreg(rs2[i],s2l);
       #endif
       int hr=0;
-      int addr,alt,ntaddr;
+      int addr=0,alt=0,ntaddr=0;
       while(hr<HOST_REGS)
       {
         if(hr!=EXCLUDE_REG && hr!=HOST_CCREG &&
@@ -6431,7 +6499,7 @@ static void store_assemble(int i,struct regstat *i_regs)
 
 static void storelr_assemble(int i,struct regstat *i_regs)
 {
-  signed char s,th,tl,real_addr,addr,temp,temp2,map=-1;
+  signed char s,th,tl,real_addr,addr,temp,temp2=0,map=-1;
   int offset,type=0,memtarget=0,c=0;
   intptr_t jaddr=0;
   u_int hr,reglist=0;
@@ -6495,8 +6563,8 @@ static void storelr_assemble(int i,struct regstat *i_regs)
 
   if(!c||memtarget)
   {
-    intptr_t case1,case2,case3;
-    intptr_t done0,done1,done2;
+    intptr_t case1=0,case2=0,case3=0;
+    intptr_t done0=0,done1=0,done2=0;
 
 #if NEW_DYNAREC >= NEW_DYNAREC_ARM
     assert(map>=0);
@@ -6937,7 +7005,9 @@ static void float_assemble(int i,struct regstat *i_regs)
 
 static void syscall_assemble(int i,struct regstat *i_regs)
 {
+#ifndef NDEBUG
   signed char ccreg=get_reg(i_regs->regmap,CCREG);
+#endif
   assert(ccreg==HOST_CCREG);
   assert(!is_delayslot);
   emit_movimm(start+i*4,0); // Get PC
@@ -7161,7 +7231,7 @@ static void rjump_assemble(int i,struct regstat *i_regs)
   signed char *i_regmap=i_regs->regmap;
   #endif
   int temp;
-  int rs,cc;
+  int rs;
   rs=get_reg(branch_regs[i].regmap,rs1[i]);
   assert(rs>=0);
   if((rs1[i]==rt1[i+1]||rs1[i]==rt2[i+1])&&(rs1[i]!=0)) {
@@ -7215,7 +7285,9 @@ static void rjump_assemble(int i,struct regstat *i_regs)
     emit_prefetch(hash_table[((return_address>>16)^return_address)&0xFFFF]);
     #endif
   }
-  cc=get_reg(branch_regs[i].regmap,CCREG);
+#ifndef NDEBUG
+  int cc=get_reg(branch_regs[i].regmap,CCREG);
+#endif
   assert(cc==HOST_CCREG);
   #ifdef USE_MINI_HT
   int rh=get_reg(branch_regs[i].regmap,RHASH);
@@ -8207,7 +8279,7 @@ static void pagespan_assemble(int i,struct regstat *i_regs)
     s1h=s2h=-1;
   }
   int hr=0;
-  int addr,alt,ntaddr;
+  int addr,alt=0,ntaddr=0;
   if(i_regs->regmap[HOST_BTREG]<0) {addr=HOST_BTREG;}
   else {
     while(hr<HOST_REGS)
@@ -8637,6 +8709,7 @@ ALIGN(4096, char jit_memory[33554432]) __attribute__((section(".text")));
 void new_dynarec_init(void)
 {
   DebugMessage(M64MSG_INFO, "Init new dynarec");
+  ensure_dynarec_cache_alignment();
 
 #if defined(RECOMPILER_DEBUG) && !defined(RECOMP_DBG)
   recomp_dbg_init();
@@ -8702,8 +8775,7 @@ void new_dynarec_init(void)
 #else
 #if defined(WIN32)
   DWORD dummy;
-  BOOL res=VirtualProtect((void*)g_dev.r4300.extra_memory, 33554432, PAGE_EXECUTE_READWRITE, &dummy);
-  assert(res!=0);
+  VirtualProtect((void*)g_dev.r4300.extra_memory, 33554432, PAGE_EXECUTE_READWRITE, &dummy);
   base_addr = base_addr_rx = (void*)g_dev.r4300.extra_memory;
 #else
   mprotect ((u_char *)g_dev.r4300.extra_memory, 1<<TARGET_SIZE_2,
@@ -11520,7 +11592,9 @@ int new_recompile_block(int addr)
   copy_size+=((slen*4)+4);
   //DebugMessage(M64MSG_VERBOSE, "Currently used memory for copy: %d",copy_size);
 
+#if !defined(NDEBUG) || NEW_DYNAREC >= NEW_DYNAREC_ARM
   uintptr_t beginning=(uintptr_t)out;
+#endif
   if((u_int)addr&1) {
     ds=1;
     pagespan_ds();

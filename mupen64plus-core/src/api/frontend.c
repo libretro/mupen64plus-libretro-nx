@@ -75,7 +75,10 @@ EXPORT m64p_error CALL CoreStartup(int APIVersion, const char *ConfigPath, const
                      VERSION_PRINTF_SPLIT(APIVersion), VERSION_PRINTF_SPLIT(FRONTEND_API_VERSION));
         return M64ERR_INCOMPATIBLE;
     }
-   
+
+    /* Initialize the main device structure to all zeros */
+    memset(&g_dev, 0, sizeof(struct device));
+
     /* allocate base memory */
     g_mem_base = init_mem_base();
     if (g_mem_base == NULL) {
@@ -105,6 +108,9 @@ EXPORT m64p_error CALL CoreShutdown(void)
     /* deallocate base memory */
     release_mem_base(g_mem_base);
     g_mem_base = NULL;
+
+    /* deallocate rom memory */
+    release_mem_rom();
 
     l_CoreInit = 0;
     return M64ERR_SUCCESS;

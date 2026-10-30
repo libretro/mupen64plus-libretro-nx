@@ -148,11 +148,11 @@ const input_plugin_functions dummy_input = {
     dummyinput_SDL_KeyDown,
     dummyinput_SDL_KeyUp,
     dummyinput_RenderCallback,
-    dummy_SendVRUWord,
-    dummy_SetMicState,
-    dummy_ReadVRUResults,
-    dummy_ClearVRUWords,
-    dummy_SetVRUWordMask
+    dummyinput_SendVRUWord,
+    dummyinput_SetMicState,
+    dummyinput_ReadVRUResults,
+    dummyinput_ClearVRUWords,
+    dummyinput_SetVRUWordMask
 };
 
 static AUDIO_INFO audio_info;
@@ -211,7 +211,7 @@ m64p_error plugin_start_gfx(void)
 {
     printf("plugin_start_gfx\n");
 
-    uint8_t media = *((uint8_t*)mem_base_u32(g_mem_base, MM_CART_ROM) + (0x3b ^ S8));
+    uint8_t media = g_rom_size == 0 ? 0 : *((uint8_t*)mem_base_u32(g_mem_base, MM_CART_ROM) + (0x3b ^ S8));
 
     /* Here we feed 64DD IPL ROM header to GFX plugin if 64DD is present.
      * We use g_media_loader.get_dd_rom to detect 64DD presence

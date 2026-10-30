@@ -19,31 +19,25 @@ jobs:
             arch: x64
           - cc: Clang
             arch: x86
-    name: Linux / ${{ matrix.cc }} / ${{ matrix.arch }}
-    runs-on: ubuntu-22.04
+    name: Linux / ${{ matrix.cc }} ${{ matrix.arch }}
+    runs-on: ubuntu-24.04
     if: github.repository == 'mupen64plus/mupen64plus-core'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Get build dependencies and arrange the environment
         run: |
-          export C_CLANG_SUFFIX="-15" C_GCC_SUFFIX="-12"
-          export BUILD_DEPS="libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libsdl1.2-dev libsdl2-dev libvulkan-dev zlib1g-dev"
+          export BUILD_DEPS="libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libsdl2-dev libvulkan-dev zlib1g-dev"
           ./.github/workflows/scripts/ci_install_ubuntu_deps.sh ${{ matrix.arch }} ${{ matrix.cc }}
       - name: Build and related stuff, backup binaries
         run: |
-          export C_CLANG_SUFFIX="-15" C_GCC_SUFFIX="-12"
           export PATH="$(pwd)/.github/workflows/scripts:${PATH}"
-          export CONFIG_OVERRIDE="ACCURATE_FPU=1 NEW_DYNAREC=1 SDL_CONFIG="sdl-config""
+          export CONFIG_OVERRIDE="ACCURATE_FPU=1 NEW_DYNAREC=1"
           ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }}
-          export CONFIG_OVERRIDE="ACCURATE_FPU=1 NEW_DYNAREC=1 SDL_CONFIG="sdl2-config""
-          ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }}
-          export CONFIG_OVERRIDE="ACCURATE_FPU=0 NEW_DYNAREC=0 SDL_CONFIG="sdl-config" POSTFIX="-old""
-          ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }}
-          export CONFIG_OVERRIDE="ACCURATE_FPU=0 NEW_DYNAREC=0 SDL_CONFIG="sdl2-config" POSTFIX="-old""
+          export CONFIG_OVERRIDE="ACCURATE_FPU=0 NEW_DYNAREC=0 POSTFIX="-old""
           ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }} makepkg
       - name: Upload artifact
         if: matrix.cc == 'GCC'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}
           path: pkg/*.tar.gz
@@ -57,18 +51,30 @@ jobs:
             arch: x64
             cross: x86_64
             env: MINGW64
+            gbc: 0
           - cc: GCC
             arch: x86
             cross: i686
             env: MINGW32
-    name: Windows / MSYS2 ${{ matrix.cc }} / ${{ matrix.arch }}
-    runs-on: windows-2022
+            gbc: 0
+          - cc: GCC
+            arch: x64
+            cross: ucrt-x86_64
+            env: UCRT64
+            gbc: 1
+          - cc: Clang
+            arch: x64
+            cross: clang-x86_64
+            env: CLANG64
+            gbc: 1
+    name: Windows ${{ matrix.arch }} / MSYS2 ${{ matrix.env }} ${{ matrix.cc }}
+    runs-on: windows-latest
     if: github.repository == 'mupen64plus/mupen64plus-core'
     defaults:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.env }}
@@ -77,7 +83,6 @@ jobs:
             git
             libtool
             make
-            mingw-w64-${{ matrix.cross }}-gcc
             mingw-w64-${{ matrix.cross }}-toolchain
             mingw-w64-${{ matrix.cross }}-freetype
             mingw-w64-${{ matrix.cross }}-libpng
@@ -86,18 +91,22 @@ jobs:
             mingw-w64-${{ matrix.cross }}-SDL2
             mingw-w64-${{ matrix.cross }}-vulkan-headers
             mingw-w64-${{ matrix.cross }}-zlib
+      - name: Get and install special-case dependencies
+        if: matrix.gbc == '1'
+        run: |
+          pacman --noconfirm --needed -S mingw-w64-${{ matrix.cross }}-opencv
       - name: Build and related stuff, backup binaries
         run: |
           export PATH="$(pwd)/.github/workflows/scripts:${PATH}"
-          export CONFIG_OVERRIDE="ACCURATE_FPU=1 NEW_DYNAREC=1"
+          export CONFIG_OVERRIDE="ACCURATE_FPU=1 NEW_DYNAREC=1 OPENCV=${{ matrix.gbc }}"
           ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }}
-          export CONFIG_OVERRIDE="ACCURATE_FPU=0 NEW_DYNAREC=0 POSTFIX="-old""
+          export CONFIG_OVERRIDE="ACCURATE_FPU=0 NEW_DYNAREC=0 OPENCV=${{ matrix.gbc }} POSTFIX="-old""
           ci_build.sh ${{ matrix.arch }} ${{ matrix.cc }}
       - name: Backup dependencies, etc...
         run: |
           ./.github/workflows/scripts/ci_backup_mingw_deps.sh ${{ matrix.env }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}
           path: pkg/*
@@ -109,30 +118,34 @@ jobs:
         include:
           - toolset: v143
             arch: x64
-            vs: 2022
+            wim: windows-latest
           - toolset: v141_xp
             arch: x86
-            vs: 2019
-    name: Windows / MSVC with ${{ matrix.toolset }} / ${{ matrix.arch }}
-    runs-on: windows-${{ matrix.vs }}
+            wim: windows-2022
+    name: Windows ${{ matrix.arch }} / MSVC with ${{ matrix.toolset }}
+    runs-on: ${{ matrix.wim }}
     if: github.repository == 'mupen64plus/mupen64plus-core'
     defaults:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@v4
-      - uses: microsoft/setup-msbuild@v2
+      - uses: actions/checkout@v7
+      - name: Pre-build arrangements for ${{ matrix.toolset }}
+        if: matrix.toolset == 'v141_xp'
+        run: |
+          "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\setup.exe" modify --quiet --productId Microsoft.VisualStudio.Product.Enterprise --channelId VisualStudio.17.Release --add Microsoft.VisualStudio.Component.WinXP
       - name: Build and related stuff, backup binaries
         run: |
           set PATH=%CD%\.github\workflows\scripts;%PATH%
           set TOOLSET=${{ matrix.toolset }}
           call ci_msvc_build.cmd ${{ matrix.arch }}
+          if errorlevel 1 exit %ERRORLEVEL%
           ci_msvc_build.cmd ${{ matrix.arch }} newdyn
       - name: Backup dependencies, etc...
         run: |
           .\.github\workflows\scripts\ci_backup_msvc_deps.cmd ${{ matrix.arch }} freetype.dll libpng16.dll SDL2.dll SDL2_net.dll zlib.dll
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}
           path: pkg/*
@@ -142,9 +155,9 @@ jobs:
     if: github.ref_name == 'master'
     needs: [Linux, MSYS2, MSVC]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: binaries
       - name: Get some tools
@@ -155,6 +168,7 @@ jobs:
         run: |
           ./.github/workflows/scripts/ci_nightly_artifacts.sh
       - name: Nightly-build
+        if: ${{ env.WORKFLOW_REV == env.CURRENT_REV }}
         uses: ncipollo/release-action@v1
         with:
           prerelease: true

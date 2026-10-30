@@ -83,6 +83,10 @@ extern char* retro_transferpak_ram_path;
 extern void gln64_thr_gl_invoke_command_loop();
 extern bool threaded_gl_safe_shutdown;
 
+// GLN64 context management (for libretro context_destroy/context_reset)
+extern void gln64DestroyGfxContext(void);
+extern void gln64ReinitGfxContext(void);
+
 // Core options
 extern uint32_t CoreOptionCategoriesSupported;
 extern uint32_t CoreOptionUpdateDisplayCbSupported;

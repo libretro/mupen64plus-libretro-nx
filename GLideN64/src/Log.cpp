@@ -153,7 +153,7 @@ void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, 
 	va_end(vaArgs);
 
 	std::stringstream formatString;
-	formatString << _fileName << ":" << _line << ", \"" << zc.data() << "\"";
+	formatString << _fileName << ":" << _line << ", \"" << zc.data() << "\"\n";
 
 	//CoreDebugCallback(CoreDebugCallbackContext, logLevel[_type], formatString.str().c_str());
 	log_cb(RETRO_LOG_INFO, formatString.str().c_str());

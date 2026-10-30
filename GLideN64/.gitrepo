@@ -4,9 +4,9 @@
 ; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
 ;
 [subrepo]
-	remote = git@github.com:libretro/GLideN64.git
+	remote = ssh://git@github.com/libretro/GLideN64.git
 	branch = develop
-	commit = b33fa191b823600252213a50e6d1f1e2353dcccf
-	parent = 4249e39b2c200e5f0895385f76d99928785f2bea
+	commit = 1cb3abf82e48667306635bc8b804e6b825d16e27
+	parent = 03fa754bff3b4a7a15681b20f674ba53102fed0f
 	method = rebase
-	cmdver = 0.4.6
+	cmdver = 0.4.9

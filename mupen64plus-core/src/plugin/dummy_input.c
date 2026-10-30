@@ -86,22 +86,22 @@ void dummyinput_RenderCallback(void)
 {
 }
 
-void dummy_SendVRUWord(uint16_t length, uint16_t *word, uint8_t lang)
+void dummyinput_SendVRUWord(uint16_t length, uint16_t *word, uint8_t lang)
 {
 }
 
-void dummy_SetMicState(int state)
+void dummyinput_SetMicState(int state)
 {
 }
 
-void dummy_ReadVRUResults(uint16_t *error_flags, uint16_t *num_results, uint16_t *mic_level, uint16_t *voice_level, uint16_t *voice_length, uint16_t *matches)
+void dummyinput_ReadVRUResults(uint16_t *error_flags, uint16_t *num_results, uint16_t *mic_level, uint16_t *voice_level, uint16_t *voice_length, uint16_t *matches)
 {
 }
 
-void dummy_ClearVRUWords(uint8_t length)
+void dummyinput_ClearVRUWords(uint8_t lenght)
 {
 }
 
-void dummy_SetVRUWordMask(uint8_t length, uint8_t *mask)
+void dummyinput_SetVRUWordMask(uint8_t length, uint8_t *mask)
 {
 }

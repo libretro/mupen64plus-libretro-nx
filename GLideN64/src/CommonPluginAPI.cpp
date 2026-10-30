@@ -5,6 +5,7 @@
 #endif // OS_WINDOWS
 
 #include "PluginAPI.h"
+#include "DisplayWindow.h"
 
 extern "C" {
 
@@ -79,4 +80,14 @@ EXPORT void CALL gln64FBWList(FrameBufferModifyEntry *plist, unsigned int size)
 	api().FBWList(plist, size);
 }
 #endif
+
+EXPORT void CALL gln64DestroyGfxContext(void)
+{
+	dwnd().destroyGfxContext();
+}
+
+EXPORT void CALL gln64ReinitGfxContext(void)
+{
+	dwnd().reinitGfxContext();
+}
 }

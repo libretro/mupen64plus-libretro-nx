@@ -53,13 +53,18 @@ void GLInfo::init() {
 	const char * strRenderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
 
 	bool isAnyAdreno = strstr(strRenderer, "Adreno") != nullptr;
+	bool isFreedreno = strstr(strRenderer, "FD") != nullptr;  // freedreno uses "FDxxx" naming
+	bool isAdrenoFamily = isAnyAdreno || isFreedreno;
 
 	if (std::regex_match(std::string(strRenderer), std::regex("Adreno.*530")))
 		renderer = Renderer::Adreno530;
 	else if (std::regex_match(std::string(strRenderer), std::regex("Adreno.*540")) ||
-		std::regex_match(std::string(strRenderer), std::regex("Adreno.*6\\d\\d")))
+		std::regex_match(std::string(strRenderer), std::regex("Adreno.*6\\d\\d")) ||
+		std::regex_match(std::string(strRenderer), std::regex(".*FD6\\d\\d.*")))  // freedreno 6xx series
 		renderer = Renderer::Adreno_no_bugs;
-	else if (strstr(strRenderer, "Adreno") != nullptr)
+	else if (std::regex_match(std::string(strRenderer), std::regex(".*FD5\\d\\d.*")))  // freedreno 5xx series
+		renderer = Renderer::Adreno;
+	else if (isAdrenoFamily)
 		renderer = Renderer::Adreno;
 	else if (strstr(strRenderer, "VideoCore IV") != nullptr)
 		renderer = Renderer::VideoCore;
@@ -202,7 +207,14 @@ void GLInfo::init() {
 	eglImage = (Utils::isEGLExtensionSupported("EGL_KHR_image_base") || Utils::isEGLExtensionSupported("EGL_KHR_image"));
 	ext_fetch_arm =  Utils::isExtensionSupported(*this, "GL_ARM_shader_framebuffer_fetch") && !ext_fetch;
 
-	dual_source_blending = !isGLESX || ((!isGLES2) && (Utils::isExtensionSupported(*this, "GL_EXT_blend_func_extended") && !isAnyAdreno));
+	// Disable broken extensions if dual_source_blending is disabled (which is currently buggy with some settings)
+	dual_source_blending = false; //!isGLESX || ((!isGLES2) && (Utils::isExtensionSupported(*this, "GL_EXT_blend_func_extended") && !isAnyAdreno));
+	if (!dual_source_blending) {
+		ext_fetch = false;
+		ext_fetch_arm = false;
+		n64DepthWithFbFetch = false;
+	}
+
 	anisotropic_filtering = Utils::isExtensionSupported(*this, "GL_EXT_texture_filter_anisotropic");
 
 #ifdef OS_ANDROID
@@ -216,6 +228,11 @@ void GLInfo::init() {
 	}
 
 	eglImageFramebuffer = eglImage && !isGLES2;
+
+#ifdef WEBOS
+	eglImage = false;
+	eglImageFramebuffer = false;
+#endif
 
 	if (config.frameBufferEmulation.N64DepthCompare != Config::dcDisable) {
 		if (config.frameBufferEmulation.N64DepthCompare == Config::dcFast) {

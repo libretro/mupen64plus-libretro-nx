@@ -253,7 +253,7 @@ ifeq ($(OS), OSX)
 endif
 ifeq ($(OS), MINGW)
   TARGET = mupen64plus$(POSTFIX).dll
-  ifeq ($(CC), clang)
+  ifeq (clang, $(word 1, $(shell $(CC) --version)))
     LDFLAGS += -shared -Wl,-export-all-symbols
   else
     LDFLAGS += -Wl,-Bsymbolic -shared -Wl,-export-all-symbols
@@ -313,7 +313,7 @@ LDLIBS += $(ZLIB_LDLIBS)
 
 ifeq ($(origin MINIZIP_CFLAGS) $(origin MINIZIP_LDLIBS), undefined undefined)
   ifeq ($(shell $(PKG_CONFIG) --modversion minizip 2>/dev/null),)
-    CFLAGS += -DNOCRYPT -DNOUNCRYPT -I$(SUBDIR)/minizip
+    CFLAGS += -DNOCRYPT -DNOUNCRYPT -I$(SUBDIR)
     MINIZIP_SOURCE = \
       $(SUBDIR)/minizip/ioapi.c \
       $(SUBDIR)/minizip/zip.c \
@@ -339,11 +339,20 @@ LDLIBS += $(LIBPNG_LDLIBS)
 ifeq ($(OPENCV), 1)
   # OpenCV lib
   ifeq ($(origin OPENCV_CFLAGS) $(origin OPENCV_LDLIBS), undefined undefined)
-    ifeq ($(shell $(PKG_CONFIG) --modversion opencv 2>/dev/null),)
-      $(error No OpenCV development libraries found!)
+    ifeq ($(shell $(PKG_CONFIG) --modversion opencv5 2>/dev/null),)
+      ifeq ($(shell $(PKG_CONFIG) --modversion opencv4 2>/dev/null),)
+        ifeq ($(shell $(PKG_CONFIG) --modversion opencv 2>/dev/null),)
+          $(error No OpenCV development libraries found!)
+        endif
+        OPENCV_VER = opencv
+      else
+        OPENCV_VER = opencv4
+      endif
+    else
+      OPENCV_VER = opencv5
     endif
-    OPENCV_CFLAGS += $(shell $(PKG_CONFIG) --cflags opencv)
-    OPENCV_LDLIBS += $(shell $(PKG_CONFIG) --libs opencv)
+    OPENCV_CFLAGS += $(shell $(PKG_CONFIG) --cflags $(OPENCV_VER))
+    OPENCV_LDLIBS += $(shell $(PKG_CONFIG) --libs $(OPENCV_VER))
   endif
   CFLAGS += $(OPENCV_CFLAGS)
   LDLIBS += $(OPENCV_LDLIBS)

@@ -406,6 +406,7 @@ else ifneq (,$(findstring osx,$(platform)))
 
    PLATCFLAGS += -D__MACOSX__ -DOSX -DOS_MAC_OS_X -DHAVE_UNISTD_H=1 -DHAVE_POSIX_MEMALIGN -DNO_ASM -DGL_SILENCE_DEPRECATION=1
    GL_LIB := -framework OpenGL
+   LDFLAGS += -framework AudioToolbox
 
    # Target Dynarec
    WITH_DYNAREC =
@@ -474,6 +475,7 @@ else ifneq (,$(findstring ios,$(platform)))
 	endif
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # tvOS
 else ifneq (,$(findstring tvos,$(platform)))
    ifeq ($(TVOSSDK),)
@@ -507,6 +509,7 @@ else ifneq (,$(findstring tvos,$(platform)))
 
    LDFLAGS += -dynamiclib
    GL_LIB := -framework OpenGLES
+   LDFLAGS += -framework AudioToolbox
 # Android
 else ifneq (,$(findstring android,$(platform)))
    ANDROID = 1
@@ -600,6 +603,26 @@ else
    LLE = 1
    COREFLAGS += -DOS_WINDOWS -DMINGW -DUNICODE
    CXXFLAGS += -fpermissive
+endif
+
+# webOS
+ifneq (,$(or $(findstring webos,$(CROSS_COMPILE)),$(findstring starfish,$(CROSS_COMPILE))))
+   # gitlab-ci uses GLES3 not FORCE_GLES3
+   ifeq ($(GLES3),1)
+      TARGET := $(TARGET_NAME)_gles3_libretro.so
+   else
+      # default to GLES v2
+      GLES = 1
+   endif
+   CPUFLAGS += -DWEBOS
+   GL_LIB := -lGLESv2
+   ifneq (,$(findstring aarch64,$(CROSS_COMPILE)))
+      WITH_DYNAREC=aarch64
+      HAVE_NEON = 0
+   else
+      WITH_DYNAREC=arm
+      HAVE_NEON = 1
+   endif
 endif
 
 ifeq ($(STATIC_LINKING), 1)
