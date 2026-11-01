@@ -123,7 +123,7 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  ifndef Z_SOLO
 #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os
 #      include <unix.h> /* for fdopen */
-#    else
+#    elif !defined(__APPLE__)
 #      ifndef fdopen
 #        define fdopen(fd,mode) NULL /* No fdopen() */
 #      endif

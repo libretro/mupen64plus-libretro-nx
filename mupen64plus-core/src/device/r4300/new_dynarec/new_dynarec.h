@@ -27,6 +27,40 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Apple Silicon W^X helpers: every site that writes to or patches the
+ * MAP_JIT code cache must wrap the access with a write/execute toggle.
+ * Calls nest — only the outermost BEGIN/END pair actually flips the
+ * page protection so that helpers like set_jump_target can be called
+ * from within new_recompile_block without prematurely re-locking the
+ * page. The depth counter is thread-local because
+ * pthread_jit_write_protect_np() itself is per-thread; sharing the
+ * counter across threads would let one thread's nesting leak into
+ * another thread's view of the page state.
+ * On other platforms these macros expand to nothing. */
+#if defined(__APPLE__)
+#include <pthread.h>
+extern _Thread_local int m64p_jit_write_depth;
+static inline void m64p_jit_write_begin(void) {
+  if (m64p_jit_write_depth++ == 0) pthread_jit_write_protect_np(0);
+}
+static inline void m64p_jit_write_end(void) {
+  /* Clamp to zero: cache_flush may be invoked from invalidation paths
+   * without a paired BEGIN, in which case we still want to land in
+   * execute mode without making the depth go negative. */
+  if (m64p_jit_write_depth <= 1) {
+    m64p_jit_write_depth = 0;
+    pthread_jit_write_protect_np(1);
+  } else {
+    m64p_jit_write_depth--;
+  }
+}
+#define M64P_JIT_WRITE_BEGIN()  m64p_jit_write_begin()
+#define M64P_JIT_WRITE_END()    m64p_jit_write_end()
+#else
+#define M64P_JIT_WRITE_BEGIN()  ((void)0)
+#define M64P_JIT_WRITE_END()    ((void)0)
+#endif
+
 #define NEW_DYNAREC_X86 1
 #define NEW_DYNAREC_X64 2
 #define NEW_DYNAREC_ARM 3
