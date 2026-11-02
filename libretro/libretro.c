@@ -2254,10 +2254,11 @@ void retro_cheat_set(unsigned index, bool enabled, const char* codeLine)
             matchLength++;
         } else {
             if (matchLength){
-               char codePartS[matchLength];
+               char codePartS[matchLength+1];
                strncpy(codePartS,codeLine+cursor-matchLength,matchLength);
                codePartS[matchLength]=0;
-               codeParts[partCount++]=strtoul(codePartS,NULL,16);
+               if (partCount < 256)
+                  codeParts[partCount++]=strtoul(codePartS,NULL,16);
                matchLength=0;
             }
         }
