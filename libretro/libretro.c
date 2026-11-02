@@ -2173,6 +2173,11 @@ bool retro_unserialize(const void *data, size_t size)
    if (initializing)
       return false;
 
+   // savestates_load_m64p() reads up to retro_serialize_size() bytes
+   // from data without a length check
+   if (!data || size < retro_serialize_size())
+      return false;
+
    retro_savestate_complete = false;
    retro_savestate_result = 0;
 
@@ -2198,7 +2203,7 @@ bool retro_unserialize(const void *data, size_t size)
       glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
    }
 
-   return true;
+   return !!retro_savestate_result;
 }
 
 //Needed to be able to detach controllers for Lylat Wars multiplayer
