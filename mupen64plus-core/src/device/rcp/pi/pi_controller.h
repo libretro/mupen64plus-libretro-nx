@@ -83,6 +83,8 @@ struct pi_controller
     struct mi_controller* mi;
     struct ri_controller* ri;
     struct rdp_core* dp;
+
+    uint32_t cart_addr_mask; /* ~1 to align cart DMA addresses like hardware, ~0 for ROM hacks that need odd ones */
 };
 
 static osal_inline uint32_t pi_reg(uint32_t address)
@@ -98,7 +100,8 @@ void init_pi(struct pi_controller* pi,
              struct dd_controller* dd,
              struct mi_controller* mi,
              struct ri_controller* ri,
-             struct rdp_core* dp);
+             struct rdp_core* dp,
+             int force_alignment_of_pi_dma);
 
 void poweron_pi(struct pi_controller* pi);
 

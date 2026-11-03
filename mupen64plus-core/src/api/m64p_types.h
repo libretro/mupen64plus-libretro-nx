@@ -287,6 +287,7 @@ typedef struct
    unsigned int countperop; /* Number of CPU cycles per instruction. */
    unsigned int sidmaduration; /* Default SI DMA duration */
    unsigned int aidmamodifier; /* Percentage modifier for AI DMA duration */
+   unsigned int forcealignmentofpidma; /* 1 - align PI DMA cart addresses (hardware), 0 - don't (some ROM hacks) */
 } m64p_rom_settings;
 
 /* ----------------------------------------- */

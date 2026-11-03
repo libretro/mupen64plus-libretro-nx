@@ -55,6 +55,9 @@ enum { DEFAULT_DISABLE_EXTRA_MEM = 0 };
 enum { DEFAULT_SI_DMA_DURATION = 0x900 };
 /* Default AI DMA modifier */
 enum { DEFAULT_AI_DMA_MODIFIER = 100 };
+/* Unknown ROMs (mostly hacks, some DMA from odd cart addresses) skip the hardware's PI DMA alignment, as in
+   M64Plus FZ; ROMs in the database align unless their entry says ForceAlignmentOfPiDma=0 */
+enum { DEFAULT_FORCE_ALIGNMENT_OF_PI_DMA = 0 };
 
 static romdatabase_entry* ini_search_by_md5(md5_byte_t* md5);
 
@@ -198,6 +201,7 @@ m64p_error open_rom(const unsigned char* romimage, unsigned int size)
         ROM_SETTINGS.disableextramem = entry->disableextramem;
         ROM_SETTINGS.sidmaduration = entry->sidmaduration;
         ROM_SETTINGS.aidmamodifier = entry->aidmamodifier;
+        ROM_SETTINGS.forcealignmentofpidma = entry->forcealignmentofpidma;
         ROM_PARAMS.cheats = entry->cheats;
     }
     else
@@ -214,6 +218,7 @@ m64p_error open_rom(const unsigned char* romimage, unsigned int size)
         ROM_SETTINGS.disableextramem = DEFAULT_DISABLE_EXTRA_MEM;
         ROM_SETTINGS.sidmaduration = DEFAULT_SI_DMA_DURATION;
         ROM_SETTINGS.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
+        ROM_SETTINGS.forcealignmentofpidma = DEFAULT_FORCE_ALIGNMENT_OF_PI_DMA;
         ROM_PARAMS.cheats = NULL;
 
         /* check if ROM has the Advanced Homebrew ROM Header (see https://n64brew.dev/wiki/ROM_Header) */
@@ -335,6 +340,7 @@ m64p_error open_disk(void)
         ROM_SETTINGS.disableextramem = entry->disableextramem;
         ROM_SETTINGS.sidmaduration = entry->sidmaduration;
         ROM_SETTINGS.aidmamodifier = entry->aidmamodifier;
+        ROM_SETTINGS.forcealignmentofpidma = entry->forcealignmentofpidma;
         ROM_PARAMS.cheats = entry->cheats;
     }
     else
@@ -352,6 +358,7 @@ m64p_error open_disk(void)
         ROM_SETTINGS.disableextramem = DEFAULT_DISABLE_EXTRA_MEM;
         ROM_SETTINGS.sidmaduration = DEFAULT_SI_DMA_DURATION;
         ROM_SETTINGS.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
+        ROM_SETTINGS.forcealignmentofpidma = DEFAULT_FORCE_ALIGNMENT_OF_PI_DMA;
         ROM_PARAMS.cheats = NULL;
     }
 
@@ -513,6 +520,12 @@ static size_t romdatabase_resolve_round(void)
             entry->entry.set_flags |= ROMDATABASE_ENTRY_COUNTEROP;
         }
 
+        if (!isset_bitmask(entry->entry.set_flags, ROMDATABASE_ENTRY_FORCEALIGNMENTOFPIDMA) &&
+            isset_bitmask(ref->set_flags, ROMDATABASE_ENTRY_FORCEALIGNMENTOFPIDMA)) {
+            entry->entry.forcealignmentofpidma = ref->forcealignmentofpidma;
+            entry->entry.set_flags |= ROMDATABASE_ENTRY_FORCEALIGNMENTOFPIDMA;
+        }
+
         if (!isset_bitmask(entry->entry.set_flags, ROMDATABASE_ENTRY_CHEATS) &&
             isset_bitmask(ref->set_flags, ROMDATABASE_ENTRY_CHEATS)) {
             if (ref->cheats)
@@ -653,6 +666,7 @@ void romdatabase_open(void)
             search->entry.biopak = 0;
             search->entry.sidmaduration = DEFAULT_SI_DMA_DURATION;
             search->entry.aidmamodifier = DEFAULT_AI_DMA_MODIFIER;
+            search->entry.forcealignmentofpidma = 1;
             search->entry.set_flags = ROMDATABASE_ENTRY_NONE;
 
             search->next_entry = NULL;
@@ -768,6 +782,11 @@ void romdatabase_open(void)
                 } else {
                     DebugMessage(M64MSG_WARNING, "ROM Database: Invalid CountPerOp on line %i", lineno);
                 }
+            }
+            else if (!strcmp(l.name, "ForceAlignmentOfPiDma"))
+            {
+                search->entry.forcealignmentofpidma = atoi(l.value);
+                search->entry.set_flags |= ROMDATABASE_ENTRY_FORCEALIGNMENTOFPIDMA;
             }
             else if (!strcmp(l.name, "DisableExtraMem"))
             {
