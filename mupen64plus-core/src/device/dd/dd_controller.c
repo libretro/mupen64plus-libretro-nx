@@ -472,7 +472,7 @@ void write_dd_regs(void* opaque, uint32_t address, uint32_t value, uint32_t mask
 
     case DD_ASIC_CMD_STATUS:
         update_rtc(&dd->rtc);
-        const struct tm* tm = localtime(&dd->rtc.now);
+        const struct tm* tm = dd->rtc.iclock->local_time(dd->rtc.clock, dd->rtc.now);
 
         /* base cycle count */
         cycles = 2000;

@@ -33,7 +33,13 @@ time_t ctime_plus_delta_get_time(void* clock)
     return user_delta + time(NULL);
 }
 
+static const struct tm* ctime_plus_delta_local_time(void* clock, time_t t)
+{
+    return localtime(&t);
+}
+
 const struct clock_backend_interface g_iclock_ctime_plus_delta =
 {
-    ctime_plus_delta_get_time
+    ctime_plus_delta_get_time,
+    ctime_plus_delta_local_time
 };
