@@ -35,6 +35,9 @@ struct clock_libretro
     int64_t sec;         /* emulated clock, UTC seconds */
     int32_t utc_offset;  /* seconds east of UTC */
     uint32_t vi_count;   /* VIs since sec last advanced */
+    int64_t host_offset; /* frontend time minus sec at the drift reference; not saved */
+    uint32_t host_offset_valid;
+    int64_t last_drift;  /* correction added at the last advance, 0 if none; not saved */
 };
 
 extern struct clock_libretro g_clock_libretro;

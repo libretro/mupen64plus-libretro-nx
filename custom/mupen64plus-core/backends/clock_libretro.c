@@ -23,9 +23,17 @@
 
 #include <string.h>
 
+#define CLOCK_LIBRETRO_MAX_DRIFT 2
+#define CLOCK_LIBRETRO_MAX_HOLD 60
+
 struct clock_libretro g_clock_libretro;
 
 static struct retro_calendar_time_interface calendar_time;
+
+static bool clock_libretro_far(int64_t delta)
+{
+    return delta >= CLOCK_LIBRETRO_MAX_DRIFT || delta <= -CLOCK_LIBRETRO_MAX_DRIFT;
+}
 
 bool clock_libretro_query(retro_environment_t cb)
 {
@@ -53,22 +61,59 @@ bool clock_libretro_start(struct clock_libretro* clock)
     clock->sec = t.sec;
     clock->utc_offset = t.utc_offset;
     clock->vi_count = 0;
+    clock->host_offset = 0;
+    clock->host_offset_valid = 1;
+    clock->last_drift = 0;
     return true;
 }
 
 void clock_libretro_vi(struct clock_libretro* clock, unsigned int vi_rate)
 {
+    struct retro_calendar_time now;
+    int64_t offset;
+    int64_t drift;
+
     if (!clock->active)
         return;
 
-    if (++clock->vi_count >= vi_rate) {
-        clock->vi_count = 0;
-        ++clock->sec;
+    if (++clock->vi_count < vi_rate)
+        return;
+
+    clock->vi_count = 0;
+    ++clock->sec;
+    clock->last_drift = 0;
+
+    if (calendar_time.get_current_time == NULL || !calendar_time.get_current_time(&now))
+        return;
+
+    offset = now.sec - clock->sec;
+    if (!clock->host_offset_valid) {
+        clock->host_offset = offset;
+        clock->host_offset_valid = 1;
+        return;
+    }
+
+    drift = offset - clock->host_offset;
+    if (drift <= -CLOCK_LIBRETRO_MAX_DRIFT && drift > -CLOCK_LIBRETRO_MAX_HOLD) {
+        /* hold rather than run the RTCs backwards */
+        --clock->sec;
+        clock->last_drift = -1;
+    } else if (clock_libretro_far(drift)) {
+        clock->sec += drift;
+        clock->last_drift = drift;
     }
 }
 
 void clock_libretro_restore(struct clock_libretro* clock, int64_t sec, int32_t utc_offset, uint32_t vi_count)
 {
+    int64_t jump = sec - clock->sec;
+
+    /* keep the reference across run-ahead and rewind, which roll back a few
+     * frames, possibly to before the VI that applied a correction */
+    if (clock_libretro_far(jump) && clock_libretro_far(jump + clock->last_drift))
+        clock->host_offset_valid = 0;
+
+    clock->last_drift = 0;
     clock->sec = sec;
     clock->utc_offset = utc_offset;
     clock->vi_count = vi_count;
@@ -84,6 +129,9 @@ bool clock_libretro_resync(struct clock_libretro* clock)
     clock->sec = t.sec;
     clock->utc_offset = t.utc_offset;
     clock->vi_count = 0;
+    clock->host_offset = 0;
+    clock->host_offset_valid = 1;
+    clock->last_drift = 0;
     return true;
 }
 
