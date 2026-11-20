@@ -33,9 +33,9 @@ static uint8_t byte2bcd(int n)
     return (uint8_t)(((n / 10) << 4) | (n % 10));
 }
 
-static void time2data(uint8_t* data, time_t now)
+static void time2data(uint8_t* data, const struct af_rtc* rtc)
 {
-    const struct tm* tm = localtime(&now);
+    const struct tm* tm = rtc->iclock->local_time(rtc->clock, rtc->now);
 
     data[0] = byte2bcd(tm->tm_sec);
     data[1] = byte2bcd(tm->tm_min);
@@ -89,7 +89,7 @@ void af_rtc_read_block(struct af_rtc* rtc,
         break;
     case 2:
         update_rtc(rtc);
-        time2data(data, rtc->now);
+        time2data(data, rtc);
         *status = 0x00;
         break;
 

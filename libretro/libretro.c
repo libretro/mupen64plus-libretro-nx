@@ -55,6 +55,7 @@
 #include "plugin/plugin.h"
 #include "device/rcp/pi/pi_controller.h"
 #include "device/pif/pif.h"
+#include "backends/clock_libretro.h"
 #include "libretro_memory.h"
 
 #include "audio_plugin.h"
@@ -717,6 +718,8 @@ void retro_init(void)
         perf_get_cpu_features_cb = perf_cb.get_cpu_features;
     else
         perf_get_cpu_features_cb = NULL;
+
+    clock_libretro_query(environ_cb);
 
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode);
     environ_cb(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble);
@@ -2102,6 +2105,8 @@ void retro_run (void)
 
 void retro_reset (void)
 {
+    /* peers and replays repeat a reset, so a held clock keeps running */
+    clock_libretro_resync(&g_clock_libretro);
     CoreDoCommand(M64CMD_RESET, 0, (void*)0);
 }
 

@@ -51,6 +51,7 @@
 #include "rom.h"
 #include "savestates.h"
 #include "util.h"
+#include "backends/clock_libretro.h"
 #include "workqueue.h"
 
 #include <unzip.h>
@@ -62,7 +63,7 @@ enum { GB_CART_FINGERPRINT_OFFSET = 0x134 };
 enum { DD_DISK_ID_OFFSET = 0x43670 };
 
 static const char* savestate_magic = "M64+SAVE";
-static const int savestate_latest_version = 0x00010900;  /* 1.9 */
+static const int savestate_latest_version = 0x00010A00;  /* 1.10 */
 static const unsigned char pj64_magic[4] = { 0xC8, 0xA6, 0xD8, 0x23 };
 
 static savestates_job job = savestates_job_nothing;
@@ -971,6 +972,22 @@ int savestates_load_m64p(struct device* dev, const void *data)
             /* extra cp0 and cp2 state */
             *r4300_cp0_latch(&dev->r4300.cp0) = GETDATA(curr, uint64_t);
             *r4300_cp2_latch(&dev->r4300.cp2) = GETDATA(curr, uint64_t);
+        }
+
+        if (version >= 0x00010A00)
+        {
+            uint32_t clock_active;
+            int64_t clock_sec;
+            int32_t clock_utc_offset;
+            uint32_t clock_vi_count;
+
+            clock_active = GETDATA(curr, uint32_t);
+            clock_sec = GETDATA(curr, int64_t);
+            clock_utc_offset = GETDATA(curr, int32_t);
+            clock_vi_count = GETDATA(curr, uint32_t);
+
+            if (clock_active && g_clock_libretro.active)
+                clock_libretro_restore(&g_clock_libretro, clock_sec, clock_utc_offset, clock_vi_count);
         }
     }
     else
@@ -2044,6 +2061,12 @@ int savestates_save_m64p(const struct device* dev, void *data)
     /* cp0 and cp2 latch (since 1.9) */
     PUTDATA(curr, uint64_t, *r4300_cp0_latch((struct cp0*)&dev->r4300.cp0));
     PUTDATA(curr, uint64_t, *r4300_cp2_latch((struct cp2*)&dev->r4300.cp2));
+
+    /* libretro calendar clock (since 1.10) */
+    PUTDATA(curr, uint32_t, g_clock_libretro.active);
+    PUTDATA(curr, int64_t, g_clock_libretro.sec);
+    PUTDATA(curr, int32_t, g_clock_libretro.utc_offset);
+    PUTDATA(curr, uint32_t, g_clock_libretro.vi_count);
 
     init_work(&save->work, savestates_save_m64p_work);
     queue_work(&save->work);
