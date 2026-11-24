@@ -1235,7 +1235,7 @@ static void init_gb_rom(void* opaque, void** storage, const struct storage_backe
 
     /* Ask the core loader for rom filename */
     char* rom_filename = (g_media_loader.get_gb_cart_rom == NULL)
-        ? (retro_transferpak_rom_path ? strdup(retro_transferpak_rom_path) : NULL)
+        ? (retro_transferpak_rom_path[data->control_id] ? strdup(retro_transferpak_rom_path[data->control_id]) : NULL)
         : g_media_loader.get_gb_cart_rom(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no cart case */
@@ -1279,7 +1279,7 @@ static void init_gb_ram(void* opaque, size_t ram_size, void** storage, const str
 
     /* Ask the core loader for ram filename */
     char* ram_filename = (g_media_loader.get_gb_cart_ram == NULL)
-        ? (retro_transferpak_ram_path ? strdup(retro_transferpak_ram_path) : NULL)
+        ? (retro_transferpak_ram_path[data->control_id] ? strdup(retro_transferpak_ram_path[data->control_id]) : NULL)
         : g_media_loader.get_gb_cart_ram(g_media_loader.cb_data, data->control_id);
 
     /* Handle the no RAM case
