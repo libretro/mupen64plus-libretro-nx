@@ -7,10 +7,16 @@
 extern "C" {
 	extern void context_reset();
 	bool threaded_gl_safe_shutdown = false;
+	bool threaded_gl_yield_per_command = false;
 
 	void gln64_thr_gl_invoke_command_loop()
 	{
 		opengl::FunctionWrapper::commandLoop();
+	}
+
+	bool gln64_thr_gl_queue_empty()
+	{
+		return opengl::FunctionWrapper::queueEmpty();
 	}
 }
 
@@ -88,7 +94,7 @@ namespace opengl {
 					timeToShutdown = command->isTimeToShutdown();
 				}
 			}
-			if(!retro_savestate_complete)
+			if(!retro_savestate_complete || threaded_gl_yield_per_command)
 			{				
 				// Yield to frontend
 				co_switch(retro_thread);
@@ -98,6 +104,11 @@ namespace opengl {
 		// Return
 		threaded_gl_safe_shutdown = true;
 		co_switch(retro_thread);
+	}
+
+	bool FunctionWrapper::queueEmpty()
+	{
+		return m_commandQueue.peek() == nullptr && m_commandQueueHighPriority.peek() == nullptr;
 	}
 
 #if defined(GL_DEBUG) && defined(GL_PROFILE)
