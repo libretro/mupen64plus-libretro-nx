@@ -129,6 +129,8 @@ void init_device(struct device* dev,
     void* aout, const struct audio_out_backend_interface* iaout, float dma_modifier,
     /* si */
     unsigned int si_dma_duration,
+    /* pi */
+    int force_alignment_of_pi_dma,
     /* rdram */
     size_t dram_size,
     /* pif */
