@@ -43,9 +43,13 @@ void LoadCustomSettings(bool internal)
 	char buffer[256];
 	char* line;
 	FILE* fPtr;
+	// strtok() and ini_parse_line() modify the buffer in place, so parse a
+	// copy and keep customini intact for the next ROM
+	std::string internalIni;
 	std::transform(myString.begin(), myString.end(), myString.begin(), ::toupper);
 	if (internal) {
-		line = strtok(customini, "\n");
+		internalIni = customini;
+		line = strtok(&internalIni[0], "\n");
 	} else {
 		const char *pathname = ConfigGetSharedDataFilepath("GLideN64.custom.ini");
 		if (pathname == NULL || (fPtr = fopen(pathname, "rb")) == NULL)
