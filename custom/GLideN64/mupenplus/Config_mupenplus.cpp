@@ -139,6 +139,16 @@ void LoadCustomSettings(bool internal)
 	}
 }
 
+// The VR depth settings that may change while a game runs
+extern "C" void gln64_vr_update_config()
+{
+	config.stereo.separation = VRSeparation;
+	config.stereo.depthBoost = VRDepthBoost;
+	config.stereo.immersiveDistance = VRImmersiveDistance;
+	config.stereo.immersiveWorldScale = VRImmersiveWorldScale;
+	config.stereo.immersiveHudScale = VRImmersiveHudScale;
+}
+
 extern "C" void Config_LoadConfig()
 {
 	u32 hacks = config.generalEmulation.hacks;
@@ -229,6 +239,14 @@ extern "C" void Config_LoadConfig()
 		LoadCustomSettings(true);
 		LoadCustomSettings(false);
 	}
+
+	config.stereo.mode = VRMode != VR_MODE_OFF ? Config::stereoBothEyes : Config::stereoOff;
+	config.stereo.immersive = VRMode == VR_MODE_IMMERSIVE ? 1 : 0;
+	gln64_vr_update_config();
+	if (VRMode != VR_MODE_OFF)
+		config.frameBufferEmulation.aspect = Config::aStretch;
+	if (VRMode == VR_MODE_IMMERSIVE)
+		config.frameBufferEmulation.enableOverscan = 0;
 
 	config.validate();
 }

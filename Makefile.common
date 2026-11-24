@@ -282,6 +282,7 @@ SOURCES_CXX   += \
     $(VIDEODIR_GLIDEN64)/src/PaletteTexture.cpp                                                   \
     $(VIDEODIR_GLIDEN64)/src/Performance.cpp                                                      \
     $(VIDEODIR_GLIDEN64)/src/PostProcessor.cpp                                                    \
+    $(VIDEODIR_GLIDEN64)/src/StereoFrames.cpp                                                     \
     $(VIDEODIR_GLIDEN64)/src/RDP.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/RSP.cpp                                                              \
     $(VIDEODIR_GLIDEN64)/src/SoftwareRender.cpp                                                   \

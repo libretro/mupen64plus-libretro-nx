@@ -138,6 +138,23 @@ extern uint32_t EnableThreadedRenderer;
 extern uint32_t EnableCopyAuxToRDRAM;
 extern uint32_t GLideN64IniBehaviour;
 
+// VR Options
+enum vr_mode
+{
+   VR_MODE_OFF = 0,
+   VR_MODE_STEREOSCOPIC,
+   VR_MODE_IMMERSIVE
+};
+extern uint32_t VRMode;
+extern float VRSeparation;
+extern float VRDepthBoost;
+extern float VRImmersiveDistance;
+extern float VRImmersiveWorldScale;
+extern float VRImmersiveHudScale;
+void gln64_vr_update_config(void);
+int libretro_vr_immersive_pose(float rotation[2][9], float tangents[2][4]);
+void libretro_vr_immersive_present(int pose);
+
 // Overscan Options
 extern uint32_t EnableOverscan;
 extern uint32_t OverscanTop;
