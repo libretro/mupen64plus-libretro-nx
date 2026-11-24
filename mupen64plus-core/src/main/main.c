@@ -77,6 +77,7 @@
 #include "netplay.h"
 
 #include <libretro_private.h>
+#include <backends/clock_libretro.h>
 #include <libco.h>
 
 #ifdef M64P_NETPLAY
@@ -149,6 +150,10 @@ static size_t l_pak_type_idx[6];
 
 /* PRNG state - used for Mempaks ID generation */
 struct xoshiro256pp_state l_mpk_idgen;
+
+/* clock for the cart, 64DD and Transfer Pak RTCs */
+static void* l_rtc_clock = NULL;
+static const struct clock_backend_interface* l_rtc_iclock = &g_iclock_ctime_plus_delta;
 
 /*********************************************************************************************************
 * static functions
@@ -826,6 +831,7 @@ void new_vi(void)
     main_check_inputs();
 
     netplay_check_sync(&g_dev.r4300.cp0);
+    clock_libretro_vi(&g_clock_libretro, g_dev.vi.expected_refresh_rate);
     retro_return();
 }
 
@@ -1332,7 +1338,7 @@ void main_change_gb_cart(int control_id)
     init_gb_cart(gb_cart,
             data, init_gb_rom, release_gb_rom,
             data, init_gb_ram, release_gb_ram,
-            NULL, &g_iclock_ctime_plus_delta,
+            l_rtc_clock, l_rtc_iclock,
             &data->control_id, &g_irumble_backend_plugin_compat,
             data->gbcam_backend, data->igbcam_backend);
 
@@ -1408,6 +1414,19 @@ m64p_error main_run(void)
         case SAVETYPE_EEPROM_16K:
             eeprom_type = JDT_EEPROM_16K;
             break;
+    }
+
+    memset(&g_clock_libretro, 0, sizeof(g_clock_libretro));
+    if (clock_libretro_start(&g_clock_libretro))
+    {
+        l_rtc_clock = &g_clock_libretro;
+        l_rtc_iclock = &g_iclock_libretro;
+        DebugMessage(M64MSG_INFO, "RTC: frontend calendar time, UTC offset %d s", (int)g_clock_libretro.utc_offset);
+    }
+    else
+    {
+        l_rtc_clock = NULL;
+        l_rtc_iclock = &g_iclock_ctime_plus_delta;
     }
 
     /* Seed MPK ID gen using current time */
@@ -1501,7 +1520,7 @@ m64p_error main_run(void)
     /* try to load DD disk first, if that succeeds, pass the region to load_dd_rom */
     if (load_dd_disk(&dd_disk, &dd_idisk))
     {
-        dd_rtc_iclock = &g_iclock_ctime_plus_delta;
+        dd_rtc_iclock = l_rtc_iclock;
         load_dd_rom((uint8_t*)mem_base_u32(g_mem_base, MM_DD_ROM), &dd_rom_size, &dd_disk.region);
     }
     else
@@ -1632,7 +1651,7 @@ m64p_error main_run(void)
                     init_gb_cart(&g_dev.gb_carts[i],
                             &l_gb_carts_data[i], init_gb_rom, release_gb_rom,
                             &l_gb_carts_data[i], init_gb_ram, release_gb_ram,
-                            NULL, &g_iclock_ctime_plus_delta,
+                            l_rtc_clock, l_rtc_iclock,
                             &l_gb_carts_data[i].control_id, &g_irumble_backend_plugin_compat,
                             l_gb_carts_data[i].gbcam_backend, l_gb_carts_data[i].igbcam_backend);
 
@@ -1693,14 +1712,14 @@ m64p_error main_run(void)
                 rdram_size,
                 joybus_devices, ijoybus_devices,
                 vi_clock_from_tv_standard(ROM_PARAMS.systemtype), vi_expected_refresh_rate_from_tv_standard(ROM_PARAMS.systemtype),
-                NULL, &g_iclock_ctime_plus_delta,
+                l_rtc_clock, l_rtc_iclock,
                 g_rom_size,
                 eeprom_type,
                 &eep, &g_ifile_storage_ro,
                 flashram_type,
                 &fla, &g_ifile_storage_ro,
                 &sra, &g_ifile_storage_ro,
-                NULL, dd_rtc_iclock,
+                l_rtc_clock, dd_rtc_iclock,
                 dd_rom_size,
                 &dd_disk, dd_idisk);
 

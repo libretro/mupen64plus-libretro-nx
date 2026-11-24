@@ -234,6 +234,7 @@ endif
 SOURCES_C += $(LIBRETRO_DIR)/libretro.c \
 	$(LIBRETRO_COMM_DIR)/memmap/memalign.c \
 	$(ROOT_DIR)/custom/mupen64plus-core/plugin/emulate_game_controller_via_libretro.c \
+	$(ROOT_DIR)/custom/mupen64plus-core/backends/clock_libretro.c \
 	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/sinc_resampler.c \
 	$(LIBRETRO_COMM_DIR)/audio/resampler/drivers/nearest_resampler.c \
 	$(LIBRETRO_COMM_DIR)/audio/resampler/audio_resampler.c \

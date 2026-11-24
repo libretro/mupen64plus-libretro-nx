@@ -29,6 +29,10 @@ struct clock_backend_interface
     /* Returns the current time
      */
     time_t (*get_time)(void* clock);
+
+    /* Breaks a time from get_time into local calendar fields
+     */
+    const struct tm* (*local_time)(void* clock, time_t t);
 };
 
 #endif
