@@ -1428,6 +1428,7 @@ namespace glsl {
 CombinerProgramBuilderCommon::CombinerProgramBuilderCommon(const opengl::GLInfo & _glinfo, opengl::CachedUseProgram * _useProgram,
 	std::unique_ptr<CombinerProgramUniformFactory> _uniformFactory)
 : CombinerProgramBuilder(_glinfo, _useProgram, std::move(_uniformFactory))
+, m_glinfo(_glinfo)
 , m_blender1(new ShaderBlender1(_glinfo))
 , m_blender2(new ShaderBlender2(_glinfo))
 , m_blenderAlpha (new ShaderBlenderAlpha(_glinfo))
@@ -1568,6 +1569,16 @@ void CombinerProgramBuilderCommon::_writeBlender1(std::stringstream& ssShader)co
 void CombinerProgramBuilderCommon::_writeBlender2(std::stringstream& ssShader)const
 {
 	m_blender2->write(ssShader);
+	if (!m_glinfo.dual_source_blending && !m_glinfo.ext_fetch && !m_glinfo.ext_fetch_arm) {
+		if (CombinerProgramBuilder::s_textureConvert.useTextureFiltering()) {
+			ssShader << "  // WebGL fallback: when framebuffer fetch is absent, LAST_FRAG_COLOR is dummy vec4(0.0).\n"
+			         << "  // In 2-cycle blend mode with CLR_MEM (muxm), blending against vec4(0.0) yields black.\n"
+			         << "  // Discarding near-black fragments on filtered sprites preserves the background (e.g. Castlevania 64 menu lens).\n"
+			         << "  if (uTextureFilterMode != 0 && uBlendMux2[2] == 1 && uBlendMux2[3] == 0 && dot(fragColor.rgb, vec3(1.0)) < 0.05) {\n"
+			         << "    discard;\n"
+			         << "  }\n";
+		}
+	}
 }
 
 void CombinerProgramBuilderCommon::_writeBlenderAlpha(std::stringstream& ssShader)const
