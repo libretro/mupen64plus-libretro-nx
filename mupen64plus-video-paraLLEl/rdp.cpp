@@ -141,8 +141,26 @@ void profile_refresh_end()
 	}
 }
 
+// begin_frame() normally keeps these arrays in sync with the frontend's
+// sync index mask, but guard against reaching complete_frame() without it
+// (e.g. via retro_serialize()/retro_unserialize(), which also run the
+// emulator) after the mask has grown.
+static void ensure_sync_slot(unsigned index)
+{
+	if (index >= retro_images.size())
+	{
+		retro_images.resize(index + 1);
+		retro_image_handles.resize(index + 1);
+	}
+}
+
 void begin_frame()
 {
+	// On the first context reset, init() is deferred until the ROM is opened,
+	// which happens inside the first retro_run().
+	if (!vulkan || !device)
+		return;
+
 	unsigned mask = vulkan->get_sync_index_mask(vulkan->handle);
 	unsigned num_frames = 0;
 	for (unsigned i = 0; i < 32; i++)
@@ -308,7 +326,7 @@ static void complete_frame_error()
 	auto image = device->create_image(info, &data);
 
 	unsigned index = vulkan->get_sync_index(vulkan->handle);
-	assert(index < retro_images.size());
+	ensure_sync_slot(index);
 
 	retro_images[index].image_view = image->get_view().get_view();
 	retro_images[index].image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -397,7 +415,7 @@ void complete_frame()
 		device->submit(cmd);
 	}
 
-	assert(index < retro_images.size());
+	ensure_sync_slot(index);
 
 	retro_images[index].image_view = image->get_view().get_view();
 	retro_images[index].image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

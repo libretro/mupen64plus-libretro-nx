@@ -2063,6 +2063,12 @@ void retro_run (void)
        
        glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
     }
+#ifdef HAVE_PARALLEL_RDP
+    else if (current_rdp_type == RDP_PLUGIN_PARALLEL)
+    {
+       parallel_begin_frame();
+    }
+#endif
 
     co_switch(game_thread);
 
